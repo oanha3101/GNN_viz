@@ -23,6 +23,7 @@ export default function TaskTopology3() {
   const [showNodes, setShowNodes] = useState(true)
   const [showTriangles, setShowTriangles] = useState(true)
   const [showTopK, setShowTopK] = useState(true)
+  const [showErrorsOnly, setShowErrorsOnly] = useState(false)
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 })
   const [stableGraphData, setStableGraphData] = useState(null)
   const containerRef = useRef()
@@ -90,21 +91,37 @@ export default function TaskTopology3() {
     let isFuture = false
 
     if (testIdx !== -1) {
-      const scoreA = snapA?.edge_scores?.[testIdx] || 0
-      const scoreB = snapB?.edge_scores?.[testIdx] || scoreA
+      const classification = classifications[testIdx]
+      const isFP = classification?.classification === 'FP'
+      const isFN = classification?.classification === 'FN'
+      const isTP = classification?.classification === 'TP'
+      const isTN = classification?.classification === 'TN'
       
-      // Calculate smooth score via LERP
-      let score = lerp(scoreA, scoreB, t)
-      
-      // SAGE specific Jitter
-      if (selectedModel === 'SAGE') {
-         const noise = (Math.sin(testIdx * 10 + currentEpochFloat * 8) * 0.05) * (1 - (currentEpochFloat/snapshots.length))
-         score = Math.max(0, Math.min(1, score + noise))
+      // Error Analysis Mode: highlight FP/FN edges
+      if (showErrorsOnly) {
+        if (isFP) {
+          color = 'rgba(239, 68, 68, 0.8)' // Red for false positive
+          width = 5
+        } else if (isFN) {
+          color = 'rgba(234, 179, 8, 0.8)' // Yellow for false negative
+          width = 5
+        } else {
+          color = 'rgba(148, 163, 184, 0.05)' // Dim correct predictions
+          width = 1
+        }
+      } else {
+        const scoreA = snapA?.edge_scores?.[testIdx] || 0
+        const scoreB = snapB?.edge_scores?.[testIdx] || scoreA
+        let score = lerp(scoreA, scoreB, t)
+        if (selectedModel === 'SAGE') {
+          const noise = (Math.sin(testIdx * 10 + currentEpochFloat * 8) * 0.05) * (1 - (currentEpochFloat/snapshots.length))
+          score = Math.max(0, Math.min(1, score + noise))
+        }
+        color = getLinkColor(score)
+        width = 3 + score * 4
       }
-
-      color = getLinkColor(score)
-      width = 3 + score * 4
-      isFuture = !testEdges[testIdx].exists && score > 0.5
+      
+      isFuture = !testEdges[testIdx].exists && (showErrorsOnly ? isFP : (snapA?.edge_scores?.[testIdx] || 0) > 0.5)
     }
 
     ctx.beginPath()
@@ -311,16 +328,20 @@ export default function TaskTopology3() {
       })()}
 
       <div className="absolute top-12 left-2 z-20 flex gap-2">
-        <button onClick={() => setShowNodes(!showNodes)} 
+        <button onClick={() => setShowNodes(!showNodes)}
                 className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${showNodes ? 'bg-slate-900/80 border-slate-700 text-slate-400' : 'bg-indigo-600/20 border-indigo-500 text-indigo-400'}`}>
           {showNodes ? '🧬 HIDE' : '👻 SHOW'}
         </button>
         {selectedModel === 'GAT' && (
-          <button onClick={() => setShowTriangles(!showTriangles)} 
+          <button onClick={() => setShowTriangles(!showTriangles)}
                   className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${showTriangles ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-400' : 'bg-slate-900/80 border-slate-700 text-slate-500'}`}>
             △ {showTriangles ? 'ON' : 'OFF'}
           </button>
         )}
+        <button onClick={() => setShowErrorsOnly(!showErrorsOnly)}
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${showErrorsOnly ? 'bg-red-500/20 border-red-500/40 text-red-400' : 'bg-slate-900/80 border-slate-700 text-slate-500'}`}>
+          🔍 Errors
+        </button>
       </div>
 
       <div className="absolute bottom-2 right-2 z-10 flex flex-col items-end gap-1.5 w-40">
