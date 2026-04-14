@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WBS TrekViet - Chuẩn Mẫu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background-color: #ffffff; 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px;
+        }
+        .wbs-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 2500px; /* Đảm bảo đủ chiều rộng cho các nhánh */
+        }
+        
+        /* Cấu trúc cây */
+        .tree-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .node-box {
+            border: 1px solid #333;
+            padding: 8px 12px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 120px;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+            z-index: 10;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        /* Màu sắc theo mẫu */
+        .color-root { background-color: #e2f0d9; border-color: #548235; } /* Xanh lá nhạt */
+        .color-phase { background-color: #dae3f3; border-color: #4472c4; } /* Xanh dương nhạt */
+        .color-task { background-color: #fff2cc; border-color: #bf8f00; } /* Vàng nhạt */
+        .color-subtask { background-color: #ffffff; border-color: #7f7f7f; font-weight: normal; font-size: 11px; } /* Trắng */
+
+        /* Đường kẻ */
+        .connector-v {
+            width: 2px;
+            background-color: #000;
+            height: 20px;
+        }
+        .connector-h-line {
+            height: 2px;
+            background-color: #000;
+            position: absolute;
+            top: -20px;
+        }
+
+        /* Bố cục hàng ngang */
+        .row {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+            padding-top: 40px;
+        }
+
+        .phase-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 15px;
+        }
+
+        .task-columns {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .column-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .subtask-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            width: 100%;
+        }
+
+        .subtask-box {
+            border: 1px solid #7f7f7f;
+            background-color: #fff;
+            padding: 5px;
+            font-size: 10px;
+            width: 120px;
+            text-align: left;
+        }
+
+        /* Header trang */
+        .header-box {
+            margin-bottom: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wbs-container">
+        <!-- ROOT -->
+        <div class="tree-node header-box">
+            <div class="node-box color-root" style="font-size: 16px; padding: 15px 30px;">
+                Quản lý hệ thống TREKVIET
+            </div>
+            <div class="connector-v"></div>
+        </div>
+
+        <!-- HÀNG CHÍNH NỐI 5 GIAI ĐOẠN -->
+        <div style="width: 82%; height: 2px; background: #000; position: relative;"></div>
+
+        <div class="row">
+            <!-- 1. KHỞI ĐỘNG -->
+            <div class="phase-group">
+                <div class="connector-v" style="position: absolute; top: 0;"></div>
+                <div class="node-box color-phase">1. Khởi động</div>
+                
+                <div class="task-columns">
+                    <!-- 1.1 -->
+                    <div class="column-group">
+                        <div class="node-box color-task">1.1. Xác định phạm vi dự án</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">1.1.1. Phân tích nhu cầu trekker</div>
+                            <div class="subtask-box">1.1.2. Tiêu chuẩn cung đường</div>
+                            <div class="subtask-box">1.1.3. Giới hạn kỹ thuật</div>
+                            <div class="subtask-box">1.1.4. Lập Scope Statement</div>
+                        </div>
+                    </div>
+                    <!-- 1.2 -->
+                    <div class="column-group">
+                        <div class="node-box color-task">1.2. Thành lập nhóm & vai trò</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">1.2.1. Tuyển chọn nhân sự</div>
+                            <div class="subtask-box">1.2.2. Ma trận RACI</div>
+                        </div>
+                    </div>
+                    <!-- 1.3 -->
+                    <div class="column-group">
+                        <div class="node-box color-task">1.3. Thu thập yêu cầu sơ bộ</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">1.3.1. Khảo sát biểu mẫu</div>
+                            <div class="subtask-box">1.3.2. Danh mục chức năng</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. LẬP KẾ HOẠCH -->
+            <div class="phase-group">
+                <div class="connector-v" style="position: absolute; top: 0;"></div>
+                <div class="node-box color-phase">2. Lập kế hoạch & Thiết kế</div>
+                
+                <div class="task-columns">
+                    <div class="column-group">
+                        <div class="node-box color-task">2.1. Phân tích yêu cầu</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">2.1.1. Kịch bản Use Case</div>
+                            <div class="subtask-box">2.1.2. Ràng buộc phi chức năng</div>
+                            <div class="subtask-box">2.1.3. Viết tài liệu SRS</div>
+                        </div>
+                    </div>
+                    <div class="column-group">
+                        <div class="node-box color-task">2.2. Giải pháp kỹ thuật</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">2.2.1. ERD & CSDL Vật lý</div>
+                            <div class="subtask-box">2.2.2. Kiến trúc HT (MVC)</div>
+                            <div class="subtask-box">2.2.3. Sequence/Class Diag.</div>
+                        </div>
+                    </div>
+                    <div class="column-group">
+                        <div class="node-box color-task">2.3. Thiết kế UI/UX</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">2.3.1. Wireframe</div>
+                            <div class="subtask-box">2.3.2. Mock-up Figma</div>
+                            <div class="subtask-box">2.3.3. User Flow</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. TRIỂN KHAI -->
+            <div class="phase-group">
+                <div class="connector-v" style="position: absolute; top: 0;"></div>
+                <div class="node-box color-phase">3. Triển khai & Kiểm thử</div>
+                
+                <div class="task-columns">
+                    <div class="column-group">
+                        <div class="node-box color-task">3.1. Xây dựng HT</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">3.1.1. Frontend (Responsive)</div>
+                            <div class="subtask-box">3.1.2. Backend & API</div>
+                            <div class="subtask-box" style="background-color: #f5f3ff; border: 1px solid #7c3aed;">3.1.3. WebSocket (Chat)</div>
+                            <div class="subtask-box">3.1.4. Kết nối CSDL</div>
+                        </div>
+                    </div>
+                    <div class="column-group">
+                        <div class="node-box color-task">3.2. Kiểm thử</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">3.2.1. Unit Test</div>
+                            <div class="subtask-box">3.2.2. Integration Test</div>
+                            <div class="subtask-box" style="background-color: #fff1f2; border: 1px solid #e11d48;">3.2.3. JMeter Performance</div>
+                        </div>
+                    </div>
+                    <div class="column-group">
+                        <div class="node-box color-task">3.3. Tài liệu hóa</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">3.3.1. HDSD (User/Admin)</div>
+                            <div class="subtask-box">3.3.2. Deployment Guide</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. GIÁM SÁT -->
+            <div class="phase-group">
+                <div class="connector-v" style="position: absolute; top: 0;"></div>
+                <div class="node-box color-phase">4. Giám sát & Kiểm soát</div>
+                
+                <div class="task-columns">
+                    <div class="column-group">
+                        <div class="node-box color-task">4.1. Theo dõi tiến độ</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">4.1.1. Cập nhật Gantt Chart</div>
+                            <div class="subtask-box">4.1.2. Review Sprint</div>
+                        </div>
+                    </div>
+                    <div class="column-group">
+                        <div class="node-box color-task">4.2. Quản lý rủi ro</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">4.2.1. Xử lý lỗi API Map</div>
+                            <div class="subtask-box">4.2.2. Phê duyệt điều chỉnh</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. BÀN GIAO -->
+            <div class="phase-group">
+                <div class="connector-v" style="position: absolute; top: 0;"></div>
+                <div class="node-box color-phase">5. Kết thúc</div>
+                
+                <div class="task-columns">
+                    <div class="column-group">
+                        <div class="node-box color-task">5.1. Nghiệm thu</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">5.1.1. Thử nghiệm Staging</div>
+                            <div class="subtask-box">5.1.2. Xác nhận Use Case</div>
+                        </div>
+                    </div>
+                    <div class="column-group">
+                        <div class="node-box color-task">5.2. Tổng kết</div>
+                        <div class="subtask-list">
+                            <div class="subtask-box">5.2.1. Hoàn thiện báo cáo</div>
+                            <div class="subtask-box">5.2.2. Slide & Video Demo</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footnote về màu sắc -->
+        <div style="margin-top: 50px; border-top: 1px solid #ccc; padding-top: 20px; width: 100%; display: flex; justify-content: center; gap: 40px;">
+            <div class="flex items-center gap-2"><div class="w-4 h-4 color-root border border-green-700"></div> <span class="text-xs">Dự án chính</span></div>
+            <div class="flex items-center gap-2"><div class="w-4 h-4 color-phase border border-blue-700"></div> <span class="text-xs">Giai đoạn</span></div>
+            <div class="flex items-center gap-2"><div class="w-4 h-4 color-task border border-yellow-700"></div> <span class="text-xs">Hạng mục công việc</span></div>
+            <div class="flex items-center gap-2"><div class="w-4 h-4 color-subtask border border-gray-500"></div> <span class="text-xs">Công việc chi tiết</span></div>
+        </div>
+    </div>
+</body>
+</html>
