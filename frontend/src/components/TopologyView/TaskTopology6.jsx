@@ -190,11 +190,19 @@ export default function TaskTopology6() {
                   ))}
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right flex flex-col items-end gap-1">
                 <span className={`text-xl font-black font-mono tracking-tighter block leading-none ${g.valid ? 'text-green-400' : 'text-red-400'}`}>
                   {(g.score * 100).toFixed(0)}%
                 </span>
                 <span className="text-[8px] text-slate-600 font-bold uppercase tracking-tight">Q-Score</span>
+                {!g.valid && g.invalidity_reason && (
+                  <div
+                    className="mt-1 px-1.5 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-[8px] text-red-400 font-bold max-w-[120px] truncate"
+                    title={g.invalidity_reason}
+                  >
+                    {g.invalidity_reason}
+                  </div>
+                )}
               </div>
             </div>
           </div>

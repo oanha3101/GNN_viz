@@ -42,6 +42,7 @@ export default function TaskTopology5() {
   const [layoutFrozen, setLayoutFrozen] = useState(false)
   const [graphReady, setGraphReady] = useState(false)
   const [resampleKey, setResampleKey] = useState(0)
+  const [showAnomalies, setShowAnomalies] = useState(false)
 
   // Get graph data from store
   const rawGraphData = useGNNStore(s => s.graphData)
@@ -199,14 +200,27 @@ export default function TaskTopology5() {
     const r = Math.max(4, Math.sqrt(degree) * 1.8 + 3)
 
     let color = '#6366f1' // default indigo
-    const gt = node.groundTruth
-    const pred = animRef.current.predictions?.[node.id]
-    if (hasLabels && gt !== undefined && gt !== 0) {
-      color = CLASS_COLORS[gt % CLASS_COLORS.length] || color
-    } else if (pred !== undefined && pred > 0) {
-      color = CLASS_COLORS[pred % CLASS_COLORS.length] || color
+
+    // Anomaly mode: color by KNN preservation score
+    if (showAnomalies) {
+      const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+      const snap = snapshots[epochInt]
+      const knnScore = snap?.per_node_knn_preservation?.[node.id]
+      if (knnScore !== undefined) {
+        if (knnScore > 0.8) color = '#22c55e'       // Green: Good preservation
+        else if (knnScore >= 0.5) color = '#eab308'  // Yellow: Moderate
+        else color = '#ef4444'                        // Red: Anomaly
+      }
+    } else {
+      const gt = node.groundTruth
+      const pred = animRef.current.predictions?.[node.id]
+      if (hasLabels && gt !== undefined && gt !== 0) {
+        color = CLASS_COLORS[gt % CLASS_COLORS.length] || color
+      } else if (pred !== undefined && pred > 0) {
+        color = CLASS_COLORS[pred % CLASS_COLORS.length] || color
+      }
     }
-    
+
     const isSelected = selectedNodeId === node.id
     const isDimmed = selectedNodeId !== null && !isSelected
     ctx.globalAlpha = isDimmed ? 0.2 : 1.0
@@ -236,7 +250,7 @@ export default function TaskTopology5() {
       ctx.fillText(`${node.id}`, node.x, node.y)
     }
     ctx.globalAlpha = 1.0
-  }, [hasLabels, selectedNodeId])
+  }, [hasLabels, selectedNodeId, showAnomalies, snapshots, currentEpochFloat])
 
   // ── Render ──────────────────────────────────────────────────────────
   if (sizeMode === 'too_large') {
@@ -306,6 +320,27 @@ export default function TaskTopology5() {
         )}
       </div>
 
+      {/* Anomaly Legend — shown when toggle is active */}
+      {showAnomalies && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md rounded-xl px-4 py-2 border border-slate-700/40 z-10">
+          <div className="text-[8px] text-slate-500 uppercase tracking-wider font-bold mb-1.5 text-center">KNN Preservation</div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+              <span className="text-[9px] text-green-400 font-bold">&gt;0.8 Good</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+              <span className="text-[9px] text-yellow-400 font-bold">0.5-0.8 Moderate</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <span className="text-[9px] text-red-400 font-bold">&lt;0.5 Anomaly</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Resample button for large graphs */}
       {sizeMode === 'subsample' && (
         <button
@@ -319,9 +354,21 @@ export default function TaskTopology5() {
       )}
 
       {/* Node count badge */}
-      <div className="absolute top-3 right-3 z-10 bg-slate-900/85 border border-slate-700/40 rounded-lg px-2.5 py-1.5 text-right">
-        <div className="text-[8px] text-slate-500 uppercase tracking-wider">Nodes</div>
-        <div className="text-sm font-bold font-mono text-cyan-300">{numNodes.toLocaleString()}</div>
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+        <button
+          onClick={() => setShowAnomalies(v => !v)}
+          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
+            showAnomalies
+              ? 'bg-amber-600/30 border-amber-500/60 text-amber-300'
+              : 'bg-slate-800/90 border-slate-700/50 text-slate-300 hover:bg-slate-700'
+          }`}
+        >
+          🔍 Anomalies
+        </button>
+        <div className="bg-slate-900/85 border border-slate-700/40 rounded-lg px-2.5 py-1.5 text-right">
+          <div className="text-[8px] text-slate-500 uppercase tracking-wider">Nodes</div>
+          <div className="text-sm font-bold font-mono text-cyan-300">{numNodes.toLocaleString()}</div>
+        </div>
       </div>
     </div>
   )

@@ -11,10 +11,11 @@ const COMMUNITY_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#eab308', '#a855f7',
 export default function TaskTopology4() {
   const rawGraphData = useGNNStore(s => s.graphData)
   const { snapshots, currentEpochFloat } = usePlayerStore()
-  
+
   const containerRef = useRef()
   const fgRef = useRef()
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 })
+  const [selectedCommunity, setSelectedCommunity] = useState(null)
 
   // 1. Fixed Graph Structure
   const graphData = useMemo(() => {
@@ -184,6 +185,12 @@ export default function TaskTopology4() {
         }}
         cooldownTicks={100}
         backgroundColor="transparent"
+        onNodeClick={(node) => {
+          const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+          const snap = snapshots[epochInt]
+          const cid = snap?.node_predictions?.[node.id]
+          if (cid !== undefined) setSelectedCommunity(cid)
+        }}
       />
 
       {/* Q HUD — compact bottom-right */}
@@ -213,6 +220,43 @@ export default function TaskTopology4() {
           <span className="text-[8px] text-slate-400 font-bold">Bridge</span>
         </div>
       </div>
+
+      {/* Community Profile Panel — bottom-left */}
+      {selectedCommunity !== null && (() => {
+        const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+        const snap = snapshots[epochInt]
+        const metrics = snap?.per_community_metrics?.[selectedCommunity]
+        if (!metrics) return null
+        const color = COMMUNITY_COLORS[selectedCommunity % COMMUNITY_COLORS.length]
+        return (
+          <div className="absolute bottom-14 left-2 z-10 bg-slate-900/90 backdrop-blur-md rounded-xl px-4 py-3 border border-slate-700/50 min-w-[220px]">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                <span className="text-sm font-bold text-white">Community {selectedCommunity}</span>
+              </div>
+              <button
+                onClick={() => setSelectedCommunity(null)}
+                className="text-[10px] text-slate-400 hover:text-white transition-colors font-bold"
+              >
+                Clear
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <div className="text-slate-500">Size</div>
+              <div className="text-slate-200 font-mono text-right">{metrics.size ?? 'N/A'}</div>
+              <div className="text-slate-500">Density</div>
+              <div className="text-slate-200 font-mono text-right">{(metrics.density ?? 0).toFixed(3)}</div>
+              <div className="text-slate-500">Conductance</div>
+              <div className="text-slate-200 font-mono text-right">{(metrics.conductance ?? 0).toFixed(3)}</div>
+              <div className="text-slate-500">Internal Edges</div>
+              <div className="text-slate-200 font-mono text-right">{metrics.internal_edges ?? 'N/A'}</div>
+              <div className="text-slate-500">External Edges</div>
+              <div className="text-slate-200 font-mono text-right">{metrics.external_edges ?? 'N/A'}</div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
