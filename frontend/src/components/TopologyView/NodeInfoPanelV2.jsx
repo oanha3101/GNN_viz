@@ -190,7 +190,7 @@ export default function NodeInfoPanelV2() {
           {/* Prediction Summary */}
           <div className="mb-3 rounded-xl bg-slate-900/50 p-3">
             <div className="flex items-start gap-2">
-              <span className="text-lg">{isCorrect ? '✅' : '⚠️'}</span>
+              <span className={`text-lg font-bold ${isCorrect ? 'text-green-400' : 'text-amber-400'}`}>{isCorrect ? '✓' : '!'}</span>
               <div className="flex-1">
                 <div className="text-xs font-semibold text-white">
                   Nút #{selectedNodeId} → {CLASS_NAMES[pred] || `Lớp ${pred}`}

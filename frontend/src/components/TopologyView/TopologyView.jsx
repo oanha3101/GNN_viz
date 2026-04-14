@@ -1,5 +1,7 @@
 import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Network, Info, Share2, X } from 'lucide-react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
 import { CLASS_COLORS } from '../../utils/colors'
@@ -28,6 +30,13 @@ export default function TopologyView() {
   const containerRef = useRef()
   const fgRef = useRef()
   const fitPendingRef = useRef(false)
+
+  // Context Menu state
+  const [contextMenu, setContextMenu] = useState(null) // { x, y, nodeId }
+
+  // Tooltip state
+  const [hoveredNode, setHoveredNode] = useState(null)
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
 
   // K-Hop neighborhood state
   const [kHopEnabled, setKHopEnabled] = useState(true)
@@ -114,6 +123,35 @@ export default function TopologyView() {
   }, [graphData])
 
   const activeGraphData = stableGraphData || graphData
+
+  // Context Menu Handlers
+  const handleNodeRightClick = useCallback((node, event) => {
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      nodeId: node.id
+    })
+  }, [])
+
+  const handleCloseContextMenu = useCallback(() => {
+    setContextMenu(null)
+  }, [])
+
+  const handleFocusNode = useCallback((nodeId) => {
+    if (!fgRef.current || !activeGraphData) return
+    const node = activeGraphData.nodes.find(n => n.id === nodeId)
+    if (node) {
+      fgRef.current.centerAt(node.x, node.y, 1000)
+      fgRef.current.zoom(2.5, 1000)
+      setSelectedNode(nodeId)
+    }
+    handleCloseContextMenu()
+  }, [activeGraphData, setSelectedNode])
+
+  const handleToggleKHop = useCallback(() => {
+    setKHopEnabled(prev => !prev)
+    handleCloseContextMenu()
+  }, [])
 
   // Simulation Setup — only run once when graph data is first loaded
   // This stabilizes node positions across epochs by not re-running layout
@@ -228,7 +266,7 @@ export default function TopologyView() {
     return (
       <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-950">
         <div className="text-center animate-pulse">
-          <div className="text-4xl mb-4">🕸️</div>
+          <Network size={40} className="mx-auto mb-4 opacity-40" />
           <p className="text-[10px] font-mono tracking-widest uppercase italic">Dang chuan bi do thi...</p>
         </div>
       </div>
@@ -236,7 +274,12 @@ export default function TopologyView() {
   }
 
   return (
-    <div ref={containerRef} className="w-full h-full relative bg-slate-950 overflow-hidden">
+    <div 
+      ref={containerRef} 
+      className="w-full h-full relative bg-slate-950 overflow-hidden cursor-crosshair"
+      onClick={handleCloseContextMenu}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <ForceGraph2D
         ref={fgRef}
         graphData={activeGraphData}
@@ -244,6 +287,9 @@ export default function TopologyView() {
         height={dimensions.height}
         nodeCanvasObject={nodeCanvasObject}
         nodeCanvasObjectMode={() => 'replace'}
+        onNodeRightClick={handleNodeRightClick}
+        onNodeHover={(node) => setHoveredNode(node)}
+        onMouseMove={(e) => setTooltipPos({ x: e.clientX, y: e.clientY })}
         // Ép vẽ lại bằng cách đưa CEF vào một prop mà thư viện theo dõi
         onRenderFramePre={() => { }}
         linkColor={(link) => {
@@ -337,6 +383,81 @@ export default function TopologyView() {
         backgroundColor="transparent"
         enableNodeDrag={true}
       />
+
+      {/* Custom Tooltip */}
+      <AnimatePresence>
+        {hoveredNode && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed z-[100] pointer-events-none px-3 py-2 rounded-xl border border-slate-700/50 bg-[#020617]/90 backdrop-blur-md shadow-2xl"
+            style={{ left: tooltipPos.x + 15, top: tooltipPos.y + 15 }}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span 
+                className="w-2.5 h-2.5 rounded-full shadow-lg" 
+                style={{ backgroundColor: CLASS_COLORS[groundTruth?.[hoveredNode.id] || 0] }} 
+              />
+              <span className="text-[10px] font-bold text-white uppercase tracking-wider">Node #{hoveredNode.id}</span>
+            </div>
+            <div className="text-[10px] text-slate-400 font-medium">
+              Class: {groundTruth?.[hoveredNode.id] ?? 'Unknown'}
+            </div>
+            {snapshots?.[Math.floor(currentEpochFloat)]?.node_predictions?.[hoveredNode.id] !== undefined && (
+              <div className="text-[10px] text-cyan-400 font-bold mt-1">
+                Pred: {snapshots[Math.floor(currentEpochFloat)].node_predictions[hoveredNode.id]}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Context Menu */}
+      <AnimatePresence>
+        {contextMenu && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed z-[100] w-48 rounded-xl border border-slate-700/50 bg-[#071120]/95 backdrop-blur-xl shadow-2xl overflow-hidden p-1"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-3 py-2 border-b border-slate-800/60 mb-1">
+              <div className="text-[9px] uppercase font-bold text-slate-500 tracking-widest">Node Actions</div>
+            </div>
+            <button
+              onClick={() => handleFocusNode(contextMenu.nodeId)}
+              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-slate-300 hover:text-white hover:bg-cyan-500/20 rounded-lg transition-colors"
+            >
+              <span>🎯</span> Focus & Center
+            </button>
+            <button
+              onClick={() => {
+                setSelectedNode(contextMenu.nodeId)
+                handleCloseContextMenu()
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-slate-300 hover:text-white hover:bg-indigo-500/20 rounded-lg transition-colors"
+            >
+              <Info size={14} /> View Details
+            </button>
+            <button
+              onClick={handleToggleKHop}
+              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-slate-300 hover:text-white hover:bg-purple-500/20 rounded-lg transition-colors"
+            >
+              <Share2 size={14} /> {kHopEnabled ? 'Disable' : 'Enable'} K-Hop
+            </button>
+            <div className="h-px bg-slate-800/60 my-1" />
+            <button
+              onClick={handleCloseContextMenu}
+              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+            >
+              <X size={14} /> Close Menu
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mode Toggles */}
       <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-10 items-end">

@@ -68,12 +68,12 @@ export default function Task2MetricsPanel() {
         <button onClick={() => setViewMode('chart')}
           className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all
             ${viewMode === 'chart' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}>
-          📈 Loss / Acc
+          Loss / Acc
         </button>
         <button onClick={() => setViewMode('heatmap')}
           className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all
             ${viewMode === 'heatmap' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}>
-          🗂 Batch Heatmap
+          Batch Heatmap
         </button>
         {viewMode === 'heatmap' && currentAccuracy && (
           <span className="ml-auto text-[9px] font-mono font-bold text-emerald-400">
@@ -89,14 +89,14 @@ export default function Task2MetricsPanel() {
           <div className="w-full h-full flex flex-col p-3 overflow-auto">
             {numGraphs === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
-                <div className="text-4xl opacity-30">🗂</div>
+                <div className="text-4xl opacity-30">&#8203;</div>
                 <p className="text-center">Bắt đầu huấn luyện Task 2<br/>để xem Batch Accuracy Heatmap</p>
               </div>
             ) : (
               <>
                 {/* Explanation */}
                 <div className="mb-3 rounded-xl border border-slate-800/60 bg-slate-900/50 p-3 text-[9px] text-slate-400 leading-relaxed">
-                  <div className="font-bold text-slate-300 text-[10px] mb-1">🗂 Batch Accuracy Heatmap</div>
+                  <div className="font-bold text-slate-300 text-[10px] mb-1">Batch Accuracy Heatmap</div>
                   Mỗi ô = 1 đồ thị trong batch · <span className="text-green-400">Xanh</span> = dự đoán đúng ·
                   <span className="text-red-400"> Đỏ</span> = sai · Cột = Epoch checkpoint · Hàng = Graph ID
                 </div>

@@ -34,7 +34,7 @@ export default function ModularityMonitor() {
   if (snapshots.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4">
-        <div className="text-3xl mb-3 opacity-40 animate-pulse">🏝️</div>
+        <div className="text-3xl mb-3 opacity-40 animate-pulse">&#8230;</div>
         <p className="text-center">Start training to see<br/>community metrics</p>
       </div>
     )

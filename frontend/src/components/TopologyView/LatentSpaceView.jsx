@@ -182,7 +182,7 @@ export default function LatentSpaceView() {
     return (
       <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs">
         <div className="text-center">
-          <div className="text-3xl mb-2 opacity-40">🌌</div>
+          <div className="text-3xl mb-2 opacity-40">&#8943;</div>
           <p>Latent space will appear during training</p>
         </div>
       </div>

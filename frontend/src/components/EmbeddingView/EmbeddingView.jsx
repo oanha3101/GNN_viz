@@ -427,7 +427,7 @@ export default function EmbeddingView() {
                 ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
                 : 'bg-slate-800/90 text-slate-500 border-slate-700/50'}`}
           >
-            〰️ Trajectory {showTrajectory ? 'ON' : 'OFF'}
+            Trajectory {showTrajectory ? 'ON' : 'OFF'}
           </button>
         </div>
       )}
@@ -444,7 +444,7 @@ export default function EmbeddingView() {
         <div className="absolute inset-0 border-2 border-red-500/60 rounded-lg pointer-events-none animate-pulse z-20">
           <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-red-900/90 text-red-300 
                           text-[10px] font-bold px-3 py-1 rounded-full border border-red-500/50">
-            ⚠️ Embedding Collapse Detected — Variance &lt; 0.5
+            Embedding Collapse Detected — Variance &lt; 0.5
           </div>
         </div>
       )}

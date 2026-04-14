@@ -1,3 +1,4 @@
+import { Brain, Eye, Network, Globe2, BarChart3, MessageSquare } from 'lucide-react'
 import useGNNStore from '../store/useGNNStore'
 
 const MODEL_GUIDES = {
@@ -63,7 +64,7 @@ const TASK_GUIDES = {
   },
 }
 
-function GuideRow({ label, text, tone = 'slate' }) {
+function GuideRow({ label, text, icon: Icon, tone = 'slate' }) {
   const toneClass = {
     slate: 'border-slate-700/40 bg-slate-900/60',
     blue: 'border-blue-500/20 bg-blue-500/8',
@@ -72,7 +73,10 @@ function GuideRow({ label, text, tone = 'slate' }) {
 
   return (
     <div className={`rounded-xl border px-3 py-2 ${toneClass}`}>
-      <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500 mb-1">{label}</div>
+      <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500 mb-1 flex items-center gap-1">
+        {Icon && <Icon size={10} />}
+        {label}
+      </div>
       <p className="text-[11px] leading-5 text-slate-300">{text}</p>
     </div>
   )
@@ -89,7 +93,9 @@ export default function VisualizationGuide() {
     <div className="guide-card p-3 space-y-2.5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.28em] text-cyan-300/80 mb-1">Cách đọc màn hình</div>
+          <div className="text-[9px] uppercase tracking-[0.28em] text-cyan-300/80 mb-1 flex items-center gap-1">
+            <Eye size={10} /> Cách đọc màn hình
+          </div>
           <h3 className="text-sm font-semibold text-white">{taskGuide.title}</h3>
         </div>
         <div className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-1 text-[9px] font-semibold text-cyan-200">
@@ -97,12 +103,12 @@ export default function VisualizationGuide() {
         </div>
       </div>
 
-      <GuideRow label="Cơ chế mô hình" text={modelGuide.summary} tone="blue" />
-      <GuideRow label="Điều nên quan sát" text={modelGuide.signal} tone="emerald" />
-      <GuideRow label="Nút và cạnh" text={taskGuide.topology} />
-      <GuideRow label="Không gian embedding" text={taskGuide.embedding} />
-      <GuideRow label="Chỉ số" text={taskGuide.metrics} />
-      <GuideRow label="Bảng giải thích" text={taskGuide.inspector} />
+      <GuideRow label="Cơ chế mô hình" text={modelGuide.summary} icon={Brain} tone="blue" />
+      <GuideRow label="Điều nên quan sát" text={modelGuide.signal} icon={Eye} tone="emerald" />
+      <GuideRow label="Nút và cạnh" text={taskGuide.topology} icon={Network} />
+      <GuideRow label="Không gian embedding" text={taskGuide.embedding} icon={Globe2} />
+      <GuideRow label="Chỉ số" text={taskGuide.metrics} icon={BarChart3} />
+      <GuideRow label="Bảng giải thích" text={taskGuide.inspector} icon={MessageSquare} />
     </div>
   )
 }

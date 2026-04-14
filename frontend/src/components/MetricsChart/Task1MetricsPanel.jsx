@@ -86,9 +86,9 @@ export default function Task1MetricsPanel() {
   }, [selectedCMCell, snapshots, currentEpochFloat, graphData])
 
   const tabs = [
-    { key: 'chart', label: '📈 Loss / Acc' },
-    { key: 'cm', label: '🔲 Confusion Matrix' },
-    { key: 'oversmooth', label: '🌊 Oversmoothing' },
+    { key: 'chart', label: 'Loss / Acc' },
+    { key: 'cm', label: 'Confusion Matrix' },
+    { key: 'oversmooth', label: 'Oversmoothing' },
   ]
 
   return (
@@ -121,8 +121,26 @@ export default function Task1MetricsPanel() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {viewMode === 'chart' && <MetricsChart />}
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        {viewMode === 'chart' && (
+          <div className="p-3 space-y-4">
+            <div className="h-[200px] bg-slate-900/20 border border-slate-800/40 rounded-lg p-1 overflow-hidden relative">
+              <div className="absolute top-1 left-2 z-10 text-[8px] uppercase font-bold text-slate-600 tracking-widest">Training Dynamics</div>
+              <MetricsChart />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-slate-900/40 p-2 rounded-lg border border-slate-800/60">
+                <div className="text-[7px] uppercase text-slate-500 font-bold mb-0.5">Accuracy</div>
+                <div className="text-lg font-mono font-black text-cyan-400">{accuracy}%</div>
+              </div>
+              <div className="bg-slate-900/40 p-2 rounded-lg border border-slate-800/60">
+                <div className="text-[7px] uppercase text-slate-500 font-bold mb-0.5">Stability</div>
+                <div className="text-lg font-mono font-black text-emerald-400">{(perClassAcc.reduce((a,b)=>a+(parseInt(b)||0),0)/numClasses).toFixed(0)}%</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {viewMode === 'cm' && (
           <div className="w-full h-full overflow-auto p-3 flex flex-col items-center">

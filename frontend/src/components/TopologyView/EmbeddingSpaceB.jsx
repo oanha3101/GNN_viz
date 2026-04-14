@@ -168,7 +168,7 @@ export default function EmbeddingSpaceB() {
     return (
       <div className="w-full h-full flex items-center justify-center text-slate-500">
         <div className="text-center">
-          <div className="text-3xl mb-2 opacity-40 animate-pulse">📐</div>
+          <div className="text-3xl mb-2 opacity-40 animate-pulse">&#8230;</div>
           <p className="text-sm">Embedding sẽ xuất hiện khi huấn luyện</p>
         </div>
       </div>
@@ -224,7 +224,7 @@ export default function EmbeddingSpaceB() {
                 : 'bg-slate-800/90 text-slate-500 border-slate-700/50 hover:text-slate-300'
               }`}
           >
-            {mode === 'pca' ? '📊 PCA' : '🔮 t-SNE'}
+            {mode === 'pca' ? 'PCA' : 't-SNE'}
           </button>
         ))}
         <button
@@ -234,7 +234,7 @@ export default function EmbeddingSpaceB() {
               ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
               : 'bg-slate-800/90 text-slate-500 border-slate-700/50'}`}
         >
-          〰️ Trail
+          Trail
         </button>
       </div>
 
@@ -252,7 +252,7 @@ export default function EmbeddingSpaceB() {
       {sampleIndices && (
         <div className="absolute bottom-2 left-2 bg-slate-900/80 border border-amber-500/30 rounded-lg px-2 py-1 z-10">
           <span className="text-[9px] text-amber-400 font-semibold">
-            ⚡ Showing {sampleIndices.length.toLocaleString()} / {totalNodes.toLocaleString()} nodes
+            Showing {sampleIndices.length.toLocaleString()} / {totalNodes.toLocaleString()} nodes
           </span>
         </div>
       )}

@@ -72,16 +72,17 @@ export default function TaskTopology3() {
 
     const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
     const t = easeInOutCubic(Math.max(0, Math.min(1, currentEpochFloat - epochInt)))
-    
+
     const snapA = snapshots[epochInt]
     const snapB = snapshots[epochInt + 1] || snapA
-    
+
     // Explainability data
     const classifications = snapA?.edge_classifications || []
     const commonNeighbors = snapA?.test_edge_common_neighbors || []
-    
+    const testEdges = taskData?.testEdges || []
+
     // Find index in test edges
-    const testIdx = testEdges.findIndex(te => 
+    const testIdx = testEdges.findIndex(te =>
       (te.source === link.source.id && te.target === link.target.id) ||
       (te.source === link.target.id && te.target === link.source.id)
     )
@@ -96,7 +97,7 @@ export default function TaskTopology3() {
       const isFN = classification?.classification === 'FN'
       const isTP = classification?.classification === 'TP'
       const isTN = classification?.classification === 'TN'
-      
+
       // Error Analysis Mode: highlight FP/FN edges
       if (showErrorsOnly) {
         if (isFP) {
@@ -114,13 +115,13 @@ export default function TaskTopology3() {
         const scoreB = snapB?.edge_scores?.[testIdx] || scoreA
         let score = lerp(scoreA, scoreB, t)
         if (selectedModel === 'SAGE') {
-          const noise = (Math.sin(testIdx * 10 + currentEpochFloat * 8) * 0.05) * (1 - (currentEpochFloat/snapshots.length))
+          const noise = (Math.sin(testIdx * 10 + currentEpochFloat * 8) * 0.05) * (1 - (currentEpochFloat / snapshots.length))
           score = Math.max(0, Math.min(1, score + noise))
         }
         color = getLinkColor(score)
         width = 3 + score * 4
       }
-      
+
       isFuture = !testEdges[testIdx].exists && (showErrorsOnly ? isFP : (snapA?.edge_scores?.[testIdx] || 0) > 0.5)
     }
 
@@ -131,7 +132,7 @@ export default function TaskTopology3() {
     } else {
       ctx.setLineDash([])
     }
-    
+
     ctx.moveTo(link.source.x, link.source.y)
     ctx.lineTo(link.target.x, link.target.y)
     ctx.strokeStyle = color
@@ -213,9 +214,9 @@ export default function TaskTopology3() {
         nodeCanvasObject={(node, ctx, globalScale) => {
           if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
           if (!showNodes) {
-             ctx.beginPath(); ctx.arc(node.x, node.y, 2, 0, 2 * Math.PI);
-             ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fill();
-             return;
+            ctx.beginPath(); ctx.arc(node.x, node.y, 2, 0, 2 * Math.PI);
+            ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fill();
+            return;
           }
           const degree = node.degree || 1
           const r = Math.max(6, Math.sqrt(degree) * 2.5 + 4)
@@ -276,22 +277,22 @@ export default function TaskTopology3() {
           ctx.save();
           // Draw pulsating lines
           const time = performance.now() / 40;
-          
+
           topLinks.forEach(link => {
-             const sNode = nodeMap.get(link.source) || nodeMap.get(String(link.source));
-             const tNode = nodeMap.get(link.target) || nodeMap.get(String(link.target));
-             
-             if (sNode && tNode && sNode.x !== undefined && tNode.x !== undefined) {
-                 ctx.beginPath();
-                 ctx.moveTo(sNode.x, sNode.y);
-                 ctx.lineTo(tNode.x, tNode.y);
-                 // Violet glowing effect based on predicted score
-                 ctx.strokeStyle = `rgba(167, 139, 250, ${link.score * 0.9 + 0.1})`; 
-                 ctx.lineWidth = (1 + link.score * 2.5) / globalScale;
-                 ctx.setLineDash([6 / globalScale, 6 / globalScale]);
-                 ctx.lineDashOffset = -time % 100;
-                 ctx.stroke();
-             }
+            const sNode = nodeMap.get(link.source) || nodeMap.get(String(link.source));
+            const tNode = nodeMap.get(link.target) || nodeMap.get(String(link.target));
+
+            if (sNode && tNode && sNode.x !== undefined && tNode.x !== undefined) {
+              ctx.beginPath();
+              ctx.moveTo(sNode.x, sNode.y);
+              ctx.lineTo(tNode.x, tNode.y);
+              // Violet glowing effect based on predicted score
+              ctx.strokeStyle = `rgba(167, 139, 250, ${link.score * 0.9 + 0.1})`;
+              ctx.lineWidth = (1 + link.score * 2.5) / globalScale;
+              ctx.setLineDash([6 / globalScale, 6 / globalScale]);
+              ctx.lineDashOffset = -time % 100;
+              ctx.stroke();
+            }
           });
           ctx.restore();
         }}
@@ -300,71 +301,71 @@ export default function TaskTopology3() {
         backgroundColor="transparent"
       />
 
-      {/* Top-K predicted links overlay — drawn via postRender */}
+      {/* Top-K predicted links overlay */}
       {showTopK && (() => {
         const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
         const snap = snapshots[epochInt]
         const topLinks = snap?.top_k_links || []
         if (topLinks.length === 0 || !fgRef.current) return null
-        
+
         return (
-          <div className="absolute top-2 left-2 z-20 bg-violet-900/80 backdrop-blur-md rounded-xl px-3 py-1.5 border border-violet-500/30 text-[8px] flex flex-col pointer-events-none">
-            <div className="text-violet-300 font-bold mb-1 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
-              Top-{topLinks.length} Predicted Links
+          <div className="absolute top-2 left-2 z-20 bg-violet-900/80 backdrop-blur-md rounded-lg px-2 py-1 border border-violet-500/30 text-[7px] flex flex-col pointer-events-none">
+            <div className="text-violet-300 font-bold mb-0.5 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+              Top-{topLinks.length} Predictions
             </div>
-            <div className="space-y-0.5 max-h-24 overflow-auto fade-in">
-              {topLinks.slice(0, 6).map((l, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <div className="w-4 h-0.5 bg-violet-400 rounded-full" style={{ opacity: l.score }} />
+            <div className="space-y-0.5 max-h-20 overflow-hidden">
+              {topLinks.slice(0, 4).map((l, i) => (
+                <div key={i} className="flex items-center gap-1">
                   <span className="text-violet-400/80 font-mono">{l.source}↔{l.target}</span>
                   <span className="text-violet-300 font-bold ml-auto">{(l.score * 100).toFixed(0)}%</span>
                 </div>
               ))}
-              {topLinks.length > 6 && <div className="text-violet-600 italic">+{topLinks.length - 6} more...</div>}
             </div>
           </div>
         )
       })()}
 
-      <div className="absolute top-12 left-2 z-20 flex gap-2">
-        <button onClick={() => setShowNodes(!showNodes)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${showNodes ? 'bg-slate-900/80 border-slate-700 text-slate-400' : 'bg-indigo-600/20 border-indigo-500 text-indigo-400'}`}>
-          {showNodes ? '🧬 HIDE' : '👻 SHOW'}
-        </button>
+      <div className="absolute top-2 right-2 z-20 flex flex-col gap-1 items-end">
+        <div className="flex gap-1">
+          <button onClick={() => setShowNodes(!showNodes)}
+            className={`px-2 py-1 rounded-md text-[8px] font-bold border transition-all ${showNodes ? 'bg-slate-900/80 border-slate-700 text-slate-400' : 'bg-indigo-600/20 border-indigo-500 text-indigo-400'}`}>
+            {showNodes ? 'HIDE NODES' : 'SHOW NODES'}
+          </button>
+          <button onClick={() => setShowErrorsOnly(!showErrorsOnly)}
+            className={`px-2 py-1 rounded-md text-[8px] font-bold border transition-all ${showErrorsOnly ? 'bg-red-500/20 border-red-500/40 text-red-400' : 'bg-slate-900/80 border-slate-700 text-slate-500'}`}>
+            ERRORS
+          </button>
+        </div>
         {selectedModel === 'GAT' && (
           <button onClick={() => setShowTriangles(!showTriangles)}
-                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${showTriangles ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-400' : 'bg-slate-900/80 border-slate-700 text-slate-500'}`}>
-            △ {showTriangles ? 'ON' : 'OFF'}
+            className={`px-2 py-1 rounded-md text-[8px] font-bold border transition-all ${showTriangles ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-400' : 'bg-slate-900/80 border-slate-700 text-slate-500'}`}>
+            TRIANGLES: {showTriangles ? 'ON' : 'OFF'}
           </button>
         )}
-        <button onClick={() => setShowErrorsOnly(!showErrorsOnly)}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${showErrorsOnly ? 'bg-red-500/20 border-red-500/40 text-red-400' : 'bg-slate-900/80 border-slate-700 text-slate-500'}`}>
-          🔍 Errors
-        </button>
       </div>
 
-      <div className="absolute bottom-2 right-2 z-10 flex flex-col items-end gap-1.5 w-40">
-        <div className="bg-slate-900/90 backdrop-blur-md rounded-lg px-2.5 py-1.5 border border-slate-700/50 w-full flex justify-between items-center">
-            <span className="text-[8px] text-slate-400 uppercase font-bold tracking-wider">AUC-ROC</span>
-            <span className={`text-sm font-black font-mono leading-none ${auc > 0.85 ? 'text-green-500' : auc > 0.7 ? 'text-yellow-500' : 'text-red-500'}`}>
-                {auc.toFixed(3)}
-            </span>
+      <div className="absolute bottom-2 left-2 z-10 flex flex-col gap-1 w-32 pointer-events-none">
+        <div className="bg-slate-900/90 backdrop-blur-md rounded-lg px-2 py-1 border border-slate-700/50 w-full flex justify-between items-center">
+          <span className="text-[7px] text-slate-500 uppercase font-bold tracking-wider">AUC-ROC</span>
+          <span className={`text-[11px] font-black font-mono leading-none ${auc > 0.85 ? 'text-green-500' : auc > 0.7 ? 'text-yellow-500' : 'text-red-500'}`}>
+            {auc.toFixed(3)}
+          </span>
         </div>
 
-        <div className="bg-slate-900/90 backdrop-blur-md rounded-lg px-2.5 py-1.5 border border-slate-700/50 w-full text-[8px]">
-          <div className="space-y-1">
+        <div className="bg-slate-900/90 backdrop-blur-md rounded-lg px-2 py-1 border border-slate-700/50 w-full text-[7px]">
+          <div className="space-y-0.5">
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5"><div className="w-2.5 h-1 bg-red-600 rounded" /><span className="text-slate-300 font-bold">Positive</span></div>
-                <span className="text-slate-500">&gt; 0.7</span>
+              <div className="flex items-center gap-1"><div className="w-2 h-0.5 bg-red-600 rounded" /><span className="text-slate-400 font-bold">Pos</span></div>
+              <span className="text-slate-600">&gt;0.7</span>
             </div>
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5"><div className="w-2.5 h-1 bg-yellow-500 rounded" /><span className="text-slate-300">Uncertain</span></div>
-                <span className="text-slate-500">0.3-0.7</span>
+              <div className="flex items-center gap-1"><div className="w-2 h-0.5 bg-yellow-500 rounded" /><span className="text-slate-400">Unc</span></div>
+              <span className="text-slate-600">0.3-0.7</span>
             </div>
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5"><div className="w-2.5 h-1 bg-blue-500 rounded" /><span className="text-slate-300">Negative</span></div>
-                <span className="text-slate-500">&lt; 0.3</span>
+              <div className="flex items-center gap-1"><div className="w-2 h-0.5 bg-blue-500 rounded" /><span className="text-slate-400">Neg</span></div>
+              <span className="text-slate-600">&lt;0.3</span>
             </div>
           </div>
         </div>

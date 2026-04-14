@@ -19,7 +19,7 @@ export class ErrorBoundary extends React.Component {
       return (
         <div className="w-full h-full flex items-center justify-center bg-slate-950 p-4">
           <div className="text-center">
-            <div className="text-2xl mb-2">⚠️</div>
+            <div className="text-2xl mb-2 text-amber-400">&#9888;</div>
             <p className="text-sm text-red-400 mb-2">Component Error</p>
             <p className="text-[10px] text-slate-500 max-w-[200px] break-words">
               {this.state.error?.message || 'Unknown error'}

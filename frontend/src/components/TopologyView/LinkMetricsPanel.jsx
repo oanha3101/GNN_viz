@@ -63,7 +63,7 @@ export default function LinkMetricsPanel() {
   if (snapshots.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4">
-        <div className="text-3xl mb-3 opacity-40 animate-pulse">🔗</div>
+        <div className="text-3xl mb-3 opacity-40 animate-pulse">&#8230;</div>
         <p className="text-center">Link prediction metrics<br/>will appear during training</p>
       </div>
     )

@@ -63,7 +63,7 @@ export default function Task5NodeInspector() {
   if (selectedNodeId === null || !snap) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-slate-500 text-sm p-4 text-center">
-        <div className="text-3xl mb-3 opacity-60">🔎</div>
+        <div className="text-3xl mb-3 opacity-60">&#128269;</div>
         <p className="leading-relaxed">Bấm vào bất kỳ Nút nào ở đồ thị để<br/>xem chi tiết Đặc trưng Cấu trúc</p>
       </div>
     )
@@ -95,7 +95,7 @@ export default function Task5NodeInspector() {
           <button
             onClick={() => setSelectedNode(null)}
             className="w-5 h-5 flex items-center justify-center rounded bg-slate-800 text-slate-500 hover:text-slate-300 hover:bg-slate-700 text-xs transition-all"
-          >✕</button>
+          >&#10005;</button>
         </div>
 
         {/* Info Grid */}
@@ -123,7 +123,7 @@ export default function Task5NodeInspector() {
         {/* Structural Comparison */}
         <div className="mt-4 pt-4 border-t border-slate-800/50 space-y-4">
           <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-widest px-1 flex items-center gap-1.5">
-            <span className="text-blue-400">📊</span> So sánh Lân cận
+            <span className="text-blue-400">&#9776;</span> So sánh Lân cận
           </h4>
           
           <div className="space-y-4">

@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import * as XLSX from 'xlsx'
+import { Network, BarChart3, Link2, Users, Globe2, Dna, Upload, X, CheckCircle2, Sparkles, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'
 import useGNNStore from '../../store/useGNNStore'
 
 const TASKS = [
-  { id: 1, name: 'Node Classification', icon: '🔵', desc: 'Predict labels for nodes (e.g. user roles)', needsGraph: false },
-  { id: 2, name: 'Graph Classification', icon: '📊', desc: 'Predict labels for entire graphs (e.g. molecules)', needsGraph: true },
-  { id: 3, name: 'Link Prediction', icon: '🔗', desc: 'Predict future or missing edges (e.g. recommendations)', needsGraph: false },
-  { id: 4, name: 'Community Detection', icon: '🏘️', desc: 'Find clusters of nodes (Unsupervised)', needsGraph: false },
-  { id: 5, name: 'Graph Embedding', icon: '🌌', desc: 'Learn node representations (Unsupervised)', needsGraph: false },
-  { id: 6, name: 'Graph Generation', icon: '🧬', desc: 'Learn to generate new graph structures', needsGraph: true },
+  { id: 1, name: 'Node Classification', Icon: Network, desc: 'Predict labels for nodes (e.g. user roles)', needsGraph: false },
+  { id: 2, name: 'Graph Classification', Icon: BarChart3, desc: 'Predict labels for entire graphs (e.g. molecules)', needsGraph: true },
+  { id: 3, name: 'Link Prediction', Icon: Link2, desc: 'Predict future or missing edges (e.g. recommendations)', needsGraph: false },
+  { id: 4, name: 'Community Detection', Icon: Users, desc: 'Find clusters of nodes (Unsupervised)', needsGraph: false },
+  { id: 5, name: 'Graph Embedding', Icon: Globe2, desc: 'Learn node representations (Unsupervised)', needsGraph: false },
+  { id: 6, name: 'Graph Generation', Icon: Dna, desc: 'Learn to generate new graph structures', needsGraph: true },
 ]
 
 export default function DataInputView({ onClose }) {
@@ -187,15 +188,15 @@ export default function DataInputView({ onClose }) {
     <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-8 text-slate-200 font-sans">
       <div className="w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col h-[85vh]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+         <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-              Custom Dataset Configuration
+            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent flex items-center gap-2">
+              <Upload size={20} /> Custom Dataset Configuration
             </h2>
             <p className="text-sm text-slate-400">Map your own nodes and edges to train a GNN model.</p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
-            ✕
+            <X size={16} />
           </button>
         </div>
 
@@ -234,7 +235,7 @@ export default function DataInputView({ onClose }) {
                       
                       {data.length > 0 && (
                         <div className="absolute inset-x-0 bottom-0 bg-green-900/40 backdrop-blur border-t border-green-500/30 p-2 transform translate-y-0 transition-transform">
-                          <span className="text-green-400 text-xs font-bold">✓ Loaded {data.length} rows</span>
+                          <span className="text-green-400 text-xs font-bold flex items-center gap-1"><CheckCircle2 size={12} /> Loaded {data.length} rows</span>
                         </div>
                       )}
                     </div>
@@ -294,7 +295,7 @@ export default function DataInputView({ onClose }) {
                       : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'
                   }`}
                 >
-                  <div className="text-3xl mb-2">{t.icon}</div>
+                  <t.Icon size={28} className={`mb-2 ${task === t.id ? 'text-blue-400' : 'text-slate-500'}`} />
                   <h3 className="font-bold text-slate-200">{t.name}</h3>
                   <p className="text-xs text-slate-400 mt-1 leading-relaxed">{t.desc}</p>
                 </button>
@@ -305,7 +306,7 @@ export default function DataInputView({ onClose }) {
           {step === 3 && (
             <div className="space-y-6">
               <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-4 flex items-center gap-3">
-                <span className="text-2xl">✨</span>
+                <Sparkles size={24} className="text-indigo-300 shrink-0" />
                 <div>
                   <h4 className="text-sm font-bold text-indigo-300">Auto-Detected Mapping</h4>
                   <p className="text-xs text-indigo-200/70">Please review the detected columns before submitting.</p>
@@ -398,7 +399,7 @@ export default function DataInputView({ onClose }) {
             className="px-5 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white"
             onClick={() => step > 1 ? setStep(s => s-1) : onClose()}
           >
-            {step > 1 ? '← Back' : 'Cancel'}
+            {step > 1 ? <><ArrowLeft size={12} /> Back</> : 'Cancel'}
           </button>
           
           <button 
@@ -414,7 +415,7 @@ export default function DataInputView({ onClose }) {
             }}
             disabled={loading}
           >
-            {loading ? 'Processing...' : step === 3 ? 'Confirm & Load Data' : 'Continue →'}
+            {loading ? <><Loader2 size={12} className="animate-spin" /> Processing...</> : step === 3 ? 'Confirm & Load Data' : <>Continue <ArrowRight size={12} /></>}
           </button>
         </div>
       </div>

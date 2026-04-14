@@ -1,9 +1,20 @@
 export function drawTask1Node(node, ctx, globalScale, config) {
-  const { currentEpochFloat, totalEpochs, selectedModel, isSelected, isHovered } = config
-  const size = Math.sqrt(node.degree || 1) * 2.5 + 3
+  const { currentEpochFloat, totalEpochs, selectedModel, isSelected, isHovered, kHopInfo } = config
+  const size = Math.sqrt(node.degree || 1) * 2.8 + 4
   
   let drawX = node.x
   let drawY = node.y
+
+  // 0. Cyber-Science Base Glow (Global)
+  const baseGlowAlpha = isSelected ? 0.3 : 0.08
+  const gradient = ctx.createRadialGradient(drawX, drawY, size * 0.5, drawX, drawY, size * 2.2)
+  const nodeBaseColor = node.color || '#94a3b8'
+  gradient.addColorStop(0, `${nodeBaseColor}44`)
+  gradient.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.beginPath()
+  ctx.arc(drawX, drawY, size * 2.2, 0, 2 * Math.PI)
+  ctx.fillStyle = gradient
+  ctx.fill()
 
   // 1. SAGE Jitter & Inductive Discovery Effect
   if (selectedModel === 'SAGE') {
@@ -38,15 +49,22 @@ export function drawTask1Node(node, ctx, globalScale, config) {
      drawY += Math.cos(currentEpochFloat * 12 + node.id * 3.1) * jitterScale
   }
 
-  // 2. Selection Glow
+  // 2. Selection Glow & Pulse
   if (isSelected) {
+    const pulse = Math.sin(Date.now() / 250) * 2 + 3
+    ctx.beginPath()
+    ctx.arc(drawX, drawY, size + 5 + pulse, 0, 2 * Math.PI)
+    ctx.strokeStyle = '#22d3ee'
+    ctx.lineWidth = 2 / globalScale
+    ctx.setLineDash([4, 4])
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    // Inner selection circle
     ctx.beginPath()
     ctx.arc(drawX, drawY, size + 4, 0, 2 * Math.PI)
-    ctx.fillStyle = 'rgba(99,102,241,0.25)'
+    ctx.fillStyle = 'rgba(34, 211, 238, 0.2)'
     ctx.fill()
-    ctx.strokeStyle = '#6366f1'
-    ctx.lineWidth = 2 / globalScale
-    ctx.stroke()
   }
 
   // 3. GCN Wave Effect (Message passing ripples from labeled nodes)
@@ -88,12 +106,17 @@ export function drawTask1Node(node, ctx, globalScale, config) {
   }
 
   // 6b. Node ID label (always visible, inside the circle)
-  const fontSize = Math.max(6, Math.min(size * 0.9, 10 / Math.sqrt(globalScale)))
-  ctx.font = `bold ${fontSize}px monospace`
+  const fontSize = Math.max(7, Math.min(size * 0.85, 12 / Math.sqrt(globalScale)))
+  ctx.font = `bold ${fontSize}px "JetBrains Mono", "Fira Code", monospace`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillStyle = '#fff'
+  
+  // Subtle text shadow for better readability
+  ctx.shadowColor = 'rgba(0,0,0,0.6)'
+  ctx.shadowBlur = 4
   ctx.fillText(`${node.id}`, drawX, drawY)
+  ctx.shadowBlur = 0
 
   // 7. Hover/Select Label
   if (isHovered || isSelected) {

@@ -1,22 +1,6 @@
 import { useRef, useCallback } from 'react'
+import { SkipBack, SkipForward, Rewind, FastForward, Play, Pause, Star } from 'lucide-react'
 import usePlayerStore from '../store/playerStore'
-
-function IconButton({ children, onClick, title, disabled = false, primary = false }) {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      disabled={disabled}
-      className={`flex h-9 w-9 items-center justify-center rounded-xl text-sm transition-all ${
-        primary
-          ? 'bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-500/25 hover:bg-cyan-300'
-          : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
-      } disabled:cursor-not-allowed disabled:opacity-35`}
-    >
-      {children}
-    </button>
-  )
-}
 
 export default function PlayerV2() {
   const {
@@ -69,7 +53,7 @@ export default function PlayerV2() {
   }, [])
 
   return (
-    <div className="border-t border-slate-800/80 bg-slate-950/92 px-4 py-2.5 backdrop-blur-md">
+    <div className="flex flex-col gap-1.5 py-1">
       {/* Interactive scrubber track */}
       <div
         ref={trackRef}
@@ -77,7 +61,7 @@ export default function PlayerV2() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
-        className={`relative mb-2.5 h-2.5 rounded-full bg-slate-800 ${disabled ? 'opacity-40' : 'cursor-pointer group'}`}
+        className={`relative h-1.5 rounded-full bg-slate-800/60 ${disabled ? 'opacity-30' : 'cursor-pointer group hover:h-2 transition-all'}`}
         style={{ touchAction: 'none' }}
       >
         {/* Fill bar */}
@@ -87,50 +71,72 @@ export default function PlayerV2() {
         />
         {/* Thumb */}
         <div
-          className={`absolute top-1/2 h-4.5 w-4.5 -translate-y-1/2 rounded-full border-2 border-white/80 bg-white shadow-[0_0_14px_rgba(96,165,250,0.7)] transition-transform ${
-            disabled ? '' : 'group-hover:scale-125'
+          className={`absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 border-white/90 bg-cyan-500 shadow-[0_0_10px_rgba(34,211,238,0.5)] transition-transform ${
+            disabled ? 'hidden' : 'scale-0 group-hover:scale-100'
           }`}
-          style={{ left: `calc(${fillPct}% - 9px)` }}
+          style={{ left: `calc(${fillPct}% - 7px)` }}
         />
         {/* Best epoch marker */}
         {trainingDone && totalEpochs > 1 && (
           <div
-            className="absolute top-full mt-0.5 text-[10px] text-yellow-300 pointer-events-none"
-            style={{ left: `calc(${bestPct}% - 5px)` }}
-            title={`Epoch tốt nhất: ${bestEpoch}`}
+            className="absolute -top-3.5 pointer-events-none drop-shadow-lg"
+            style={{ left: `calc(${bestPct}% - 6px)` }}
+            title={`Best Epoch: ${bestEpoch}`}
           >
-            ★
+            <Star size={12} className="text-yellow-400 fill-yellow-400" />
           </div>
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
-          <IconButton onClick={() => seekTo(0)} title="Về đầu" disabled={disabled}>⏮</IconButton>
-          <IconButton onClick={stepBack} title="Lùi 1 bước" disabled={disabled}>⏪</IconButton>
-          <IconButton onClick={isPlaying ? pause : play} title={isPlaying ? 'Tạm dừng' : 'Phát'} disabled={disabled} primary>
-            {isPlaying ? '⏸' : '▶'}
-          </IconButton>
-          <IconButton onClick={stepForward} title="Tiến 1 bước" disabled={disabled}>⏩</IconButton>
-          <IconButton onClick={() => seekTo(maxFloat)} title="Về cuối" disabled={disabled}>⏭</IconButton>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <button onClick={() => seekTo(0)} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
+            <SkipBack size={14} />
+          </button>
+          <button onClick={stepBack} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
+            <Rewind size={14} />
+          </button>
+          <button
+            onClick={isPlaying ? pause : play}
+            disabled={disabled}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-30 transition-all shadow-lg shadow-cyan-500/10"
+          >
+            {isPlaying ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
+          </button>
+          <button onClick={stepForward} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
+            <FastForward size={14} />
+          </button>
+          <button onClick={() => seekTo(maxFloat)} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
+            <SkipForward size={14} />
+          </button>
 
-          <div className="ml-2 rounded-lg border border-slate-700/50 bg-slate-900/70 px-2.5 py-1.5 text-[11px] text-slate-300">
-            Epoch: <span className="font-mono text-cyan-300">{currentEpochFloat.toFixed(1)}</span>
-          </div>
-          <div className="rounded-lg border border-slate-700/50 bg-slate-900/70 px-2.5 py-1.5 text-[11px] text-slate-300">
-            Tổng: <span className="font-mono text-slate-100">{snapshots.length}</span>
+          <div className="ml-4 flex items-center gap-3">
+            <div className="flex flex-col">
+              <span className="text-[8px] uppercase text-slate-500 font-bold">Current</span>
+              <span className="text-[11px] font-mono text-cyan-400 font-bold">{currentEpochFloat.toFixed(1)}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[8px] uppercase text-slate-500 font-bold">Total</span>
+              <span className="text-[11px] font-mono text-slate-300">{snapshots.length}</span>
+            </div>
+            {trainingDone && (
+               <div className="flex flex-col">
+                <span className="text-[8px] uppercase text-yellow-600 font-bold flex items-center gap-0.5"><Star size={8} className="fill-yellow-600" /> Best</span>
+                <span className="text-[11px] font-mono text-yellow-400 font-bold">{bestEpoch}</span>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-1 rounded-xl border border-slate-700/50 bg-slate-900/65 p-0.5">
-          {[0.25, 0.5, 1, 2, 4].map((speed) => (
+        <div className="flex items-center gap-1 bg-slate-900/40 p-1 rounded-lg border border-slate-800/60">
+          {[0.5, 1, 2, 4].map((speed) => (
             <button
               key={speed}
               onClick={() => setSpeed(speed)}
               disabled={disabled}
-              className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all ${
-                playbackSpeed === speed ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-              } disabled:opacity-40`}
+              className={`px-2.5 py-1 rounded-md text-[9px] font-bold transition-all ${
+                playbackSpeed === speed ? 'bg-slate-800 text-cyan-400' : 'text-slate-500 hover:text-slate-300'
+              } disabled:opacity-30`}
             >
               {speed}x
             </button>

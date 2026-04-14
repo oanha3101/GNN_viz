@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { Maximize2, X } from 'lucide-react'
 
 /**
  * FloatPanel — Wrapper that lets any inline panel expand into a floating overlay.
@@ -9,8 +10,8 @@ import { createPortal } from 'react-dom'
  *     <MyChart />
  *   </FloatPanel>
  *
- * When NOT expanded: renders children inline with a small ⤢ button top-right.
- * When expanded: renders children in a full-viewport overlay portal (80vw × 80vh).
+ * When NOT expanded: renders children inline with a small expand button top-right.
+ * When expanded: renders children in a full-viewport overlay portal (84vw × 84vh).
  */
 export default function FloatPanel({ title = '', children, className = '' }) {
   const [expanded, setExpanded] = useState(false)
@@ -34,7 +35,7 @@ export default function FloatPanel({ title = '', children, className = '' }) {
       className={`
         absolute top-2 right-2 z-30
         w-6 h-6 flex items-center justify-center
-        rounded-md text-[11px] font-bold
+        rounded-md
         border border-slate-700/60 backdrop-blur-sm
         transition-all duration-150
         ${expanded
@@ -43,7 +44,7 @@ export default function FloatPanel({ title = '', children, className = '' }) {
         }
       `}
     >
-      {expanded ? '✕' : '⤢'}
+      {expanded ? <X size={12} /> : <Maximize2 size={12} />}
     </button>
   )
 
@@ -73,12 +74,12 @@ export default function FloatPanel({ title = '', children, className = '' }) {
             {title}
           </span>
           <div className="flex items-center gap-2">
-            <span className="text-[9px] text-slate-600 italic">ESC hoặc bấm ✕ để thu nhỏ</span>
+            <span className="text-[9px] text-slate-600 italic">ESC hoặc bấm để thu nhỏ</span>
             <button
               onClick={toggle}
-              className="px-3 py-1 rounded-lg text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/50 transition-all"
+              className="px-3 py-1 rounded-lg text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/50 transition-all flex items-center gap-1.5"
             >
-              ✕ Thu nhỏ
+              <X size={10} /> Thu nhỏ
             </button>
           </div>
         </div>
@@ -97,7 +98,7 @@ export default function FloatPanel({ title = '', children, className = '' }) {
       <div className={`relative w-full h-full ${className}`}>
         {expandBtn}
         <div className="w-full h-full flex items-center justify-center text-slate-700 text-xs pointer-events-none select-none">
-          <span className="italic opacity-60">Panel đang mở rộng ↗</span>
+          <span className="italic opacity-60">Panel đang mở rộng</span>
         </div>
       </div>
       {createPortal(overlay, document.body)}

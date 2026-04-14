@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
+import { Play, Square, Loader2 } from 'lucide-react'
 import useGNNStore from '../store/useGNNStore'
 import usePlayerStore from '../store/playerStore'
 import {
@@ -192,42 +193,56 @@ export default function TrainingControlsV2() {
   }, [setTraining, trainingProgress])
 
   return (
-    <div className="border-t border-slate-800/70 bg-slate-950/92 px-4 py-3 backdrop-blur-md">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
         <button
           onClick={isTraining ? handleStop : handleStart}
-          className={`rounded-2xl px-4 py-2 text-sm font-semibold transition-all ${
+          className={`flex-1 rounded-xl px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 ${
             isTraining
-              ? 'bg-red-500 text-white hover:bg-red-400'
-              : 'bg-cyan-400 text-slate-950 hover:bg-cyan-300'
+              ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
+              : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-cyan-500/20'
           }`}
         >
-          {isTraining ? 'Dừng huấn luyện' : `Huấn luyện ${TASK_NAMES[selectedTask]}`}
+          {isTraining ? (
+            <>
+              <Square size={12} /> Stop Training
+            </>
+          ) : (
+            <>
+              <Play size={12} /> Run {TASK_NAMES[selectedTask]}
+            </>
+          )}
         </button>
+      </div>
 
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-700/50 bg-slate-900/65 px-3 py-2 text-xs text-slate-300">
-          <span>Epoch: <span className="font-mono text-slate-100">{hyperparams.epochs}</span></span>
-          <span>LR: <span className="font-mono text-slate-100">{hyperparams.lr}</span></span>
-          <span>Ẩn: <span className="font-mono text-slate-100">{hyperparams.hidden}</span></span>
-        </div>
-
-        {isTraining && (
-          <div className="flex flex-1 items-center gap-3">
-            <div className="h-2 flex-1 rounded-full bg-slate-800">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500"
-                style={{ width: `${trainingProgress * 100}%` }}
-              />
-            </div>
-            <span className="text-xs text-slate-400">
-              {mockMode ? 'Đang dựng dữ liệu mô phỏng...' : `${Math.round(trainingProgress * 100)}%`}
-            </span>
+      <div className="flex items-center gap-2">
+        {isTraining ? (
+          <div className="flex-1 flex flex-col gap-1">
+             <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 transition-[width] duration-150"
+                  style={{ width: `${trainingProgress * 100}%` }}
+                />
+              </div>
+              <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-tighter">
+                <span className="text-slate-500 flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Progress</span>
+                <span className="text-cyan-400 font-mono">{Math.round(trainingProgress * 100)}%</span>
+              </div>
           </div>
-        )}
-
-        {!isTraining && playerSnapshots.length > 0 && (
-          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
-            ✅ Đã lưu & sẵn sàng phát lại {playerSnapshots.length} epoch
+        ) : (
+          <div className="flex-1 flex items-center justify-between px-3 py-1.5 rounded-lg border border-slate-800/60 bg-slate-900/30">
+            <div className="flex flex-col">
+              <span className="text-[8px] uppercase text-slate-500 font-bold">Epochs</span>
+              <span className="text-[10px] font-mono text-slate-300">{hyperparams.epochs}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[8px] uppercase text-slate-500 font-bold">LR</span>
+              <span className="text-[10px] font-mono text-slate-300">{hyperparams.lr}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[8px] uppercase text-slate-500 font-bold">Hidden</span>
+              <span className="text-[10px] font-mono text-slate-300">{hyperparams.hidden}</span>
+            </div>
           </div>
         )}
       </div>

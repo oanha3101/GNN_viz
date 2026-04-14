@@ -104,7 +104,7 @@ export default function TaskTopology6() {
     return (
       <div className="w-full h-full flex items-center justify-center text-slate-600 bg-slate-950">
         <div className="text-center animate-pulse">
-          <div className="text-5xl mb-4 opacity-20">🧬</div>
+          <div className="text-5xl mb-4 opacity-20">&#9888;</div>
           <p className="text-xs font-black uppercase tracking-[0.2em]">Awaiting Latent Formation</p>
         </div>
       </div>

@@ -4,6 +4,7 @@
  * and visually replay past training sessions.
  */
 import { useState, useEffect, useCallback } from 'react'
+import { X, RefreshCw, Trash2, Play, AlertTriangle, Loader2, FolderOpen, Network, BarChart3, Link2, Users, Globe2, Dna } from 'lucide-react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
 
@@ -19,7 +20,7 @@ const TASK_NAMES = {
 }
 
 const TASK_ICONS = {
-  1: '🔵', 2: '📊', 3: '🔗', 4: '🏘️', 5: '🌌', 6: '🧬',
+  1: Network, 2: BarChart3, 3: Link2, 4: Users, 5: Globe2, 6: Dna,
 }
 
 export default function ProjectLibrary({ isOpen, onClose }) {
@@ -162,8 +163,8 @@ export default function ProjectLibrary({ isOpen, onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800/70 px-6 py-5">
           <div>
-            <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80 mb-1">
-              Thư viện huấn luyện
+            <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80 mb-1 flex items-center gap-1.5">
+              <FolderOpen size={12} /> Thư viện huấn luyện
             </div>
             <h2 className="text-xl font-semibold text-white">
               Lịch sử thí nghiệm
@@ -174,9 +175,9 @@ export default function ProjectLibrary({ isOpen, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="rounded-xl border border-slate-700/40 bg-slate-900/70 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800/80 transition-colors"
+            className="rounded-xl border border-slate-700/40 bg-slate-900/70 p-2.5 text-slate-300 hover:bg-slate-800/80 transition-colors"
           >
-            Đóng
+            <X size={16} />
           </button>
         </div>
 
@@ -192,108 +193,114 @@ export default function ProjectLibrary({ isOpen, onClose }) {
           >
             Tất cả
           </button>
-          {[1, 2, 3, 4, 5, 6].map(t => (
-            <button
-              key={t}
-              onClick={() => setFilterTask(t)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
-                filterTask === t
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
-                  : 'bg-slate-800/60 text-slate-400 border border-slate-700/40 hover:border-slate-600'
-              }`}
-            >
-              {TASK_ICONS[t]} Task {t}
-            </button>
-          ))}
+          {[1, 2, 3, 4, 5, 6].map(t => {
+            const TaskIcon = TASK_ICONS[t]
+            return (
+              <button
+                key={t}
+                onClick={() => setFilterTask(t)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  filterTask === t
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
+                    : 'bg-slate-800/60 text-slate-400 border border-slate-700/40 hover:border-slate-600'
+                }`}
+              >
+                <TaskIcon size={12} /> Task {t}
+              </button>
+            )
+          })}
         </div>
 
         {/* Experiments List */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+              <Loader2 size={32} className="animate-spin text-cyan-400/30" />
             </div>
           ) : experiments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-              <div className="text-5xl mb-4">📂</div>
+              <FolderOpen size={48} className="mb-4 opacity-30" />
               <p className="text-lg font-medium">Chưa có thí nghiệm nào</p>
               <p className="text-sm mt-1">Hãy huấn luyện mô hình và dữ liệu sẽ được tự động lưu tại đây.</p>
             </div>
           ) : (
-            experiments.map(exp => (
-              <div
-                key={exp.id}
-                className="group relative flex items-center gap-4 rounded-2xl border border-slate-700/40 bg-slate-900/50 p-4 hover:border-cyan-500/30 hover:bg-slate-800/50 transition-all cursor-pointer"
-                onClick={() => handleLoadExperiment(exp.id)}
-              >
-                {/* Task Icon */}
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-slate-800/80 flex items-center justify-center text-2xl">
-                  {TASK_ICONS[exp.task_type] || '🔵'}
-                </div>
+            experiments.map(exp => {
+              const TaskIcon = TASK_ICONS[exp.task_type] || Network
+              return (
+                <div
+                  key={exp.id}
+                  className="group relative flex items-center gap-4 rounded-2xl border border-slate-700/40 bg-slate-900/50 p-4 hover:border-cyan-500/30 hover:bg-slate-800/50 transition-all cursor-pointer"
+                  onClick={() => handleLoadExperiment(exp.id)}
+                >
+                  {/* Task Icon */}
+                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-slate-800/80 flex items-center justify-center">
+                    <TaskIcon size={22} className="text-slate-400" />
+                  </div>
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-white truncate">
-                      {TASK_NAMES[exp.task_type] || `Task ${exp.task_type}`}
-                    </h3>
-                    <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-medium">
-                      {exp.model_type}
-                    </span>
-                    {exp.is_mock && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-medium">
-                        Mock
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-white truncate">
+                        {TASK_NAMES[exp.task_type] || `Task ${exp.task_type}`}
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-medium">
+                        {exp.model_type}
                       </span>
+                      {exp.is_mock && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-medium">
+                          Mock
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 mt-1.5 text-[11px] text-slate-400">
+                      <span>{exp.dataset_name}</span>
+                      <span>{exp.epoch_count} epochs</span>
+                      <span>{(exp.accuracy * 100).toFixed(1)}% acc</span>
+                      <span>{exp.loss.toFixed(3)} loss</span>
+                    </div>
+                  </div>
+
+                  {/* Date & Actions */}
+                  <div className="flex-shrink-0 flex items-center gap-2">
+                    <span className="text-[10px] text-slate-500">
+                      {new Date(exp.created_at).toLocaleDateString('vi-VN', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </span>
+
+                    {loadingId === exp.id ? (
+                      <Loader2 size={20} className="animate-spin text-cyan-400" />
+                    ) : (
+                      <>
+                        <button
+                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 transition-all"
+                          onClick={(e) => { e.stopPropagation(); handleLoadExperiment(exp.id) }}
+                          title="Tải lại"
+                        >
+                          <Play size={12} />
+                        </button>
+                        <button
+                          className="p-1.5 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (deleteConfirm === exp.id) {
+                              handleDelete(exp.id)
+                            } else {
+                              setDeleteConfirm(exp.id)
+                              setTimeout(() => setDeleteConfirm(null), 3000)
+                            }
+                          }}
+                          title={deleteConfirm === exp.id ? "Bấm lần nữa để xoá" : "Xoá"}
+                        >
+                          {deleteConfirm === exp.id ? <AlertTriangle size={12} /> : <Trash2 size={12} />}
+                        </button>
+                      </>
                     )}
                   </div>
-                  <div className="flex items-center gap-4 mt-1.5 text-[11px] text-slate-400">
-                    <span>📊 {exp.dataset_name}</span>
-                    <span>🔄 {exp.epoch_count} epochs</span>
-                    <span>📈 {(exp.accuracy * 100).toFixed(1)}% acc</span>
-                    <span>📉 {exp.loss.toFixed(3)} loss</span>
-                  </div>
                 </div>
-
-                {/* Date & Actions */}
-                <div className="flex-shrink-0 flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500">
-                    {new Date(exp.created_at).toLocaleDateString('vi-VN', {
-                      day: '2-digit', month: '2-digit', year: 'numeric',
-                      hour: '2-digit', minute: '2-digit',
-                    })}
-                  </span>
-
-                  {loadingId === exp.id ? (
-                    <div className="w-6 h-6 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <button
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 text-xs hover:bg-cyan-500/30 transition-all"
-                        onClick={(e) => { e.stopPropagation(); handleLoadExperiment(exp.id) }}
-                        title="Tải lại"
-                      >
-                        ▶
-                      </button>
-                      <button
-                        className="p-1.5 rounded-lg bg-red-500/20 text-red-300 text-xs hover:bg-red-500/30 transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (deleteConfirm === exp.id) {
-                            handleDelete(exp.id)
-                          } else {
-                            setDeleteConfirm(exp.id)
-                            setTimeout(() => setDeleteConfirm(null), 3000)
-                          }
-                        }}
-                        title={deleteConfirm === exp.id ? "Bấm lần nữa để xoá" : "Xoá"}
-                      >
-                        {deleteConfirm === exp.id ? '⚠' : '🗑'}
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
 
@@ -306,14 +313,14 @@ export default function ProjectLibrary({ isOpen, onClose }) {
                 onClick={handleDeleteAll}
                 className="flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors font-medium"
               >
-                🗑 Xoá tất cả
+                <Trash2 size={12} /> Xoá tất cả
               </button>
             )}
             <button
               onClick={fetchExperiments}
               className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
             >
-              🔄 Làm mới
+              <RefreshCw size={12} /> Làm mới
             </button>
           </div>
         </div>

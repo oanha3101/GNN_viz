@@ -1,9 +1,9 @@
 import useGNNStore from '../store/useGNNStore'
 
 const MODELS = [
-  { id: 'GCN', label: 'GCN' },
-  { id: 'GAT', label: 'GAT' },
-  { id: 'SAGE', label: 'GraphSAGE' },
+  { id: 'GCN', label: 'GCN', color: '#3b82f6' },
+  { id: 'GAT', label: 'GAT', color: '#22c55e' },
+  { id: 'SAGE', label: 'GraphSAGE', color: '#f97316' },
 ]
 
 export default function ModelSelectorV2() {
@@ -18,11 +18,15 @@ export default function ModelSelectorV2() {
           <button
             key={model.id}
             onClick={() => setModel(model.id)}
-            className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
+            className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 ${
               active
-                ? 'bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-500/20'
+                ? 'text-slate-950 shadow-lg'
                 : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
             }`}
+            style={active ? {
+              backgroundColor: model.color,
+              boxShadow: `0 4px 15px ${model.color}33`,
+            } : {}}
           >
             {model.label}
           </button>
