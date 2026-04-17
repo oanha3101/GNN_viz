@@ -8,37 +8,50 @@ const GRAPH_LABELS = ['Dense', 'Sparse']
 
 export default function ReadoutMonitor() {
   const hoveredGraphId = useGNNStore((s) => s.hoveredGraphId)
+  const setHoveredGraph = useGNNStore((s) => s.setHoveredGraph)
   const selectedNodeId = useGNNStore((s) => s.selectedNodeId)
   const taskData = useGNNStore((s) => s.taskData)
-  
+
   // Use playerStore for synchronized animation state
   const { snapshots, currentEpochFloat } = usePlayerStore()
-  
-  // Support both hover and click selections
-  const activeGraphId = hoveredGraphId !== null ? hoveredGraphId : selectedNodeId
-  
+
+  const [isPinned, setIsPinned] = useState(false)
+  const [pinnedGraphId, setPinnedGraphId] = useState(null)
+
+  // Prioritize: pinned > hover > select
+  const activeGraphId = isPinned && pinnedGraphId !== null 
+    ? pinnedGraphId 
+    : (hoveredGraphId !== null ? hoveredGraphId : selectedNodeId)
+
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
   const t = easeInOutCubic(Math.max(0, Math.min(1, currentEpochFloat - epochInt)))
   const snapA = snapshots[epochInt]
   const snapB = snapshots[epochInt + 1] || snapA
-  
+
   const currSnap = useMemo(() => {
     if (!snapA) return null
     return interpolateSnapshots(snapA, snapB, t)
   }, [snapA, snapB, t])
 
   const fgRef = useRef(null)
-  
+
   const graph = useMemo(() => {
     if (activeGraphId === null || !taskData?.graphs) return null
     const g = taskData.graphs[activeGraphId]
     if (!g) return null
+    
+    // Auto-pin on first hover if not pinned
+    if (!isPinned && hoveredGraphId !== null && hoveredGraphId === activeGraphId) {
+      setPinnedGraphId(activeGraphId)
+      setIsPinned(true)
+    }
+    
     return {
       ...g,
       nodes: g.nodes.map(n => ({ ...n })),
       links: g.links.map(l => ({ ...l }))
     }
-  }, [activeGraphId, taskData])
+  }, [activeGraphId, taskData, isPinned, hoveredGraphId])
 
   const containerRef = useRef(null)
   const [dim, setDim] = useState({ w: 200, h: 150 })
@@ -73,7 +86,7 @@ export default function ReadoutMonitor() {
       <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4 bg-slate-950">
         <div className="text-3xl mb-3 opacity-40 animate-pulse">📡</div>
         <p className="text-center leading-relaxed">
-          Hover a point in Embedding Space<br/>to analyze GNN Readout focus
+          Hover a point in Embedding Space<br />to analyze GNN Readout focus
         </p>
       </div>
     )
@@ -90,10 +103,30 @@ export default function ReadoutMonitor() {
     <div className="h-full flex flex-col p-3 text-xs w-full relative bg-slate-950">
       <div className="mb-3 space-y-1.5 z-10">
         <div className="flex items-center justify-between">
-          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-tighter">Readout Analysis</h3>
-          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${isCorrect ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-            {isCorrect ? '✓ MATCHED' : '✗ FAULT'}
-          </span>
+          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-tighter">🔥 Attention Weight Map</h3>
+          <div className="flex items-center gap-1">
+            {isPinned && activeGraphId !== null && (
+              <button 
+                onClick={() => {
+                  setIsPinned(false)
+                  setPinnedGraphId(null)
+                }}
+                className="p-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:bg-amber-500/30 transition-all text-xs font-bold shadow-md" 
+                title="Bỏ ghim">
+                📌
+              </button>
+            )}
+            {(!isPinned || activeGraphId === null) && (
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${isCorrect ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                {isCorrect ? '✓ MATCHED' : '✗ FAULT'}
+              </span>
+            )}
+            {isPinned && activeGraphId !== null && (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                📌 PINNED
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold text-white">UNIT #{activeGraphId}</span>
@@ -103,7 +136,7 @@ export default function ReadoutMonitor() {
           <span className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-400">PRED: <b className={isCorrect ? 'text-green-400' : 'text-red-400'}>{predLabel}</b></span>
         </div>
       </div>
-      
+
       <div ref={containerRef} className="flex-1 min-h-[140px] relative bg-slate-900/30 rounded-xl overflow-hidden border border-slate-800/50 shadow-inner">
         <ForceGraph2D
           width={dim.w}
@@ -127,12 +160,12 @@ export default function ReadoutMonitor() {
 
       <div className="mt-3 space-y-1.5 z-10">
         <div className="flex justify-between text-[8px] font-bold text-slate-500 uppercase tracking-widest">
-          <span>Cold Features</span>
-          <span>Hot Features</span>
+          <span>Trắng = Quan trọng nhất</span>
+          <span>Đen = Bỏ qua</span>
         </div>
         <div className="h-1.5 rounded-full bg-gradient-to-r from-slate-800 via-orange-600 to-yellow-300 shadow-[0_0_10px_rgba(245,158,11,0.2)]" />
         <p className="text-[8px] text-slate-600 italic leading-tight mt-1">
-          Bright nodes represent the structural elements GNN prioritized for this classification.
+          Trắng = Quan trọng nhất | Đen = Bỏ qua. Ghim 📌 để khóa khi rê chuột ra ngoài.
         </p>
       </div>
     </div>

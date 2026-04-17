@@ -13,11 +13,24 @@ import MetricsChart from './MetricsChart'
  */
 export default function Task2MetricsPanel() {
   const [viewMode, setViewMode] = useState('chart')
+  const [prevSnapshotsLength, setPrevSnapshotsLength] = useState(0)
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const taskData = useGNNStore(s => s.taskData)
 
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
   const snap = snapshots[epochInt]
+  const hasHeatmapData = !!snap?.graph_correct?.length
+
+  const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+  const snap = snapshots[epochInt]
+
+  // Auto-switch to heatmap on first data load
+  useEffect(() => {
+    if (snapshots.length > 0 && prevSnapshotsLength === 0 && snap?.graph_correct?.length > 0) {
+      setViewMode('heatmap')
+    }
+    setPrevSnapshotsLength(snapshots.length)
+  }, [snapshots.length, prevSnapshotsLength, snap])
 
   // Build heatmap data: history of graph_correct across epochs (downsampled)
   const { heatmapRows, graphLabels, numGraphs } = useMemo(() => {
@@ -71,9 +84,15 @@ export default function Task2MetricsPanel() {
           Loss / Acc
         </button>
         <button onClick={() => setViewMode('heatmap')}
-          className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all
+          className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all relative
             ${viewMode === 'heatmap' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}>
           Batch Heatmap
+{hasHeatmapData && viewMode !== 'heatmap' && (
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-slate-900 shadow-lg" title={`New: ${snap.graph_correct.length} graphs`} />
+          )}
+          {hasHeatmapData && (
+            <sup className="ml-0.5 text-[8px] font-bold text-red-400">({snap.graph_correct.length})</sup>
+          )}
         </button>
         {viewMode === 'heatmap' && currentAccuracy && (
           <span className="ml-auto text-[9px] font-mono font-bold text-emerald-400">
@@ -82,6 +101,10 @@ export default function Task2MetricsPanel() {
         )}
       </div>
 
+      {/* Legend */}
+      <div className="px-3 pb-2 pt-1 text-[9px] text-slate-400 bg-slate-900/50 border-b border-slate-800/60">
+        <span className="font-bold text-slate-300">🟢</span> Đúng · <span className="font-bold text-slate-300">🔴</span> Sai · <span className="font-bold text-slate-300">⚪</span> Chờ · <span className="font-bold text-cyan-400">💎</span> Epoch hiện tại
+      </div>
       <div className="flex-1 min-h-0 overflow-hidden">
         {viewMode === 'chart' && <MetricsChart />}
 

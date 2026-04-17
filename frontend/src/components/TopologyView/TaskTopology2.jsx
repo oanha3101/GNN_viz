@@ -181,13 +181,21 @@ export default function TaskTopology2() {
                         </button>
                         
                         <div className="bg-slate-900/95 border border-slate-700/40 px-3 py-2.5 rounded-xl min-w-[200px] pointer-events-auto shadow-xl">
-                            <div className="flex justify-between items-center mb-2">
-                                <div>
-                                    <h2 className="text-sm font-bold text-white leading-tight">{GRAPH_LABELS[g.groundTruth]}</h2>
-                                    <p className="text-[8px] text-slate-500 font-mono">#{selectedGraphIdx} | {g.nodes.length}n/{g.links.length}e</p>
+                            <div className="flex flex-col gap-2 mb-2">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <h2 className="text-sm font-bold text-white leading-tight">{GRAPH_LABELS[g.groundTruth]}</h2>
+                                        <p className="text-[8px] text-slate-500 font-mono">#{selectedGraphIdx} | {g.nodes.length}n/{g.links.length}e</p>
+                                    </div>
+                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${isCorrect ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'}`}>
+                                        {isCorrect ? '✓' : '✗'}
+                                    </div>
                                 </div>
-                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${isCorrect ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'}`}>
-                                    {isCorrect ? '✓' : '✗'}
+                                {/* Graph Stats Bar */}
+                                <div className="grid grid-cols-3 gap-2 text-[8px] text-slate-400 uppercase font-mono tracking-wider bg-slate-900/50 rounded-lg p-1.5 border border-slate-800/50">
+                                    <div>Density: <span className="text-slate-200 font-bold ml-0.5">{snap?.graph_structural_metrics?.[selectedGraphIdx]?.density?.toFixed(3) || '—'}</span></div>
+                                    <div>Clustering: <span className="text-slate-200 font-bold ml-0.5">{snap?.graph_structural_metrics?.[selectedGraphIdx]?.avg_clustering?.toFixed(3) || '—'}</span></div>
+                                    <div>AvgDeg: <span className="text-slate-200 font-bold ml-0.5">{snap?.graph_structural_metrics?.[selectedGraphIdx]?.avg_degree?.toFixed(1) || '—'}</span></div>
                                 </div>
                             </div>
 
@@ -279,13 +287,20 @@ export default function TaskTopology2() {
                                 </div>
                             </div>
                             
-                            <div className="p-4 bg-slate-900/40 rounded-b-[2rem] border-t border-white/5 flex items-center justify-between">
-                                <div className="overflow-hidden">
-                                    <p className="text-[11px] text-white font-black uppercase truncate tracking-tight">{GRAPH_LABELS[g.groundTruth]}</p>
-                                    <p className="text-[8px] text-slate-500 font-bold font-mono">GRAPH #{i}</p>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-[9px] text-slate-500 font-black px-2 py-0.5 rounded-full bg-white/5 uppercase">N:{g.nodes.length}</span>
+                            <div className="p-4 bg-slate-900/40 rounded-b-[2rem] border-t border-white/5 flex flex-col gap-1">
+                                <div className="flex items-center justify-between">
+                                    <div className="overflow-hidden">
+                                        <p className="text-[11px] text-white font-black uppercase truncate tracking-tight">{GRAPH_LABELS[g.groundTruth]}</p>
+                                        <p className="text-[8px] text-slate-500 font-bold font-mono">GRAPH #{i}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[9px] text-slate-500 font-black px-2 py-0.5 rounded-full bg-white/5 uppercase">N:{g.nodes.length}</span>
+                                        {hasResult && (
+                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${conf > 0.8 ? 'bg-green-500/20 text-green-400 border border-green-500/30' : conf > 0.5 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                                {(conf * 100).toFixed(0)}%
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>

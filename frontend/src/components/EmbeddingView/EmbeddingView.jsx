@@ -45,7 +45,7 @@ function getSpreadStats(points = []) {
 }
 
 /* ─── Mini-Graph Popup for Task 2 ─────────────────────────────────────────── */
-function MiniGraphPopup({ graph, position }) {
+function MiniGraphPopup({ graph, hoveredGraphId, currSnap, position }) {
   if (!graph || !position) return null
   const { nodes, links } = graph
   const size = 100
@@ -64,8 +64,7 @@ function MiniGraphPopup({ graph, position }) {
       className="fixed z-[9999] pointer-events-none"
       style={{ left: position.x + 16, top: position.y - 60 }}
     >
-      <div className="bg-slate-900/95 backdrop-blur-md rounded-xl border border-slate-600/60
-                      shadow-2xl shadow-black/50 p-2 w-[130px]">
+      <div className="bg-slate-900/95 backdrop-blur-md rounded-xl border border-slate-600/60 shadow-2xl shadow-black/50 p-2 w-[160px]">
         <svg width="100" height="100" viewBox="0 0 100 100" className="mx-auto">
           {links.map((l, i) => {
             const s = typeof l.source === 'object' ? l.source.id : l.source
@@ -81,8 +80,9 @@ function MiniGraphPopup({ graph, position }) {
                     r="4" fill="#6366f1" />
           ) : null)}
         </svg>
-        <div className="text-[8px] text-center text-slate-400 mt-0.5">
-          {nodes.length}n · {links.length}e
+        <div className="text-[7px] text-center text-slate-400 mt-1 space-y-0.5 leading-tight">
+          <div>{nodes.length}n/{links.length}e</div>
+          <div>D: {currSnap?.graph_structural_metrics?.[hoveredGraphId]?.density?.toFixed(3) || '?'} | C: {currSnap?.graph_structural_metrics?.[hoveredGraphId]?.avg_clustering?.toFixed(3) || '?'} | D°: {currSnap?.graph_structural_metrics?.[hoveredGraphId]?.avg_degree?.toFixed(1) || '?'}</div>
         </div>
       </div>
     </div>
@@ -457,8 +457,11 @@ export default function EmbeddingView() {
 
       {/* Mini-graph popup (Task 2 hover) */}
       {hoveredGraph && popupPos && (
-        <MiniGraphPopup graph={hoveredGraph} position={popupPos} />
+        <MiniGraphPopup graph={hoveredGraph} hoveredGraphId={hoveredGraphId} currSnap={currSnap} position={popupPos} />
       )}
+    </div>
+  )
+}
     </div>
   )
 }
