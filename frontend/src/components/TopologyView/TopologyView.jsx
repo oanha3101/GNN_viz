@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Network, Info, Share2, X } from 'lucide-react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
-import { CLASS_COLORS } from '../../utils/colors'
+import { CLASS_COLORS, CLASS_NAMES } from '../../utils/colors'
 import { easeInOutCubic, getNodeColor } from '../../engine/interpolate'
 import { drawTask1Node } from '../../engine/drawTask1Node'
 import { computeKHopNeighbors } from '../../utils/khop'
@@ -276,7 +276,7 @@ export default function TopologyView() {
   return (
     <div 
       ref={containerRef} 
-      className="w-full h-full relative bg-slate-950 overflow-hidden cursor-crosshair"
+      className="w-full h-full relative bg-slate-950 overflow-visible cursor-crosshair"
       onClick={handleCloseContextMenu}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -372,7 +372,7 @@ export default function TopologyView() {
           if (fitPendingRef.current && fgRef.current) {
             fitPendingRef.current = false
             try {
-              fgRef.current.zoomToFit(420, 72)
+              fgRef.current.zoomToFit(400, 24)
             } catch {
               // Ignore transient fit errors while the layout is settling.
             }
@@ -388,27 +388,72 @@ export default function TopologyView() {
       <AnimatePresence>
         {hoveredNode && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed z-[100] pointer-events-none px-3 py-2 rounded-xl border border-slate-700/50 bg-[#020617]/90 backdrop-blur-md shadow-2xl"
-            style={{ left: tooltipPos.x + 15, top: tooltipPos.y + 15 }}
+            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+            className="absolute z-[100] pointer-events-none px-4 py-3 rounded-2xl border border-slate-700/40 bg-[#020617]/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] min-w-[180px]"
+            style={{ 
+              left: tooltipPos.x + 20, 
+              top: tooltipPos.y - 40,
+            }}
           >
-            <div className="flex items-center gap-2 mb-1">
-              <span 
-                className="w-2.5 h-2.5 rounded-full shadow-lg" 
-                style={{ backgroundColor: CLASS_COLORS[groundTruth?.[hoveredNode.id] || 0] }} 
-              />
-              <span className="text-[10px] font-bold text-white uppercase tracking-wider">Node #{hoveredNode.id}</span>
+            <div className="flex items-center justify-between gap-4 mb-2">
+              <div className="flex items-center gap-2">
+                <span 
+                  className="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]" 
+                  style={{ backgroundColor: CLASS_COLORS[groundTruth?.[hoveredNode.id] || 0] }} 
+                />
+                <span className="text-[11px] font-black text-white uppercase tracking-tighter">
+                  Node #{hoveredNode.original_id || hoveredNode.id}
+                </span>
+              </div>
+              <div className="text-[9px] bg-slate-800/80 px-1.5 py-0.5 rounded text-slate-400 font-mono">
+                ID {hoveredNode.id}
+              </div>
             </div>
-            <div className="text-[10px] text-slate-400 font-medium">
-              Class: {groundTruth?.[hoveredNode.id] ?? 'Unknown'}
+
+            {hoveredNode.label_name && (
+               <div className="text-[10px] text-indigo-300 font-bold mb-2 flex items-center gap-1.5 bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/20">
+                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                 Label: {hoveredNode.label_name}
+               </div>
+            )}
+
+            <div className="space-y-1.5 mb-2">
+              <div className="flex justify-between items-center text-[9px]">
+                <span className="text-slate-500 uppercase font-bold">Ground Truth</span>
+                <span className="text-slate-300 font-mono">{CLASS_NAMES[groundTruth?.[hoveredNode.id]] || groundTruth?.[hoveredNode.id] || 'N/A'}</span>
+              </div>
+              
+              {snapshots?.[Math.floor(currentEpochFloat)]?.node_predictions?.[hoveredNode.id] !== undefined && (
+                <div className="flex justify-between items-center text-[9px]">
+                  <span className="text-slate-500 uppercase font-bold">GNN Prediction</span>
+                  <span className="text-cyan-400 font-black">
+                    {CLASS_NAMES?.[snapshots[Math.floor(currentEpochFloat)].node_predictions[hoveredNode.id]] 
+                       || snapshots[Math.floor(currentEpochFloat)].node_predictions[hoveredNode.id]}
+                  </span>
+                </div>
+              )}
             </div>
-            {snapshots?.[Math.floor(currentEpochFloat)]?.node_predictions?.[hoveredNode.id] !== undefined && (
-              <div className="text-[10px] text-cyan-400 font-bold mt-1">
-                Pred: {snapshots[Math.floor(currentEpochFloat)].node_predictions[hoveredNode.id]}
+
+            {/* Quick Features Preview */}
+            {hoveredNode.features && Object.keys(hoveredNode.features).length > 0 && (
+              <div className="pt-2 border-t border-slate-800/60 mt-2 space-y-1">
+                {Object.entries(hoveredNode.features).slice(0, 3).map(([key, val]) => (
+                  <div key={key} className="flex justify-between items-center text-[8px]">
+                    <span className="text-slate-500 truncate w-20">{key}</span>
+                    <span className="text-emerald-400 font-mono font-bold">
+                      {typeof val === 'number' ? val.toFixed(3) : String(val).substring(0, 8)}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
+
+            <div className="mt-3 pt-2 border-t border-slate-800/60 text-[8px] text-slate-500 italic flex items-center justify-center gap-1.5 bg-slate-900/40 -mx-4 -mb-3 rounded-b-2xl py-2">
+               <Info size={10} className="text-indigo-400" /> 
+               <span>CLICK ĐỂ XEM CHI TIẾT META</span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

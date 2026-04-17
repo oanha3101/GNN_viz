@@ -88,7 +88,6 @@ export default function Task1MetricsPanel() {
   const tabs = [
     { key: 'chart', label: 'Loss / Acc' },
     { key: 'cm', label: 'Confusion Matrix' },
-    { key: 'oversmooth', label: 'Oversmoothing' },
   ]
 
   return (
@@ -113,11 +112,7 @@ export default function Task1MetricsPanel() {
         {viewMode === 'cm' && confusionMatrix && (
           <span className="ml-auto text-[9px] text-cyan-400/80 font-mono">Acc: {accuracy}% · {numClasses} lớp</span>
         )}
-        {viewMode === 'oversmooth' && snapshots.length > 0 && (
-          <span className={`ml-auto text-[9px] font-mono font-bold px-2 py-0.5 rounded ${isOversmoothed ? 'text-red-400 bg-red-500/10' : 'text-green-400 bg-green-500/10'}`}>
-            {isOversmoothed ? '⚠ OVERSMOOTHED' : '✓ OK'} · E={currentEnergy.toFixed(3)}
-          </span>
-        )}
+
       </div>
 
       {/* Content */}
@@ -245,73 +240,7 @@ export default function Task1MetricsPanel() {
           </div>
         )}
 
-        {viewMode === 'oversmooth' && (
-          <div className="w-full h-full flex flex-col p-3">
-            {energyTrace.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
-                <div className="text-4xl opacity-30">🌊</div>
-                <p className="text-center">Bắt đầu huấn luyện để xem<br/>biểu đồ Dirichlet Energy</p>
-              </div>
-            ) : (
-              <>
-                {/* Explanation card */}
-                <div className="mb-3 rounded-xl border border-slate-800/60 bg-slate-900/50 p-3 text-[9px] text-slate-400 leading-relaxed">
-                  <div className="font-bold text-slate-300 text-[10px] mb-1">🌊 Dirichlet Energy — Detector Oversmoothing</div>
-                  <div>
-                    <span className="text-green-400">Cao</span> = Embedding đặc trưng rõ ràng &nbsp;·&nbsp;
-                    <span className="text-red-400">Thấp</span> = Oversmoothing (tất cả node trở nên giống nhau sau nhiều lớp GNN).
-                    GCN sâu thường bị oversmooth là vì thông tin bị "wash out" qua nhiều vòng lặp tổng hợp.
-                  </div>
-                </div>
-                <div className="flex-1 min-h-0">
-                  <Plot
-                    data={[
-                      {
-                        x: energyTrace.map(d => d.epoch),
-                        y: energyTrace.map(d => d.energy),
-                        type: 'scatter',
-                        mode: 'lines',
-                        name: 'Dirichlet Energy',
-                        line: { color: '#f97316', width: 2.5 },
-                        fill: 'tozeroy',
-                        fillcolor: 'rgba(249,115,22,0.08)'
-                      },
-                      // Warning threshold line at 5% of initial
-                      {
-                        x: [energyTrace[0]?.epoch, energyTrace[energyTrace.length - 1]?.epoch],
-                        y: [(energyTrace[0]?.energy ?? 0) * 0.05, (energyTrace[0]?.energy ?? 0) * 0.05],
-                        type: 'scatter',
-                        mode: 'lines',
-                        name: 'Ngưỡng Oversmooth',
-                        line: { color: 'rgba(239,68,68,0.6)', width: 1, dash: 'dot' }
-                      }
-                    ]}
-                    layout={{
-                      paper_bgcolor: 'transparent',
-                      plot_bgcolor: 'transparent',
-                      margin: { l: 45, r: 10, t: 10, b: 35 },
-                      xaxis: { title: 'Epoch', color: '#475569', gridcolor: '#1e293b', zeroline: false },
-                      yaxis: { title: 'Dirichlet Energy', color: '#475569', gridcolor: '#1e293b', zeroline: false },
-                      showlegend: true,
-                      legend: { x: 0.7, y: 1, font: { color: '#94a3b8', size: 9 } },
-                      annotations: isOversmoothed ? [{
-                        x: energyTrace[energyTrace.length - 1]?.epoch,
-                        y: currentEnergy,
-                        text: '⚠ Oversmoothed',
-                        font: { color: '#ef4444', size: 10 },
-                        showarrow: true,
-                        arrowcolor: '#ef4444',
-                        ax: -50, ay: -30
-                      }] : []
-                    }}
-                    config={{ displayModeBar: false, responsive: true }}
-                    style={{ width: '100%', height: '100%' }}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        )}
+
       </div>
     </div>
   )

@@ -20,6 +20,10 @@ export default function TaskTopology3() {
   const selectedModel = useGNNStore(s => s.selectedModel)
   const { snapshots, currentEpochFloat } = usePlayerStore()
 
+  const selectedNodeId = useGNNStore(s => s.selectedNodeId)
+  const selectedTargetNodeId = useGNNStore(s => s.selectedTargetNodeId)
+  const setSelectedNode = useGNNStore(s => s.setSelectedNode)
+
   const [showNodes, setShowNodes] = useState(true)
   const [showTriangles, setShowTriangles] = useState(true)
   const [showTopK, setShowTopK] = useState(true)
@@ -90,6 +94,23 @@ export default function TaskTopology3() {
     let color = 'rgba(148, 163, 184, 0.15)'
     let width = 1.5
     let isFuture = false
+    let isTargetedPair = false
+    let isConnectedToSelected = false
+
+    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+
+    const hasSelection = selectedNodeId !== null;
+    if (hasSelection) {
+      if ((sourceId === selectedNodeId && targetId === selectedTargetNodeId) ||
+          (sourceId === selectedTargetNodeId && targetId === selectedNodeId)) {
+        isTargetedPair = true;
+      }
+      if (sourceId === selectedNodeId || targetId === selectedNodeId ||
+          sourceId === selectedTargetNodeId || targetId === selectedTargetNodeId) {
+        isConnectedToSelected = true;
+      }
+    }
 
     if (testIdx !== -1) {
       const classification = classifications[testIdx]
@@ -126,6 +147,8 @@ export default function TaskTopology3() {
     }
 
     ctx.beginPath()
+
+    // Animation for dotted future links
     if (isFuture) {
       ctx.setLineDash([4, 4])
       ctx.lineDashOffset = -(performance.now() / 40) % 10
@@ -133,11 +156,26 @@ export default function TaskTopology3() {
       ctx.setLineDash([])
     }
 
+    // If there is a selection, dim unselected edges
+    let finalAlpha = 1;
+    if (hasSelection) {
+      if (isTargetedPair) {
+        width = Math.max(width, 4);
+        color = '#fff'; // Brilliant white for the target pair
+      } else if (isConnectedToSelected) {
+        finalAlpha = 0.6; // Keep connections to selected nodes somewhat visible
+      } else {
+        finalAlpha = 0.05; // Dim the rest heavily
+      }
+    }
+
+    ctx.globalAlpha = finalAlpha;
     ctx.moveTo(link.source.x, link.source.y)
     ctx.lineTo(link.target.x, link.target.y)
     ctx.strokeStyle = color
     ctx.lineWidth = width
     ctx.stroke()
+    ctx.globalAlpha = 1;
     ctx.setLineDash([])
 
     // Triangle closure detection for GAT:
@@ -231,20 +269,31 @@ export default function TaskTopology3() {
           // Main circle
           ctx.beginPath()
           ctx.arc(node.x, node.y, r, 0, 2 * Math.PI)
+
+          // Dim nodes if there's a selection and this node isn't involved
+          const isSelected = selectedNodeId === node.id || selectedTargetNodeId === node.id;
+          const hasSelection = selectedNodeId !== null;
+          const globalAlpha = hasSelection && !isSelected ? 0.2 : 1;
+
+          ctx.globalAlpha = globalAlpha;
           ctx.fillStyle = color
           ctx.fill()
-          ctx.strokeStyle = 'rgba(255,255,255,0.5)'
-          ctx.lineWidth = 1.5 / globalScale
+
+          ctx.strokeStyle = isSelected ? '#fff' : 'rgba(255,255,255,0.5)'
+          ctx.lineWidth = (isSelected ? 3 : 1.5) / globalScale
           ctx.stroke()
 
           // Node ID label
-          const fontSize = Math.max(8, 10 / Math.sqrt(globalScale))
+          const fontSize = Math.max(8, (isSelected ? 14 : 10) / Math.sqrt(globalScale))
           ctx.font = `bold ${fontSize}px monospace`
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
           ctx.fillStyle = '#fff'
           ctx.fillText(`${node.id}`, node.x, node.y)
+          
+          ctx.globalAlpha = 1; // Reset alpha
         }}
+        onNodeClick={(node) => setSelectedNode(node.id)}
         nodeCanvasObjectMode={() => 'replace'}
         linkCanvasObject={linkCanvasObject}
         linkCanvasObjectMode={() => 'replace'}
@@ -252,7 +301,7 @@ export default function TaskTopology3() {
           if (fitPendingRef.current && fgRef.current) {
             fitPendingRef.current = false
             try {
-              fgRef.current.zoomToFit(420, 72)
+              fgRef.current.zoomToFit(400, 24)
             } catch {
               // Ignore transient fit errors while the layout is settling.
             }
@@ -345,7 +394,7 @@ export default function TaskTopology3() {
         )}
       </div>
 
-      <div className="absolute bottom-2 left-2 z-10 flex flex-col gap-1 w-32 pointer-events-none">
+      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1 w-auto max-w-[220px] pointer-events-none">
         <div className="bg-slate-900/90 backdrop-blur-md rounded-lg px-2 py-1 border border-slate-700/50 w-full flex justify-between items-center">
           <span className="text-[7px] text-slate-500 uppercase font-bold tracking-wider">AUC-ROC</span>
           <span className={`text-[11px] font-black font-mono leading-none ${auc > 0.85 ? 'text-green-500' : auc > 0.7 ? 'text-yellow-500' : 'text-red-500'}`}>
@@ -353,19 +402,32 @@ export default function TaskTopology3() {
           </span>
         </div>
 
-        <div className="bg-slate-900/90 backdrop-blur-md rounded-lg px-2 py-1 border border-slate-700/50 w-full text-[7px]">
-          <div className="space-y-0.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1"><div className="w-2 h-0.5 bg-red-600 rounded" /><span className="text-slate-400 font-bold">Pos</span></div>
-              <span className="text-slate-600">&gt;0.7</span>
+        <div className="bg-slate-900/90 backdrop-blur-md rounded-lg px-2 py-1.5 border border-slate-700/50 w-full text-[8px] pointer-events-auto">
+          <div className="space-y-1.5 min-w-[150px]">
+            <div className="text-slate-300 font-bold mb-1 uppercase tracking-wider text-[7px] border-b border-slate-800 pb-1">Chú thích đồ thị</div>
+            
+            <div className="flex items-center gap-2">
+              <div className="w-4 border-t-2 border-slate-500" />
+              <span className="text-slate-400 font-medium">Đường liền (Cấu trúc gốc)</span>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1"><div className="w-2 h-0.5 bg-yellow-500 rounded" /><span className="text-slate-400">Unc</span></div>
-              <span className="text-slate-600">0.3-0.7</span>
+            
+            <div className="flex items-center gap-2">
+              <div className="w-4 border-t-2 border-dashed border-red-400 drop-shadow-[0_0_2px_rgba(248,113,113,0.8)]" />
+              <span className="text-slate-400 font-medium">Nét đứt (Links dự đoán mới)</span>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1"><div className="w-2 h-0.5 bg-blue-500 rounded" /><span className="text-slate-400">Neg</span></div>
-              <span className="text-slate-600">&lt;0.3</span>
+            
+            <div className="flex items-center gap-2">
+              <div className="w-4 border-t-[3px] border-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)]" />
+              <span className="text-slate-300 font-bold">Viền trắng (Cạnh đang chọn)</span>
+            </div>
+            
+            <div className="pt-1 mt-1 border-t border-slate-800">
+              <div className="flex items-center justify-between text-[7px] text-slate-500 mb-0.5 font-bold">
+                <span>0%</span>
+                <span className="text-slate-400">Xác suất kết nối</span>
+                <span>100%</span>
+              </div>
+              <div className="w-full h-1.5 bg-gradient-to-r from-blue-500 via-yellow-500 to-red-500 rounded-sm opacity-80" />
             </div>
           </div>
         </div>

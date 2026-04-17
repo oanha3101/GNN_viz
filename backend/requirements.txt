@@ -13,3 +13,4 @@ pymysql
 pymongo
 redis
 cryptography
+openpyxl>=3.1.0

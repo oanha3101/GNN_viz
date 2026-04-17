@@ -85,7 +85,9 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag):
     edge_index = data.edge_index
 
     # Split edges into train/val/test
-    train_edges, val_edges, test_edges = split_edges(edge_index, val_ratio=0.1, test_ratio=0.15)
+    test_ratio = config.get('edge_split_ratio', 0.15)
+    val_ratio = max(0.05, test_ratio * 0.67)  # val is ~2/3 of test
+    train_edges, val_edges, test_edges = split_edges(edge_index, val_ratio=val_ratio, test_ratio=test_ratio)
 
     # Build graph structure for frontend (only train edges visible)
     train_edge_np = train_edges.cpu().numpy()

@@ -104,12 +104,13 @@ function InspectorDrawer() {
 
 function PanelHeading({ title, subtitle, align = 'left' }) {
   return (
-    <div className={`absolute top-2 ${align === 'right' ? 'right-2' : 'left-2'} z-10 pointer-events-none rounded-lg border border-slate-700/30 bg-[#020617]/70 backdrop-blur-md px-3 py-1.5 flex items-center gap-2 shadow-lg`}>
-      <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400 leading-none">{title}</span>
+    <div className={`absolute top-4 ${align === 'right' ? 'right-4' : 'left-16'} z-10 pointer-events-none rounded-xl border border-white/5 bg-[#020617]/40 backdrop-blur-xl px-4 py-2 flex items-center gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)]`}>
+      <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_#06b6d4]" />
+      <span className="text-[11px] uppercase font-black tracking-[0.2em] text-white/90 leading-none">{title}</span>
       {subtitle && (
         <>
-          <span className="text-slate-700">|</span>
-          <span className="text-[10px] text-slate-500 font-medium leading-none">{subtitle}</span>
+          <div className="w-px h-3 bg-white/10" />
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">{subtitle}</span>
         </>
       )}
     </div>
@@ -129,7 +130,7 @@ function AppSidebar({ collapsed, onToggle, activeTab, setActiveRightTab, rightPa
     { icon: Settings, label: 'Settings', action: onOpenConfig },
   ]
   return (
-    <div className="h-full flex flex-col bg-[#050c19]/80 border-r border-slate-800/60">
+    <div className="h-full flex flex-col bg-[#050c19]/40 backdrop-blur-2xl border-r border-white/5 shadow-2xl">
       <div className="flex items-center justify-center py-3 border-b border-slate-800/40">
         <button onClick={onToggle} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-all">
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
@@ -373,8 +374,8 @@ function App() {
 
       {/* ═══ Main Workspace ═══ */}
       <main className="flex-1 flex overflow-hidden relative bg-[#020617] min-h-0">
-        {/* Sidebar */}
-        <div className={`transition-all duration-200 shrink-0 ${sidebarCollapsed ? 'w-[56px]' : 'w-[180px]'}`}>
+        {/* Floating Sidebar Overlay */}
+        <div className={`absolute left-0 top-0 bottom-0 z-40 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'w-[56px]' : 'w-[200px]'}`}>
           <AppSidebar
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -388,15 +389,16 @@ function App() {
           />
         </div>
 
-        {/* ── Resizable Content (custom pointer-event drag) ── */}
-        <ResizableWorkspace
-          rightPanelOpen={rightPanelOpen}
-          leftContent={
-            <div className="w-full h-full relative overflow-hidden bg-[#030712]">
-              <PanelHeading title={taskLabels[selectedTask]} subtitle="Network Topology & Signal Flow" />
-              <ErrorBoundary><TopologyRouter /></ErrorBoundary>
-            </div>
-          }
+        {/* Full-width content area (Sidebar is an overlay) */}
+        <div className="flex-1 flex min-w-0 h-full relative">
+          <ResizableWorkspace
+            rightPanelOpen={rightPanelOpen}
+            leftContent={
+              <div className="w-full h-full relative overflow-visible bg-transparent">
+                <PanelHeading title={taskLabels[selectedTask]} subtitle="Network Topology & Signal Flow" />
+                <ErrorBoundary><TopologyRouter /></ErrorBoundary>
+              </div>
+            }
           rightContent={
             <VerticalResizable
               topContent={
@@ -451,6 +453,7 @@ function App() {
             />
           }
         />
+      </div>
 
         {/* Global Overlays */}
         <TrainingReport />

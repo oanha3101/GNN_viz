@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import usePlayerStore from '../../store/playerStore'
 import useGNNStore from '../../store/useGNNStore'
 import MetricsChart from './MetricsChart'
@@ -16,13 +16,14 @@ export default function Task2MetricsPanel() {
   const [prevSnapshotsLength, setPrevSnapshotsLength] = useState(0)
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const taskData = useGNNStore(s => s.taskData)
+  const setSelectedNode = useGNNStore(s => s.setSelectedNode)
+  const selectedNodeId = useGNNStore(s => s.selectedNodeId)
 
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+
   const snap = snapshots[epochInt]
   const hasHeatmapData = !!snap?.graph_correct?.length
 
-  const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-  const snap = snapshots[epochInt]
 
   // Auto-switch to heatmap on first data load
   useEffect(() => {
@@ -101,10 +102,7 @@ export default function Task2MetricsPanel() {
         )}
       </div>
 
-      {/* Legend */}
-      <div className="px-3 pb-2 pt-1 text-[9px] text-slate-400 bg-slate-900/50 border-b border-slate-800/60">
-        <span className="font-bold text-slate-300">🟢</span> Đúng · <span className="font-bold text-slate-300">🔴</span> Sai · <span className="font-bold text-slate-300">⚪</span> Chờ · <span className="font-bold text-cyan-400">💎</span> Epoch hiện tại
-      </div>
+
       <div className="flex-1 min-h-0 overflow-hidden">
         {viewMode === 'chart' && <MetricsChart />}
 
@@ -141,10 +139,13 @@ export default function Task2MetricsPanel() {
                     {/* Rows = graphs */}
                     {Array.from({ length: numGraphs }, (_, gi) => {
                       const gt = taskData?.graphs?.[gi]?.groundTruth
+                      const isSelected = selectedNodeId === gi
                       return (
-                        <div key={gi} className="flex gap-0.5 items-center">
+                        <div key={gi} 
+                          onClick={() => setSelectedNode(gi)}
+                          className={`flex gap-0.5 items-center cursor-pointer group/row transition-all rounded-sm hover:bg-white/5 ${isSelected ? 'bg-cyan-500/10 ring-1 ring-cyan-500/20' : ''}`}>
                           {/* Graph label */}
-                          <div className="w-8 text-right text-[7px] font-mono text-slate-500 shrink-0 pr-1">
+                          <div className={`w-8 text-right text-[7px] font-mono shrink-0 pr-1 transition-colors ${isSelected ? 'text-cyan-400 font-bold' : 'text-slate-500 group-hover/row:text-slate-300'}`}>
                             {graphLabels[gi]}
                           </div>
                           {/* Cells across epochs */}
@@ -153,12 +154,12 @@ export default function Task2MetricsPanel() {
                             return (
                               <div key={ci}
                                 title={`Graph ${gi} · Epoch ${row.epoch}: ${val === 1 ? '✓ Đúng' : val === 0 ? '✗ Sai' : '?'}`}
-                                className={`w-5 h-5 rounded-sm shrink-0 transition-all duration-300 ${row.isCurrent ? 'ring-1 ring-cyan-500/40' : ''}`}
+                                className={`w-5 h-5 rounded-sm shrink-0 transition-all duration-300 ${row.isCurrent ? (isSelected ? 'ring-2 ring-cyan-400' : 'ring-1 ring-cyan-500/40') : ''}`}
                                 style={{
                                   backgroundColor: val === 1
-                                    ? `rgba(34,197,94,${row.isCurrent ? 0.9 : 0.5})`
+                                    ? `rgba(34,197,94,${row.isCurrent ? 0.9 : (isSelected ? 0.7 : 0.5)})`
                                     : val === 0
-                                      ? `rgba(239,68,68,${row.isCurrent ? 0.8 : 0.4})`
+                                      ? `rgba(239,68,68,${row.isCurrent ? 0.8 : (isSelected ? 0.6 : 0.4)})`
                                       : 'rgba(15,23,42,0.6)'
                                 }}
                               />

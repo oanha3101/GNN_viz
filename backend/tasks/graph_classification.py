@@ -99,24 +99,82 @@ def generate_synthetic_graphs(num_graphs=50):
 # ───────────────────────────────────────────────────────────────────────────────
 # Main Training Loop
 # ───────────────────────────────────────────────────────────────────────────────
-async def run_graph_classification(config, websocket, stop_flag):
-    """Train graph classification model and stream snapshots."""
+async def run_graph_classification(config, websocket, stop_flag, custom_graphs=None):
+    """Train graph classification model and stream snapshots.
+    
+    Args:
+        custom_graphs: Optional list of PyG Data objects from user upload.
+                      Each Data should have .x, .edge_index, .y (graph label).
+                      If None, synthetic graphs are generated.
+    """
     epochs = config.get('epochs', 80)
 
-    # Generate graphs
-    graphs_data = generate_synthetic_graphs(50)
-    pyg_graphs = [g['pyg'] for g in graphs_data]
-    ground_truth = [g['groundTruth'] for g in graphs_data]
+    if custom_graphs and len(custom_graphs) > 0:
+        # ── Use user-uploaded graphs ──
+        pyg_graphs = custom_graphs
+        
+        # Ensure all graphs have features
+        for i, g in enumerate(pyg_graphs):
+            if not hasattr(g, 'x') or g.x is None:
+                # Auto-generate degree features
+                num_n = g.num_nodes or (g.edge_index.max().item() + 1 if g.edge_index.size(1) > 0 else 1)
+                degrees = torch.zeros(num_n)
+                if g.edge_index.size(1) > 0:
+                    for j in range(g.edge_index.size(1)):
+                        degrees[g.edge_index[0, j]] += 1
+                max_deg = degrees.max().clamp(min=1)
+                g.x = (degrees / max_deg).unsqueeze(1)
+            if not hasattr(g, 'y') or g.y is None:
+                g.y = torch.tensor([0], dtype=torch.long)
+        
+        ground_truth = [int(g.y.item()) if g.y.dim() == 0 or g.y.size(0) == 1
+                       else int(g.y[0].item()) for g in pyg_graphs]
+        
+        # Build graphs_json from PyG Data objects
+        graphs_json = []
+        for i, g in enumerate(pyg_graphs):
+            edge_np = g.edge_index.cpu().numpy()
+            edges = []
+            seen = set()
+            for j in range(edge_np.shape[1]):
+                s, t = int(edge_np[0, j]), int(edge_np[1, j])
+                key = (min(s, t), max(s, t))
+                if key not in seen:
+                    seen.add(key)
+                    edges.append({'source': s, 'target': t})
+            num_n = g.num_nodes or g.x.size(0)
+            graphs_json.append({
+                'id': i,
+                'groundTruth': ground_truth[i],
+                'nodes': [{'id': j} for j in range(num_n)],
+                'links': edges,
+                'numNodes': num_n,
+                'numEdges': len(edges),
+            })
+        
+        in_channels = pyg_graphs[0].x.size(1)
+        num_classes = max(2, max(ground_truth) + 1)
+        
+        # Build graphs_data for structural metrics computation
+        graphs_data = graphs_json
+    else:
+        # ── Generate synthetic graphs (fallback) ──
+        graphs_data_raw = generate_synthetic_graphs(50)
+        pyg_graphs = [g['pyg'] for g in graphs_data_raw]
+        ground_truth = [g['groundTruth'] for g in graphs_data_raw]
 
-    # Serialize graph structure for frontend
-    graphs_json = [{
-        'id': g['id'],
-        'groundTruth': g['groundTruth'],
-        'nodes': g['nodes'],
-        'links': g['links'],
-        'numNodes': g['numNodes'],
-        'numEdges': g['numEdges'],
-    } for g in graphs_data]
+        graphs_json = [{
+            'id': g['id'],
+            'groundTruth': g['groundTruth'],
+            'nodes': g['nodes'],
+            'links': g['links'],
+            'numNodes': g['numNodes'],
+            'numEdges': g['numEdges'],
+        } for g in graphs_data_raw]
+        
+        graphs_data = graphs_json
+        in_channels = 1
+        num_classes = 2
 
     # Send graph structure to frontend first
     await websocket.send_json({
@@ -128,7 +186,7 @@ async def run_graph_classification(config, websocket, stop_flag):
     })
 
     # Build model + optimizer
-    model = GraphClassifier(in_channels=1, hidden=32, num_classes=2)
+    model = GraphClassifier(in_channels=in_channels, hidden=32, num_classes=num_classes)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.get('lr', 0.01))
 
     # Prepare batched data (train: 80%, test: 20%)

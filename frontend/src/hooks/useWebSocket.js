@@ -74,6 +74,17 @@ export default function useWebSocket() {
         if (d.testEdges && !d.graphs) {
           setTaskData({ testEdges: d.testEdges })
         }
+        // Task 4: community ground truth & num communities
+        if (d.communityGroundTruth) {
+          useGNNStore.getState().setCommunityGroundTruth(d.communityGroundTruth)
+        }
+        if (d.numCommunities) {
+          useGNNStore.getState().setNumCommunities(d.numCommunities)
+        }
+        // Task 6: reference graph
+        if (d.referenceGraph) {
+          useGNNStore.getState().setReferenceGraph(d.referenceGraph)
+        }
 
       } else if (msg.type === 'graph_metadata') {
         // Task 5: auto-detected graph properties

@@ -48,9 +48,17 @@ def calculate_modularity(G, community_map):
     except:
         return 0.0
 
-async def run_community_detection(config, data, model_type, websocket, stop_flag):
+async def run_community_detection(config, data, model_type, websocket, stop_flag,
+                                   num_communities=4, community_gt=None):
+    """Train community detection model.
+    
+    Args:
+        num_communities: Target number of clusters (default: 4).
+        community_gt: Optional list of ground truth community labels for NMI evaluation.
+    """
     epochs = config.get('epochs', 100)
     num_nodes = data.x.size(0)
+    num_communities = config.get('num_communities', num_communities)
     
     # Generate a graph with community structure (Stochastic Block Model)
     # We'll use the existing data but treat it as unsupervised
@@ -59,19 +67,26 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
     model = CommunityGNN(data.x.size(1), model_type=model_type)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     
-    # Send initial graph structure
+    # Send initial graph structure (include community GT if available)
+    nodes_data = [{'id': i} for i in range(num_nodes)]
+    if community_gt:
+        for i in range(min(num_nodes, len(community_gt))):
+            nodes_data[i]['communityGT'] = community_gt[i]
+    
     await websocket.send_json({
         'type': 'graph_data',
         'data': {
             'graphData': {
-                'nodes': [{'id': i} for i in range(num_nodes)],
+                'nodes': nodes_data,
                 'links': [{'source': int(u), 'target': int(v)} for u, v in G.edges()]
-            }
+            },
+            'communityGroundTruth': community_gt,
+            'numCommunities': num_communities,
         }
     })
 
     epoch_snapshots = []
-    num_communities = 4 # Target islands
+    # num_communities is now passed via parameter (default 4)
 
     for epoch in range(epochs):
         if stop_flag(): break
@@ -249,6 +264,17 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                 except Exception:
                     pass
 
+        # NMI (Normalized Mutual Information) if ground truth available
+        nmi_score = None
+        if community_gt and len(community_gt) == num_nodes:
+            try:
+                from sklearn.metrics import normalized_mutual_info_score
+                nmi_score = float(normalized_mutual_info_score(
+                    community_gt, clusters.tolist()
+                ))
+            except Exception:
+                nmi_score = None
+
         snapshot = {
             'epoch': epoch,
             'node_predictions': clusters.tolist(),
@@ -263,6 +289,7 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
             'conductance': avg_conductance,
             'community_sizes': community_sizes,
             'linkage_matrix': linkage_matrix,
+            'nmi_score': nmi_score,
             'train_loss': float(loss.item()),
             'val_acc': q_score
         }

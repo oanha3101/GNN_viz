@@ -149,14 +149,15 @@ export default function EmbeddingView() {
     
     // Task 2: Graph-level embedding
     if (selectedTask === 2 && currSnap.graph_embeddings_2d) {
+      const activeId = selectedNodeId !== null ? selectedNodeId : hoveredGraphId
       const emb = currSnap.graph_embeddings_2d
       const preds = currSnap.graph_predictions || []
       const { compactness } = getSpreadStats(emb)
       const x = emb.map(p => p[0])
       const y = emb.map(p => p[1])
       const colors = preds.map(c => getClassColor(c))
-      const sizes = emb.map((_, i) => (i === hoveredGraphId) ? 16 * compactness : 9 * compactness)
-      const opacities = emb.map((_, i) => (i === hoveredGraphId) ? 1.0 : 0.75)
+      const sizes = emb.map((_, i) => (i === activeId) ? 16 * compactness : 9 * compactness)
+      const opacities = emb.map((_, i) => (i === activeId) ? 1.0 : 0.75)
       
       return [{
         type: 'scatter',
@@ -167,8 +168,8 @@ export default function EmbeddingView() {
           size: sizes,
           opacity: opacities,
           line: {
-            color: emb.map((_, i) => (i === hoveredGraphId) ? 'white' : 'rgba(255,255,255,0.08)'),
-            width: emb.map((_, i) => (i === hoveredGraphId) ? 2 : 0.5),
+            color: emb.map((_, i) => (i === activeId) ? 'white' : 'rgba(255,255,255,0.08)'),
+            width: emb.map((_, i) => (i === activeId) ? 2 : 0.5),
           },
         },
         text: preds.map((c, i) => `Graph ${i} | Class ${c === 0 ? 'Dense' : 'Sparse'}`),
@@ -449,6 +450,7 @@ export default function EmbeddingView() {
         </div>
       )}
 
+
       {/* Epoch Badge */}
       <div className="absolute bottom-2 right-2 bg-slate-900/70 rounded px-2 py-0.5">
         <span className="text-[9px] text-slate-500">Epoch </span>
@@ -462,6 +464,4 @@ export default function EmbeddingView() {
     </div>
   )
 }
-    </div>
-  )
-}
+

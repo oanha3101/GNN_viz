@@ -39,6 +39,13 @@ const useGNNStore = create((set, get) => ({
   // ─── Uploaded file path (for custom datasets) ───────────────
   uploadedFilePath: null,
 
+  // ─── Task-specific upload data ─────────────────────────────
+  communityGroundTruth: null,  // T4: array of community labels
+  numCommunities: null,        // T4: target cluster count
+  referenceGraph: null,        // T6: reference graph structure
+  uploadMetadata: null,        // { schema_version, validation_warnings, ... }
+  taskConfig: null,            // { edge_split_ratio, num_communities, has_community_gt, ... }
+
   // ─── Actions: Config ─────────────────────────────────────────
   setTask: (task) => {
     const prevState = get()
@@ -50,6 +57,7 @@ const useGNNStore = create((set, get) => ({
       isTraining: false,
       trainingProgress: 0,
       selectedNodeId: null,
+      selectedTargetNodeId: null,
       // Clear data only if moving to/from tasks with incompatible graph formats
       ...(needsReset ? {
         graphData: null,
@@ -82,7 +90,15 @@ const useGNNStore = create((set, get) => ({
   setGroundTruth: (gt) => set({ groundTruth: gt }),
   setTrainMask: (mask) => set({ trainMask: mask }),
   setTaskData: (td) => set({ taskData: td }),
-  setSelectedNode: (id) => set({ selectedNodeId: id }),
+  setSelectedNode: (id) => {
+    const current = get().selectedNodeId;
+    if (current !== id) {
+      set({ selectedNodeId: id, selectedTargetNodeId: null })
+    } else {
+      set({ selectedNodeId: id })
+    }
+  },
+  setSelectedTargetNode: (id) => set({ selectedTargetNodeId: id }),
 
   addInductiveNode: (newNode) => {
     const { graphData } = get()
@@ -126,6 +142,13 @@ const useGNNStore = create((set, get) => ({
   setTask5Meta: (meta) => set({ task5Meta: meta }),
   setTask5Exporting: (v) => set({ task5Exporting: v }),
   setUploadedFilePath: (path) => set({ uploadedFilePath: path }),
+
+  // ─── Upload/Task-specific Actions ────────────────────────
+  setCommunityGroundTruth: (gt) => set({ communityGroundTruth: gt }),
+  setNumCommunities: (n) => set({ numCommunities: n }),
+  setReferenceGraph: (g) => set({ referenceGraph: g }),
+  setUploadMetadata: (meta) => set({ uploadMetadata: meta }),
+  setTaskConfig: (cfg) => set({ taskConfig: cfg }),
 }))
 
 export default useGNNStore

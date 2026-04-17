@@ -97,8 +97,17 @@ def load_dataset(name):
 
 
 def get_data_from_config(config):
+    """Load data from config. Returns Data or List[Data] depending on file contents."""
     uploaded_path = config.get('uploaded_file_path')
     if uploaded_path and os.path.exists(uploaded_path):
+        loaded = torch.load(uploaded_path, weights_only=False)
+        # If it's a list (graph classification / generation), return as-is
+        if isinstance(loaded, list):
+            return loaded
+        # If it's a single Data object, return it
+        if isinstance(loaded, Data):
+            return loaded
+        # Fallback: try load_custom_graph
         return load_custom_graph(uploaded_path)
     dataset_name = config.get('dataset', 'cora')
     return load_dataset(dataset_name)
@@ -147,7 +156,12 @@ async def train_websocket(websocket: WebSocket):
 
         # ── Task 2: Graph Classification ───────────────────────────────────
         if task_id == 2:
-            epoch_snapshots = await run_graph_classification(config, websocket, stop_flag)
+            # Check if user uploaded custom graphs
+            data = get_data_from_config(config)
+            custom_graphs = data if isinstance(data, list) else None
+            epoch_snapshots = await run_graph_classification(
+                config, websocket, stop_flag, custom_graphs=custom_graphs
+            )
             await websocket.send_json({
                 'type': 'training_complete',
                 'all_snapshots': epoch_snapshots,
@@ -157,7 +171,11 @@ async def train_websocket(websocket: WebSocket):
         # ── Task 3: Link Prediction ────────────────────────────────────────
         if task_id == 3:
             data = get_data_from_config(config)
+            if isinstance(data, list):
+                data = data[0]
             model_type = config.get('model', 'GCN')
+            # Pass edge_split_ratio from upload config
+            config['edge_split_ratio'] = config.get('edge_split_ratio', 0.15)
             epoch_snapshots = await run_link_prediction(
                 config, data, model_type, websocket, stop_flag
             )
@@ -170,9 +188,15 @@ async def train_websocket(websocket: WebSocket):
         # ── Task 4: Community Detection ────────────────────────────────────
         if task_id == 4:
             data = get_data_from_config(config)
+            if isinstance(data, list):
+                data = data[0]  # Use first graph if list
             model_type = config.get('model', 'GCN')
+            num_communities = config.get('num_communities', 4)
+            has_community_gt = config.get('has_community_gt', False)
             epoch_snapshots = await run_community_detection(
-                config, data, model_type, websocket, stop_flag
+                config, data, model_type, websocket, stop_flag,
+                num_communities=num_communities,
+                community_gt=data.y.cpu().tolist() if has_community_gt and hasattr(data, 'y') and data.y is not None else None,
             )
             await websocket.send_json({
                 'type': 'training_complete',
@@ -183,6 +207,8 @@ async def train_websocket(websocket: WebSocket):
         # ── Task 5: Graph Embedding (Unsupervised) ──────────────────────────
         if task_id == 5:
             data = get_data_from_config(config)
+            if isinstance(data, list):
+                data = data[0]
 
             # Auto-detect graph properties
             data, graph_meta = auto_detect_graph(data)
@@ -221,6 +247,8 @@ async def train_websocket(websocket: WebSocket):
 
         if task_id == 6:
             data = get_data_from_config(config)
+            if isinstance(data, list):
+                data = data[0]
             epoch_snapshots = await run_graph_generation(
                 config, data, websocket, stop_flag
             )
@@ -232,6 +260,8 @@ async def train_websocket(websocket: WebSocket):
 
         # ── Task 1 (default): Node Classification ─────────────────────────
         data = get_data_from_config(config)
+        if isinstance(data, list):
+            data = data[0]
         model = build_model(config, data)
         optimizer = torch.optim.Adam(
             model.parameters(),

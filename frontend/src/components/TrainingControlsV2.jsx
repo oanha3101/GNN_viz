@@ -170,6 +170,11 @@ export default function TrainingControlsV2() {
     } else {
       // Upload file path if available
       const uploadedPath = useGNNStore.getState().uploadedFilePath
+      if (!uploadedPath) {
+        alert("⚠️ CHƯA CÓ DỮ LIỆU UPLOAD!\n\nVui lòng nhấn nút 'Upload Data' ở bảng điều khiển bên phải để tải dữ liệu của bạn lên trước khi chạy mô hình thực tế.")
+        return
+      }
+      const taskConfig = useGNNStore.getState().taskConfig || {}
       window.dispatchEvent(new CustomEvent('gnn:start-training', {
         detail: {
           task: selectedTask,
@@ -182,6 +187,8 @@ export default function TrainingControlsV2() {
           heads: hyperparams.heads,
           aggregator: hyperparams.aggregator,
           ...(uploadedPath ? { uploaded_file_path: uploadedPath } : {}),
+          // Task-specific config from upload
+          ...taskConfig,
         },
       }))
       setTraining(true, 0)

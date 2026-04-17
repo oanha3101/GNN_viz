@@ -63,6 +63,8 @@ function MiniGraphSVG({ nodes, links, contributions, size = 100 }) {
 export default function TaskTopology2() {
     const { snapshots, currentEpochFloat, isPlaying } = usePlayerStore()
     const taskData = useGNNStore((s) => s.taskData)
+    const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
+    const selectedNodeId = useGNNStore((s) => s.selectedNodeId)
     const [selectedGraphIdx, setSelectedGraphIdx] = useState(null)
     const fgRefDetail = useRef();
 
@@ -141,6 +143,13 @@ export default function TaskTopology2() {
             fg.d3ReheatSimulation();
         }
     }, [selectedGraphIdx]);
+
+    // Sync local selectedGraphIdx with global store (for Latent Space/Heatmap sync)
+    useEffect(() => {
+        if (selectedNodeId !== null && selectedNodeId !== selectedGraphIdx) {
+            setSelectedGraphIdx(selectedNodeId);
+        }
+    }, [selectedNodeId]);
 
     // Compute detail data (always, no conditional returns before this)
     const showDetail = selectedGraphIdx !== null && detailGraphData && graphs.length > 0;
@@ -258,7 +267,10 @@ export default function TaskTopology2() {
                     const hasResult = pred !== undefined
                     
                     return (
-                        <div key={i} onClick={() => setSelectedGraphIdx(i)}
+                        <div key={i} onClick={() => {
+                                setSelectedGraphIdx(i)
+                                setSelectedNode(i)
+                            }}
                              className={`group relative bg-slate-900/20 backdrop-blur-md rounded-[2rem] border-2 transition-all duration-500 cursor-pointer 
                                         hover:scale-[1.04] hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)]
                                         ${hasResult 
