@@ -5,43 +5,41 @@ import usePlayerStore from '../../store/playerStore'
 import { CLASS_COLORS, getClassColor } from '../../utils/colors'
 import { easeInOutCubic, interpolateSnapshots } from '../../engine/interpolate'
 
-function computeAxisRange(values, paddingRatio = 0.18, minSpan = 6) {
-  if (!values?.length) return [-minSpan / 2, minSpan / 2]
-
-  let min = Infinity
-  let max = -Infinity
-  values.forEach((value) => {
-    if (Number.isFinite(value)) {
-      min = Math.min(min, value)
-      max = Math.max(max, value)
-    }
-  })
-
-  if (!Number.isFinite(min) || !Number.isFinite(max)) {
-    return [-minSpan / 2, minSpan / 2]
-  }
-
-  const rawSpan = Math.max(max - min, 0)
-  const span = Math.max(rawSpan, minSpan)
-  const center = (min + max) / 2
-  const half = (span * (1 + paddingRatio)) / 2
-  return [center - half, center + half]
-}
-
+/**
+ * Tính toán dải tọa độ và độ nén linh hoạt.
+ */
 function getSpreadStats(points = []) {
   if (!points.length) {
     return { xRange: [-3, 3], yRange: [-3, 3], compactness: 1 }
   }
 
-  const xValues = points.map((point) => point[0])
-  const yValues = points.map((point) => point[1])
-  const xRange = computeAxisRange(xValues)
-  const yRange = computeAxisRange(yValues)
-  const xSpan = Math.abs(xRange[1] - xRange[0])
-  const ySpan = Math.abs(yRange[1] - yRange[0])
-  const compactness = Math.max(0.55, Math.min(1.7, 8 / Math.max(xSpan, ySpan, 0.001)))
+  let minX = Infinity, maxX = -Infinity
+  let minY = Infinity, maxY = -Infinity
+  
+  points.forEach(([x, y]) => {
+    if (Number.isFinite(x)) { minX = Math.min(minX, x); maxX = Math.max(maxX, x) }
+    if (Number.isFinite(y)) { minY = Math.min(minY, y); maxY = Math.max(maxY, y) }
+  })
 
-  return { xRange, yRange, compactness }
+  if (!Number.isFinite(minX)) return { xRange: [-3, 3], yRange: [-3, 3], compactness: 1 }
+
+  const spanX = Math.max(maxX - minX, 0.5)
+  const spanY = Math.max(maxY - minY, 0.5)
+  
+  // Ép tỉ lệ 1:1 và căn giữa dữ liệu thực tế
+  const maxSpan = Math.max(spanX, spanY)
+  const padding = maxSpan * 0.25 // Thêm lề xung quanh cho thoáng
+
+  const centerX = (minX + maxX) / 2
+  const centerY = (minY + maxY) / 2
+
+  const compactness = Math.max(0.4, Math.min(1.3, 4 / maxSpan))
+
+  return { 
+    xRange: [centerX - maxSpan/2 - padding, centerX + maxSpan/2 + padding], 
+    yRange: [centerY - maxSpan/2 - padding, centerY + maxSpan/2 + padding], 
+    compactness 
+  }
 }
 
 /* ─── Mini-Graph Popup for Task 2 ─────────────────────────────────────────── */
@@ -118,7 +116,7 @@ export default function EmbeddingView() {
   /* ── Trajectory trace (10-epoch trail for selected node) ──────────── */
   const trajectoryTrace = useMemo(() => {
     if (!showTrajectory || selectedNodeId === null || !currSnap?.embeddings_2d) return null
-    if (selectedTask === 2 || selectedTask === 3) return null // only for Task 1
+    if (selectedTask === 2 || selectedTask === 3) return null
 
     const trailLen = Math.min(10, epochInt)
     const x = [], y = []
@@ -136,7 +134,7 @@ export default function EmbeddingView() {
       line: { color: 'rgba(251, 146, 60, 0.5)', width: 2, shape: 'spline' },
       marker: {
         color: x.map((_, i) => `rgba(251, 146, 60, ${0.2 + (i / x.length) * 0.8})`),
-        size: x.map((_, i) => 3 + (i / x.length) * 6),
+        size: x.map((_, i) => 3 + (i / x.length) * 4),
       },
       hoverinfo: 'none',
       showlegend: false,
@@ -156,13 +154,16 @@ export default function EmbeddingView() {
       const x = emb.map(p => p[0])
       const y = emb.map(p => p[1])
       const colors = preds.map(c => getClassColor(c))
-      const sizes = emb.map((_, i) => (i === activeId) ? 16 * compactness : 9 * compactness)
+      const sizes = emb.map((_, i) => (i === activeId) ? 14 * compactness : 8 * compactness)
       const opacities = emb.map((_, i) => (i === activeId) ? 1.0 : 0.75)
       
       return [{
         type: 'scatter',
-        mode: 'markers',
+        mode: 'markers+text',
         x, y,
+        text: emb.map((_, i) => `G${i}`),
+        textposition: 'top center',
+        textfont: { family: 'monospace', size: 9, color: '#94a3b8' },
         marker: {
           color: colors,
           size: sizes,
@@ -172,7 +173,6 @@ export default function EmbeddingView() {
             width: emb.map((_, i) => (i === activeId) ? 2 : 0.5),
           },
         },
-        text: preds.map((c, i) => `Graph ${i} | Class ${c === 0 ? 'Dense' : 'Sparse'}`),
         hoverinfo: 'none', 
       }]
     }
@@ -185,7 +185,7 @@ export default function EmbeddingView() {
       const scores = currSnap.edge_scores || []
       const { compactness } = getSpreadStats(emb)
       
-      const x = [], y = [], colors = [], texts = [], sizes = [], opacities = []
+      const x = [], y = [], colors = [], texts = [], labels = [], sizes = [], opacities = []
 
       testEdges.forEach((e, i) => {
          const p1 = emb[e.source]
@@ -194,39 +194,30 @@ export default function EmbeddingView() {
              const score = scores[i] ?? 0.5
              x.push((p1[0] + p2[0]) / 2)
              y.push((p1[1] + p2[1]) / 2)
-             colors.push(e.exists ? '#3b82f6' : '#ef4444')
-             sizes.push((8 + score * 8) * Math.min(compactness, 1.45))
-             opacities.push(0.6 + score * 0.4)
+             colors.push(e.exists ? '#10b981' : '#ef4444')
+             sizes.push((7 + score * 7) * compactness)
+             opacities.push(0.5 + score * 0.5)
+             labels.push(`${e.source}-${e.target}`)
              texts.push(`Pair: ${e.source}-${e.target}<br>GT: ${e.exists ? 'Link' : 'No Link'}<br>Confidence: ${(score*100).toFixed(1)}%`)
          }
       })
 
-      // Collapse warning: check variance
-      let collapseWarning = false
-      if (x.length > 2) {
-        const meanX = x.reduce((a, b) => a + b, 0) / x.length
-        const meanY = y.reduce((a, b) => a + b, 0) / y.length
-        const variance = x.reduce((acc, xi, i) => acc + (xi - meanX) ** 2 + (y[i] - meanY) ** 2, 0) / x.length
-        collapseWarning = variance < 0.5
-      }
-
-      const traces = [{
+      return [{
         type: 'scatter',
-        mode: 'markers',
+        mode: 'markers+text',
         x, y,
+        text: labels,
+        textposition: 'top center',
+        textfont: { family: 'monospace', size: 8, color: '#64748b' },
         marker: {
           color: colors,
           size: sizes,
           opacity: opacities,
           line: { color: 'rgba(255,255,255,0.2)', width: 1 }
         },
-        text: texts,
+        textinfo: 'text',
         hoverinfo: 'text'
       }]
-
-      // Store collapse warning for rendering
-      traces._collapseWarning = collapseWarning
-      return traces
     }
 
     // Task 1: Node-level embedding
@@ -237,13 +228,16 @@ export default function EmbeddingView() {
     const x = emb.map((p) => p[0])
     const y = emb.map((p) => p[1])
     const colors = preds.map(c => getClassColor(c))
-    const sizes = emb.map((_, i) => i === selectedNodeId ? 13 * compactness : 7 * compactness)
+    const sizes = emb.map((_, i) => i === selectedNodeId ? 14 * compactness : 8 * compactness)
     const opacities = emb.map((_, i) => i === selectedNodeId ? 1.0 : 0.82)
 
     const traces = [{
       type: 'scatter',
-      mode: 'markers',
+      mode: 'markers+text',
       x, y,
+      text: emb.map((_, i) => String(i)),
+      textposition: 'top center',
+      textfont: { family: 'monospace', size: 9, color: '#ffffff' },
       marker: {
         color: colors,
         size: sizes,
@@ -255,13 +249,10 @@ export default function EmbeddingView() {
           width: emb.map((_, i) => i === selectedNodeId ? 2 : 0.5),
         },
       },
-      text: preds.map((c, i) => `Node ${i} | Class ${c}`),
       hoverinfo: 'text',
     }]
 
-    // Add trajectory trace if active
     if (trajectoryTrace) traces.push(trajectoryTrace)
-
     return traces
   }, [currSnap, selectedNodeId, selectedTask, hoveredGraphId, taskData, trajectoryTrace])
 
@@ -311,12 +302,8 @@ export default function EmbeddingView() {
   const handlePointClick = useCallback((event) => {
     if (event.points && event.points.length > 0) {
       const idx = event.points[0].pointIndex
-      if (selectedTask === 1) {
-        setSelectedNode(idx)
-        setShowTrajectory(true) // auto-enable trajectory on click
-      } else {
-        setSelectedNode(idx)
-      }
+      setSelectedNode(idx)
+      if (selectedTask === 1) setShowTrajectory(true)
     }
   }, [setSelectedNode, selectedTask])
 
@@ -325,81 +312,49 @@ export default function EmbeddingView() {
       const pt = event.points[0]
       if (selectedTask === 2) {
         setHoveredGraph(pt.pointIndex)
-        // Get cursor position for popup
-        const rect = plotContainerRef.current?.getBoundingClientRect()
-        if (rect) {
-          setPopupPos({
-            x: (event.event?.clientX || 0),
-            y: (event.event?.clientY || 0),
-          })
-        }
+        setPopupPos({ x: (event.event?.clientX || 0), y: (event.event?.clientY || 0) })
       }
     }
   }, [selectedTask, setHoveredGraph])
 
   const handleUnhover = useCallback(() => {
-    if (selectedTask === 2) {
-      setHoveredGraph(null)
-      setPopupPos(null)
-    }
+    if (selectedTask === 2) { setHoveredGraph(null); setPopupPos(null) }
   }, [selectedTask, setHoveredGraph])
 
-  // Get hovered graph data for popup
   const hoveredGraph = useMemo(() => {
     if (selectedTask !== 2 || hoveredGraphId === null || !taskData?.graphs) return null
     return taskData.graphs[hoveredGraphId]
   }, [selectedTask, hoveredGraphId, taskData])
 
   const axisConfig = useMemo(() => {
-    if (selectedTask === 2) {
-      return getSpreadStats(currSnap?.graph_embeddings_2d || [])
-    }
+    if (selectedTask === 2) return getSpreadStats(currSnap?.graph_embeddings_2d || [])
     return getSpreadStats(currSnap?.embeddings_2d || [])
   }, [currSnap, selectedTask])
 
-  if (!plotData) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-slate-500">
-        <div className="text-center">
-          <div className="text-3xl mb-2 opacity-60">🌐</div>
-          <p className="text-sm">No embedding data yet</p>
-        </div>
-      </div>
-    )
-  }
-
-  const scoreColor =
-    silhouetteScore > 0.45 ? 'text-green-400' :
-    silhouetteScore > 0.2  ? 'text-yellow-400' :
-                              'text-red-400'
-
-  const collapseWarning = plotData._collapseWarning
+  if (!plotData) return <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-950/20 animate-pulse text-[10px] uppercase font-black tracking-widest">Awaiting Latent...</div>
 
   return (
-    <div ref={plotContainerRef} className="w-full h-full relative">
+    <div ref={plotContainerRef} className="w-full h-full relative bg-[#020617]/40">
       <Plot
         data={plotData}
         layout={{
           paper_bgcolor: 'transparent',
-          plot_bgcolor: 'rgba(15,23,42,0.25)',
+          plot_bgcolor: 'transparent',
           font: { color: '#94a3b8', size: 10 },
           xaxis: {
-            showgrid: false, zeroline: false, showticklabels: false,
-            range: axisConfig.xRange,
-            fixedrange: false,
+            showgrid: true, gridcolor: 'rgba(255,255,255,0.02)',
+            zeroline: false, showticklabels: false,
+            range: axisConfig.xRange, fixedrange: false,
           },
           yaxis: {
-            showgrid: false, zeroline: false, showticklabels: false,
-            range: axisConfig.yRange,
-            fixedrange: false,
-            scaleanchor: 'x',
-            scaleratio: 1,
+            showgrid: true, gridcolor: 'rgba(255,255,255,0.02)',
+            zeroline: false, showticklabels: false,
+            range: axisConfig.yRange, fixedrange: false,
+            scaleanchor: 'x', scaleratio: 1,
           },
-          margin: { l: 12, r: 12, t: 54, b: 28 },
-          transition: { duration: 60, easing: 'linear', ordering: 'traces first' },
+          margin: { l: 30, r: 30, t: 40, b: 30 },
           uirevision: `gnn-embed-${selectedTask}`,
-          showlegend: false,
-          dragmode: 'pan',
+          showlegend: false, dragmode: 'pan',
         }}
         style={{ width: '100%', height: '100%' }}
         useResizeHandler
@@ -409,59 +364,21 @@ export default function EmbeddingView() {
         onUnhover={handleUnhover}
       />
 
-      {/* Silhouette Score Badge */}
-      <div className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-sm
-                      rounded-lg px-2.5 py-1.5 border border-slate-700/40 text-right">
-        <span className="text-[9px] text-slate-500 block uppercase tracking-wider">Silhouette</span>
-        <span className={`text-sm font-bold font-mono ${scoreColor}`}>
+      <div className="absolute top-2 right-2 bg-slate-900/90 backdrop-blur-md rounded-xl px-3 py-2 border border-white/5 shadow-2xl text-right pointer-events-none">
+        <span className="text-[8px] text-slate-500 block uppercase font-black tracking-widest">Silhouette</span>
+        <span className={`text-sm font-black font-mono ${silhouetteScore > 0.45 ? 'text-emerald-400' : silhouetteScore > 0.2 ? 'text-amber-400' : 'text-rose-400'}`}>
           {silhouetteScore.toFixed(3)}
         </span>
       </div>
 
-      {/* Trajectory Toggle (Task 1 only) */}
-      {selectedTask === 1 && (
-        <div className="absolute top-2 left-2 z-10">
-          <button
-            onClick={() => setShowTrajectory(!showTrajectory)}
-            className={`px-2 py-1 rounded-lg text-[9px] font-bold transition-all border
-              ${showTrajectory
-                ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
-                : 'bg-slate-800/90 text-slate-500 border-slate-700/50'}`}
-          >
-            Trajectory {showTrajectory ? 'ON' : 'OFF'}
-          </button>
-        </div>
-      )}
-
-      <div className="absolute bottom-2 left-2 bg-slate-950/75 border border-slate-700/50 rounded-lg px-2 py-1 pointer-events-none">
-        <span className="text-[9px] text-slate-500">Độ mở cụm </span>
-        <span className="text-[9px] font-semibold text-cyan-300">
-          {(axisConfig.compactness * 100).toFixed(0)}%
-        </span>
+      <div className="absolute bottom-3 left-3 bg-slate-950/80 backdrop-blur-md border border-white/5 rounded-lg px-2 py-1 pointer-events-none flex items-center gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_#06b6d4]" />
+        <span className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Density: {(axisConfig.compactness * 100).toFixed(0)}%</span>
       </div>
 
-      {/* Collapse Warning (Task 3) */}
-      {collapseWarning && (
-        <div className="absolute inset-0 border-2 border-red-500/60 rounded-lg pointer-events-none animate-pulse z-20">
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-red-900/90 text-red-300 
-                          text-[10px] font-bold px-3 py-1 rounded-full border border-red-500/50">
-            Embedding Collapse Detected — Variance &lt; 0.5
-          </div>
-        </div>
-      )}
-
-
-      {/* Epoch Badge */}
-      <div className="absolute bottom-2 right-2 bg-slate-900/70 rounded px-2 py-0.5">
-        <span className="text-[9px] text-slate-500">Epoch </span>
-        <span className="text-[9px] text-slate-300 font-semibold">{currentEpoch}</span>
-      </div>
-
-      {/* Mini-graph popup (Task 2 hover) */}
       {hoveredGraph && popupPos && (
         <MiniGraphPopup graph={hoveredGraph} hoveredGraphId={hoveredGraphId} currSnap={currSnap} position={popupPos} />
       )}
     </div>
   )
 }
-

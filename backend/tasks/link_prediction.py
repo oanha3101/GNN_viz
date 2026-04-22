@@ -14,6 +14,7 @@ from sklearn.neighbors import NearestNeighbors
 from torch_geometric.nn import GCNConv, GATConv, SAGEConv
 from torch_geometric.utils import negative_sampling, to_undirected
 from utils.ws_msg import send_json_zipped
+from utils.model_utils import should_take_snapshot
 
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -216,6 +217,14 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag):
             val_loss = F.binary_cross_entropy(torch.cat([pos_val_s, neg_val_s]), 
                                               torch.cat([torch.ones(pos_val_s.size(0)), torch.zeros(neg_val_s.size(0))]))
 
+        if should_take_snapshot(epoch, epochs):
+            # PCA
+            emb_np = embedding.cpu().numpy()
+            pca = PCA(n_components=2)
+            emb_2d = pca.fit_transform(emb_np).tolist()
+
+            edge_scores = pos_test_score.cpu().tolist() + neg_test_score.cpu().tolist()
+
             # ── Top-K predicted future links ──────────────────────────────
             # Find highest score pairs NOT in training set (true predictions)
             top_k_links = []
@@ -308,45 +317,45 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag):
                     'embedding_distance': emb_dist
                 })
 
-        # Compute kNN preservation
-        knn_pres = 0.0
-        try:
-            k_actual = min(k_knn, num_nodes - 1)
-            if k_actual > 0:
-                knn = NearestNeighbors(n_neighbors=k_actual + 1).fit(emb_np)
-                _, indices = knn.kneighbors(emb_np[sample_indices])
-                pres_scores = []
-                for i, idx in enumerate(sample_indices):
-                    graph_neighbors = adj_sets[idx]
-                    if not graph_neighbors:
-                        continue
-                    emb_neighbors = set(indices[i, 1:])
-                    intersection = graph_neighbors.intersection(emb_neighbors)
-                    pres_scores.append(len(intersection) / min(k_actual, len(graph_neighbors)))
-                knn_pres = float(np.mean(pres_scores)) if pres_scores else 0.0
-        except Exception:
-            pass
+            # Compute kNN preservation
+            knn_pres = 0.0
+            try:
+                k_actual = min(k_knn, num_nodes - 1)
+                if k_actual > 0:
+                    knn = NearestNeighbors(n_neighbors=k_actual + 1).fit(emb_np)
+                    _, indices = knn.kneighbors(emb_np[sample_indices])
+                    pres_scores = []
+                    for i, idx in enumerate(sample_indices):
+                        graph_neighbors = adj_sets[idx]
+                        if not graph_neighbors:
+                            continue
+                        emb_neighbors = set(indices[i, 1:])
+                        intersection = graph_neighbors.intersection(emb_neighbors)
+                        pres_scores.append(len(intersection) / min(k_actual, len(graph_neighbors)))
+                    knn_pres = float(np.mean(pres_scores)) if pres_scores else 0.0
+            except Exception:
+                pass
 
-        snapshot = {
-            'epoch': epoch,
-            'edge_scores': edge_scores,
-            'edge_classifications': edge_classifications,
-            'test_edge_common_neighbors': test_edge_common_neighbors,
-            'embeddings_2d': emb_2d,
-            'knn_preservation': knn_pres,
-            'train_loss': float(loss.item()),
-            'val_loss': float(val_loss.item()),
-            'auc': auc,
-            'val_acc': auc,
-            'top_k_links': top_k_links,
-        }
-        epoch_snapshots.append(snapshot)
+            snapshot = {
+                'epoch': epoch,
+                'edge_scores': edge_scores,
+                'edge_classifications': edge_classifications,
+                'test_edge_common_neighbors': test_edge_common_neighbors,
+                'embeddings_2d': emb_2d,
+                'knn_preservation': knn_pres,
+                'train_loss': float(loss.item()),
+                'val_loss': float(val_loss.item()),
+                'auc': auc,
+                'val_acc': auc,
+                'top_k_links': top_k_links,
+            }
+            epoch_snapshots.append(snapshot)
 
-        await send_json_zipped(websocket, {
-            'type': 'epoch_snapshot',
-            'data': snapshot,
-            'progress': (epoch + 1) / epochs,
-        })
+            await send_json_zipped(websocket, {
+                'type': 'epoch_snapshot',
+                'data': snapshot,
+                'progress': (epoch + 1) / epochs,
+            })
         await asyncio.sleep(0.005)
 
     return epoch_snapshots

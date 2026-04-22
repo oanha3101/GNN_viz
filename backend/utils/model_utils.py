@@ -26,3 +26,20 @@ def build_model(config, data=None, num_features=None, num_classes=None):
         return GraphSAGEModel(num_features, hidden, num_classes, dropout)
     else:
         return GCNModel(num_features, hidden, num_classes, dropout)
+
+def should_take_snapshot(epoch: int, total_epochs: int) -> bool:
+    """
+    Quyết định xem có nên thực hiện PCA và gửi snapshot ở epoch này không.
+    Giúp tối ưu hóa CPU/GPU bottleneck.
+    """
+    if epoch == 0 or epoch == total_epochs - 1:
+        return True
+        
+    if total_epochs <= 50:
+        return True
+    elif total_epochs <= 200:
+        return epoch % 2 == 0
+    elif total_epochs <= 500:
+        return epoch % 5 == 0
+    else:
+        return epoch % 10 == 0

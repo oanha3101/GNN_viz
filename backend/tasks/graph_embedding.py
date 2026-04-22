@@ -17,6 +17,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.neighbors import NearestNeighbors
 from torch_geometric.utils import negative_sampling
 from utils.ws_msg import send_json_zipped
+from utils.model_utils import should_take_snapshot
 
 executor = ThreadPoolExecutor(max_workers=2)
 
@@ -200,162 +201,164 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag):
             optimizer.step()
             avg_loss = loss.item()
 
-        # ── Evaluation ─────────────────────────────────────────────────────
-        model.eval()
-        with torch.no_grad():
-            outputs_eval = model(data.x, edge_index)
-            z_eval = outputs_eval[0] if isinstance(outputs_eval, tuple) else outputs_eval
-            z_np = z_eval.cpu().numpy()
+        if should_take_snapshot(epoch, epochs):
+            # ── Evaluation ─────────────────────────────────────────────────────
+            model.eval()
+            with torch.no_grad():
+                outputs_eval = model(data.x, edge_index)
+                z_eval = outputs_eval[0] if isinstance(outputs_eval, tuple) else outputs_eval
+                z_np = z_eval.cpu().numpy()
 
-            # Decide whether to compute t-SNE this epoch
-            do_tsne = (
-                last_tsne is None or
-                epoch == epochs - 1 or
-                epoch % 10 == 0 or
-                (num_nodes < 500 and epoch % 1 == 0)
-            )
+                # Decide whether to compute t-SNE this epoch
+                do_tsne = (
+                    last_tsne is None or
+                    epoch == epochs - 1 or
+                    epoch % 10 == 0 or
+                    (num_nodes < 500 and epoch % 1 == 0)
+                )
 
-            pca_2d, tsne_2d, knn_pres, isotropy, proximity_scores = await loop.run_in_executor(
-                executor, compute_metrics_sync,
-                z_np, num_nodes, sample_indices, adj_sets, edge_index_np,
-                last_tsne, epoch, epochs, k_knn, do_tsne
-            )
-            last_tsne = tsne_2d
+                pca_2d, tsne_2d, knn_pres, isotropy, proximity_scores = await loop.run_in_executor(
+                    executor, compute_metrics_sync,
+                    z_np, num_nodes, sample_indices, adj_sets, edge_index_np,
+                    last_tsne, epoch, epochs, k_knn, do_tsne
+                )
+                last_tsne = tsne_2d
 
-            # Quick AUC calculation
-            num_auc_samples = min(1000, edge_index.size(1))
-            pos_idx = np.random.choice(edge_index.size(1), num_auc_samples, replace=False)
-            neg_edge_eval = negative_sampling(edge_index, num_nodes, num_auc_samples)
-            p_scores = torch.sigmoid(
-                (z_eval[edge_index[0, pos_idx]] * z_eval[edge_index[1, pos_idx]]).sum(dim=1)
-            )
-            n_scores = torch.sigmoid(
-                (z_eval[neg_edge_eval[0]] * z_eval[neg_edge_eval[1]]).sum(dim=1)
-            )
+                # Quick AUC calculation
+                num_auc_samples = min(1000, edge_index.size(1))
+                pos_idx = np.random.choice(edge_index.size(1), num_auc_samples, replace=False)
+                neg_edge_eval = negative_sampling(edge_index, num_nodes, num_auc_samples)
+                p_scores = torch.sigmoid(
+                    (z_eval[edge_index[0, pos_idx]] * z_eval[edge_index[1, pos_idx]]).sum(dim=1)
+                )
+                n_scores = torch.sigmoid(
+                    (z_eval[neg_edge_eval[0]] * z_eval[neg_edge_eval[1]]).sum(dim=1)
+                )
+                try:
+                    auc = float(roc_auc_score(
+                        np.concatenate([np.ones(num_auc_samples), np.zeros(num_auc_samples)]),
+                        np.concatenate([p_scores.cpu().numpy(), n_scores.cpu().numpy()])
+                    ))
+                except Exception:
+                    auc = 0.5
+
+            snapshot = {
+                'epoch': epoch,
+                'embeddings_2d': pca_2d,
+                'tsne_2d': tsne_2d,
+                'knn_preservation': knn_pres,
+                'link_recon_auc': auc,
+                'isotropy_score': isotropy,
+                'reconstruction_loss': float(avg_loss),
+                'proximity_scores': proximity_scores[:500],  # cap for WS payload
+                
+                # ── Explainability Data ─────────────────────────────────────────
+                
+                # 1. Per-node kNN preservation score (sampled nodes only)
+                'per_node_knn_preservation': {},  # {node_id: preservation_score}
+                
+                # 2. Per-edge reconstruction error
+                'per_edge_reconstruction_error': [],  # [{source, target, error, correct}]
+                
+                # 3. Embedding norms per node (influence indicator)
+                'embedding_norms': [float(np.linalg.norm(z_np[i])) for i in range(num_nodes)],
+                
+                # 4. Outlier scores (distance to k-nearest embedding neighbors)
+                'outlier_scores': [],  # [{node_id, avg_distance_to_neighbors, is_outlier}]
+                
+                # Compatibility fields for shared MetricsChart
+                'train_loss': float(avg_loss),
+                'val_loss': float(avg_loss * 1.1),
+                'val_acc': auc,
+                'node_predictions': [0] * num_nodes,  # placeholder for cluster coloring
+            }
+            
+            # Compute per-node kNN preservation
             try:
-                auc = float(roc_auc_score(
-                    np.concatenate([np.ones(num_auc_samples), np.zeros(num_auc_samples)]),
-                    np.concatenate([p_scores.cpu().numpy(), n_scores.cpu().numpy()])
-                ))
-            except Exception:
-                auc = 0.5
-
-        snapshot = {
-            'epoch': epoch,
-            'embeddings_2d': pca_2d,
-            'tsne_2d': tsne_2d,
-            'knn_preservation': knn_pres,
-            'link_recon_auc': auc,
-            'isotropy_score': isotropy,
-            'reconstruction_loss': float(avg_loss),
-            'proximity_scores': proximity_scores[:500],  # cap for WS payload
+                k_actual = min(k_knn, num_nodes - 1)
+                if k_actual > 0:
+                    knn = NearestNeighbors(n_neighbors=k_actual + 1).fit(z_np)
+                    _, indices = knn.kneighbors(z_np[sample_indices])
+                    per_node_scores = {}
+                    for i, idx in enumerate(sample_indices):
+                        graph_neighbors = adj_sets[idx]
+                        if not graph_neighbors:
+                            per_node_scores[str(idx)] = 0.0
+                            continue
+                        emb_neighbors = set(indices[i, 1:])
+                        intersection = graph_neighbors.intersection(emb_neighbors)
+                        score = len(intersection) / min(k_actual, len(graph_neighbors))
+                        per_node_scores[str(idx)] = float(score)
+                    snapshot['per_node_knn_preservation'] = per_node_scores
+            except Exception as e:
+                print(f"Per-node kNN preservation failed: {e}")
             
-            # ── Explainability Data ─────────────────────────────────────────
-            
-            # 1. Per-node kNN preservation score (sampled nodes only)
-            'per_node_knn_preservation': {},  # {node_id: preservation_score}
-            
-            # 2. Per-edge reconstruction error
-            'per_edge_reconstruction_error': [],  # [{source, target, error, correct}]
-            
-            # 3. Embedding norms per node (influence indicator)
-            'embedding_norms': [float(np.linalg.norm(z_np[i])) for i in range(num_nodes)],
-            
-            # 4. Outlier scores (distance to k-nearest embedding neighbors)
-            'outlier_scores': [],  # [{node_id, avg_distance_to_neighbors, is_outlier}]
-            
-            # Compatibility fields for shared MetricsChart
-            'train_loss': float(avg_loss),
-            'val_loss': float(avg_loss * 1.1),
-            'val_acc': auc,
-            'node_predictions': [0] * num_nodes,  # placeholder for cluster coloring
-        }
-        
-        # Compute per-node kNN preservation
-        try:
-            k_actual = min(k_knn, num_nodes - 1)
-            if k_actual > 0:
-                knn = NearestNeighbors(n_neighbors=k_actual + 1).fit(z_np)
-                _, indices = knn.kneighbors(z_np[sample_indices])
-                per_node_scores = {}
-                for i, idx in enumerate(sample_indices):
-                    graph_neighbors = adj_sets[idx]
-                    if not graph_neighbors:
-                        per_node_scores[str(idx)] = 0.0
+            # Compute per-edge reconstruction error
+            try:
+                num_report_errors = min(100, edge_index_np.shape[1])
+                seen_edges = set()
+                per_edge_errors = []
+                
+                for i in range(edge_index_np.shape[1]):
+                    if len(per_edge_errors) >= num_report_errors:
+                        break
+                        
+                    u, v = int(edge_index_np[0, i]), int(edge_index_np[1, i])
+                    key = (min(u, v), max(u, v))
+                    if key in seen_edges:
                         continue
-                    emb_neighbors = set(indices[i, 1:])
-                    intersection = graph_neighbors.intersection(emb_neighbors)
-                    score = len(intersection) / min(k_actual, len(graph_neighbors))
-                    per_node_scores[str(idx)] = float(score)
-                snapshot['per_node_knn_preservation'] = per_node_scores
-        except Exception as e:
-            print(f"Per-node kNN preservation failed: {e}")
-        
-        # Compute per-edge reconstruction error
-        try:
-            num_report_errors = min(100, edge_index_np.shape[1])
-            seen_edges = set()
-            per_edge_errors = []
-            
-            for i in range(edge_index_np.shape[1]):
-                if len(per_edge_errors) >= num_report_errors:
-                    break
+                    seen_edges.add(key)
                     
-                u, v = int(edge_index_np[0, i]), int(edge_index_np[1, i])
-                key = (min(u, v), max(u, v))
-                if key in seen_edges:
-                    continue
-                seen_edges.add(key)
-                
-                # Reconstruction score
-                dot = float(np.dot(z_np[u], z_np[v]))
-                recon_score = 1.0 / (1.0 + math.exp(-dot))  # sigmoid
-                error = 1.0 - recon_score  # High error = low score for real edge
-                
-                per_edge_errors.append({
-                    'source': u,
-                    'target': v,
-                    'reconstruction_score': float(recon_score),
-                    'error': float(error),
-                    'is_correct': recon_score >= 0.5  # Threshold
-                })
-            
-            snapshot['per_edge_reconstruction_error'] = per_edge_errors
-        except Exception as e:
-            print(f"Per-edge reconstruction error failed: {e}")
-        
-        # Compute outlier scores
-        try:
-            k_outlier = min(5, num_nodes - 1)
-            if k_outlier > 0:
-                knn_outlier = NearestNeighbors(n_neighbors=k_outlier + 1).fit(z_np)
-                distances, _ = knn_outlier.kneighbors(z_np)
-                
-                outlier_data = []
-                for i in range(num_nodes):
-                    avg_dist = float(np.mean(distances[i, 1:]))  # Exclude self
-                    # Outlier if avg distance > 90th percentile
-                    outlier_data.append({
-                        'node_id': i,
-                        'avg_distance_to_neighbors': avg_dist,
+                    # Reconstruction score
+                    dot = float(np.dot(z_np[u], z_np[v]))
+                    recon_score = 1.0 / (1.0 + math.exp(-dot))  # sigmoid
+                    error = 1.0 - recon_score  # High error = low score for real edge
+                    
+                    per_edge_errors.append({
+                        'source': u,
+                        'target': v,
+                        'reconstruction_score': float(recon_score),
+                        'error': float(error),
+                        'is_correct': recon_score >= 0.5  # Threshold
                     })
                 
-                # Mark outliers
-                avg_dists = [d['avg_distance_to_neighbors'] for d in outlier_data]
-                threshold = float(np.percentile(avg_dists, 90))
-                for d in outlier_data:
-                    d['is_outlier'] = d['avg_distance_to_neighbors'] > threshold
-                
-                snapshot['outlier_scores'] = outlier_data[:200]  # Cap at 200
-        except Exception as e:
-            print(f"Outlier scores failed: {e}")
-        epoch_snapshots.append(snapshot)
+                snapshot['per_edge_reconstruction_error'] = per_edge_errors
+            except Exception as e:
+                print(f"Per-edge reconstruction error failed: {e}")
+            
+            # Compute outlier scores
+            try:
+                k_outlier = min(5, num_nodes - 1)
+                if k_outlier > 0:
+                    knn_outlier = NearestNeighbors(n_neighbors=k_outlier + 1).fit(z_np)
+                    distances, _ = knn_outlier.kneighbors(z_np)
+                    
+                    outlier_data = []
+                    for i in range(num_nodes):
+                        avg_dist = float(np.mean(distances[i, 1:]))  # Exclude self
+                        # Outlier if avg distance > 90th percentile
+                        outlier_data.append({
+                            'node_id': i,
+                            'avg_distance_to_neighbors': avg_dist,
+                        })
+                    
+                    # Mark outliers
+                    avg_dists = [d['avg_distance_to_neighbors'] for d in outlier_data]
+                    threshold = float(np.percentile(avg_dists, 90))
+                    for d in outlier_data:
+                        d['is_outlier'] = d['avg_distance_to_neighbors'] > threshold
+                    
+                    snapshot['outlier_scores'] = outlier_data[:200]  # Cap at 200
+            except Exception as e:
+                print(f"Outlier scores failed: {e}")
+            epoch_snapshots.append(snapshot)
 
-        await send_json_zipped(websocket, {
-            'type': 'epoch_snapshot',
-            'data': snapshot,
-            'progress': (epoch + 1) / epochs,
-        })
+            await send_json_zipped(websocket, {
+                'type': 'epoch_snapshot',
+                'data': snapshot,
+                'progress': (epoch + 1) / epochs,
+            })
+
         await asyncio.sleep(0.01)
 
     # Store final embedding for export
