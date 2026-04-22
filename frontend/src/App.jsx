@@ -321,18 +321,29 @@ function App() {
       {/* ═══ Header ═══ */}
       <header className="h-14 flex items-center justify-between px-5 border-b border-slate-800/60 bg-[#050c19]/80 backdrop-blur-xl z-50 shrink-0">
         <div className="flex items-center gap-5">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <Network size={18} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-sm font-black tracking-[0.15em] text-white">GNN-INSIGHT</h1>
-              <div className="text-[9px] text-cyan-500/80 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                <span className={`status-dot ${isTraining ? 'status-dot-training' : trainingDone ? 'status-dot-live' : 'status-dot-idle'}`} />
-                {isTraining ? 'Training...' : trainingDone ? 'Ready' : 'Standby'}
+          {(() => {
+            const datasetName = useGNNStore(s => s.datasetName)
+            return (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                  <Network size={18} className="text-white" />
+                </div>
+                <div>
+                  <h1 className="text-sm font-black tracking-[0.15em] text-white">GNN-INSIGHT</h1>
+                  <div className="text-[9px] text-cyan-500/80 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    <span className={`status-dot ${isTraining ? 'status-dot-training' : trainingDone ? 'status-dot-live' : 'status-dot-idle'}`} />
+                    {isTraining ? 'Training...' : trainingDone ? 'Ready' : 'Standby'}
+                    {datasetName && (
+                      <span className="ml-2 text-slate-500 lowercase normal-case flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-slate-700" />
+                        {datasetName}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            )
+          })()}
           <div className="h-6 w-px bg-slate-800" />
           <div className="flex items-center gap-2">
             <TaskSelector />

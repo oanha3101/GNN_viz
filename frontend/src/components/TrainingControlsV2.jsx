@@ -195,7 +195,12 @@ export default function TrainingControlsV2() {
     }
   }, [mockMode, hyperparams, selectedTask, setTraining, setGraphData, setGroundTruth, setTrainMask, setTaskData, loadSnapshots, setDone, resetForTraining, setReportOpen])
 
-  const handleStop = useCallback(() => {
+  const handleStop = useCallback(async () => {
+    try {
+      await fetch(`${API}/stop`, { method: 'POST' })
+    } catch (e) {
+      console.error('Failed to notify backend to stop:', e)
+    }
     setTraining(false, trainingProgress)
   }, [setTraining, trainingProgress])
 

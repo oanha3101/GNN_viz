@@ -29,6 +29,7 @@ export default function ProjectLibrary({ isOpen, onClose }) {
   const [loadingId, setLoadingId] = useState(null)
   const [filterTask, setFilterTask] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [error, setError] = useState(null)
 
   const setTask = useGNNStore((s) => s.setTask)
   const setModel = useGNNStore((s) => s.setModel)
@@ -51,9 +52,13 @@ export default function ProjectLibrary({ isOpen, onClose }) {
       if (res.ok) {
         const data = await res.json()
         setExperiments(data)
+        setError(null)
+      } else {
+        throw new Error(`Server returned ${res.status}`)
       }
     } catch (e) {
       console.error('Failed to fetch experiments:', e)
+      setError(e.message)
     } finally {
       setLoading(false)
     }
@@ -216,6 +221,18 @@ export default function ProjectLibrary({ isOpen, onClose }) {
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 size={32} className="animate-spin text-cyan-400/30" />
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-16 text-red-400">
+              <AlertTriangle size={48} className="mb-4 opacity-50" />
+              <p className="text-lg font-medium">Lỗi kết nối database</p>
+              <p className="text-sm mt-1 opacity-70">{error}</p>
+              <button 
+                onClick={fetchExperiments}
+                className="mt-6 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-bold hover:bg-red-500/20 transition-all"
+              >
+                Thử lại
+              </button>
             </div>
           ) : experiments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-500">

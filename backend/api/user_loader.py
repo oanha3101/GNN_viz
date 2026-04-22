@@ -43,6 +43,7 @@ class MappingConfig(BaseModel):
     is_directed: bool = False
     num_communities: Optional[int] = None
     edge_split_ratio: float = 0.15
+    dataset_name: Optional[str] = None
 
 
 class ConfigurePayload(BaseModel):
@@ -165,7 +166,7 @@ async def configure_dataset(payload: ConfigurePayload):
             },
             "graph_json": result['graph_json'],
             "uploaded_file_path": tmp_path,
-            "dataset_name": "custom",
+            "dataset_name": m.dataset_name or "custom",
             "validation_warnings": warnings,
             # Task-specific config to pass to training
             "task_config": {
@@ -296,7 +297,7 @@ async def upload_files(
             },
             "graph_json": result['graph_json'],
             "uploaded_file_path": tmp_path,
-            "dataset_name": "custom",
+            "dataset_name": m.dataset_name or "custom",
             "validation_warnings": warnings,
             "task_config": {
                 "edge_split_ratio": result.get('edge_split_ratio', 0.15),

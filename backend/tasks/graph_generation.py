@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 from sklearn.decomposition import PCA
+from utils.ws_msg import send_json_zipped
 
 
 executor = ThreadPoolExecutor(max_workers=2)
@@ -249,7 +250,7 @@ async def run_graph_generation(config, data, websocket, stop_flag):
 
         snapshot = await loop.run_in_executor(executor, _epoch_payload, epoch, epochs, data)
         snapshots.append(snapshot)
-        await websocket.send_json({
+        await send_json_zipped(websocket, {
             'type': 'epoch_snapshot',
             'data': snapshot,
             'progress': (epoch + 1) / epochs,

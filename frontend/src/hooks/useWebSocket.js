@@ -52,8 +52,25 @@ export default function useWebSocket() {
       wsRef.current.send(JSON.stringify(config))
     }
 
-    wsRef.current.onmessage = (event) => {
-      const msg = JSON.parse(event.data)
+    wsRef.current.onmessage = async (event) => {
+      let msg;
+      
+      // Kiểm tra nếu dữ liệu là nhị phân (Blob) -> Cần giải nén GZIP
+      if (event.data instanceof Blob) {
+        try {
+          const ds = new DecompressionStream('gzip');
+          const decompressedStream = event.data.stream().pipeThrough(ds);
+          const response = new Response(decompressedStream);
+          const text = await response.text();
+          msg = JSON.parse(text);
+        } catch (err) {
+          console.error('WS Decompression Error:', err);
+          return;
+        }
+      } else {
+        // Dữ liệu text thông thường
+        msg = JSON.parse(event.data);
+      }
 
       if (msg.type === 'graph_data') {
         const d = msg.data
@@ -121,9 +138,12 @@ export default function useWebSocket() {
 
     wsRef.current.onclose = (event) => {
       statusRef.current = 'disconnected'
-      // Auto-reconnect if connection was lost unexpectedly (code 1006 = abnormal closure)
-      if (event.code === 1006 && configRef.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
-        attemptReconnect()
+      // Disable auto-reconnect for training tasks to avoid infinite crash loops.
+      // If the backend fails, the user should be notified and choose to rerun manually.
+      setTraining(false, 0)
+      
+      if (event.code === 1006) {
+        console.warn('WebSocket closed abnormally (1006). Potential backend crash or network issue.')
       }
     }
   }, [addSnapshot, loadSnapshots, setTraining, setGraphData, setGroundTruth, setTaskData, setTask5Meta, setDone, attemptReconnect])

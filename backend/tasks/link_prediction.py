@@ -10,8 +10,10 @@ import torch.nn.functional as F
 import random
 from sklearn.decomposition import PCA
 from sklearn.metrics import roc_auc_score
+from sklearn.neighbors import NearestNeighbors
 from torch_geometric.nn import GCNConv, GATConv, SAGEConv
 from torch_geometric.utils import negative_sampling, to_undirected
+from utils.ws_msg import send_json_zipped
 
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -128,7 +130,7 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag):
         s, t = int(neg_test_np[0, i]), int(neg_test_np[1, i])
         test_edges_json.append({'source': s, 'target': t, 'exists': False, 'idx': i + n_pos})
 
-    await websocket.send_json({
+    await send_json_zipped(websocket, {
         'type': 'graph_data',
         'data': {
             'graphData': {'nodes': nodes_json, 'links': links_json},
@@ -136,6 +138,18 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag):
             'testEdges': test_edges_json,
         }
     })
+
+    # Build adjacency sets for kNN preservation calculation
+    adj_sets = [set() for _ in range(num_nodes)]
+    for i in range(train_edge_np.shape[1]):
+        s, t = int(train_edge_np[0, i]), int(train_edge_np[1, i])
+        adj_sets[s].add(t)
+        adj_sets[t].add(s)
+
+    # Sample indices for kNN preservation (for performance)
+    k_knn = config.get('k_knn', 10)
+    sample_size = min(500, num_nodes)
+    sample_indices = np.random.choice(num_nodes, sample_size, replace=False)
 
     # Build model
     model = LinkPredModel(
@@ -294,12 +308,32 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag):
                     'embedding_distance': emb_dist
                 })
 
+        # Compute kNN preservation
+        knn_pres = 0.0
+        try:
+            k_actual = min(k_knn, num_nodes - 1)
+            if k_actual > 0:
+                knn = NearestNeighbors(n_neighbors=k_actual + 1).fit(emb_np)
+                _, indices = knn.kneighbors(emb_np[sample_indices])
+                pres_scores = []
+                for i, idx in enumerate(sample_indices):
+                    graph_neighbors = adj_sets[idx]
+                    if not graph_neighbors:
+                        continue
+                    emb_neighbors = set(indices[i, 1:])
+                    intersection = graph_neighbors.intersection(emb_neighbors)
+                    pres_scores.append(len(intersection) / min(k_actual, len(graph_neighbors)))
+                knn_pres = float(np.mean(pres_scores)) if pres_scores else 0.0
+        except Exception:
+            pass
+
         snapshot = {
             'epoch': epoch,
             'edge_scores': edge_scores,
             'edge_classifications': edge_classifications,
             'test_edge_common_neighbors': test_edge_common_neighbors,
             'embeddings_2d': emb_2d,
+            'knn_preservation': knn_pres,
             'train_loss': float(loss.item()),
             'val_loss': float(val_loss.item()),
             'auc': auc,
@@ -308,7 +342,7 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag):
         }
         epoch_snapshots.append(snapshot)
 
-        await websocket.send_json({
+        await send_json_zipped(websocket, {
             'type': 'epoch_snapshot',
             'data': snapshot,
             'progress': (epoch + 1) / epochs,

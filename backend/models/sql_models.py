@@ -43,7 +43,17 @@ class Experiment(Base):
     dropout = Column(Float)
     accuracy = Column(Float)
     loss = Column(Float)
-    mongo_doc_id = Column(String(50)) # ObjectId in MongoDB holding (config, snapshots, graph_data, ground_truth, task_data)
+    
+    # Standard: References a document in MongoDB
+    mongo_doc_id = Column(String(50)) 
+    
+    # Fallback/Legacy: Stores heavy data directly in SQL if Mongo is missing
+    config_json = Column(JSON)
+    snapshots_json = Column(JSON)
+    graph_data_json = Column(JSON)
+    ground_truth_json = Column(JSON)
+    task_data_json = Column(JSON)
+
     is_best = Column(Boolean, default=False)
     is_mock = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

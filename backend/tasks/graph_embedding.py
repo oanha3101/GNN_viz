@@ -16,6 +16,7 @@ from sklearn.manifold import TSNE
 from sklearn.metrics import roc_auc_score
 from sklearn.neighbors import NearestNeighbors
 from torch_geometric.utils import negative_sampling
+from utils.ws_msg import send_json_zipped
 
 executor = ThreadPoolExecutor(max_workers=2)
 
@@ -350,7 +351,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag):
             print(f"Outlier scores failed: {e}")
         epoch_snapshots.append(snapshot)
 
-        await websocket.send_json({
+        await send_json_zipped(websocket, {
             'type': 'epoch_snapshot',
             'data': snapshot,
             'progress': (epoch + 1) / epochs,

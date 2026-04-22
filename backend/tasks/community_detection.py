@@ -11,6 +11,7 @@ import networkx as nx
 from sklearn.cluster import KMeans
 from torch_geometric.nn import GCNConv, GATConv, SAGEConv
 from torch_geometric.utils import to_networkx
+from utils.ws_msg import send_json_zipped
 try:
     from scipy.cluster.hierarchy import linkage as scipy_linkage
     HAS_SCIPY = True
@@ -73,7 +74,7 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
         for i in range(min(num_nodes, len(community_gt))):
             nodes_data[i]['communityGT'] = community_gt[i]
     
-    await websocket.send_json({
+    await send_json_zipped(websocket, {
         'type': 'graph_data',
         'data': {
             'graphData': {
@@ -310,7 +311,7 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
             snapshot['community_transitions'] = {}
         epoch_snapshots.append(snapshot)
         
-        await websocket.send_json({
+        await send_json_zipped(websocket, {
             'type': 'epoch_snapshot',
             'data': snapshot,
             'progress': (epoch + 1) / epochs

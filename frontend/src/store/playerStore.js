@@ -40,10 +40,11 @@ const usePlayerStore = create((set, get) => ({
 
   addSnapshot: (snapshot) => {
     set((s) => {
-      // Prevent duplicate epochs by checking if this epoch already exists
-      const existingEpoch = snapshot.epoch
-      if (s.snapshots.some(snap => snap.epoch === existingEpoch)) {
-        // Skip duplicate - return unchanged state
+      // Optimized check for duplicates (O(1) instead of O(N))
+      // Since snapshots arrive via WebSocket in sequential order, 
+      // we only need to compare with the most recent entry.
+      const lastSnapshot = s.snapshots[s.snapshots.length - 1]
+      if (lastSnapshot && lastSnapshot.epoch === snapshot.epoch) {
         return {}
       }
       

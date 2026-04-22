@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from sklearn.decomposition import PCA
+from utils.ws_msg import send_json_zipped
 
 
 async def run_node_classification(config, data, model, optimizer, websocket, stop_flag):
@@ -142,7 +143,7 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
         epoch_snapshots.append(snapshot)
 
         # ── Stream to Frontend ──────────────────────────────────────────────
-        await websocket.send_json({
+        await send_json_zipped(websocket, {
             'type': 'epoch_snapshot',
             'data': snapshot,
             'progress': (epoch + 1) / epochs,

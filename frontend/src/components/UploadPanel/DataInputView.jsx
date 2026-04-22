@@ -66,6 +66,8 @@ export default function DataInputView({ onClose }) {
   const [nodesFile, setNodesFile] = useState(null)
   const [edgesFile, setEdgesFile] = useState(null)
   const [graphsFile, setGraphsFile] = useState(null)
+  const [datasetName, setDatasetNameLocal] = useState('')
+  const setDatasetNameGlobal = useGNNStore(s => s.setDatasetName)
   
   const [nodeCols, setNodeCols] = useState([])
   const [edgeCols, setEdgeCols] = useState([])
@@ -137,6 +139,11 @@ export default function DataInputView({ onClose }) {
         } else if (type === 'graphs') {
           setGraphsData(jsonData)
           setGraphCols(cols)
+        }
+        
+        if (type === 'nodes' && !datasetName) {
+           const baseName = file.name.split('.')[0].replace(/[-_]/g, ' ')
+           setDatasetNameLocal(baseName.charAt(0).toUpperCase() + baseName.slice(1))
         }
       } catch (err) {
         alert("Error parsing file: " + err.message)
@@ -249,7 +256,7 @@ export default function DataInputView({ onClose }) {
         formData.append('nodes_file', nodesFile)
         formData.append('edges_file', edgesFile)
         if (graphsFile) formData.append('graphs_file', graphsFile)
-        formData.append('mapping_json', JSON.stringify({ task, ...mapping }))
+        formData.append('mapping_json', JSON.stringify({ task, ...mapping, dataset_name: datasetName }))
 
         const res = await fetch(`${API}/upload-files`, {
           method: 'POST',
@@ -271,7 +278,7 @@ export default function DataInputView({ onClose }) {
           nodes: nodesData,
           edges: edgesData,
           graphs: graphsData.length > 0 ? graphsData : null,
-          mapping: { task, ...mapping }
+          mapping: { task, ...mapping, dataset_name: datasetName }
         }
 
         const res = await fetch(`${API}/configure`, {
@@ -299,6 +306,7 @@ export default function DataInputView({ onClose }) {
       store.setTask(task)
       store.setUploadedFilePath(configRes.uploaded_file_path)
       store.setHyperparams({ dataset: configRes.dataset_name || 'custom' })
+      setDatasetNameGlobal(configRes.dataset_name || 'custom')
 
       // Save task config for training WebSocket
       if (configRes.task_config) {
@@ -381,6 +389,20 @@ export default function DataInputView({ onClose }) {
             </div>
           ))}
         </div>
+
+        {/* Dataset Name Input (Persistent) */}
+        {(step === 1 || step === 3) && (
+          <div className="px-6 py-3 bg-slate-900 border-b border-slate-800 flex items-center gap-4">
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest shrink-0">Dataset Name</label>
+             <input 
+               type="text" 
+               placeholder="Enter a friendly name for this dataset..."
+               value={datasetName}
+               onChange={e => setDatasetNameLocal(e.target.value)}
+               className="flex-1 bg-slate-950/50 border border-slate-700/50 rounded-lg px-3 py-1.5 text-sm text-cyan-400 focus:border-blue-500 transition-colors"
+             />
+          </div>
+        )}
 
         {/* Body */}
         <div className="flex-1 overflow-auto p-6">

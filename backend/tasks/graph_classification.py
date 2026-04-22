@@ -11,6 +11,7 @@ import networkx as nx
 from sklearn.decomposition import PCA
 from torch_geometric.data import Data, Batch
 from torch_geometric.nn import GCNConv, global_add_pool
+from utils.ws_msg import send_json_zipped
 
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -177,7 +178,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         num_classes = 2
 
     # Send graph structure to frontend first
-    await websocket.send_json({
+    await send_json_zipped(websocket, {
         'type': 'graph_data',
         'data': {
             'graphs': graphs_json,
@@ -339,7 +340,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         }
         epoch_snapshots.append(snapshot)
 
-        await websocket.send_json({
+        await send_json_zipped(websocket, {
             'type': 'epoch_snapshot',
             'data': snapshot,
             'progress': (epoch + 1) / epochs,

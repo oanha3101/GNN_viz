@@ -146,6 +146,37 @@ export default function NodeInfoPanelV2() {
         </div>
       </div>
 
+      {/* Node Features */}
+      {node?.features && (
+        <div className="mt-4 rounded-2xl border border-slate-700/40 bg-slate-900/70 p-4">
+          <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-500">
+            <span>Đặc trưng (Features)</span>
+            <span className="rounded bg-slate-800 px-1.5 py-0.5">
+              {Array.isArray(node.features) ? node.features.length : Object.keys(node.features).length} dims
+            </span>
+          </div>
+          <div className="grid max-h-32 grid-cols-4 gap-1 overflow-y-auto pr-1 custom-scrollbar">
+            {(Array.isArray(node.features) ? node.features : Object.values(node.features)).map((val, idx) => {
+              if (idx >= 60) return null;
+              return (
+                <div 
+                  key={idx} 
+                  className="rounded bg-slate-800/50 px-1.5 py-1 text-center font-mono text-[9px] text-slate-300"
+                  title={`Dimension ${idx}`}
+                >
+                  {typeof val === 'number' ? val.toFixed(2) : val}
+                </div>
+              );
+            })}
+            {(Array.isArray(node.features) ? node.features.length : Object.keys(node.features).length) > 60 && (
+               <div className="col-span-4 mt-1 text-center text-[9px] italic text-slate-500">
+                 ... và {(Array.isArray(node.features) ? node.features.length : Object.keys(node.features).length) - 60} dimensions khác
+               </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* K-Hop Neighborhood Stats */}
       {kHopStats && (
         <div className="mt-4 rounded-2xl border border-slate-700/40 bg-slate-900/70 p-4">
