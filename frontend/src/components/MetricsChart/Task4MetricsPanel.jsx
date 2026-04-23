@@ -260,7 +260,10 @@ function StatCell({ label, value, digits = 0, tone = 'neutral' }) {
 }
 
 function Gauge({ label, value }) {
-  const v = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : null
+  // Silhouette ranges over [-1, 1]; display the true value as text but
+  // clamp only the bar width so we never draw a negative-width rectangle.
+  const v = Number.isFinite(value) ? value : null
+  const barV = v == null ? 0 : Math.max(0, Math.min(1, v))
   return (
     <div className="bg-slate-900/60 rounded-md px-2 py-1.5 border border-slate-800/50">
       <div className="flex items-center justify-between">
@@ -268,7 +271,7 @@ function Gauge({ label, value }) {
         <span className="text-micro font-mono font-bold text-slate-100">{v == null ? '—' : v.toFixed(3)}</span>
       </div>
       <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden mt-1">
-        <div className="h-full bg-cyan-400" style={{ width: `${(v ?? 0) * 100}%` }} />
+        <div className="h-full bg-cyan-400" style={{ width: `${barV * 100}%` }} />
       </div>
     </div>
   )
