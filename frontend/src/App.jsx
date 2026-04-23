@@ -78,30 +78,6 @@ function InfoRouter() {
   return <NodeInfoPanel />
 }
 
-function InspectorDrawer() {
-  const selectedTask = useGNNStore((s) => s.selectedTask)
-  const selectedNodeId = useGNNStore((s) => s.selectedNodeId)
-  const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
-
-  return (
-    <AnimatePresence>
-      {[1, 5].includes(selectedTask) && selectedNodeId !== null && (
-        <motion.div
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="absolute inset-y-0 right-0 z-50 w-[380px] border-l border-slate-800/80 bg-[#071120]/95 shadow-2xl backdrop-blur-xl"
-        >
-          <div className="h-full overflow-y-auto custom-scrollbar">
-            <InfoRouter />
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  )
-}
-
 function PanelHeading({ title, subtitle, align = 'left' }) {
   return (
     <div className={`absolute top-4 ${align === 'right' ? 'right-4' : 'left-16'} z-10 pointer-events-none rounded-xl border border-white/5 bg-[#020617]/40 backdrop-blur-xl px-4 py-2 flex items-center gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)]`}>
@@ -289,7 +265,9 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+      if (e.target.isContentEditable) return
       const { isPlaying, play, pause, stepBack, stepForward } = usePlayerStore.getState()
       switch (e.code) {
         case 'Space': e.preventDefault(); isPlaying ? pause() : play(); break
