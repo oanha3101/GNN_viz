@@ -27,6 +27,7 @@ const useGNNStore = create((set, get) => ({
   // ─── Selection / UI ──────────────────────────────────────────
   selectedNodeId: null,
   hoveredGraphId: null,
+  selectedCommunityId: null, // Task 4 — community selected via canvas click / metric table
   viewMode: 'prediction',
   attentionHead: 'avg',
   configOpen: false,
@@ -99,6 +100,7 @@ const useGNNStore = create((set, get) => ({
     }
   },
   setSelectedTargetNode: (id) => set({ selectedTargetNodeId: id }),
+  setSelectedCommunity: (id) => set({ selectedCommunityId: id }),
 
   addInductiveNode: (newNode) => {
     const { graphData } = get()

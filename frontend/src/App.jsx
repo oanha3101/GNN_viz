@@ -26,7 +26,8 @@ import ConfigPanel from './components/ConfigPanel/ConfigPanel'
 import InductiveDemo from './components/TopologyView/InductiveDemo'
 import ReadoutMonitor from './components/TopologyView/ReadoutMonitor'
 import ROCMonitor from './components/TopologyView/ROCMonitor'
-import ModularityMonitor from './components/TopologyView/ModularityMonitor'
+import Task4MetricsPanel from './components/MetricsChart/Task4MetricsPanel'
+import Task4CommunityInspector from './components/TopologyView/Task4CommunityInspector'
 import EmbeddingSpaceB from './components/TopologyView/EmbeddingSpaceB'
 import StructurePreservation from './components/TopologyView/StructurePreservation'
 import Task5NodeInspector from './components/TopologyView/Task5NodeInspector'
@@ -72,7 +73,7 @@ function InfoRouter() {
   if (selectedTask === 1) return <NodeInfoPanel />
   if (selectedTask === 2) return <ReadoutMonitor />
   if (selectedTask === 3) return <LinkMetricsPanel />
-  if (selectedTask === 4) return <ModularityMonitor />
+  if (selectedTask === 4) return <Task4CommunityInspector />
   if (selectedTask === 5) return <Task5NodeInspector />
   if (selectedTask === 6) return <ValidityMonitor />
   return <NodeInfoPanel />
@@ -426,7 +427,7 @@ function App() {
                             {selectedTask === 1 ? <Task1MetricsPanel /> :
                              selectedTask === 2 ? <Task2MetricsPanel /> :
                              selectedTask === 3 ? <ROCMonitor /> :
-                             selectedTask === 4 ? <ModularityMonitor /> :
+                             selectedTask === 4 ? <Task4MetricsPanel /> :
                              selectedTask === 5 ? <StructurePreservation /> :
                              <MetricsChart />}
                           </ErrorBoundary>
