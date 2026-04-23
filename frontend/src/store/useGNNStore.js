@@ -36,6 +36,9 @@ const useGNNStore = create((set, get) => ({
   task5Meta: null,     // { num_nodes, num_edges, has_features, feature_dim, has_labels, num_classes, ... }
   task5Exporting: false,
 
+  // ─── Task 6 specific ────────────────────────────────────────
+  task6FilterMode: 'all',   // all | valid | invalid | novel — drives grid filter
+
   // ─── Uploaded file path (for custom datasets) ───────────────
   uploadedFilePath: null,
 
@@ -58,6 +61,7 @@ const useGNNStore = create((set, get) => ({
       trainingProgress: 0,
       selectedNodeId: null,
       selectedTargetNodeId: null,
+      task6FilterMode: 'all',
       // Clear data only if moving to/from tasks with incompatible graph formats
       ...(needsReset ? {
         graphData: null,
@@ -99,6 +103,7 @@ const useGNNStore = create((set, get) => ({
     }
   },
   setSelectedTargetNode: (id) => set({ selectedTargetNodeId: id }),
+  setTask6FilterMode: (mode) => set({ task6FilterMode: mode || 'all' }),
 
   addInductiveNode: (newNode) => {
     const { graphData } = get()

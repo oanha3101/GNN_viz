@@ -28,7 +28,7 @@ export default function ValidityMonitor() {
 
   if (snapshots.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4">
+      <div className="h-full flex flex-col items-center justify-center text-slate-500 text-micro p-4">
         <div className="text-3xl mb-3 opacity-40 animate-pulse">&#8230;</div>
         <p className="text-center">Generation metrics<br/>will appear during training</p>
       </div>
@@ -37,22 +37,22 @@ export default function ValidityMonitor() {
 
   return (
     <div className="h-full flex flex-col p-3 text-xs overflow-auto bg-slate-950">
-      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+      <h3 className="text-micro font-black text-slate-400 uppercase tracking-ultra mb-3">
         Generation Quality
       </h3>
 
       {/* Metric cards */}
       <div className="grid grid-cols-3 gap-1.5 mb-3">
         <div className="bg-green-900/20 rounded-lg px-1.5 py-1.5 text-center border border-green-500/20">
-          <span className="text-[7px] text-green-500/70 block uppercase font-bold">Valid</span>
+          <span className="text-nano text-green-500/70 block uppercase font-bold">Valid</span>
           <span className="text-sm font-black font-mono text-green-400">{(validity * 100).toFixed(0)}%</span>
         </div>
         <div className="bg-blue-900/20 rounded-lg px-1.5 py-1.5 text-center border border-blue-500/20">
-          <span className="text-[7px] text-blue-500/70 block uppercase font-bold">Unique</span>
+          <span className="text-nano text-blue-500/70 block uppercase font-bold">Unique</span>
           <span className="text-sm font-black font-mono text-blue-400">{(uniqueness * 100).toFixed(0)}%</span>
         </div>
         <div className="bg-purple-900/20 rounded-lg px-1.5 py-1.5 text-center border border-purple-500/20">
-          <span className="text-[7px] text-purple-500/70 block uppercase font-bold">Novel</span>
+          <span className="text-nano text-purple-500/70 block uppercase font-bold">Novel</span>
           <span className="text-sm font-black font-mono text-purple-400">{(novelty * 100).toFixed(0)}%</span>
         </div>
       </div>
@@ -93,11 +93,11 @@ export default function ValidityMonitor() {
       {/* Loss cards */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-slate-900/60 rounded-lg px-2 py-1.5 text-center border border-slate-800/50">
-          <span className="text-[8px] text-slate-500 block uppercase font-bold">Recon Loss</span>
+          <span className="text-nano text-slate-500 block uppercase font-bold">Recon Loss</span>
           <span className="text-xs font-bold font-mono text-orange-400">{reconLoss.toFixed(3)}</span>
         </div>
         <div className="bg-slate-900/60 rounded-lg px-2 py-1.5 text-center border border-slate-800/50">
-          <span className="text-[8px] text-slate-500 block uppercase font-bold">KL Loss</span>
+          <span className="text-nano text-slate-500 block uppercase font-bold">KL Loss</span>
           <span className="text-xs font-bold font-mono text-purple-400">{klLoss.toFixed(3)}</span>
         </div>
       </div>
