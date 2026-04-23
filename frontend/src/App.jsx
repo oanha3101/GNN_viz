@@ -25,7 +25,7 @@ import TrainingControls from './components/TrainingControlsV2'
 import ConfigPanel from './components/ConfigPanel/ConfigPanel'
 import InductiveDemo from './components/TopologyView/InductiveDemo'
 import ReadoutMonitor from './components/TopologyView/ReadoutMonitor'
-import ROCMonitor from './components/TopologyView/ROCMonitor'
+import Task3MetricsPanel from './components/MetricsChart/Task3MetricsPanel'
 import Task4MetricsPanel from './components/MetricsChart/Task4MetricsPanel'
 import Task4CommunityInspector from './components/TopologyView/Task4CommunityInspector'
 import EmbeddingSpaceB from './components/TopologyView/EmbeddingSpaceB'
@@ -426,7 +426,7 @@ function App() {
                           <ErrorBoundary>
                             {selectedTask === 1 ? <Task1MetricsPanel /> :
                              selectedTask === 2 ? <Task2MetricsPanel /> :
-                             selectedTask === 3 ? <ROCMonitor /> :
+                             selectedTask === 3 ? <Task3MetricsPanel /> :
                              selectedTask === 4 ? <Task4MetricsPanel /> :
                              selectedTask === 5 ? <StructurePreservation /> :
                              <MetricsChart />}

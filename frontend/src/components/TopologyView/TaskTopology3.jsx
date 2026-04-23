@@ -21,6 +21,8 @@ export default function TaskTopology3() {
 
   const selectedNodeId = useGNNStore(s => s.selectedNodeId)
   const setSelectedNode = useGNNStore(s => s.setSelectedNode)
+  const focusedEdgeIdx = useGNNStore(s => s.focusedEdgeIdx)
+  const setFocusedEdge = useGNNStore(s => s.setFocusedEdge)
 
   const [showNodes, setShowNodes] = useState(true)
   const [showTriangles, setShowTriangles] = useState(true)
@@ -63,31 +65,56 @@ export default function TaskTopology3() {
   }, [activeGraphData])
 
   // Re-fit on resize so the graph always fills the workspace (no dark dead space).
-  useEffect(() => {
+  // Generous 60px padding prevents over-crush at narrow workspace widths.
+  const fitView = useCallback((duration = 500, padding = 60) => {
     if (!fgRef.current) return
-    const id = requestAnimationFrame(() => {
-      try { fgRef.current && fgRef.current.zoomToFit(300, 32) } catch { /* settle */ }
-    })
-    return () => cancelAnimationFrame(id)
-  }, [dimensions.width, dimensions.height])
+    try { fgRef.current.zoomToFit(duration, padding) } catch { /* settle */ }
+  }, [])
 
-  // Setup Lực D3
+  useEffect(() => {
+    const id = requestAnimationFrame(() => fitView(400, 60))
+    return () => cancelAnimationFrame(id)
+  }, [dimensions.width, dimensions.height, fitView])
+
+  // Press F to re-centre the graph at any time.
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = e.target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return
+      if (e.key === 'f' || e.key === 'F') fitView(600, 60)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [fitView])
+
+  // When a Hard Edges row asks us to focus a specific test edge, pan-zoom the
+  // force graph to its midpoint and auto-clear the focus after the flash so
+  // the user can click another row immediately.
+  useEffect(() => {
+    if (focusedEdgeIdx == null || !fgRef.current) return
+    const te = taskData?.testEdges?.[focusedEdgeIdx]
+    if (!te) return
+    const nodes = activeGraphData?.nodes || []
+    const s = nodes.find((n) => n.id === te.source)
+    const t = nodes.find((n) => n.id === te.target)
+    if (!s || !t || !Number.isFinite(s.x) || !Number.isFinite(t.x)) return
+    try {
+      fgRef.current.centerAt((s.x + t.x) / 2, (s.y + t.y) / 2, 600)
+      fgRef.current.zoom(2.2, 600)
+    } catch { /* settle */ }
+    const clr = setTimeout(() => setFocusedEdge(null), 1800)
+    return () => clearTimeout(clr)
+  }, [focusedEdgeIdx, taskData, activeGraphData, setFocusedEdge])
+
+  // Setup Lực D3 (không tự fit ở đây — dimension effect sẽ lo refit sau khi
+  // simulation settle, tránh race với zoomToFit gây double-animation).
   useEffect(() => {
     if (!fgRef.current || !activeGraphData) return
     const fg = fgRef.current
-    
-    // Đảm bảo đồ thị luôn ở tâm
     fg.d3Force('charge')?.strength(-180).distanceMax(500)
     fg.d3Force('link')?.distance(50)
-    fg.d3Force('center')?.strength(0.15) // Thêm lực hướng tâm mạnh hơn
-    
+    fg.d3Force('center')?.strength(0.15)
     fg.d3ReheatSimulation()
-    
-    // Tự động căn chỉnh sau khi dữ liệu nạp xong
-    const timer = setTimeout(() => {
-        if (fgRef.current) fgRef.current.zoomToFit(600, 35)
-    }, 500)
-    return () => clearTimeout(timer)
   }, [activeGraphData])
 
   // 2. Tính Common Neighbors
@@ -127,7 +154,10 @@ export default function TaskTopology3() {
     if (testIdx !== -1) {
       const scoreA = snapA?.edge_scores?.[testIdx] || 0, scoreB = snapB?.edge_scores?.[testIdx] || scoreA
       score = lerp(scoreA, scoreB, t)
-      color = getLinkColor(score); width = 2 + score * 4
+      color = getLinkColor(score)
+      // Cap edge width at 4 — previous `2 + score * 4` let confident edges hit 6
+      // which over-dominates the canvas at narrow workspace widths.
+      width = Math.min(4, 1.5 + score * 3)
       isFuture = !testEdges[testIdx].exists && score > 0.5
     }
 
@@ -199,6 +229,8 @@ export default function TaskTopology3() {
         linkCanvasObjectMode={() => 'replace'}
         onNodeClick={(node) => setSelectedNode(selectedNodeId === node.id ? null : node.id)}
         onLinkHover={(link) => setHoveredLink(link)}
+        minZoom={0.3}
+        maxZoom={3}
         backgroundColor="transparent"
       />
 
@@ -221,8 +253,15 @@ export default function TaskTopology3() {
       </div>
 
       <div className="absolute top-4 right-4 z-20 flex gap-2">
-        <button onClick={() => setShowNodes(!showNodes)} className={`px-3 py-1.5 rounded-xl text-[9px] font-black tracking-wider uppercase border transition-all ${showNodes ? 'bg-slate-900/90 border-slate-700 text-slate-400 hover:text-white' : 'bg-indigo-600/30 border-indigo-500 text-indigo-300'}`}>Nodes</button>
-        <button onClick={() => setShowErrorsOnly(!showErrorsOnly)} className={`px-3 py-1.5 rounded-xl text-[9px] font-black tracking-wider uppercase border transition-all ${showErrorsOnly ? 'bg-red-500/20 border-red-500/40 text-red-400' : 'bg-slate-900/80 border-slate-700 text-slate-500'}`}>Errors</button>
+        <button onClick={() => setShowNodes(!showNodes)} className={`px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border transition-all ${showNodes ? 'bg-slate-900/90 border-slate-700 text-slate-400 hover:text-white' : 'bg-indigo-600/30 border-indigo-500 text-indigo-300'}`}>Nodes</button>
+        <button onClick={() => setShowErrorsOnly(!showErrorsOnly)} className={`px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border transition-all ${showErrorsOnly ? 'bg-red-500/20 border-red-500/40 text-red-400' : 'bg-slate-900/80 border-slate-700 text-slate-500'}`}>Errors</button>
+        <button
+          onClick={() => fitView(600, 60)}
+          title="Fit to view (F)"
+          className="px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border bg-slate-900/80 border-slate-700 text-slate-400 hover:text-white hover:border-cyan-500/40 transition-all"
+        >
+          Fit
+        </button>
       </div>
     </div>
   )
