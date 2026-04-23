@@ -1,117 +1,297 @@
-import React, { useMemo } from 'react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { Activity, ShieldCheck, Zap, AlertTriangle } from 'lucide-react'
+import React, { useMemo, useState } from 'react'
+import {
+  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, BarChart, Bar, Legend,
+} from 'recharts'
 import usePlayerStore from '../../store/playerStore'
 import useGNNStore from '../../store/useGNNStore'
+import {
+  pairScores,
+  buildROCPoints,
+  buildPRPoints,
+  topKHardEdges,
+  buildScoreHistogram,
+  accuracyAtThreshold,
+} from '../../utils/task3Metrics'
 
-/**
- * LinkMetricsPanel — Nâng cấp XAI chuyên sâu cho Task 3
- */
-export default function LinkMetricsPanel() {
+const TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'curves', label: 'Curves' },
+  { id: 'hard', label: 'Hard Edges' },
+  { id: 'diagnostics', label: 'Diagnostics' },
+]
+
+export default function Task3MetricsPanel() {
   const { snapshots, currentEpochFloat } = usePlayerStore()
-  const taskData = useGNNStore(s => s.taskData)
+  const taskData = useGNNStore((s) => s.taskData)
+  const setFocusedEdge = useGNNStore((s) => s.setFocusedEdge)
+  const [activeTab, setActiveTab] = useState('overview')
 
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
   const snap = snapshots[epochInt]
 
-  // AUC history
-  const aucHistory = useMemo(() => {
-    return snapshots.slice(0, epochInt + 1).map((s, i) => ({
-      epoch: i,
-      auc: s.auc ?? 0.5,
-    }))
-  }, [snapshots, epochInt])
+  const paired = useMemo(
+    () => pairScores(snap?.edge_scores || [], taskData?.testEdges || []),
+    [snap, taskData]
+  )
 
-  const auc = snap?.auc ?? 0.5
-  const totalEdges = taskData?.testEdges?.length ?? 0
-
-  if (snapshots.length === 0) return <div className="p-4 text-[10px] text-slate-500 italic animate-pulse">Awaiting signal analysis...</div>
+  if (!snapshots.length) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-slate-500 p-6 gap-2">
+        <div className="text-3xl opacity-40 animate-pulse">&#8230;</div>
+        <p className="text-micro text-center">Start training to see link prediction metrics</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="h-full flex flex-col p-4 text-xs bg-[#050c19] custom-scrollbar overflow-y-auto">
-      {/* ─── STATUS HEADER ─── */}
-      <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-              <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Link Intelligence</h3>
-          </div>
-          <span className="text-[9px] font-mono text-slate-500">v3.0_stable</span>
+    <div className="h-full flex flex-col gap-2">
+      <div className="flex items-center gap-1 px-1">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            className={`text-nano font-bold uppercase tracking-ultra px-2.5 py-1 rounded-md transition-colors ${
+              activeTab === t.id
+                ? 'bg-slate-800 text-white'
+                : 'bg-transparent text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* ─── INSIGHT CARDS ─── */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-3 flex flex-col gap-1">
-              <div className="flex items-center gap-1.5 text-cyan-400 mb-1">
-                  <ShieldCheck size={12} />
-                  <span className="text-[8px] font-bold uppercase tracking-wider">Confidence</span>
-              </div>
-              <span className="text-xl font-black text-white font-mono">{(auc * 100).toFixed(1)}%</span>
-              <div className="h-1 w-full bg-slate-800 rounded-full mt-1 overflow-hidden">
-                  <div className="h-full bg-cyan-500" style={{ width: `${auc * 100}%` }} />
-              </div>
-          </div>
-          <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-3 flex flex-col gap-1">
-              <div className="flex items-center gap-1.5 text-amber-400 mb-1">
-                  <Zap size={12} />
-                  <span className="text-[8px] font-bold uppercase tracking-wider">Candidates</span>
-              </div>
-              <span className="text-xl font-black text-white font-mono">{totalEdges}</span>
-              <span className="text-[8px] text-slate-500 font-bold uppercase">Test Pairs</span>
-          </div>
+      {activeTab === 'overview' && (
+        <OverviewTab snap={snap} snapshots={snapshots} epochInt={epochInt} paired={paired} />
+      )}
+      {activeTab === 'curves' && <CurvesTab paired={paired} />}
+      {activeTab === 'hard' && <HardEdgesTab paired={paired} onFocus={setFocusedEdge} />}
+      {activeTab === 'diagnostics' && <DiagnosticsTab paired={paired} />}
+    </div>
+  )
+}
+
+// ── Overview ───────────────────────────────────────────────────────
+function OverviewTab({ snap, snapshots, epochInt, paired }) {
+  const aucHistory = useMemo(
+    () => snapshots.slice(0, epochInt + 1).map((s, i) => ({
+      epoch: i,
+      auc: s.auc ?? 0.5,
+      loss: s.loss ?? null,
+    })),
+    [snapshots, epochInt]
+  )
+
+  const auc = snap?.auc ?? 0.5
+  const acc = accuracyAtThreshold(paired, 0.5)
+  const loss = snap?.loss ?? null
+
+  return (
+    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+      <div className="grid grid-cols-3 gap-2">
+        <Metric label="AUC" value={auc.toFixed(3)} tone={auc > 0.85 ? 'emerald' : auc > 0.7 ? 'amber' : 'red'} />
+        <Metric label="Acc@0.5" value={`${(acc * 100).toFixed(1)}%`} tone="cyan" />
+        <Metric label="Loss" value={loss == null ? '—' : loss.toFixed(3)} tone="slate" />
       </div>
 
-      {/* ─── AUC CHART ─── */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-            <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest flex items-center gap-2">
-                <Activity size={10} /> Model Stability
-            </span>
-            <span className="text-[10px] text-emerald-400 font-mono font-bold">+{((auc - 0.5)*100).toFixed(1)}%</span>
+      <Panel title="AUC · Loss / Epoch">
+        <div className="h-44 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={aucHistory} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+              <YAxis yAxisId="auc" domain={[0.4, 1]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+              <YAxis yAxisId="loss" orientation="right" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} />
+              <Line yAxisId="auc" type="monotone" dataKey="auc" stroke="#22d3ee" strokeWidth={2} dot={false} />
+              <Line yAxisId="loss" type="monotone" dataKey="loss" stroke="#f59e0b" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
-        <div className="h-24 w-full">
+      </Panel>
+    </div>
+  )
+}
+
+// ── Curves ─────────────────────────────────────────────────────────
+function CurvesTab({ paired }) {
+  const { roc, pr } = useMemo(() => {
+    return {
+      roc: buildROCPoints(paired),
+      pr: buildPRPoints(paired),
+    }
+  }, [paired])
+
+  return (
+    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+        <Panel title={`ROC · AUC ${roc.auc.toFixed(3)}`}>
+          <div className="h-52 w-full">
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={aucHistory}>
-                    <defs>
-                        <linearGradient id="aucArea" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                        </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                    <XAxis dataKey="epoch" hide />
-                    <YAxis domain={[0.4, 1]} hide />
-                    <Area type="monotone" dataKey="auc" stroke="#22d3ee" strokeWidth={2} fill="url(#aucArea)" animationDuration={300} />
-                </AreaChart>
+              <LineChart data={roc.points} margin={{ top: 6, right: 10, bottom: 14, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="fpr" type="number" domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} label={{ value: 'FPR', position: 'insideBottom', offset: -2, fill: '#475569', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis dataKey="tpr" type="number" domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} formatter={(v) => v.toFixed(3)} />
+                <Line type="monotone" dataKey="tpr" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                <Line data={[{ fpr: 0, tpr: 0 }, { fpr: 1, tpr: 1 }]} type="linear" dataKey="tpr" stroke="#475569" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+              </LineChart>
             </ResponsiveContainer>
-        </div>
-      </div>
+          </div>
+        </Panel>
 
-      {/* ─── LIVE TOP PREDICTIONS ─── */}
-      <div>
-          <div className="flex items-center gap-2 mb-3 text-slate-400">
-              <AlertTriangle size={10} className="text-indigo-400" />
-              <span className="text-[9px] font-black uppercase tracking-widest">Key Anomalies Detected</span>
+        <Panel title={`Precision-Recall · AP ${pr.ap.toFixed(3)}`}>
+          <div className="h-52 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={pr.points} margin={{ top: 6, right: 10, bottom: 14, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="recall" type="number" domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} label={{ value: 'Recall', position: 'insideBottom', offset: -2, fill: '#475569', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis dataKey="precision" type="number" domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} formatter={(v) => v.toFixed(3)} />
+                <Line type="monotone" dataKey="precision" stroke="#a855f7" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-          <div className="space-y-2">
-              {snap?.top_k_links?.slice(0, 4).map((link, i) => (
-                  <div key={i} className="group flex items-center justify-between bg-slate-900/30 hover:bg-slate-800/50 border border-white/5 rounded-xl p-2.5 transition-all cursor-pointer">
-                      <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-black text-cyan-400 border border-white/5">
-                              {link.source}
-                          </div>
-                          <div className="h-px w-4 bg-slate-700 group-hover:w-6 transition-all" />
-                          <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-black text-indigo-400 border border-white/5">
-                              {link.target}
-                          </div>
-                      </div>
-                      <div className="text-right">
-                          <div className="text-[10px] font-black text-white font-mono">{(link.score * 100).toFixed(1)}%</div>
-                          <div className="text-[7px] text-slate-500 uppercase font-bold">Potential</div>
-                      </div>
-                  </div>
-              ))}
-          </div>
+        </Panel>
       </div>
+    </div>
+  )
+}
+
+// ── Hard Edges ─────────────────────────────────────────────────────
+function HardEdgesTab({ paired, onFocus }) {
+  const { falsePositives, falseNegatives } = useMemo(() => topKHardEdges(paired, 5, 0.5), [paired])
+
+  if (!paired.length) {
+    return <div className="flex-1 flex items-center justify-center text-micro text-slate-500">No test edges available yet.</div>
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+        <Panel title={`False Positives (top ${falsePositives.length})`} tone="red">
+          <HardTable rows={falsePositives} onFocus={onFocus} tone="red" />
+        </Panel>
+        <Panel title={`False Negatives (top ${falseNegatives.length})`} tone="amber">
+          <HardTable rows={falseNegatives} onFocus={onFocus} tone="amber" />
+        </Panel>
+      </div>
+      <p className="text-nano text-slate-500 px-1">
+        Click a row to focus that edge on the canvas — the force graph will zoom and centre on
+        it for ~1.5s so you can inspect the surrounding neighborhood.
+      </p>
+    </div>
+  )
+}
+
+function HardTable({ rows, onFocus, tone }) {
+  if (!rows.length) {
+    return <div className="py-4 text-center text-nano text-slate-500">None at threshold 0.5</div>
+  }
+  const accent = tone === 'red' ? 'text-red-400' : 'text-amber-400'
+  return (
+    <div className="divide-y divide-slate-800/80">
+      {rows.map((r) => (
+        <button
+          key={`${r.idx}-${r.source}-${r.target}`}
+          onClick={() => onFocus?.(r.idx)}
+          className="w-full flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-slate-800/50 transition-colors text-left group"
+        >
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-nano text-slate-500">#{r.idx}</span>
+            <span className="font-mono text-micro text-slate-200">{r.source} → {r.target}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`font-mono text-micro font-bold ${accent}`}>{r.score.toFixed(3)}</span>
+            <span className="text-nano text-slate-500 group-hover:text-cyan-400 transition-colors">focus →</span>
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ── Diagnostics ────────────────────────────────────────────────────
+function DiagnosticsTab({ paired }) {
+  const histogram = useMemo(() => buildScoreHistogram(paired, 10), [paired])
+  const acc05 = accuracyAtThreshold(paired, 0.5)
+  const acc07 = accuracyAtThreshold(paired, 0.7)
+  const acc03 = accuracyAtThreshold(paired, 0.3)
+
+  return (
+    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+        <Panel title="Score distribution">
+          <div className="h-40 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={histogram} margin={{ top: 6, right: 10, bottom: 14, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} />
+                <Legend wrapperStyle={{ fontSize: 9 }} />
+                <Bar dataKey="positive" stackId="a" fill="#22c55e" name="Positive" />
+                <Bar dataKey="negative" stackId="a" fill="#ef4444" name="Negative" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Panel>
+
+        <Panel title="Accuracy @ threshold">
+          <div className="p-3 space-y-2">
+            <ThresholdRow label="0.3" acc={acc03} />
+            <ThresholdRow label="0.5" acc={acc05} />
+            <ThresholdRow label="0.7" acc={acc07} />
+          </div>
+        </Panel>
+      </div>
+      <p className="text-nano text-slate-500 px-1">
+        An ideal separability: positives cluster on the right (score → 1), negatives on the left
+        (score → 0). Heavy overlap around 0.5 indicates the model can&apos;t discriminate those
+        pairs.
+      </p>
+    </div>
+  )
+}
+
+function ThresholdRow({ label, acc }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="font-mono text-micro text-slate-500 w-10">{label}</span>
+      <div className="flex-1 h-2 rounded bg-slate-800 overflow-hidden">
+        <div className="h-full bg-cyan-500 transition-all" style={{ width: `${acc * 100}%` }} />
+      </div>
+      <span className="font-mono text-micro text-cyan-300 w-12 text-right">{(acc * 100).toFixed(1)}%</span>
+    </div>
+  )
+}
+
+// ── Primitives ─────────────────────────────────────────────────────
+function Metric({ label, value, tone = 'slate' }) {
+  const colors = {
+    emerald: 'text-emerald-400',
+    amber: 'text-amber-400',
+    red: 'text-red-400',
+    cyan: 'text-cyan-300',
+    slate: 'text-slate-200',
+  }
+  return (
+    <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-2">
+      <div className="text-nano uppercase tracking-ultra text-slate-500 font-bold">{label}</div>
+      <div className={`font-mono text-lg font-black leading-tight ${colors[tone]}`}>{value}</div>
+    </div>
+  )
+}
+
+function Panel({ title, tone = 'slate', children }) {
+  const border = tone === 'red' ? 'border-red-500/30' : tone === 'amber' ? 'border-amber-500/30' : 'border-slate-800'
+  return (
+    <div className={`bg-slate-900/40 border ${border} rounded-lg overflow-hidden`}>
+      <div className="px-2 py-1.5 border-b border-slate-800 bg-slate-900/60">
+        <div className="text-nano uppercase tracking-ultra text-slate-400 font-bold">{title}</div>
+      </div>
+      <div>{children}</div>
     </div>
   )
 }

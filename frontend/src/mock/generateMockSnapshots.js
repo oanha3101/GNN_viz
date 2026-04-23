@@ -229,6 +229,19 @@ export function generateTask1Mock(numNodes = 60, numEpochs = 100) {
       return Math.max(0.05, Math.min(1, base + jitter))
     })
 
+    // Flatten neighbor_majority to a plain ratio array — simpler for Task 1
+    // Homophily scatter + Diagnostics tabs to consume (no need to map over
+    // {majority_class, majority_ratio} objects on the hot render path).
+    const majorityRatio = neighborMajority.map((m) => Number.isFinite(m?.majority_ratio) ? m.majority_ratio : 0)
+
+    // Dirichlet energy — a coarse over-smoothing indicator. Starts near 1
+    // (embeddings differ between neighbors) and decays as training progresses
+    // (GCN smoothing pulls neighbors together). Minor epoch-seeded jitter so
+    // the diagnostics curve isn't monotonically flat.
+    const energyBase = Math.max(0.01, Math.exp(-epoch / 35) * 0.85 + 0.08)
+    const energyJitter = (seededRand(epoch * 53 + 7) - 0.5) * 0.02
+    const dirichletEnergy = Math.max(0.005, Math.min(1, energyBase + energyJitter))
+
     snapshots.push({
       epoch,
       node_predictions: nodePredictions,
@@ -236,6 +249,8 @@ export function generateTask1Mock(numNodes = 60, numEpochs = 100) {
       node_confidence: nodeConfidences,
       node_correctness: nodeCorrectness,
       neighbor_majority: neighborMajority,
+      majority_ratio: majorityRatio,
+      dirichlet_energy: dirichletEnergy,
       embeddings_2d: embeddings2d,
       attention_weights: attentionWeights,
       node_confidences: nodeConfidences,
@@ -694,6 +709,29 @@ export function generateTask5Mock(numNodes = 40, numEpochs = 80) {
       }
     })
 
+    // Per-node diagnostics — outlier, knn preservation, embedding norm.
+    // Mix structural (degree) + cluster-center distance so the top rows feel
+    // meaningful across epochs.
+    const cx0 = embeddings.reduce((s, p) => s + p[0], 0) / numNodes
+    const cy0 = embeddings.reduce((s, p) => s + p[1], 0) / numNodes
+    const perNodeKnn = new Array(numNodes)
+    const outlierScores = new Array(numNodes)
+    const embeddingNorms = new Array(numNodes)
+    for (let i = 0; i < numNodes; i++) {
+      const dx = embeddings[i][0] - cx0
+      const dy = embeddings[i][1] - cy0
+      const distFromCenter = Math.sqrt(dx * dx + dy * dy)
+      embeddingNorms[i] = Math.sqrt(embeddings[i][0] ** 2 + embeddings[i][1] ** 2)
+      // Higher degree + well-clustered nodes → higher knn preservation.
+      const degreeBoost = Math.min(1, (degrees[i] || 1) / 8)
+      const knnBase = knnPres * (0.7 + 0.3 * degreeBoost)
+      perNodeKnn[i] = Math.max(0, Math.min(1, knnBase + (seededRand(i * 131 + epoch) - 0.5) * 0.15))
+      // Outliers: nodes far from cluster centre + low knn.
+      outlierScores[i] = Math.max(0, Math.min(1,
+        0.5 * (distFromCenter / 8) + 0.5 * (1 - perNodeKnn[i]) + (seededRand(i * 193 + epoch) - 0.5) * 0.05
+      ))
+    }
+
     snapshots.push({
       epoch,
       embeddings_2d: embeddings,
@@ -704,6 +742,9 @@ export function generateTask5Mock(numNodes = 40, numEpochs = 80) {
       isotropy_score: isotropyScore,
       reconstruction_loss: reconstructionLoss,
       proximity_scores: proximityScores,
+      outlier_scores: outlierScores,
+      per_node_knn_preservation: perNodeKnn,
+      embedding_norms: embeddingNorms,
       train_loss: reconstructionLoss,
       val_loss: reconstructionLoss * 1.12,
       train_acc: knnPres,

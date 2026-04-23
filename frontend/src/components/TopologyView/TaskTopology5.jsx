@@ -7,6 +7,8 @@ import { CLASS_COLORS } from '../../utils/colors'
 const EDGE_COLOR_COLD = [6, 182, 212]
 const EDGE_COLOR_MID = [234, 179, 8]
 const EDGE_COLOR_HOT = [239, 68, 68]
+const NODE_R_MIN = 3
+const NODE_R_MAX = 11
 
 function lerpRGB(a, b, t) {
   return `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(a[1] + (b[1] - a[1]) * t)},${Math.round(a[2] + (b[2] - a[2]) * t)})`
@@ -22,12 +24,11 @@ export default function TaskTopology5() {
   const containerRef = useRef()
   const fgRef = useRef()
   const animRef = useRef({ proximityMap: {}, predictions: null })
-  // Use state (not ref) so ForceGraph2D re-renders when data changes
   const [graphData, setGraphData] = useState(null)
   const [dims, setDims] = useState({ width: 800, height: 600 })
   const [resampleKey, setResampleKey] = useState(0)
   const [showAnomalies, setShowAnomalies] = useState(false)
-  const fitDoneRef = useRef(false)
+  const [pulseTick, setPulseTick] = useState(0)
 
   const rawGraphData = useGNNStore(s => s.graphData)
   const graphMeta = useGNNStore(s => s.task5Meta)
@@ -38,6 +39,8 @@ export default function TaskTopology5() {
   const hasLabels = graphMeta?.has_labels || (rawGraphData?.nodes?.[0]?.groundTruth !== undefined)
   const selectedNodeId = useGNNStore(s => s.selectedNodeId)
   const setSelectedNode = useGNNStore(s => s.setSelectedNode)
+  const outlierPulseIdx = useGNNStore(s => s.outlierPulseIdx)
+  const setOutlierPulse = useGNNStore(s => s.setOutlierPulse)
 
   // Build display graph (subsampled if large)
   const displayGraphData = useMemo(() => {
@@ -69,15 +72,11 @@ export default function TaskTopology5() {
     return { nodes, links }
   }, [rawGraphData, sizeMode, resampleKey])
 
-  // Update graph state when data changes
   useEffect(() => {
-    if (displayGraphData) {
-      fitDoneRef.current = false
-      setGraphData({ ...displayGraphData }) // new reference triggers ForceGraph2D re-init
-    }
+    if (displayGraphData) setGraphData({ ...displayGraphData })
   }, [displayGraphData])
 
-  // Subscribe to player store for animated proximity data — NO reheat to avoid loop
+  // Subscribe to player store for animated proximity data
   useEffect(() => {
     const unsub = usePlayerStore.subscribe((state) => {
       const { snapshots, currentEpochFloat } = state
@@ -95,8 +94,6 @@ export default function TaskTopology5() {
       if (snap?.node_predictions) {
         animRef.current.predictions = snap.node_predictions
       }
-      // Request a single repaint — do NOT call d3ReheatSimulation (causes vanish loop)
-      fgRef.current?.d3Force // just access to check if mounted
     })
     return unsub
   }, [])
@@ -110,11 +107,10 @@ export default function TaskTopology5() {
       if (width > 10 && height > 10) setDims({ width, height })
     })
     ro.observe(el)
-    // Immediately read size on mount
     const rect = el.getBoundingClientRect()
     if (rect.width > 10 && rect.height > 10) setDims({ width: rect.width, height: rect.height })
     return () => ro.disconnect()
-  }) // no deps = runs after every render to always reattach to the right DOM node
+  })
 
   // Apply force params when graph data changes
   useEffect(() => {
@@ -126,21 +122,63 @@ export default function TaskTopology5() {
     fg.d3ReheatSimulation()
   }, [graphData])
 
-  const handleEngineStop = useCallback(() => {
-    // Only zoomToFit once after initial layout — do NOT freeze nodes (fx/fy causes vanish)
-    if (fitDoneRef.current || !fgRef.current) return
-    fitDoneRef.current = true
-    try { fgRef.current.zoomToFit(400, 40) } catch {} // eslint-disable-line
+  const fitView = useCallback(() => {
+    if (!fgRef.current) return
+    try { fgRef.current.zoomToFit(400, 60) } catch { /* settle */ }
   }, [])
 
-  // Re-fit on resize so the graph always fills the workspace (no dark dead space).
+  // Wait for the force simulation to settle before the first fit — otherwise
+  // zoomToFit runs while nodes are still at the origin and locks the camera
+  // onto a single corner of the workspace.
+  const fitDoneRef = useRef(false)
+  useEffect(() => { fitDoneRef.current = false }, [graphData])
+
+  // Re-fit on user-driven resize, skipping the initial 0→N dim transition so
+  // it doesn't race with the engineStop fit on mount.
+  const prevDimsRef = useRef({ width: 0, height: 0 })
   useEffect(() => {
     if (!fgRef.current) return
-    const id = requestAnimationFrame(() => {
-      try { fgRef.current && fgRef.current.zoomToFit(300, 40) } catch { /* settle */ }
-    })
+    const prev = prevDimsRef.current
+    prevDimsRef.current = { width: dims.width, height: dims.height }
+    if (prev.width === 0 || prev.height === 0) return
+    const id = requestAnimationFrame(fitView)
     return () => cancelAnimationFrame(id)
-  }, [dims.width, dims.height])
+  }, [dims.width, dims.height, fitView])
+
+  // Keyboard shortcut: "F" to refit
+  useEffect(() => {
+    const handler = (e) => {
+      const el = e.target
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault()
+        fitView()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [fitView])
+
+  // Outlier pulse — center+zoom to the requested node, animate + auto-clear.
+  useEffect(() => {
+    if (outlierPulseIdx == null || !fgRef.current || !graphData?.nodes) return
+    const node = graphData.nodes.find((n) => n.id === outlierPulseIdx)
+    if (!node || !Number.isFinite(node.x) || !Number.isFinite(node.y)) return
+    try { fgRef.current.centerAt(node.x, node.y, 500) } catch { /* settle */ }
+    try { fgRef.current.zoom(2.4, 500) } catch { /* settle */ }
+    const start = Date.now()
+    let raf = null
+    const step = () => {
+      setPulseTick((t) => t + 1)
+      if (Date.now() - start < 1500) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    const clr = setTimeout(() => setOutlierPulse(null), 1500)
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      clearTimeout(clr)
+    }
+  }, [outlierPulseIdx, graphData, setOutlierPulse])
 
   const linkCanvasObject = useCallback((link, ctx) => {
     const s = link.source
@@ -175,7 +213,8 @@ export default function TaskTopology5() {
   const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
     if (!node || !Number.isFinite(node.x) || !Number.isFinite(node.y)) return
     const degree = node.degree || 1
-    const r = Math.max(4, Math.sqrt(degree) * 1.8 + 3)
+    // Cap node radius so large-degree nodes don't dominate the canvas.
+    const r = Math.max(NODE_R_MIN, Math.min(NODE_R_MAX, Math.sqrt(degree) * 1.8 + 3))
     let color = '#6366f1'
     if (showAnomalies) {
       const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
@@ -193,8 +232,22 @@ export default function TaskTopology5() {
       else if (pred !== undefined && pred > 0) color = CLASS_COLORS[pred % CLASS_COLORS.length] || color
     }
     const isSelected = selectedNodeId === node.id
+    const isPulsing = outlierPulseIdx === node.id
     const isDimmed = selectedNodeId !== null && !isSelected
     ctx.globalAlpha = isDimmed ? 0.2 : 1.0
+
+    // Pulsing ring for focused outlier
+    if (isPulsing) {
+      const pulse = 1 + Math.sin(Date.now() / 100) * 0.4
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, (r + 8) * pulse, 0, 2 * Math.PI)
+      ctx.strokeStyle = '#ef4444'
+      ctx.lineWidth = 2.5
+      ctx.globalAlpha = 0.85
+      ctx.stroke()
+      ctx.globalAlpha = 1.0
+    }
+
     // Glow
     ctx.beginPath()
     ctx.arc(node.x, node.y, r + (isSelected ? 6 : 3), 0, 2 * Math.PI)
@@ -218,9 +271,8 @@ export default function TaskTopology5() {
       ctx.fillText(`${node.id}`, node.x, node.y)
     }
     ctx.globalAlpha = 1.0
-  }, [hasLabels, selectedNodeId, showAnomalies, snapshots, currentEpochFloat])
+  }, [hasLabels, selectedNodeId, showAnomalies, snapshots, currentEpochFloat, outlierPulseIdx, pulseTick])
 
-  // ── Always render the outer container so containerRef/ResizeObserver always works ──
   return (
     <div ref={containerRef} className="w-full h-full relative bg-slate-950 overflow-hidden">
       {sizeMode === 'too_large' ? (
@@ -231,7 +283,7 @@ export default function TaskTopology5() {
               Đồ thị có <span className="text-cyan-400 font-mono font-bold">{numNodes.toLocaleString()}</span> nút — vượt ngưỡng 5.000 cho rendering.
             </p>
             <p className="text-xs text-slate-600 mt-2">
-              Xem kết quả tại <span className="text-indigo-400">Không gian Embedding</span> bên phải →
+              Xem chỉ số embedding tại panel metric bên phải → tab <span className="text-indigo-400">Outliers</span>, <span className="text-indigo-400">KNN</span>, <span className="text-indigo-400">Diagnostics</span>.
             </p>
           </div>
         </div>
@@ -239,7 +291,7 @@ export default function TaskTopology5() {
         <div className="w-full h-full flex items-center justify-center text-slate-500">
           <div className="text-center">
             <p className="text-sm font-medium">Tải dữ liệu hoặc chọn dataset</p>
-            <p className="text-[10px] text-slate-600 mt-1">Bấm "Huấn luyện" để bắt đầu</p>
+            <p className="text-micro text-slate-600 mt-1">Bấm "Huấn luyện" để bắt đầu</p>
           </div>
         </div>
       ) : (
@@ -255,22 +307,26 @@ export default function TaskTopology5() {
             linkCanvasObjectMode={() => 'replace'}
             onNodeClick={node => setSelectedNode(node.id)}
             onBackgroundClick={() => setSelectedNode(null)}
-            onEngineStop={handleEngineStop}
-            cooldownTicks={150}
+            cooldownTicks={200}
             warmupTicks={30}
             d3VelocityDecay={0.4}
             backgroundColor="transparent"
             minZoom={0.3}
-            maxZoom={10}
+            maxZoom={4}
+            onEngineStop={() => {
+              if (fitDoneRef.current) return
+              fitDoneRef.current = true
+              fitView()
+            }}
           />
 
           {/* Proximity Legend */}
           <div className="absolute bottom-2 left-2 bg-slate-900/90 backdrop-blur-md rounded-lg px-2 py-1 border border-slate-700/40 z-10 pointer-events-none">
-            <div className="text-[7px] text-slate-500 uppercase tracking-wider font-bold mb-1">Embedding Proximity</div>
+            <div className="text-nano text-slate-500 uppercase tracking-ultra font-bold mb-1">Embedding Proximity</div>
             <div className="flex items-center gap-1">
-              <span className="text-[7px] text-cyan-400 font-bold">Gần</span>
+              <span className="text-nano text-cyan-400 font-bold">Gần</span>
               <div className="w-12 h-1 rounded-full bg-gradient-to-r from-cyan-500 via-yellow-500 to-red-500" />
-              <span className="text-[7px] text-red-400 font-bold">Xa</span>
+              <span className="text-nano text-red-400 font-bold">Xa</span>
             </div>
           </div>
 
@@ -278,8 +334,8 @@ export default function TaskTopology5() {
           {showAnomalies && (
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md rounded-lg px-3 py-1 border border-slate-700/40 z-10 pointer-events-none">
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500" /><span className="text-[8px] text-green-400">Good</span></div>
-                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /><span className="text-[8px] text-red-400">Anomaly</span></div>
+                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500" /><span className="text-nano text-green-400">Good</span></div>
+                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /><span className="text-nano text-red-400">Anomaly</span></div>
               </div>
             </div>
           )}
@@ -288,23 +344,32 @@ export default function TaskTopology5() {
           <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
             <button
               onClick={() => setShowAnomalies(v => !v)}
-              className={`px-2 py-1 rounded-md text-[8px] font-bold transition-all border ${showAnomalies ? 'bg-amber-600/30 border-amber-500/60 text-amber-300' : 'bg-slate-800/90 border-slate-700/50 text-slate-300 hover:bg-slate-700'}`}
+              className={`px-2 py-1 rounded-md text-nano font-bold transition-all border ${showAnomalies ? 'bg-amber-600/30 border-amber-500/60 text-amber-300' : 'bg-slate-800/90 border-slate-700/50 text-slate-300 hover:bg-slate-700'}`}
             >
               ANOMALIES
             </button>
             {sizeMode === 'subsample' && (
               <button
                 onClick={() => setResampleKey(k => k + 1)}
-                className="px-2 py-1 rounded-md text-[8px] font-bold bg-slate-800/90 border border-slate-700/50 text-slate-300 hover:bg-slate-700"
+                className="px-2 py-1 rounded-md text-nano font-bold bg-slate-800/90 border border-slate-700/50 text-slate-300 hover:bg-slate-700"
               >
                 RESAMPLE
               </button>
             )}
-            <div className="bg-slate-900/85 border border-slate-700/40 rounded-lg px-2 py-1 text-right min-w-[60px]">
-              <div className="text-[7px] text-slate-500 uppercase font-bold tracking-tight">Nodes</div>
+            <div className="bg-slate-900/85 border border-slate-700/40 rounded-lg px-2 py-1 text-right min-w-14">
+              <div className="text-nano text-slate-500 uppercase font-bold tracking-tight">Nodes</div>
               <div className="text-xs font-bold font-mono text-cyan-300 leading-none">{numNodes.toLocaleString()}</div>
             </div>
           </div>
+
+          {/* Fit button (bottom-right) */}
+          <button
+            onClick={fitView}
+            className="absolute bottom-2 right-2 z-10 px-2.5 py-1 rounded-md text-nano font-bold bg-slate-900/90 border border-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+            title="Fit to view (F)"
+          >
+            FIT
+          </button>
         </>
       )}
     </div>

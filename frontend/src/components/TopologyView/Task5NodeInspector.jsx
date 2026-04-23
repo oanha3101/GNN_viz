@@ -86,7 +86,7 @@ export default function Task5NodeInspector() {
         {/* Header */}
         <div className="flex items-center justify-between sticky top-0 bg-slate-950/95 backdrop-blur-md pb-2 z-20 border-b border-slate-800/50">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg"
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-micro font-bold text-white shadow-lg"
                  style={{ backgroundColor: predColor, boxShadow: `0 0 10px ${predColor}44` }}>
               {selectedNodeId}
             </div>
@@ -101,28 +101,28 @@ export default function Task5NodeInspector() {
         {/* Info Grid */}
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/30">
-            <span className="text-slate-500 text-[9px] block uppercase tracking-wider mb-1 font-medium">Original Degree</span>
+            <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">Original Degree</span>
             <span className="text-slate-200 font-bold text-lg">{degree}</span>
           </div>
           <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/30">
-            <span className="text-slate-500 text-[9px] block uppercase tracking-wider mb-1 font-medium">Epoch</span>
+            <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">Epoch</span>
             <span className="text-slate-200 font-bold text-lg">{currentEpoch}</span>
           </div>
         </div>
 
         {hasLabels && gt !== null && (
           <div className="bg-slate-900/50 rounded-lg p-2.5 border border-slate-800/50 flex items-center justify-between">
-            <span className="text-slate-400 text-[10px] uppercase tracking-wider font-semibold">Nhãn gốc (GT)</span>
+            <span className="text-slate-400 text-micro uppercase tracking-wider font-semibold">Nhãn gốc (GT)</span>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gtColor }} />
-              <span className="font-semibold text-slate-200 text-[10px]">{ CLASS_NAMES[gt] || `Class ${gt}` }</span>
+              <span className="font-semibold text-slate-200 text-micro">{ CLASS_NAMES[gt] || `Class ${gt}` }</span>
             </div>
           </div>
         )}
 
         {/* Structural Comparison */}
         <div className="mt-4 pt-4 border-t border-slate-800/50 space-y-4">
-          <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-widest px-1 flex items-center gap-1.5">
+          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-widest px-1 flex items-center gap-1.5">
             <span className="text-blue-400">&#9776;</span> So sánh Lân cận
           </h4>
           
@@ -130,7 +130,7 @@ export default function Task5NodeInspector() {
             
             {/* Base Graph Neighbors */}
             <div className="bg-slate-900/30 rounded-xl p-2.5 border border-slate-800/30">
-              <span className="text-[9px] text-slate-500 font-bold tracking-widest uppercase mb-2 block">
+              <span className="text-nano text-slate-500 font-bold tracking-widest uppercase mb-2 block">
                 Hàng xóm đồ thị gốc ({topGraphNeighbors.length})
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -139,18 +139,18 @@ export default function Task5NodeInspector() {
                   const color = hasLabels && nt !== undefined ? getClassColor(nt) : '#475569'
                   return (
                     <button key={`graph-${nid}`} onClick={() => setSelectedNode(nid)}
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold text-white transition-all hover:scale-110 shadow-md cursor-pointer border border-white/10"
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-nano font-bold text-white transition-all hover:scale-110 shadow-md cursor-pointer border border-white/10"
                       style={{ backgroundColor: color }} title={`Xem Node ${nid}`}>
                       {nid}
                     </button>
                   )
-                }) : <span className="text-slate-600 text-[10px]">Không có lân cận</span>}
+                }) : <span className="text-slate-600 text-micro">Không có lân cận</span>}
               </div>
             </div>
 
             {/* Embedding Space Neighbors */}
             <div className="bg-blue-900/10 rounded-xl p-2.5 border border-blue-800/20">
-              <span className="text-[9px] text-blue-400 font-bold tracking-widest uppercase mb-2 block">
+              <span className="text-nano text-blue-400 font-bold tracking-widest uppercase mb-2 block">
                 Top 5 gần nhất không gian nhúng
               </span>
               <div className="space-y-1.5">
@@ -167,18 +167,18 @@ export default function Task5NodeInspector() {
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg border text-left transition-all hover:bg-slate-800/80
                         ${isAlsoGraphNeighbor ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-slate-800/30 border-transparent'}
                       `}>
-                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-sm"
+                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-nano font-bold text-white shadow-sm"
                             style={{ backgroundColor: color }}>
                         {item.id}
                       </span>
                       <div className="flex-1 flex flex-col">
-                        <span className="text-[10px] text-slate-300 font-medium leading-none">Node {item.id}</span>
-                        {isAlsoGraphNeighbor && <span className="text-[8px] text-cyan-400 font-semibold mt-0.5">✓ Có nối kết gốc</span>}
+                        <span className="text-micro text-slate-300 font-medium leading-none">Node {item.id}</span>
+                        {isAlsoGraphNeighbor && <span className="text-nano text-cyan-400 font-semibold mt-0.5">✓ Có nối kết gốc</span>}
                       </div>
-                      <span className="text-slate-500 font-mono text-[9px]">L2: {item.dist.toFixed(2)}</span>
+                      <span className="text-slate-500 font-mono text-nano">L2: {item.dist.toFixed(2)}</span>
                     </button>
                   )
-                }) : <span className="text-slate-600 text-[10px]">Đang tính toán...</span>}
+                }) : <span className="text-slate-600 text-micro">Đang tính toán...</span>}
               </div>
             </div>
 

@@ -67,3 +67,18 @@ Thêm `OutlierPanel` cho Task 5:
 - Nhận `snap.outlier_scores` (Array<number>).
 - Tabs: `Overview` (histogram) · `Top-K` (bảng 20 node outlier cao nhất) · `Embedding` (scatter đánh dấu outlier).
 - Empty khi `outlier_scores` length = 0 → `<EmptyState title="Outlier detection disabled" />`.
+
+### Pattern: "Embedding quality triad" (Task 5)
+
+Task 5 (Graph Embedding) là dạng panel không có confusion matrix rõ ràng — thay vào đó hội tụ 3 trục chất lượng:
+
+1. **Overview** — kNN preservation + link recon AUC + loss theo epoch. Dual-Y: `[0, 100]` pct trái, loss phải. Cảnh báo khi iso/kNN < threshold.
+2. **Outliers** — `topKOutliers(snap.outlier_scores, 10)` → list row. Click row = `setSelectedNode(id)` + `setOutlierPulse(id)` → canvas center & pulse 1.5s.
+3. **KNN Preservation** — scatter `degree × per_node_knn_preservation` + reference line = mean. Nodes phía dưới đường = ứng viên outlier có thể bảo tồn kém.
+4. **Diagnostics** — histogram `embedding_norms` + isotropy gauge (BE score + client-computed PCA isotropy cho so sánh).
+
+Ràng buộc:
+- 4 tab, không hơn.
+- Viz tab dùng `repeat(auto-fit, minmax(220px, 1fr))` để fit rail 360→900px.
+- `setOutlierPulse` trong `useGNNStore` phải được clear trong `setTask` / `setModel` (pattern giống `selectedCommunityId` + `focusedEdgeIdx`).
+- Node radius trên canvas phải cap `[3, 11]` — không cho degree-outlier lấn toàn khung hình.
