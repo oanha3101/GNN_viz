@@ -71,7 +71,19 @@ export default function TaskTopology3() {
     try { fgRef.current.zoomToFit(duration, padding) } catch { /* settle */ }
   }, [])
 
+  // On initial mount / new graph, wait for the force simulation to settle
+  // before fitting — otherwise `zoomToFit` runs while nodes are still at the
+  // origin and the camera locks onto a corner.
+  const fitDoneRef = useRef(false)
+  useEffect(() => { fitDoneRef.current = false }, [activeGraphData])
+
+  // Subsequent user-driven resize events still refit instantly, but the very
+  // first dim transition (0→N on mount) is absorbed by the engineStop path.
+  const prevDimsRef = useRef({ width: 0, height: 0 })
   useEffect(() => {
+    const prev = prevDimsRef.current
+    prevDimsRef.current = { width: dimensions.width, height: dimensions.height }
+    if (prev.width === 0 || prev.height === 0) return
     const id = requestAnimationFrame(() => fitView(400, 60))
     return () => cancelAnimationFrame(id)
   }, [dimensions.width, dimensions.height, fitView])
@@ -232,6 +244,13 @@ export default function TaskTopology3() {
         minZoom={0.3}
         maxZoom={3}
         backgroundColor="transparent"
+        cooldownTicks={200}
+        warmupTicks={30}
+        onEngineStop={() => {
+          if (fitDoneRef.current) return
+          fitDoneRef.current = true
+          fitView(400, 60)
+        }}
       />
 
       {/* DYNAMIC GAUGE */}

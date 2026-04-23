@@ -127,9 +127,20 @@ export default function TaskTopology5() {
     try { fgRef.current.zoomToFit(400, 60) } catch { /* settle */ }
   }, [])
 
-  // Re-fit on resize so the graph always fills the workspace (no dark dead space).
+  // Wait for the force simulation to settle before the first fit — otherwise
+  // zoomToFit runs while nodes are still at the origin and locks the camera
+  // onto a single corner of the workspace.
+  const fitDoneRef = useRef(false)
+  useEffect(() => { fitDoneRef.current = false }, [graphData])
+
+  // Re-fit on user-driven resize, skipping the initial 0→N dim transition so
+  // it doesn't race with the engineStop fit on mount.
+  const prevDimsRef = useRef({ width: 0, height: 0 })
   useEffect(() => {
     if (!fgRef.current) return
+    const prev = prevDimsRef.current
+    prevDimsRef.current = { width: dims.width, height: dims.height }
+    if (prev.width === 0 || prev.height === 0) return
     const id = requestAnimationFrame(fitView)
     return () => cancelAnimationFrame(id)
   }, [dims.width, dims.height, fitView])
@@ -296,12 +307,17 @@ export default function TaskTopology5() {
             linkCanvasObjectMode={() => 'replace'}
             onNodeClick={node => setSelectedNode(node.id)}
             onBackgroundClick={() => setSelectedNode(null)}
-            cooldownTicks={150}
+            cooldownTicks={200}
             warmupTicks={30}
             d3VelocityDecay={0.4}
             backgroundColor="transparent"
             minZoom={0.3}
             maxZoom={4}
+            onEngineStop={() => {
+              if (fitDoneRef.current) return
+              fitDoneRef.current = true
+              fitView()
+            }}
           />
 
           {/* Proximity Legend */}
