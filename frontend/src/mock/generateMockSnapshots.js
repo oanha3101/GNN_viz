@@ -346,10 +346,63 @@ export function generateTask2Mock(numGraphs = 50, numEpochs = 80) {
     const trainAcc = Math.min(1, acc + (seededRand(epoch * 13) - 0.5) * 0.015)
     const valAcc   = Math.min(1, acc - 0.03 + (seededRand(epoch * 19) - 0.5) * 0.02)
 
+    // Derived fields: enrich snapshot so new Task 2 dashboards (Confusion,
+    // Hard Cases, Diagnostics) work in Mock Mode without needing the backend.
+    const graphCorrect = predictions.map((p, i) => (p === graphs[i].groundTruth ? 1 : 0))
+
+    // Probabilities: turn confidence into a two-class distribution so
+    // confidence_margins come out sensible (top1 ~ conf, top2 ~ 1 - conf).
+    const graphProbabilities = predictions.map((p, i) => {
+      const c = confidences[i]
+      const row = [1 - c, 1 - c]
+      row[p] = c
+      return row
+    })
+    const confidenceMargins = confidences.map((c) => Math.max(0, 2 * c - 1))
+
+    // Attention entropy: higher when training is early or node contributions
+    // are diffuse. Compute from the mock contributions so the value is
+    // consistent with what the Readout heatmap shows.
+    const attentionEntropy = nodeContributions.map((arr) => {
+      if (!arr.length) return 0
+      const sum = arr.reduce((s, v) => s + (v > 0 ? v : 0), 0)
+      if (sum <= 0) return 0
+      let h = 0
+      for (const v of arr) {
+        if (v <= 0) continue
+        const pv = v / sum
+        h -= pv * Math.log(pv)
+      }
+      const hmax = Math.log(arr.length)
+      return hmax > 0 ? h / hmax : 0
+    })
+
+    // Structural metrics — constant per graph; compute once on first epoch.
+    const graphStructuralMetrics = graphs.map((g) => {
+      const n = g.nodes.length
+      const e = g.links.length
+      const maxEdges = (n * (n - 1)) / 2
+      const density = maxEdges > 0 ? e / maxEdges : 0
+      const deg = new Array(n).fill(0)
+      g.links.forEach((l) => {
+        deg[l.source] += 1
+        deg[l.target] += 1
+      })
+      const avgDegree = n > 0 ? deg.reduce((s, v) => s + v, 0) / n : 0
+      // Rough clustering approximation — we don't need exact NX value in mock.
+      const avgClustering = Math.min(1, density * 0.9)
+      return { density, avg_degree: avgDegree, avg_clustering: avgClustering }
+    })
+
     snapshots.push({
       epoch,
       graph_predictions: predictions,
       graph_confidences: confidences,
+      graph_probabilities: graphProbabilities,
+      confidence_margins: confidenceMargins,
+      attention_entropy: attentionEntropy,
+      graph_structural_metrics: graphStructuralMetrics,
+      graph_correct: graphCorrect,
       graph_embeddings_2d: embeddings2d,
       node_contributions: nodeContributions,
       train_loss: Math.max(0, trainLoss),

@@ -134,7 +134,9 @@ function AppSidebar({ collapsed, onToggle, activeTab, setActiveRightTab, rightPa
 
 // ─── Custom horizontal drag-resize ──────────────────
 function ResizableWorkspace({ rightPanelOpen, leftContent, rightContent }) {
-  const [rightWidth, setRightWidth] = useState(420) // px
+  // Default width tuned for 1440×900: leaves ~1000px for the workspace so
+  // Task 2 grid keeps 3+ columns without the user dragging the divider.
+  const [rightWidth, setRightWidth] = useState(360) // px
   const MIN_RIGHT = 260
   const MAX_RIGHT = 800
   const dragging = useRef(false)
