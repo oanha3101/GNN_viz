@@ -1,6 +1,8 @@
 import { useRef, useCallback, useEffect } from 'react'
 import useGNNStore from '../store/useGNNStore'
 import usePlayerStore from '../store/playerStore'
+import { WS_URL } from '../utils/api'
+import { logger } from '../utils/logger'
 
 export default function useWebSocket() {
   const wsRef       = useRef(null)
@@ -22,15 +24,15 @@ export default function useWebSocket() {
 
   const attemptReconnect = useCallback(() => {
     if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached')
+      logger.error('Max reconnection attempts reached')
       statusRef.current = 'disconnected'
       setTraining(false, 0)
       return
     }
 
     reconnectAttemptsRef.current += 1
-    console.log(`Attempting to reconnect (${reconnectAttemptsRef.current}/${maxReconnectAttempts})...`)
-    
+    logger.warn(`Attempting to reconnect (${reconnectAttemptsRef.current}/${maxReconnectAttempts})...`)
+
     setTimeout(() => {
       if (configRef.current) {
         connect(configRef.current)
@@ -43,8 +45,7 @@ export default function useWebSocket() {
     configRef.current = config
     reconnectAttemptsRef.current = 0
 
-    const wsUrl = 'ws://localhost:8000/ws/train'
-    wsRef.current = new WebSocket(wsUrl)
+    wsRef.current = new WebSocket(WS_URL)
     statusRef.current = 'connecting'
 
     wsRef.current.onopen = () => {

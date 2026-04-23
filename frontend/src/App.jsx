@@ -78,39 +78,17 @@ function InfoRouter() {
   return <NodeInfoPanel />
 }
 
-function InspectorDrawer() {
-  const selectedTask = useGNNStore((s) => s.selectedTask)
-  const selectedNodeId = useGNNStore((s) => s.selectedNodeId)
-  const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
-
-  return (
-    <AnimatePresence>
-      {[1, 5].includes(selectedTask) && selectedNodeId !== null && (
-        <motion.div
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="absolute inset-y-0 right-0 z-50 w-[380px] border-l border-slate-800/80 bg-[#071120]/95 shadow-2xl backdrop-blur-xl"
-        >
-          <div className="h-full overflow-y-auto custom-scrollbar">
-            <InfoRouter />
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  )
-}
-
 function PanelHeading({ title, subtitle, align = 'left' }) {
+  // Sit in the extreme top-left/right corner with w-fit so the pill never
+  // stretches over the Task 2 grid cards below.
   return (
-    <div className={`absolute top-4 ${align === 'right' ? 'right-4' : 'left-16'} z-10 pointer-events-none rounded-xl border border-white/5 bg-[#020617]/40 backdrop-blur-xl px-4 py-2 flex items-center gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)]`}>
-      <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_#06b6d4]" />
-      <span className="text-[11px] uppercase font-black tracking-[0.2em] text-white/90 leading-none">{title}</span>
+    <div className={`absolute top-3 ${align === 'right' ? 'right-3' : 'left-3'} z-10 pointer-events-none w-fit max-w-[calc(100%-1.5rem)] rounded-lg border border-white/5 bg-panel-soft/70 backdrop-blur-xl px-3 py-1.5 flex items-center gap-2`}>
+      <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_6px_#06b6d4]" />
+      <span className="text-micro uppercase font-black tracking-ultra text-white/90 leading-none">{title}</span>
       {subtitle && (
         <>
           <div className="w-px h-3 bg-white/10" />
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">{subtitle}</span>
+          <span className="text-nano text-slate-400 font-bold uppercase tracking-wide leading-none">{subtitle}</span>
         </>
       )}
     </div>
@@ -158,7 +136,9 @@ function AppSidebar({ collapsed, onToggle, activeTab, setActiveRightTab, rightPa
 
 // ─── Custom horizontal drag-resize ──────────────────
 function ResizableWorkspace({ rightPanelOpen, leftContent, rightContent }) {
-  const [rightWidth, setRightWidth] = useState(420) // px
+  // Default width tuned for 1440×900: leaves ~1000px for the workspace so
+  // Task 2 grid keeps 3+ columns without the user dragging the divider.
+  const [rightWidth, setRightWidth] = useState(360) // px
   const MIN_RIGHT = 260
   const MAX_RIGHT = 800
   const dragging = useRef(false)
@@ -289,12 +269,18 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+      if (e.target.isContentEditable) return
       const { isPlaying, play, pause, stepBack, stepForward } = usePlayerStore.getState()
       switch (e.code) {
         case 'Space': e.preventDefault(); isPlaying ? pause() : play(); break
         case 'ArrowLeft': e.preventDefault(); stepBack(); break
         case 'ArrowRight': e.preventDefault(); stepForward(); break
+        case 'BracketLeft':
+        case 'BracketRight':
+          e.preventDefault(); setRightPanelOpen((v) => !v); break
+        default: break
       }
     }
     window.addEventListener('keydown', handleKeyDown)

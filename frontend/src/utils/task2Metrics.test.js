@@ -1,0 +1,141 @@
+import { describe, it, expect } from 'vitest'
+import {
+  buildConfusionMatrix,
+  computeMargins,
+  computeHardCases,
+  buildConfidenceHistogram,
+  computeEntropy,
+  buildDiagnosticsPoints,
+} from './task2Metrics'
+
+describe('buildConfusionMatrix', () => {
+  it('returns zero matrix on empty input', () => {
+    const cm = buildConfusionMatrix([], [], 2)
+    expect(cm.matrix).toEqual([[0, 0], [0, 0]])
+    expect(cm.accuracy).toBe(0)
+  })
+
+  it('counts 2x2 correctly and derives precision/recall', () => {
+    // preds = [0,0,1,1,1], truth = [0,1,1,1,0]  -> 3 correct
+    const cm = buildConfusionMatrix([0, 0, 1, 1, 1], [0, 1, 1, 1, 0], 2)
+    expect(cm.matrix[0][0]).toBe(1) // TP class 0
+    expect(cm.matrix[0][1]).toBe(1) // pred 0 but actual 1
+    expect(cm.matrix[1][1]).toBe(2) // TP class 1
+    expect(cm.matrix[1][0]).toBe(1) // FP class 1
+    expect(cm.accuracy).toBeCloseTo(3 / 5)
+    expect(cm.precision[0]).toBeCloseTo(0.5)
+    expect(cm.recall[0]).toBeCloseTo(0.5)
+  })
+
+  it('infers numClasses when omitted', () => {
+    const cm = buildConfusionMatrix([0, 2, 1], [0, 2, 1])
+    expect(cm.classes).toBe(3)
+    expect(cm.accuracy).toBe(1)
+  })
+})
+
+describe('computeMargins', () => {
+  it('returns top1-top2 gap', () => {
+    const m = computeMargins([[0.7, 0.3], [0.4, 0.6], [0.5, 0.5]])
+    expect(m[0]).toBeCloseTo(0.4)
+    expect(m[1]).toBeCloseTo(0.2)
+    expect(m[2]).toBeCloseTo(0)
+  })
+
+  it('handles single-class gracefully', () => {
+    expect(computeMargins([[0.9]])[0]).toBeCloseTo(0.9)
+  })
+})
+
+describe('computeHardCases', () => {
+  const graphs = [
+    { groundTruth: 0, nodes: [1, 2, 3], links: [{}] },
+    { groundTruth: 1, nodes: [1, 2], links: [] },
+    { groundTruth: 0, nodes: [1, 2, 3, 4], links: [{}, {}] },
+  ]
+  const snap = {
+    graph_predictions: [0, 0, 0], // #1 wrong (gt=1), #2 correct via coincidence
+    graph_confidences: [0.9, 0.4, 0.6],
+    confidence_margins: [0.8, 0.05, 0.2],
+  }
+
+  it('puts wrong predictions before correct ones', () => {
+    const hc = computeHardCases(snap, graphs, 3)
+    expect(hc[0].correct).toBe(false)
+    expect(hc[0].id).toBe(1)
+  })
+
+  it('respects onlyWrong filter', () => {
+    const hc = computeHardCases(snap, graphs, 5, { onlyWrong: true })
+    expect(hc.length).toBe(1)
+    expect(hc[0].id).toBe(1)
+  })
+
+  it('sorts correct cases by ascending margin', () => {
+    const hc = computeHardCases(snap, graphs, 10)
+    const correctOnes = hc.filter((x) => x.correct)
+    expect(correctOnes[0].margin).toBeLessThanOrEqual(correctOnes[1].margin)
+  })
+})
+
+describe('buildConfidenceHistogram', () => {
+  it('buckets confidences into bins', () => {
+    const snap = {
+      graph_confidences: [0.05, 0.15, 0.5, 0.95, 0.99],
+      graph_correct: [1, 0, 1, 1, 1],
+    }
+    const h = buildConfidenceHistogram(snap, 10)
+    expect(h[0].count).toBe(1) // 0.05
+    expect(h[1].count).toBe(1) // 0.15
+    expect(h[5].count).toBe(1) // 0.5
+    expect(h[9].count).toBe(2) // 0.95, 0.99
+    expect(h[9].correct).toBe(2)
+    expect(h[1].wrong).toBe(1)
+  })
+})
+
+describe('computeEntropy', () => {
+  it('returns 1 for uniform distribution', () => {
+    expect(computeEntropy([0.25, 0.25, 0.25, 0.25])).toBeCloseTo(1)
+  })
+  it('returns 0 for spike distribution', () => {
+    expect(computeEntropy([1, 0, 0, 0])).toBeCloseTo(0)
+  })
+  it('returns 0 on empty / all zero', () => {
+    expect(computeEntropy([])).toBe(0)
+    expect(computeEntropy([0, 0, 0])).toBe(0)
+  })
+})
+
+describe('buildDiagnosticsPoints', () => {
+  it('zips snapshot fields per graph', () => {
+    const snap = {
+      attention_entropy: [0.1, 0.8],
+      graph_structural_metrics: [
+        { density: 0.3, avg_clustering: 0.2, avg_degree: 2.0 },
+        { density: 0.7, avg_clustering: 0.5, avg_degree: 3.5 },
+      ],
+      graph_correct: [1, 0],
+    }
+    const graphs = [
+      { groundTruth: 0 },
+      { groundTruth: 1 },
+    ]
+    const pts = buildDiagnosticsPoints(snap, graphs)
+    expect(pts).toHaveLength(2)
+    expect(pts[0].entropy).toBeCloseTo(0.1)
+    expect(pts[1].density).toBeCloseTo(0.7)
+    expect(pts[0].correct).toBe(true)
+  })
+
+  it('falls back to computeEntropy when attention_entropy is missing', () => {
+    const snap = {
+      node_contributions: [[1, 0, 0], [0.25, 0.25, 0.25, 0.25]],
+      graph_correct: [1, 1],
+    }
+    const graphs = [{}, {}]
+    const pts = buildDiagnosticsPoints(snap, graphs)
+    expect(pts[0].entropy).toBeCloseTo(0)
+    expect(pts[1].entropy).toBeCloseTo(1)
+  })
+})

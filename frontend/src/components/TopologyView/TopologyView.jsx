@@ -8,6 +8,8 @@ import { CLASS_COLORS, CLASS_NAMES } from '../../utils/colors'
 import { easeInOutCubic, getNodeColor } from '../../engine/interpolate'
 import { drawTask1Node } from '../../engine/drawTask1Node'
 import { computeKHopNeighbors } from '../../utils/khop'
+import { isNodeMisclassified, countMisclassified } from '../../utils/misclassification'
+import { logger } from '../../utils/logger'
 
 export default function TopologyView() {
   // 1. Dữ liệu tĩnh
@@ -43,9 +45,8 @@ export default function TopologyView() {
   const [kHopMaxHops, setKHopMaxHops] = useState(3)
   const kHopNeighborsRef = useRef(null)
 
-  // Misclassification Explorer state - TEMPORARILY DISABLED FOR DEBUGGING
+  // Misclassification Explorer state
   const [showErrorsOnly, setShowErrorsOnly] = useState(false)
-  const showErrorsOnlySafe = false // Force disable until bug is fixed
 
   // 3. StateRef: Đảm bảo luồng vẽ Canvas luôn lấy được dữ liệu mới nhất mà không trễ nhịp
   const animState = useRef({
@@ -60,7 +61,7 @@ export default function TopologyView() {
     kHopMaxHops: 3,
     kHopNeighbors: null,
     showErrorsOnly: false,
-    nodeCorrectness: null
+    nodeCorrectness: null,
   })
 
   // Cập nhật Ref và ép Redraw 60 lần/giây
@@ -81,8 +82,8 @@ export default function TopologyView() {
       kHopEnabled,
       kHopMaxHops,
       kHopNeighbors: kHopNeighborsRef.current,
-      showErrorsOnlySafe,
-      nodeCorrectness: currentSnap ? (currentSnap.node_correctness || null) : null
+      showErrorsOnly,
+      nodeCorrectness: currentSnap ? (currentSnap.node_correctness || null) : null,
     }
 
     // Compute K-Hop neighbors when selected node changes
@@ -93,16 +94,33 @@ export default function TopologyView() {
     }
   }, [snapshots, currentEpochFloat, selectedNodeId, viewMode, groundTruth, selectedModel, attentionHead, kHopEnabled, kHopMaxHops, rawGraphData, showErrorsOnly])
 
-  // Resize handler
+  // Resize handler — re-attach whenever the target node remounts
+  // (e.g. after activeGraphData flips from null → data, the render tree swaps
+  // from the loading placeholder to the real canvas wrapper).
   useEffect(() => {
-    if (!containerRef.current) return
+    const el = containerRef.current
+    if (!el) return
     const ro = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect
       if (width > 0 && height > 0) setDimensions({ width, height })
     })
-    ro.observe(containerRef.current)
+    ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [stableGraphData])
+
+  // Re-fit the graph whenever the workspace resizes so nodes always fill the
+  // full canvas instead of leaving dark dead space (fixes the "dark lower-left
+  // corner" complaint — the initial 800×400 fallback zoom was never re-fit
+  // after the observer reported the real container size).
+  useEffect(() => {
+    if (!fgRef.current) return
+    const id = requestAnimationFrame(() => {
+      try { fgRef.current && fgRef.current.zoomToFit(300, 32) } catch {
+        /* transient fit error while layout settles — next frame will retry */
+      }
+    })
+    return () => cancelAnimationFrame(id)
+  }, [dimensions.width, dimensions.height])
 
   // Đánh chỉ mục cạnh để truy xuất nhanh O(1)
   // Build edge index mapping that matches backend's edge_index order
@@ -182,7 +200,7 @@ export default function TopologyView() {
       const state = animState.current
       if (!state) return
 
-      const { snaps, cef, vm, gt, sid, kHopEnabled, kHopNeighbors, showErrorsOnlySafe, nodeCorrectness } = state
+      const { snaps, cef, vm, gt, sid, kHopEnabled, kHopNeighbors, showErrorsOnly: showErrors, nodeCorrectness } = state
       let nodeColor = '#475569'
 
       // Safe checks for required values
@@ -199,14 +217,9 @@ export default function TopologyView() {
         kHopInfo = kHopNeighbors.get(node.id)
       }
 
-      // Check if node is misclassified (for error highlighting) - DISABLED
-      let isMisclassified = false
-      // if (showErrorsOnlySafe && Array.isArray(nodeCorrectness) && nodeCorrectness.length > 0) {
-      //   const nodeId = node.id
-      //   if (typeof nodeId === 'number' && nodeId >= 0 && nodeId < nodeCorrectness.length) {
-      //     isMisclassified = nodeCorrectness[nodeId] === 0
-      //   }
-      // }
+      // Check if node is misclassified (for error highlighting)
+      const isMisclassified =
+        showErrors && isNodeMisclassified(node.id, nodeCorrectness)
 
       if (Array.isArray(snaps) && snaps.length > 0) {
         const epochInt = Math.max(0, Math.min(snaps.length - 1, Math.floor(cef || 0)))
@@ -233,20 +246,19 @@ export default function TopologyView() {
         ctx.fill()
       }
 
-      // Draw error highlight (red pulse ring for misclassified nodes) - DISABLED
-      // if (showErrorsOnlySafe && isMisclassified) {
-      //   const pulseRadius = 12 + Math.sin(Date.now() / 200) * 3
-      //   ctx.beginPath()
-      //   ctx.arc(node.x, node.y, pulseRadius, 0, 2 * Math.PI)
-      //   ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)'
-      //   ctx.lineWidth = 2
-      //   ctx.stroke()
-      //   
-      //   ctx.beginPath()
-      //   ctx.arc(node.x, node.y, 8, 0, 2 * Math.PI)
-      //   ctx.fillStyle = 'rgba(239, 68, 68, 0.15)'
-      //   ctx.fill()
-      // }
+      if (isMisclassified) {
+        const pulseRadius = 12 + Math.sin(Date.now() / 200) * 3
+        ctx.beginPath()
+        ctx.arc(node.x, node.y, pulseRadius, 0, 2 * Math.PI)
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)'
+        ctx.lineWidth = 2
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.arc(node.x, node.y, 8, 0, 2 * Math.PI)
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.15)'
+        ctx.fill()
+      }
 
       drawTask1Node({ ...node, color: nodeColor }, ctx, globalScale, {
         currentEpochFloat: cef || 0,
@@ -255,10 +267,10 @@ export default function TopologyView() {
         isSelected: node.id === sid,
         isHovered: false,
         kHopInfo,
-        isMisclassified: false // showErrorsOnlySafe && isMisclassified
+        isMisclassified,
       })
     } catch (error) {
-      console.error('nodeCanvasObject error:', error)
+      logger.error('nodeCanvasObject error:', error)
     }
   }, [selectedModel, totalEpochs]) // Removed showErrorsOnly dependency
 
@@ -522,18 +534,29 @@ export default function TopologyView() {
           ))}
         </div>
 
-        {/* Misclassification Explorer Toggle - TEMPORARILY HIDDEN */}
-        {/* <button
-          onClick={() => setShowErrorsOnly(!showErrorsOnly)}
+        {/* Misclassification Explorer Toggle */}
+        <button
+          onClick={() => setShowErrorsOnly(v => !v)}
           className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all border flex items-center gap-1.5
             ${showErrorsOnly
               ? 'bg-red-500/20 border-red-500/40 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
               : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-300'
             }`}
+          title={showErrorsOnly
+            ? 'Hide misclassification highlight'
+            : 'Highlight misclassified nodes (red ring)'}
         >
-          <span>{showErrorsOnly ? '🔴' : '⚪'}</span>
-          <span>Errors Only</span>
-        </button> */}
+          <span className={`inline-block w-1.5 h-1.5 rounded-full ${showErrorsOnly ? 'bg-red-400' : 'bg-slate-500'}`} />
+          <span>
+            Errors Only
+            {showErrorsOnly && (() => {
+              const snaps = animState.current.snaps
+              const cur = snaps[Math.max(0, Math.min(snaps.length - 1, Math.floor(currentEpochFloat)))]
+              const n = countMisclassified(cur && cur.node_correctness)
+              return n > 0 ? ` · ${n}` : ''
+            })()}
+          </span>
+        </button>
 
         {/* K-Hop Neighborhood Toggle */}
         {selectedNodeId !== null && (

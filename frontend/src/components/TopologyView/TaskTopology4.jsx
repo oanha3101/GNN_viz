@@ -57,13 +57,22 @@ export default function TaskTopology4() {
   }, [currentEpochFloat, snapshots, graphData])
 
   useEffect(() => {
-    if (!containerRef.current) return
+    const el = containerRef.current
+    if (!el) return
     const ro = new ResizeObserver(([e]) => {
       if (e.contentRect.width > 0) setDimensions({ width: e.contentRect.width, height: e.contentRect.height })
     })
-    ro.observe(containerRef.current)
+    ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [graphData])
+
+  useEffect(() => {
+    if (!fgRef.current) return
+    const id = requestAnimationFrame(() => {
+      try { fgRef.current && fgRef.current.zoomToFit(300, 32) } catch { /* settle */ }
+    })
+    return () => cancelAnimationFrame(id)
+  }, [dimensions.width, dimensions.height])
 
   // 3. Convex Hulls Calculation
   const communityHulls = useMemo(() => {

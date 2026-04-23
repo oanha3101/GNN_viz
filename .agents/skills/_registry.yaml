@@ -1,0 +1,35 @@
+version: 1
+description: >
+  Skill registry cho GNN-Insight. `.gemini/skills` là symlink sang thư mục này,
+  đảm bảo single source of truth. Đọc thêm SKILL.md trong từng thư mục con.
+skills:
+  - id: gnn-search-first
+    category: core
+    triggers: [before-any-logic-change]
+  - id: gnn-verification-loop
+    category: core
+    triggers: [post-edit]
+  - id: gnn-continuous-learning
+    category: core
+    triggers: [post-task-complete]
+  - id: gnn-fe-tdd
+    category: fe
+    triggers: [fe-component-change]
+  - id: fe-ux-heuristics
+    category: fe
+    triggers: [fe-component-change, pre-release]
+  - id: fe-consistency-guard
+    category: fe
+    triggers: [pre-commit, ci-lint]
+  - id: fe-ui-debug
+    category: fe
+    triggers: [ui-bug-report, visual-regression-failure]
+  - id: gnn-data-viz
+    category: viz
+    triggers: [chart-change]
+  - id: viz-dashboards
+    category: viz
+    triggers: [metric-panel-change]
+  - id: gnn-be-tdd
+    category: be
+    triggers: [be-change]
