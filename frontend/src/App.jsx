@@ -244,7 +244,6 @@ function App() {
   const mockMode = useGNNStore((s) => s.mockMode)
   const setMockMode = useGNNStore((s) => s.setMockMode)
   const setConfigOpen = useGNNStore((s) => s.setConfigOpen)
-  const setReportOpen = useGNNStore((s) => s.setReportOpen)
   const isTraining = useGNNStore((s) => s.isTraining)
   const snapshots = usePlayerStore((s) => s.snapshots)
   const currentEpoch = usePlayerStore((s) => s.currentEpoch)
@@ -288,12 +287,13 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Auto-popup của TrainingReport đã bị gỡ theo yêu cầu — nó làm phiền mỗi lần
+  // người dùng bấm Run hoặc chuyển task. Report giờ chỉ mở khi user bấm nút.
   useEffect(() => {
     if (!isTraining && trainingDone && snapshots.length > 0 && reportVersion > lastReportVersionRef.current) {
       lastReportVersionRef.current = reportVersion
-      setReportOpen(true)
     }
-  }, [isTraining, trainingDone, snapshots.length, reportVersion, setReportOpen])
+  }, [isTraining, trainingDone, snapshots.length, reportVersion])
 
   const valAcc = snapshot ? (snapshot.val_acc * 100).toFixed(1) : '--'
   const trainLoss = snapshot ? snapshot.train_loss.toFixed(3) : '--'
