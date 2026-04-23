@@ -40,6 +40,7 @@ import DataInputView from './components/UploadPanel/DataInputView'
 import TrainingReport from './components/TrainingReport'
 import ProjectLibrary from './components/Library/ProjectLibrary'
 import Task2MetricsPanel from './components/MetricsChart/Task2MetricsPanel'
+import Task6MetricsPanel from './components/MetricsChart/Task6MetricsPanel'
 import CommunityEvolution from './components/TopologyView/CommunityEvolution'
 import SidebarButton from './components/ui/SidebarButton'
 
@@ -429,6 +430,7 @@ function App() {
                              selectedTask === 3 ? <Task3MetricsPanel /> :
                              selectedTask === 4 ? <Task4MetricsPanel /> :
                              selectedTask === 5 ? <Task5MetricsPanel /> :
+                             selectedTask === 6 ? <Task6MetricsPanel /> :
                              <MetricsChart />}
                           </ErrorBoundary>
                         </motion.div>

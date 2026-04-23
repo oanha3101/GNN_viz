@@ -32,6 +32,35 @@ function lerp(a, b, t) {
   return a + (b - a) * Math.max(0, Math.min(1, t))
 }
 
+// Small non-cryptographic hash used for Task 6 graph signatures.
+function hashString(str) {
+  let h = 2166136261
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return (h >>> 0).toString(16).padStart(8, '0')
+}
+
+// Fixed reference "target distribution" for Task 6 Comparison tab. Sampled once
+// with deterministic seeds so source bars stay stable while generated samples
+// evolve per epoch.
+const SOURCE_GRAPHS_TASK6 = (() => {
+  const out = []
+  for (let g = 0; g < 20; g++) {
+    const n = seededRandInt(g * 411 + 7, 6, 12)
+    const nodes = Array.from({ length: n }, (_, i) => ({ id: i }))
+    const links = []
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        if (seededRand(g * 809 + i * 73 + j) < 0.35) links.push({ source: i, target: j })
+      }
+    }
+    out.push({ id: g, nodes, links })
+  }
+  return out
+})()
+
 // ── Task 1: Node Classification ───────────────────────────────────────────────
 export function generateTask1Mock(numNodes = 60, numEpochs = 100) {
   const numClasses = 7
@@ -789,8 +818,22 @@ export function generateTask6Mock(numEpochs = 60) {
             links.push({ source: i, target: j })
       const density = links.length / Math.max(1, (n * (n - 1)) / 2)
       const avgDegree = (links.length * 2) / Math.max(1, n)
-      const valid = links.length >= n - 1
-      const isolatedRatio = Math.max(0, (n - Math.min(n, links.length * 2)) / n)
+      const isolatedCount = Math.max(0, n - Math.min(n, links.length * 2))
+      const isolatedRatio = isolatedCount / Math.max(1, n)
+      // Determine validity + concrete reason (consumed by Invalidity tab)
+      let valid = true
+      let invalidityReason = null
+      if (links.length === 0) { valid = false; invalidityReason = 'isolated' }
+      else if (links.length < n - 1) { valid = false; invalidityReason = 'disconnected' }
+      else if (density < 0.12) { valid = false; invalidityReason = 'too_sparse' }
+      // Signature = simple canonical hash of (n, sorted edge list). Collisions
+      // are fine for mock — duplicates drive the Signatures tab.
+      const edgeStr = links
+        .map((l) => (l.source < l.target ? `${l.source}-${l.target}` : `${l.target}-${l.source}`))
+        .sort()
+        .join(',')
+      const signature = `n${n}:${hashString(edgeStr)}`
+      const matchesSource = seededRand(epoch * 131 + g * 23) < 0.08
       return {
         id: g,
         nodes,
@@ -800,8 +843,16 @@ export function generateTask6Mock(numEpochs = 60) {
         density,
         avg_degree: avgDegree,
         isolated_ratio: isolatedRatio,
+        invalidity_reason: invalidityReason,
+        signature,
+        matches_source: matchesSource,
       }
     })
+
+    // Source reference graphs — sampled once per run from the same generator
+    // family so Comparison tab can render "target distribution" histograms.
+    // Deterministic seed keeps source stable across epochs.
+    const sourceGraphs = SOURCE_GRAPHS_TASK6
 
     const latentPoints = Array.from({ length: 30 }, (_, i) => [
       (seededRand(i * 311 + epoch * 7) - 0.5) * 2 * (1 + (1 - progress) * 2),
@@ -829,6 +880,7 @@ export function generateTask6Mock(numEpochs = 60) {
       epoch, generated_graphs: generatedGraphs, latent_points: latentPoints,
       latent_point_scores: latentPointScores,
       latent_point_validity: latentPointValidity,
+      source_graphs: sourceGraphs,
       train_loss: reconLoss + klLoss, val_loss: (reconLoss + klLoss) * 1.1,
       train_acc: Math.min(1, quality), val_acc: Math.min(1, quality * 0.9),
       recon_loss: reconLoss, kl_loss: klLoss,

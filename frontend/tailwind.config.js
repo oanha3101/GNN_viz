@@ -19,7 +19,7 @@ export default {
         divider: '#1e293b',
       },
       fontSize: {
-        // Matches tokens.font.size — paired with sensible line-heights.
+        // Shared with fe-consistency-guard so panels can avoid text-[7/8/10px].
         nano: ['9px', '12px'],
         micro: ['10px', '14px'],
       },
