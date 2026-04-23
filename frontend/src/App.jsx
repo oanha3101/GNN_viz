@@ -27,9 +27,9 @@ import InductiveDemo from './components/TopologyView/InductiveDemo'
 import ReadoutMonitor from './components/TopologyView/ReadoutMonitor'
 import Task3MetricsPanel from './components/MetricsChart/Task3MetricsPanel'
 import Task4MetricsPanel from './components/MetricsChart/Task4MetricsPanel'
+import Task5MetricsPanel from './components/MetricsChart/Task5MetricsPanel'
 import Task4CommunityInspector from './components/TopologyView/Task4CommunityInspector'
 import EmbeddingSpaceB from './components/TopologyView/EmbeddingSpaceB'
-import StructurePreservation from './components/TopologyView/StructurePreservation'
 import Task5NodeInspector from './components/TopologyView/Task5NodeInspector'
 import LatentSpaceView from './components/TopologyView/LatentSpaceView'
 import ValidityMonitor from './components/TopologyView/ValidityMonitor'
@@ -428,7 +428,7 @@ function App() {
                              selectedTask === 2 ? <Task2MetricsPanel /> :
                              selectedTask === 3 ? <Task3MetricsPanel /> :
                              selectedTask === 4 ? <Task4MetricsPanel /> :
-                             selectedTask === 5 ? <StructurePreservation /> :
+                             selectedTask === 5 ? <Task5MetricsPanel /> :
                              <MetricsChart />}
                           </ErrorBoundary>
                         </motion.div>
