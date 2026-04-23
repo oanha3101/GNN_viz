@@ -61,6 +61,7 @@ const useGNNStore = create((set, get) => ({
       selectedNodeId: null,
       selectedTargetNodeId: null,
       selectedCommunityId: null,
+      focusedEdgeIdx: null,
       // Clear data only if moving to/from tasks with incompatible graph formats
       ...(needsReset ? {
         graphData: null,
@@ -82,6 +83,7 @@ const useGNNStore = create((set, get) => ({
       taskData: null,
       selectedNodeId: null,
       selectedCommunityId: null,
+      focusedEdgeIdx: null,
       isTraining: false,
       trainingProgress: 0,
     })
