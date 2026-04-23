@@ -200,9 +200,6 @@ export default function TaskTopology2() {
   }
 
   if (showDetail) {
-    const density = snap?.graph_structural_metrics?.[selectedGraphIdx]?.density
-    const clustering = snap?.graph_structural_metrics?.[selectedGraphIdx]?.avg_clustering
-    const avgDeg = snap?.graph_structural_metrics?.[selectedGraphIdx]?.avg_degree
     return (
       <div key="detail_view" className="w-full h-full relative bg-panel overflow-hidden">
         <div className="absolute inset-0" style={{ zIndex: 1 }}>
@@ -215,71 +212,39 @@ export default function TaskTopology2() {
             linkWidth={1.5}
             backgroundColor="transparent"
             onEngineStop={() => {
-              if (fgRefDetail.current) fgRefDetail.current.zoomToFit(400, 80)
+              if (fgRefDetail.current) fgRefDetail.current.zoomToFit(400, 30)
             }}
           />
         </div>
 
-        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 50 }}>
-          <div className="absolute top-3 left-3 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedGraphIdx(null)
-                setSelectedNode(null)
-              }}
-              className="pointer-events-auto px-3 py-1.5 rounded-md text-micro font-bold tracking-wide bg-slate-900/95 text-slate-200 hover:bg-slate-800 transition-colors border border-slate-700/60 uppercase shadow-xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-            >
-              ← Exit drill-down
-            </button>
+        {/* Corner-only exit control; full metadata lives in the right-rail Inspector */}
+        <div className="absolute top-3 left-3 z-50">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedGraphIdx(null)
+              setSelectedNode(null)
+            }}
+            className="px-3 py-1.5 rounded-md text-micro font-bold tracking-wide bg-slate-900/90 text-slate-200 hover:bg-slate-800 transition-colors border border-slate-700/60 uppercase shadow-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+          >
+            ← Exit drill-down
+          </button>
+        </div>
 
-            <div className="bg-slate-900/95 border border-slate-700/50 px-3 py-2.5 rounded-lg min-w-[220px] pointer-events-auto shadow-xl flex flex-col gap-2">
-              <div className="flex justify-between items-start gap-3">
-                <div>
-                  <h2 className="text-sm font-bold text-white leading-tight">
-                    {GRAPH_LABELS[g.groundTruth] || `Class ${g.groundTruth}`}
-                  </h2>
-                  <p className="text-nano text-slate-500 font-mono">
-                    #{selectedGraphIdx} · {g.nodes.length}n / {g.links.length}e
-                  </p>
-                </div>
-                <div
-                  className={`w-7 h-7 rounded-md flex items-center justify-center text-sm font-bold ${
-                    isCorrect ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/20 text-red-300'
-                  }`}
-                >
-                  {isCorrect ? '✓' : '✗'}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-1 text-nano text-slate-400 font-mono bg-slate-950/60 rounded-md p-1.5 border border-slate-800/60">
-                <Stat label="Density" value={density} />
-                <Stat label="Clustering" value={clustering} />
-                <Stat label="AvgDeg" value={avgDeg} digits={1} />
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-nano text-slate-500 uppercase font-semibold">Confidence</span>
-                  <span
-                    className={`text-micro font-mono font-bold tabular-nums ${
-                      conf > 0.8 ? 'text-emerald-400' : 'text-amber-400'
-                    }`}
-                  >
-                    {(conf * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-800/60 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 ${isCorrect ? 'bg-emerald-500' : 'bg-red-500'}`}
-                    style={{ width: `${conf * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              <TopContributors contributions={contributions[selectedGraphIdx]} />
-            </div>
-          </div>
+        {/* Pill summary (GT / PRED / confidence) at top-right, non-blocking */}
+        <div className="absolute top-3 right-3 z-50 flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/50 text-micro font-mono text-slate-300 shadow-lg">
+          <span className="text-nano uppercase tracking-ultra text-slate-500">#{selectedGraphIdx}</span>
+          <span className="text-slate-200">{GRAPH_LABELS[g.groundTruth] || `Class ${g.groundTruth}`}</span>
+          <span
+            className={`w-4 h-4 rounded-sm flex items-center justify-center text-nano font-bold ${
+              isCorrect ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/25 text-red-300'
+            }`}
+          >
+            {isCorrect ? '✓' : '✗'}
+          </span>
+          <span className={`tabular-nums ${conf > 0.8 ? 'text-emerald-400' : 'text-amber-400'}`}>
+            {(conf * 100).toFixed(0)}%
+          </span>
         </div>
       </div>
     )
@@ -367,50 +332,4 @@ export default function TaskTopology2() {
   )
 }
 
-function Stat({ label, value, digits = 3 }) {
-  return (
-    <div>
-      <div className="text-slate-500 uppercase">{label}</div>
-      <div className="text-slate-200 font-bold">
-        {value != null && Number.isFinite(value) ? value.toFixed(digits) : '—'}
-      </div>
-    </div>
-  )
-}
 
-function TopContributors({ contributions }) {
-  const topNodes = useMemo(() => {
-    if (!contributions?.length) return []
-    return contributions
-      .map((val, idx) => ({ id: idx, val }))
-      .sort((a, b) => b.val - a.val)
-      .slice(0, 3)
-  }, [contributions])
-
-  return (
-    <div>
-      <span className="text-nano text-slate-500 uppercase font-semibold block mb-1.5 border-l-2 border-amber-500 pl-2">
-        Top contributors
-      </span>
-      {topNodes.length === 0 ? (
-        <div className="text-nano text-slate-600 italic">No data yet</div>
-      ) : (
-        topNodes.map((node) => (
-          <div key={node.id} className="flex items-center justify-between mb-1 last:mb-0 gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-sm flex items-center justify-center bg-slate-800 text-nano font-bold text-slate-100">
-                {node.id}
-              </div>
-              <div className="h-1 w-16 bg-slate-800/50 rounded-full overflow-hidden">
-                <div className="h-full bg-amber-500" style={{ width: `${node.val * 100}%` }} />
-              </div>
-            </div>
-            <span className="text-nano font-bold font-mono text-amber-400 tabular-nums">
-              {(node.val * 100).toFixed(0)}%
-            </span>
-          </div>
-        ))
-      )}
-    </div>
-  )
-}
