@@ -1,69 +1,142 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import usePlayerStore from '../../store/playerStore'
 import useGNNStore from '../../store/useGNNStore'
 import { filterGraphsBy } from '../../utils/task6Metrics.js'
+import {
+  classifyGraphShape,
+  classifyNodeRoles,
+  countComponents,
+  countTriangles,
+  computeForceLayout,
+  findNearestSourceGraph,
+} from '../../utils/task6Structure.js'
 
-const NODE_COLORS = ['#22c55e', '#ef4444', '#3b82f6', '#eab308', '#a855f7', '#06b6d4']
+const ROLE_COLOR = {
+  isolated: '#ef4444',
+  leaf: '#64748b',
+  bridge: '#f59e0b',
+  hub: '#22d3ee',
+  regular: '#94a3b8',
+}
+
+const SHAPE_TONE = {
+  disconnected: { bg: 'bg-red-500/15',     border: 'border-red-500/40',     text: 'text-red-300' },
+  star:         { bg: 'bg-cyan-500/15',    border: 'border-cyan-500/40',    text: 'text-cyan-200' },
+  cycle:        { bg: 'bg-indigo-500/15',  border: 'border-indigo-500/40',  text: 'text-indigo-200' },
+  tree:         { bg: 'bg-emerald-500/15', border: 'border-emerald-500/40', text: 'text-emerald-200' },
+  clique:       { bg: 'bg-fuchsia-500/15', border: 'border-fuchsia-500/40', text: 'text-fuchsia-200' },
+  dense:        { bg: 'bg-amber-500/15',   border: 'border-amber-500/40',   text: 'text-amber-200' },
+  sparse:       { bg: 'bg-slate-500/15',   border: 'border-slate-500/40',   text: 'text-slate-300' },
+  generic:      { bg: 'bg-slate-800/40',   border: 'border-slate-700/60',   text: 'text-slate-300' },
+  empty:        { bg: 'bg-slate-800/40',   border: 'border-slate-700/60',   text: 'text-slate-500' },
+}
 
 /**
- * MiniGraphSVG for Task 6 — with optional "grow" animation.
- * Nodes & edges appear sequentially (GraphRNN-style) based on revealProgress.
+ * StructuralMiniGraph — force-directed mini layout with role-based coloring.
+ * - Node size = sqrt(degree) clamped to [3, 7]
+ * - Color by role: isolated red, leaf slate, bridge amber, hub cyan
+ * - Dashed stroke + reduced opacity for sparse / disconnected shapes so
+ *   failure modes read at a glance.
  */
-function MiniGraphSVG({ nodes, links, size = 130, valid, revealProgress = 1 }) {
-  const padding = 20
-  const r = (size - padding * 2) / 2
-  const cx = size / 2
-  const cy = size / 2
+function StructuralMiniGraph({ nodes, links, size = 140, shape, invalid }) {
+  const pos = useMemo(
+    () => computeForceLayout(nodes, links, size, 80),
+    [nodes, links, size],
+  )
+  const roles = useMemo(() => classifyNodeRoles(nodes, links), [nodes, links])
+  const degs = useMemo(() => {
+    const d = new Array(nodes.length).fill(0)
+    for (const l of links) {
+      const s = typeof l.source === 'object' ? l.source.id : l.source
+      const t = typeof l.target === 'object' ? l.target.id : l.target
+      if (Number.isInteger(s) && Number.isInteger(t)) { d[s] += 1; d[t] += 1 }
+    }
+    return d
+  }, [nodes, links])
 
-  const nodePos = useMemo(() => {
-    const pos = {}
-    const n = nodes.length
-    if (n === 1) { pos[nodes[0].id] = { x: cx, y: cy }; return pos }
-    nodes.forEach((node, i) => {
-      const angle = (i / n) * Math.PI * 2 - Math.PI / 2
-      pos[node.id] = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) }
-    })
-    return pos
-  }, [nodes, r, cx, cy])
-
-  const visibleNodesCount = Math.ceil(nodes.length * revealProgress)
-  const visibleLinksCount = Math.ceil(links.length * revealProgress)
+  const edgeStroke = invalid ? '#ef4444' : shape === 'sparse' ? '#64748b' : '#475569'
+  const dashed = shape === 'sparse' || shape === 'disconnected'
 
   return (
-    <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
-      <defs>
-        <filter id="glow6">
-          <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
-          <feMerge>
-            <feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-
-      {links.slice(0, visibleLinksCount).map((link, i) => {
-        const s = typeof link.source === 'object' ? link.source.id : link.source
-        const t = typeof link.target === 'object' ? link.target.id : link.target
-        if (s >= visibleNodesCount || t >= visibleNodesCount) return null
-        const p1 = nodePos[s]; const p2 = nodePos[t]
+    <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`}>
+      {links.map((l, i) => {
+        const s = typeof l.source === 'object' ? l.source.id : l.source
+        const t = typeof l.target === 'object' ? l.target.id : l.target
+        const p1 = pos[s]; const p2 = pos[t]
         if (!p1 || !p2) return null
-        return <line key={i} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
-                     stroke={valid ? '#4ade80' : '#f87171'} strokeWidth="1.2" strokeOpacity="0.4"
-                     strokeDasharray="2 1" />
-      })}
-
-      {nodes.slice(0, visibleNodesCount).map((node, ni) => {
-        const p = nodePos[node.id]
-        if (!p) return null
-        const color = NODE_COLORS[ni % NODE_COLORS.length]
-        const delay = (ni / nodes.length) * 0.3
         return (
-          <g key={node.id} style={{ transition: `all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)`, transitionDelay: `${delay}s` }}>
-            <circle cx={p.x} cy={p.y} r={4.5} fill={color} filter="url(#glow6)" />
-            <circle cx={p.x} cy={p.y} r={2} fill="#fff" />
+          <line
+            key={i}
+            x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+            stroke={edgeStroke} strokeWidth={1.2}
+            strokeOpacity={dashed ? 0.5 : 0.8}
+            strokeDasharray={dashed ? '3 2' : undefined}
+          />
+        )
+      })}
+      {nodes.map((node, i) => {
+        const p = pos[node.id]
+        if (!p) return null
+        const role = roles[i] || 'regular'
+        const r = Math.max(3, Math.min(7, 2.5 + Math.sqrt(degs[i] || 0) * 1.4))
+        const flash = role === 'isolated' ? (
+          <circle cx={p.x} cy={p.y} r={r + 3} fill="none" stroke="#ef4444" strokeOpacity={0.4}>
+            <animate attributeName="r" values={`${r + 1};${r + 4};${r + 1}`} dur="1.4s" repeatCount="indefinite" />
+            <animate attributeName="stroke-opacity" values="0.6;0.0;0.6" dur="1.4s" repeatCount="indefinite" />
+          </circle>
+        ) : null
+        return (
+          <g key={node.id}>
+            {flash}
+            <circle cx={p.x} cy={p.y} r={r} fill={ROLE_COLOR[role]} stroke="#0f172a" strokeWidth={1} />
           </g>
         )
       })}
     </svg>
+  )
+}
+
+function ShapeBadge({ shape }) {
+  const tone = SHAPE_TONE[shape] || SHAPE_TONE.generic
+  return (
+    <span className={`text-nano font-black uppercase tracking-ultra px-1.5 py-0.5 rounded border ${tone.bg} ${tone.border} ${tone.text}`}>
+      {shape}
+    </span>
+  )
+}
+
+function LegendDot({ color, label, pulsing }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        className="inline-block w-2.5 h-2.5 rounded-full"
+        style={{ background: color, boxShadow: pulsing ? `0 0 0 2px ${color}33` : undefined }}
+      />
+      {label}
+    </span>
+  )
+}
+
+function CompareCard({ title, graph, invalid }) {
+  const shape = classifyGraphShape(graph.nodes, graph.links)
+  const comp = countComponents(graph.nodes, graph.links)
+  const tri = countTriangles(graph.nodes, graph.links)
+  const m = graph.links.length
+  const n = graph.nodes.length
+  const d = (graph.density ?? (m / Math.max(1, (n * (n - 1)) / 2))).toFixed(2)
+  return (
+    <div className="bg-slate-900/40 rounded-xl p-3 border border-slate-800/60">
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <span className="text-nano font-black text-slate-400 uppercase tracking-ultra">{title}</span>
+        <ShapeBadge shape={shape} />
+      </div>
+      <div className="w-full" style={{ height: 160 }}>
+        <StructuralMiniGraph nodes={graph.nodes} links={graph.links} size={180} shape={shape} invalid={invalid} />
+      </div>
+      <div className="mt-2 text-nano font-mono text-slate-400 tabular-nums">
+        n={n} · m={m} · c={comp} · Δ={tri} · d={d}
+      </div>
+    </div>
   )
 }
 
@@ -80,9 +153,6 @@ export default function TaskTopology6() {
   const snap = snapshots[epochInt]
 
   const [expandedGraph, setExpandedGraph] = useState(null)
-  const [revealProgress, setRevealProgress] = useState(1)
-  // Filter chip state — also readable by Task6 Invalidity tab via useGNNStore
-  // so clicking a row there can narrow the grid. Local to component for now.
   const filterMode = useGNNStore((s) => s.task6FilterMode) || 'all'
   const setFilterMode = useGNNStore((s) => s.setTask6FilterMode) || (() => {})
 
@@ -92,48 +162,38 @@ export default function TaskTopology6() {
     if (snap?.generated_graphs?.length) prevGraphsRef.current = snap.generated_graphs
   }, [snap])
 
-  // Grow-in animation when epoch ticks
-  const prevEpochRef = useRef(epochInt)
-  useEffect(() => {
-    if (epochInt !== prevEpochRef.current) {
-      prevEpochRef.current = epochInt
-      setRevealProgress(0)
-      let start = performance.now()
-      const duration = 800
-      const animate = (now) => {
-        const p = Math.min(1, (now - start) / duration)
-        setRevealProgress(p)
-        if (p < 1) requestAnimationFrame(animate)
-      }
-      requestAnimationFrame(animate)
-    }
-  }, [epochInt])
-
   const generatedGraphs = useMemo(
     () => filterGraphsBy(rawGraphs, filterMode),
     [rawGraphs, filterMode],
   )
 
+  const expanded = useMemo(
+    () => rawGraphs.find((g) => g.id === expandedGraph) || null,
+    [rawGraphs, expandedGraph],
+  )
+  const nearestSource = useMemo(
+    () => (expanded ? findNearestSourceGraph(expanded, snap?.source_graphs || []) : null),
+    [expanded, snap],
+  )
+
   if (!rawGraphs.length) {
     return (
       <div className="w-full h-full flex items-center justify-center text-slate-600 bg-slate-950">
-        <div className="text-center animate-pulse">
-          <div className="text-5xl mb-4 opacity-20">&#9888;</div>
+        <div className="text-center">
           <p className="text-xs font-black uppercase tracking-ultra">Awaiting Latent Formation</p>
         </div>
       </div>
     )
   }
 
-  const validCount = rawGraphs.filter(g => g.valid).length
+  const validCount = rawGraphs.filter((g) => g.valid).length
   const validityPct = ((validCount / rawGraphs.length) * 100).toFixed(0)
   const avgNodes = (rawGraphs.reduce((sum, g) => sum + g.nodes.length, 0) / rawGraphs.length).toFixed(1)
-  const novelCount = rawGraphs.filter(g => g.matches_source !== true).length
+  const novelCount = rawGraphs.filter((g) => g.matches_source !== true).length
 
   return (
     <div className="w-full h-full overflow-y-auto p-6 bg-slate-950 custom-scrollbar">
-      {/* Compact header — 3 stat pills + filter chips */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
+      <div className="flex flex-wrap items-center gap-3 mb-3">
         <div className="flex items-center gap-2 bg-slate-900/60 border border-white/5 px-3 py-2 rounded-xl">
           <span className="text-nano text-slate-500 font-black uppercase tracking-ultra">Valid</span>
           <span className="text-lg font-black font-mono text-green-400">{validityPct}%</span>
@@ -164,7 +224,14 @@ export default function TaskTopology6() {
         </div>
       </div>
 
-      {/* Grid — container-query auto-fit, reflows with the panel width */}
+      <div className="flex flex-wrap items-center gap-3 mb-4 text-nano text-slate-500 font-bold uppercase tracking-ultra">
+        <LegendDot color={ROLE_COLOR.isolated} label="Isolated" pulsing />
+        <LegendDot color={ROLE_COLOR.bridge} label="Bridge" />
+        <LegendDot color={ROLE_COLOR.hub} label="Hub" />
+        <LegendDot color={ROLE_COLOR.leaf} label="Leaf" />
+        <span className="text-slate-600">·  Node size ∝ degree  ·  Dashed edges = sparse / disconnected</span>
+      </div>
+
       <div
         className="grid gap-4"
         style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
@@ -176,104 +243,91 @@ export default function TaskTopology6() {
         )}
         {generatedGraphs.map((g, i) => {
           const selected = expandedGraph === g.id
+          const shape = classifyGraphShape(g.nodes, g.links)
+          const comp = countComponents(g.nodes, g.links)
+          const tri = countTriangles(g.nodes, g.links)
+          const m = g.links.length
+          const n = g.nodes.length
+          const d = (g.density ?? (m / Math.max(1, (n * (n - 1)) / 2))).toFixed(2)
+
           const borderClass = selected
-            ? 'border-indigo-500/50'
+            ? 'border-indigo-500/60 ring-2 ring-indigo-500/40'
             : g.valid
-              ? 'border-green-500/20 hover:border-green-400/40'
-              : 'border-red-500/20 hover:border-red-400/40'
+              ? 'border-slate-800/60 hover:border-slate-600/60'
+              : 'border-red-500/30 hover:border-red-400/50'
+
           return (
             <div
-              key={g.id || i}
+              key={g.id ?? i}
               onClick={() => setExpandedGraph(selected ? null : g.id)}
-              className={`group relative rounded-xl p-4 cursor-pointer overflow-hidden
-                transition-colors duration-200 border ${borderClass} bg-slate-900/40`}
+              className={`relative rounded-xl p-3 cursor-pointer border bg-slate-900/40 transition-colors ${borderClass}`}
             >
-              <div className="w-full h-[128px] relative z-10">
-                <MiniGraphSVG
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ShapeBadge shape={shape} />
+                  {g.matches_source && (
+                    <span className="text-nano font-black uppercase tracking-ultra px-1.5 py-0.5 rounded border bg-amber-500/15 border-amber-500/40 text-amber-200">
+                      memorized
+                    </span>
+                  )}
+                </div>
+                <span className={`text-sm font-black font-mono tabular-nums ${g.valid ? 'text-green-400' : 'text-red-400'}`}>
+                  {((g.score ?? 0) * 100).toFixed(0)}%
+                </span>
+              </div>
+
+              <div className="w-full" style={{ height: 130 }}>
+                <StructuralMiniGraph
                   nodes={g.nodes}
                   links={g.links}
                   size={140}
-                  valid={g.valid}
-                  revealProgress={revealProgress}
+                  shape={shape}
+                  invalid={!g.valid}
                 />
               </div>
 
-              <div className="w-full flex justify-between items-end mt-3 relative z-10 border-t border-white/5 pt-3">
-                <div>
-                  <p className="text-nano text-slate-500 font-black uppercase tracking-ultra mb-1">Latent DNA</p>
-                  <div className="flex gap-0.5">
-                    {[
-                      g.nodes.length / 12,
-                      g.links.length / Math.max(1, g.nodes.length * 2),
-                      g.density ?? 0,
-                      (g.avg_degree ?? 0) / 4,
-                      1 - (g.isolated_ratio ?? 0),
-                      g.score ?? 0,
-                    ].map((metric, j) => (
-                      <div
-                        key={j}
-                        className="w-1 rounded-full"
-                        style={{
-                          height: `${Math.max(2, Math.min(14, metric * 14))}px`,
-                          backgroundColor: g.valid ? '#22c55e66' : '#ef444466',
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="text-right flex flex-col items-end gap-1">
-                  <span className={`text-xl font-black font-mono tracking-tighter block leading-none ${g.valid ? 'text-green-400' : 'text-red-400'}`}>
-                    {(g.score * 100).toFixed(0)}%
-                  </span>
-                  <span className="text-nano text-slate-600 font-bold uppercase tracking-ultra">Q-Score</span>
-                  {!g.valid && g.invalidity_reason && (
-                    <div
-                      className="mt-1 px-1.5 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-nano text-red-400 font-bold max-w-[120px] truncate"
-                      title={g.invalidity_reason}
-                    >
-                      {g.invalidity_reason}
-                    </div>
-                  )}
-                  {g.matches_source && (
-                    <div
-                      className="mt-1 px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-nano text-amber-300 font-bold"
-                      title="Memorized from training set"
-                    >
-                      memorized
-                    </div>
-                  )}
-                </div>
+              <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-nano font-mono text-slate-400 tabular-nums">
+                <span>n={n} · m={m} · c={comp} · Δ={tri} · d={d}</span>
               </div>
+
+              {!g.valid && g.invalidity_reason && (
+                <div className="mt-1 text-nano font-bold text-red-300 truncate" title={g.invalidity_reason}>
+                  × {g.invalidity_reason}
+                </div>
+              )}
             </div>
           )
         })}
       </div>
 
-      {/* Latent trajectory Monitor */}
-      {snap && (
-        <div className="mt-8 pt-6 border-t border-white/5">
-          <div className="flex justify-between items-center mb-4">
-             <h3 className="text-micro text-slate-500 font-black uppercase tracking-ultra">Latent Space Trajectory</h3>
-             <div className="flex gap-4 text-micro font-mono">
-                <span className="text-orange-400">REC: {(snap.recon_loss || 0).toFixed(4)}</span>
-                <span className="text-purple-400">KLD: {(snap.kl_loss || 0).toFixed(4)}</span>
-             </div>
+      {expanded && (
+        <div className="mt-6 bg-slate-900/60 border border-indigo-500/30 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-micro font-black text-slate-300 uppercase tracking-ultra">
+              Generated vs nearest source graph
+            </h3>
+            <button
+              className="text-nano font-black text-slate-400 uppercase tracking-ultra hover:text-slate-200"
+              onClick={() => setExpandedGraph(null)}
+            >
+              Close
+            </button>
           </div>
-          <div className="h-24 bg-slate-900/40 rounded-xl border border-white/5 relative overflow-hidden flex items-end px-4 gap-1">
-            {snapshots.slice(Math.max(0, epochInt - 19), epochInt + 1).map((entry, j, arr) => {
-              const validity = entry.validity_rate ?? 0
-              const novelty = entry.novelty_rate ?? 0
-              const uniqueness = entry.uniqueness_rate ?? 0
-              const q = (validity * 0.45 + uniqueness * 0.25 + novelty * 0.3) * 100
-              const isActive = j === arr.length - 1
-              return (
-                <div
-                  key={j}
-                  className={`flex-1 rounded-t-sm transition-colors ${isActive ? 'bg-indigo-400' : 'bg-slate-700'}`}
-                  style={{ height: `${Math.max(2, q)}%` }}
-                />
-              )
-            })}
+          <div
+            className="grid gap-4"
+            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
+          >
+            <CompareCard title="Generated" graph={expanded} invalid={!expanded.valid} />
+            {nearestSource?.graph ? (
+              <CompareCard
+                title={`Nearest source · dist ${nearestSource.distance.toFixed(2)}`}
+                graph={nearestSource.graph}
+              />
+            ) : (
+              <div className="bg-slate-900/40 rounded-xl p-3 text-slate-500 text-xs flex items-center justify-center">
+                No source distribution available.
+              </div>
+            )}
           </div>
         </div>
       )}
