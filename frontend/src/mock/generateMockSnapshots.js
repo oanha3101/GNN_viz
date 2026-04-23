@@ -229,6 +229,19 @@ export function generateTask1Mock(numNodes = 60, numEpochs = 100) {
       return Math.max(0.05, Math.min(1, base + jitter))
     })
 
+    // Flatten neighbor_majority to a plain ratio array — simpler for Task 1
+    // Homophily scatter + Diagnostics tabs to consume (no need to map over
+    // {majority_class, majority_ratio} objects on the hot render path).
+    const majorityRatio = neighborMajority.map((m) => Number.isFinite(m?.majority_ratio) ? m.majority_ratio : 0)
+
+    // Dirichlet energy — a coarse over-smoothing indicator. Starts near 1
+    // (embeddings differ between neighbors) and decays as training progresses
+    // (GCN smoothing pulls neighbors together). Minor epoch-seeded jitter so
+    // the diagnostics curve isn't monotonically flat.
+    const energyBase = Math.max(0.01, Math.exp(-epoch / 35) * 0.85 + 0.08)
+    const energyJitter = (seededRand(epoch * 53 + 7) - 0.5) * 0.02
+    const dirichletEnergy = Math.max(0.005, Math.min(1, energyBase + energyJitter))
+
     snapshots.push({
       epoch,
       node_predictions: nodePredictions,
@@ -236,6 +249,8 @@ export function generateTask1Mock(numNodes = 60, numEpochs = 100) {
       node_confidence: nodeConfidences,
       node_correctness: nodeCorrectness,
       neighbor_majority: neighborMajority,
+      majority_ratio: majorityRatio,
+      dirichlet_energy: dirichletEnergy,
       embeddings_2d: embeddings2d,
       attention_weights: attentionWeights,
       node_confidences: nodeConfidences,
