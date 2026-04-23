@@ -7,8 +7,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { X, RefreshCw, Trash2, Play, AlertTriangle, Loader2, FolderOpen, Network, BarChart3, Link2, Users, Globe2, Dna } from 'lucide-react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import { API_BASE } from '../../utils/api'
 
-const API = 'http://localhost:8000/api'
+const API = API_BASE
 
 const TASK_NAMES = {
   1: 'Phân loại nút',

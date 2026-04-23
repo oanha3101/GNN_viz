@@ -2,8 +2,9 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import { Network, BarChart3, Link2, Users, Globe2, Dna, Upload, X, CheckCircle2, Sparkles, ArrowLeft, ArrowRight, Loader2, AlertCircle, Download, Eye } from 'lucide-react'
 import useGNNStore from '../../store/useGNNStore'
+import { API_BASE } from '../../utils/api'
 
-const API = 'http://localhost:8000/api'
+const API = API_BASE
 
 const TASKS = [
   { id: 1, name: 'Node Classification', Icon: Network, desc: 'Predict labels for nodes (e.g. user roles)', needsGraph: false },

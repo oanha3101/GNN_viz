@@ -2,91 +2,138 @@ import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
-import { easeInOutCubic } from '../../engine/interpolate'
-
 import { polygonHull } from 'd3-polygon'
+import { normalizeCommunityCenters } from '../../utils/task4Metrics'
 
 const COMMUNITY_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#eab308', '#a855f7', '#06b6d4', '#ec4899']
+// Reference anchors on a 600-unit world. They are re-scaled to the live
+// container every time dimensions change so the force-graph never over-zooms
+// on small viewports or near-square containers.
+const ANCHOR_REFERENCE = [
+  { x: -220, y: -150 }, { x: 220, y: -150 },
+  { x: -220, y: 150 }, { x: 220, y: 150 },
+  { x: 0, y: -250 }, { x: 0, y: 250 },
+  { x: 0, y: 0 },
+]
+const MIN_ZOOM = 0.3
+const MAX_ZOOM = 1.4
+// Keep nodes readable without letting hubs overwhelm the canvas. Bridge pulse
+// is small (+2px) so it doesn't overflow into neighbouring clusters.
+const NODE_SIZE_CAP = 11
+const NODE_SIZE_MIN = 5
 
 export default function TaskTopology4() {
   const rawGraphData = useGNNStore(s => s.graphData)
+  const selectedCommunityId = useGNNStore(s => s.selectedCommunityId)
+  const setSelectedCommunity = useGNNStore(s => s.setSelectedCommunity)
   const { snapshots, currentEpochFloat } = usePlayerStore()
 
   const containerRef = useRef()
   const fgRef = useRef()
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 })
-  const [selectedCommunity, setSelectedCommunity] = useState(null)
 
-  // 1. Fixed Graph Structure
+  // Stable graph data shape — nodes & links are re-created in a new reference
+  // only when `rawGraphData` identity changes, not on every render.
   const graphData = useMemo(() => {
     if (!rawGraphData) return null
     return {
       nodes: rawGraphData.nodes.map(n => ({ ...n })),
-      links: rawGraphData.links.map((l, i) => ({ ...l, _idx: i }))
+      links: rawGraphData.links.map((l, i) => ({ ...l, _idx: i })),
     }
   }, [rawGraphData])
 
-  // 2. Community Force (Island Force)
-  useEffect(() => {
-    if (fgRef.current && snapshots.length > 0 && graphData) {
-        const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-        const snap = snapshots[epochInt]
-        const preds = snap?.node_predictions || []
-        
-        const fg = fgRef.current
-        const centers = [
-            { x: -220, y: -150 }, { x: 220, y: -150 },
-            { x: -220, y: 150 }, { x: 220, y: 150 },
-            { x: 0, y: -250 }, { x: 0, y: 250 },
-            { x: 0, y: 0 }
-        ]
+  // Normalised community anchor centres — rescale whenever the container is
+  // resized so we never depend on a fixed ±220 world that stops fitting.
+  const centers = useMemo(
+    () => normalizeCommunityCenters(ANCHOR_REFERENCE, dimensions.width, dimensions.height, 600),
+    [dimensions.width, dimensions.height]
+  )
 
-        fg.d3Force('community', (alpha) => {
-            graphData.nodes.forEach(node => {
-                const cid = preds[node.id] ?? 0
-                const center = centers[cid % centers.length]
-                // Apply velocity towards community center with higher strength (0.08)
-                node.vx += (center.x - node.x) * alpha * 0.08
-                node.vy += (center.y - node.y) * alpha * 0.08
-            })
-        })
-        
-        fg.d3Force('charge').strength(-120) // Push nodes apart within islands
-        fg.d3ReheatSimulation()
-    }
-  }, [currentEpochFloat, snapshots, graphData])
-
+  // Island force — pull each node toward its predicted community center.
   useEffect(() => {
-    if (!containerRef.current) return
-    const ro = new ResizeObserver(([e]) => {
-      if (e.contentRect.width > 0) setDimensions({ width: e.contentRect.width, height: e.contentRect.height })
+    if (!(fgRef.current && snapshots.length > 0 && graphData)) return
+    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+    const preds = snapshots[epochInt]?.node_predictions || []
+    const fg = fgRef.current
+
+    fg.d3Force('community', (alpha) => {
+      graphData.nodes.forEach((node) => {
+        const cid = preds[node.id] ?? 0
+        const center = centers[cid % centers.length]
+        node.vx += (center.x - node.x) * alpha * 0.08
+        node.vy += (center.y - node.y) * alpha * 0.08
+      })
     })
-    ro.observe(containerRef.current)
+    const charge = fg.d3Force('charge')
+    if (charge) charge.strength(-120)
+    fg.d3ReheatSimulation()
+  }, [currentEpochFloat, snapshots, graphData, centers])
+
+  // Resize handler — re-attach whenever the container remounts.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => {
+      const { width, height } = e.contentRect
+      if (width > 0 && height > 0) setDimensions({ width, height })
+    })
+    ro.observe(el)
     return () => ro.disconnect()
+  }, [graphData])
+
+  // Re-fit with generous padding + bound zoom so the view never crushes the
+  // nodes up against the viewport edges (the over-zoom complaint).
+  useEffect(() => {
+    if (!fgRef.current) return
+    const id = requestAnimationFrame(() => {
+      try {
+        fgRef.current && fgRef.current.zoomToFit(600, 80)
+      } catch {
+        /* settle */
+      }
+    })
+    return () => cancelAnimationFrame(id)
+  }, [dimensions.width, dimensions.height])
+
+  // Clamp zoom so manual wheel / pinch cannot explode the canvas.
+  const onZoom = useCallback((t) => {
+    if (!fgRef.current || !t) return
+    if (t.k < MIN_ZOOM) fgRef.current.zoom(MIN_ZOOM, 0)
+    else if (t.k > MAX_ZOOM) fgRef.current.zoom(MAX_ZOOM, 0)
   }, [])
 
-  // 3. Convex Hulls Calculation
+  // Fit shortcut — matches the per-task "F" accelerator in the upgrade plan.
+  useEffect(() => {
+    const handler = (ev) => {
+      const t = ev.target
+      const tag = t?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || t?.isContentEditable) return
+      if (ev.key === 'f' || ev.key === 'F') {
+        try { fgRef.current && fgRef.current.zoomToFit(400, 80) } catch { /* ignore */ }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
   const communityHulls = useMemo(() => {
     if (snapshots.length === 0 || !graphData) return []
     const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-    const snap = snapshots[epochInt]
-    const preds = snap?.node_predictions || []
-    
+    const preds = snapshots[epochInt]?.node_predictions || []
+
     const communities = {}
-    graphData.nodes.forEach(node => {
+    graphData.nodes.forEach((node) => {
       const cid = preds[node.id] ?? 0
       if (!communities[cid]) communities[cid] = []
       communities[cid].push([node.x, node.y])
     })
-
     return Object.entries(communities).map(([cid, points]) => {
       if (points.length < 3) return null
       const hull = polygonHull(points)
-      return hull ? { cid: parseInt(cid), path: hull } : null
+      return hull ? { cid: parseInt(cid, 10), path: hull } : null
     }).filter(Boolean)
   }, [currentEpochFloat, snapshots, graphData])
 
-  // 4. Custom Drawing
   const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
     if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
 
@@ -94,64 +141,59 @@ export default function TaskTopology4() {
     const snap = snapshots[epochInt] || snapshots[0]
     const communityId = snap?.node_predictions?.[node.id] ?? 0
     const isBridge = snap?.bridge_nodes?.[node.id] || false
-    
-    const color = COMMUNITY_COLORS[communityId % COMMUNITY_COLORS.length]
-    const size = Math.sqrt(node.degree || 1) * 2 + 5
+    const isSelectedComm = selectedCommunityId != null && communityId === selectedCommunityId
+    const isDimmed = selectedCommunityId != null && !isSelectedComm
 
-    // Bridge Pulse Effect
+    const color = COMMUNITY_COLORS[communityId % COMMUNITY_COLORS.length]
+    const size = Math.max(NODE_SIZE_MIN, Math.min(NODE_SIZE_CAP, Math.sqrt(node.degree || 1) * 1.6 + 4))
+
+    ctx.globalAlpha = isDimmed ? 0.18 : 1
+
     if (isBridge) {
-        const pulse = (Math.sin(Date.now() / 300) + 1) * 2;
-        ctx.beginPath()
-        ctx.arc(node.x, node.y, size + 4 + pulse, 0, 2 * Math.PI)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)'
-        ctx.fill()
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 + pulse/10})`
-        ctx.lineWidth = 1/globalScale
-        ctx.stroke()
+      const pulse = (Math.sin(Date.now() / 300) + 1) * 1
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, size + 2 + pulse, 0, 2 * Math.PI)
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 + pulse / 10})`
+      ctx.lineWidth = 1 / globalScale
+      ctx.stroke()
     }
 
-    // Node Core with Gradient
     const grad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, size)
     grad.addColorStop(0, '#fff')
-    grad.addColorStop(0.2, color)
+    grad.addColorStop(0.25, color)
     grad.addColorStop(1, 'rgba(0,0,0,0.2)')
-    
     ctx.beginPath()
     ctx.arc(node.x, node.y, size, 0, 2 * Math.PI)
     ctx.fillStyle = grad
     ctx.fill()
 
-    // Community Label (only at higher zoom)
     if (globalScale > 2) {
-        ctx.font = `bold ${10/globalScale}px Inter, sans-serif`
-        ctx.textAlign = 'center'
-        ctx.fillStyle = 'white'
-        ctx.fillText(`${node.id}`, node.x, node.y + size + 7/globalScale)
+      ctx.font = `bold ${10 / globalScale}px Inter, sans-serif`
+      ctx.textAlign = 'center'
+      ctx.fillStyle = 'white'
+      ctx.fillText(`${node.id}`, node.x, node.y + size + 7 / globalScale)
     }
-  }, [snapshots, currentEpochFloat])
 
-  // Drawing the Hulls (Background clouds)
-  const drawBefore = useCallback((ctx, globalScale) => {
-    communityHulls.forEach(hull => {
+    ctx.globalAlpha = 1
+  }, [snapshots, currentEpochFloat, selectedCommunityId])
+
+  const drawBefore = useCallback((ctx) => {
+    communityHulls.forEach((hull) => {
       const color = COMMUNITY_COLORS[hull.cid % COMMUNITY_COLORS.length]
+      const dim = selectedCommunityId != null && hull.cid !== selectedCommunityId
       ctx.beginPath()
       ctx.moveTo(hull.path[0][0], hull.path[0][1])
-      for (let i = 1; i < hull.path.length; i++) {
-        ctx.lineTo(hull.path[i][0], hull.path[i][1])
-      }
+      for (let i = 1; i < hull.path.length; i++) ctx.lineTo(hull.path[i][0], hull.path[i][1])
       ctx.closePath()
-      
-      // Glassy bubble effect
       ctx.lineJoin = 'round'
       ctx.lineCap = 'round'
-      ctx.strokeStyle = `${color}44`
-      ctx.lineWidth = 40 / globalScale
+      ctx.strokeStyle = dim ? `${color}18` : `${color}44`
+      ctx.lineWidth = 28
       ctx.stroke()
-      
-      ctx.fillStyle = `${color}11`
+      ctx.fillStyle = dim ? `${color}08` : `${color}11`
       ctx.fill()
     })
-  }, [communityHulls])
+  }, [communityHulls, selectedCommunityId])
 
   if (!graphData) return null
 
@@ -167,97 +209,77 @@ export default function TaskTopology4() {
         nodeCanvasObject={nodeCanvasObject}
         nodeCanvasObjectMode={() => 'replace'}
         onRenderFramePre={drawBefore}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
+        onZoom={onZoom}
         linkColor={(link) => {
-            const snap = snapshots[Math.floor(currentEpochFloat)] || snapshots[0]
-            if (!snap) return 'rgba(148,163,184,0.05)'
-            const srcComm = snap.node_predictions?.[link.source.id]
-            const tgtComm = snap.node_predictions?.[link.target.id]
-            return srcComm === tgtComm 
-                ? `${COMMUNITY_COLORS[srcComm % COMMUNITY_COLORS.length]}33` 
-                : 'rgba(148, 163, 184, 0.05)'
+          const snap = snapshots[Math.floor(currentEpochFloat)] || snapshots[0]
+          if (!snap) return 'rgba(148,163,184,0.05)'
+          const srcComm = snap.node_predictions?.[link.source.id]
+          const tgtComm = snap.node_predictions?.[link.target.id]
+          return srcComm === tgtComm
+            ? `${COMMUNITY_COLORS[srcComm % COMMUNITY_COLORS.length]}33`
+            : 'rgba(148, 163, 184, 0.05)'
         }}
         linkWidth={(link) => {
-            const snap = snapshots[Math.floor(currentEpochFloat)] || snapshots[0]
-            if (!snap) return 0.5
-            const srcComm = snap.node_predictions?.[link.source.id]
-            const tgtComm = snap.node_predictions?.[link.target.id]
-            return srcComm === tgtComm ? 1.5 : 0.5
+          const snap = snapshots[Math.floor(currentEpochFloat)] || snapshots[0]
+          if (!snap) return 0.5
+          const srcComm = snap.node_predictions?.[link.source.id]
+          const tgtComm = snap.node_predictions?.[link.target.id]
+          return srcComm === tgtComm ? 1.4 : 0.5
         }}
         cooldownTicks={100}
         backgroundColor="transparent"
         onNodeClick={(node) => {
           const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-          const snap = snapshots[epochInt]
-          const cid = snap?.node_predictions?.[node.id]
+          const cid = snapshots[epochInt]?.node_predictions?.[node.id]
           if (cid !== undefined) setSelectedCommunity(cid)
         }}
+        onBackgroundClick={() => setSelectedCommunity(null)}
       />
 
-      {/* Q HUD — compact bottom-right */}
-      <div className="absolute top-12 left-2 z-10">
-        <div className="bg-slate-900/80 backdrop-blur-md rounded-lg px-3 py-2 border border-slate-700/40 flex items-center gap-2">
-          <span className="text-[8px] text-slate-500 uppercase font-bold tracking-wider">Q</span>
-          <span className={`text-base font-black font-mono leading-none ${modularityQ > 0.4 ? 'text-green-400' : 'text-amber-400'}`}>
-              {modularityQ.toFixed(3)}
+      {/* Q HUD + Legend — top-right to avoid the dark lower-left band */}
+      <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 items-end">
+        <div className="bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-2 border border-white/5 flex items-center gap-2">
+          <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra">Q</span>
+          <span className={`text-sm font-black font-mono leading-none ${modularityQ > 0.4 ? 'text-green-400' : 'text-amber-400'}`}>
+            {modularityQ.toFixed(3)}
           </span>
           <div className="w-14 bg-slate-800/50 h-1.5 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-amber-500 to-green-500 transition-all duration-500" 
-                 style={{ width: `${modularityQ * 100}%` }} />
+            <div
+              className="h-full bg-amber-400"
+              style={{ width: `${Math.max(0, Math.min(1, modularityQ)) * 100}%` }}
+            />
+          </div>
+        </div>
+        <div className="bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-white/5 flex items-center gap-2 flex-wrap max-w-[220px] justify-end">
+          {COMMUNITY_COLORS.slice(0, 6).map((c, i) => (
+            <button
+              key={i}
+              onClick={() => setSelectedCommunity(selectedCommunityId === i ? null : i)}
+              className={`flex items-center gap-1 text-nano font-mono transition-opacity ${
+                selectedCommunityId != null && selectedCommunityId !== i ? 'opacity-40 hover:opacity-100' : 'opacity-100'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
+              <span className="text-slate-400">C{i}</span>
+            </button>
+          ))}
+          <div className="flex items-center gap-1 pl-2 border-l border-slate-700/50">
+            <div className="w-2.5 h-2.5 rounded-full border border-white/60 bg-white/10" />
+            <span className="text-nano text-slate-400 font-bold">Bridge</span>
           </div>
         </div>
       </div>
 
-      {/* Legend — compact horizontal strip */}
-      <div className="absolute bottom-2 left-2 right-2 bg-slate-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-slate-700/40 z-10 flex items-center gap-3 flex-wrap">
-        {COMMUNITY_COLORS.slice(0, 6).map((c, i) => (
-          <div key={i} className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
-            <span className="text-[8px] text-slate-400 font-mono">C{i}</span>
-          </div>
-        ))}
-        <div className="flex items-center gap-1 ml-1 pl-2 border-l border-slate-700/50">
-          <div className="w-2.5 h-2.5 rounded-full border border-white/60 bg-white/10" />
-          <span className="text-[8px] text-slate-400 font-bold">Bridge</span>
-        </div>
-      </div>
-
-      {/* Community Profile Panel — bottom-left */}
-      {selectedCommunity !== null && (() => {
-        const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-        const snap = snapshots[epochInt]
-        const metrics = snap?.per_community_metrics?.[selectedCommunity]
-        if (!metrics) return null
-        const color = COMMUNITY_COLORS[selectedCommunity % COMMUNITY_COLORS.length]
-        return (
-          <div className="absolute bottom-14 left-2 z-10 bg-slate-900/90 backdrop-blur-md rounded-xl px-4 py-3 border border-slate-700/50 min-w-[220px]">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-                <span className="text-sm font-bold text-white">Community {selectedCommunity}</span>
-              </div>
-              <button
-                onClick={() => setSelectedCommunity(null)}
-                className="text-[10px] text-slate-400 hover:text-white transition-colors font-bold"
-              >
-                Clear
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-              <div className="text-slate-500">Size</div>
-              <div className="text-slate-200 font-mono text-right">{metrics.size ?? 'N/A'}</div>
-              <div className="text-slate-500">Density</div>
-              <div className="text-slate-200 font-mono text-right">{(metrics.density ?? 0).toFixed(3)}</div>
-              <div className="text-slate-500">Conductance</div>
-              <div className="text-slate-200 font-mono text-right">{(metrics.conductance ?? 0).toFixed(3)}</div>
-              <div className="text-slate-500">Internal Edges</div>
-              <div className="text-slate-200 font-mono text-right">{metrics.internal_edges ?? 'N/A'}</div>
-              <div className="text-slate-500">External Edges</div>
-              <div className="text-slate-200 font-mono text-right">{metrics.external_edges ?? 'N/A'}</div>
-            </div>
-          </div>
-        )
-      })()}
+      {/* Fit to view — bottom-right, always reachable */}
+      <button
+        onClick={() => { try { fgRef.current && fgRef.current.zoomToFit(400, 80) } catch { /* ignore */ } }}
+        className="absolute bottom-3 right-3 z-10 bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-white/5 text-nano font-bold text-slate-300 hover:text-white hover:border-cyan-500/40 transition-colors uppercase tracking-ultra"
+        title="Fit to view (F)"
+      >
+        Fit · F
+      </button>
     </div>
   )
 }
-

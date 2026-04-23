@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import useGNNStore from '../../store/useGNNStore'
 import { CLASS_COLORS } from '../../utils/colors'
+import { apiUrl } from '../../utils/api'
 
 export default function InductiveDemo() {
   const graphData = useGNNStore((s) => s.graphData)
@@ -32,7 +33,7 @@ export default function InductiveDemo() {
     // Call real backend prediction
     let predictedClass = 0
     try {
-      const response = await fetch('http://localhost:8000/api/inductive-predict', {
+      const response = await fetch(apiUrl('/inductive-predict'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ features: Array(1433).fill(0).map(() => Math.random()) })

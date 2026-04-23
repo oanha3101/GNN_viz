@@ -258,6 +258,19 @@ export function generateTask1Mock(numNodes = 60, numEpochs = 100) {
       return Math.max(0.05, Math.min(1, base + jitter))
     })
 
+    // Flatten neighbor_majority to a plain ratio array — simpler for Task 1
+    // Homophily scatter + Diagnostics tabs to consume (no need to map over
+    // {majority_class, majority_ratio} objects on the hot render path).
+    const majorityRatio = neighborMajority.map((m) => Number.isFinite(m?.majority_ratio) ? m.majority_ratio : 0)
+
+    // Dirichlet energy — a coarse over-smoothing indicator. Starts near 1
+    // (embeddings differ between neighbors) and decays as training progresses
+    // (GCN smoothing pulls neighbors together). Minor epoch-seeded jitter so
+    // the diagnostics curve isn't monotonically flat.
+    const energyBase = Math.max(0.01, Math.exp(-epoch / 35) * 0.85 + 0.08)
+    const energyJitter = (seededRand(epoch * 53 + 7) - 0.5) * 0.02
+    const dirichletEnergy = Math.max(0.005, Math.min(1, energyBase + energyJitter))
+
     snapshots.push({
       epoch,
       node_predictions: nodePredictions,
@@ -265,6 +278,8 @@ export function generateTask1Mock(numNodes = 60, numEpochs = 100) {
       node_confidence: nodeConfidences,
       node_correctness: nodeCorrectness,
       neighbor_majority: neighborMajority,
+      majority_ratio: majorityRatio,
+      dirichlet_energy: dirichletEnergy,
       embeddings_2d: embeddings2d,
       attention_weights: attentionWeights,
       node_confidences: nodeConfidences,
@@ -375,10 +390,63 @@ export function generateTask2Mock(numGraphs = 50, numEpochs = 80) {
     const trainAcc = Math.min(1, acc + (seededRand(epoch * 13) - 0.5) * 0.015)
     const valAcc   = Math.min(1, acc - 0.03 + (seededRand(epoch * 19) - 0.5) * 0.02)
 
+    // Derived fields: enrich snapshot so new Task 2 dashboards (Confusion,
+    // Hard Cases, Diagnostics) work in Mock Mode without needing the backend.
+    const graphCorrect = predictions.map((p, i) => (p === graphs[i].groundTruth ? 1 : 0))
+
+    // Probabilities: turn confidence into a two-class distribution so
+    // confidence_margins come out sensible (top1 ~ conf, top2 ~ 1 - conf).
+    const graphProbabilities = predictions.map((p, i) => {
+      const c = confidences[i]
+      const row = [1 - c, 1 - c]
+      row[p] = c
+      return row
+    })
+    const confidenceMargins = confidences.map((c) => Math.max(0, 2 * c - 1))
+
+    // Attention entropy: higher when training is early or node contributions
+    // are diffuse. Compute from the mock contributions so the value is
+    // consistent with what the Readout heatmap shows.
+    const attentionEntropy = nodeContributions.map((arr) => {
+      if (!arr.length) return 0
+      const sum = arr.reduce((s, v) => s + (v > 0 ? v : 0), 0)
+      if (sum <= 0) return 0
+      let h = 0
+      for (const v of arr) {
+        if (v <= 0) continue
+        const pv = v / sum
+        h -= pv * Math.log(pv)
+      }
+      const hmax = Math.log(arr.length)
+      return hmax > 0 ? h / hmax : 0
+    })
+
+    // Structural metrics — constant per graph; compute once on first epoch.
+    const graphStructuralMetrics = graphs.map((g) => {
+      const n = g.nodes.length
+      const e = g.links.length
+      const maxEdges = (n * (n - 1)) / 2
+      const density = maxEdges > 0 ? e / maxEdges : 0
+      const deg = new Array(n).fill(0)
+      g.links.forEach((l) => {
+        deg[l.source] += 1
+        deg[l.target] += 1
+      })
+      const avgDegree = n > 0 ? deg.reduce((s, v) => s + v, 0) / n : 0
+      // Rough clustering approximation — we don't need exact NX value in mock.
+      const avgClustering = Math.min(1, density * 0.9)
+      return { density, avg_degree: avgDegree, avg_clustering: avgClustering }
+    })
+
     snapshots.push({
       epoch,
       graph_predictions: predictions,
       graph_confidences: confidences,
+      graph_probabilities: graphProbabilities,
+      confidence_margins: confidenceMargins,
+      attention_entropy: attentionEntropy,
+      graph_structural_metrics: graphStructuralMetrics,
+      graph_correct: graphCorrect,
       graph_embeddings_2d: embeddings2d,
       node_contributions: nodeContributions,
       train_loss: Math.max(0, trainLoss),
@@ -670,6 +738,29 @@ export function generateTask5Mock(numNodes = 40, numEpochs = 80) {
       }
     })
 
+    // Per-node diagnostics — outlier, knn preservation, embedding norm.
+    // Mix structural (degree) + cluster-center distance so the top rows feel
+    // meaningful across epochs.
+    const cx0 = embeddings.reduce((s, p) => s + p[0], 0) / numNodes
+    const cy0 = embeddings.reduce((s, p) => s + p[1], 0) / numNodes
+    const perNodeKnn = new Array(numNodes)
+    const outlierScores = new Array(numNodes)
+    const embeddingNorms = new Array(numNodes)
+    for (let i = 0; i < numNodes; i++) {
+      const dx = embeddings[i][0] - cx0
+      const dy = embeddings[i][1] - cy0
+      const distFromCenter = Math.sqrt(dx * dx + dy * dy)
+      embeddingNorms[i] = Math.sqrt(embeddings[i][0] ** 2 + embeddings[i][1] ** 2)
+      // Higher degree + well-clustered nodes → higher knn preservation.
+      const degreeBoost = Math.min(1, (degrees[i] || 1) / 8)
+      const knnBase = knnPres * (0.7 + 0.3 * degreeBoost)
+      perNodeKnn[i] = Math.max(0, Math.min(1, knnBase + (seededRand(i * 131 + epoch) - 0.5) * 0.15))
+      // Outliers: nodes far from cluster centre + low knn.
+      outlierScores[i] = Math.max(0, Math.min(1,
+        0.5 * (distFromCenter / 8) + 0.5 * (1 - perNodeKnn[i]) + (seededRand(i * 193 + epoch) - 0.5) * 0.05
+      ))
+    }
+
     snapshots.push({
       epoch,
       embeddings_2d: embeddings,
@@ -680,6 +771,9 @@ export function generateTask5Mock(numNodes = 40, numEpochs = 80) {
       isotropy_score: isotropyScore,
       reconstruction_loss: reconstructionLoss,
       proximity_scores: proximityScores,
+      outlier_scores: outlierScores,
+      per_node_knn_preservation: perNodeKnn,
+      embedding_norms: embeddingNorms,
       train_loss: reconstructionLoss,
       val_loss: reconstructionLoss * 1.12,
       train_acc: knnPres,

@@ -25,10 +25,11 @@ import TrainingControls from './components/TrainingControlsV2'
 import ConfigPanel from './components/ConfigPanel/ConfigPanel'
 import InductiveDemo from './components/TopologyView/InductiveDemo'
 import ReadoutMonitor from './components/TopologyView/ReadoutMonitor'
-import ROCMonitor from './components/TopologyView/ROCMonitor'
-import ModularityMonitor from './components/TopologyView/ModularityMonitor'
+import Task3MetricsPanel from './components/MetricsChart/Task3MetricsPanel'
+import Task4MetricsPanel from './components/MetricsChart/Task4MetricsPanel'
+import Task5MetricsPanel from './components/MetricsChart/Task5MetricsPanel'
+import Task4CommunityInspector from './components/TopologyView/Task4CommunityInspector'
 import EmbeddingSpaceB from './components/TopologyView/EmbeddingSpaceB'
-import StructurePreservation from './components/TopologyView/StructurePreservation'
 import Task5NodeInspector from './components/TopologyView/Task5NodeInspector'
 import LatentSpaceView from './components/TopologyView/LatentSpaceView'
 import ValidityMonitor from './components/TopologyView/ValidityMonitor'
@@ -73,45 +74,23 @@ function InfoRouter() {
   if (selectedTask === 1) return <NodeInfoPanel />
   if (selectedTask === 2) return <ReadoutMonitor />
   if (selectedTask === 3) return <LinkMetricsPanel />
-  if (selectedTask === 4) return <ModularityMonitor />
+  if (selectedTask === 4) return <Task4CommunityInspector />
   if (selectedTask === 5) return <Task5NodeInspector />
   if (selectedTask === 6) return <ValidityMonitor />
   return <NodeInfoPanel />
 }
 
-function InspectorDrawer() {
-  const selectedTask = useGNNStore((s) => s.selectedTask)
-  const selectedNodeId = useGNNStore((s) => s.selectedNodeId)
-  const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
-
-  return (
-    <AnimatePresence>
-      {[1, 5].includes(selectedTask) && selectedNodeId !== null && (
-        <motion.div
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="absolute inset-y-0 right-0 z-50 w-[380px] border-l border-slate-800/80 bg-[#071120]/95 shadow-2xl backdrop-blur-xl"
-        >
-          <div className="h-full overflow-y-auto custom-scrollbar">
-            <InfoRouter />
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  )
-}
-
 function PanelHeading({ title, subtitle, align = 'left' }) {
+  // Sit in the extreme top-left/right corner with w-fit so the pill never
+  // stretches over the Task 2 grid cards below.
   return (
-    <div className={`absolute top-4 ${align === 'right' ? 'right-4' : 'left-16'} z-10 pointer-events-none rounded-xl border border-white/5 bg-[#020617]/40 backdrop-blur-xl px-4 py-2 flex items-center gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)]`}>
-      <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_#06b6d4]" />
-      <span className="text-[11px] uppercase font-black tracking-[0.2em] text-white/90 leading-none">{title}</span>
+    <div className={`absolute top-3 ${align === 'right' ? 'right-3' : 'left-3'} z-10 pointer-events-none w-fit max-w-[calc(100%-1.5rem)] rounded-lg border border-white/5 bg-panel-soft/70 backdrop-blur-xl px-3 py-1.5 flex items-center gap-2`}>
+      <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_6px_#06b6d4]" />
+      <span className="text-micro uppercase font-black tracking-ultra text-white/90 leading-none">{title}</span>
       {subtitle && (
         <>
           <div className="w-px h-3 bg-white/10" />
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">{subtitle}</span>
+          <span className="text-nano text-slate-400 font-bold uppercase tracking-wide leading-none">{subtitle}</span>
         </>
       )}
     </div>
@@ -159,7 +138,9 @@ function AppSidebar({ collapsed, onToggle, activeTab, setActiveRightTab, rightPa
 
 // ─── Custom horizontal drag-resize ──────────────────
 function ResizableWorkspace({ rightPanelOpen, leftContent, rightContent }) {
-  const [rightWidth, setRightWidth] = useState(420) // px
+  // Default width tuned for 1440×900: leaves ~1000px for the workspace so
+  // Task 2 grid keeps 3+ columns without the user dragging the divider.
+  const [rightWidth, setRightWidth] = useState(360) // px
   const MIN_RIGHT = 260
   const MAX_RIGHT = 800
   const dragging = useRef(false)
@@ -264,7 +245,6 @@ function App() {
   const mockMode = useGNNStore((s) => s.mockMode)
   const setMockMode = useGNNStore((s) => s.setMockMode)
   const setConfigOpen = useGNNStore((s) => s.setConfigOpen)
-  const setReportOpen = useGNNStore((s) => s.setReportOpen)
   const isTraining = useGNNStore((s) => s.isTraining)
   const snapshots = usePlayerStore((s) => s.snapshots)
   const currentEpoch = usePlayerStore((s) => s.currentEpoch)
@@ -290,24 +270,31 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+      if (e.target.isContentEditable) return
       const { isPlaying, play, pause, stepBack, stepForward } = usePlayerStore.getState()
       switch (e.code) {
         case 'Space': e.preventDefault(); isPlaying ? pause() : play(); break
         case 'ArrowLeft': e.preventDefault(); stepBack(); break
         case 'ArrowRight': e.preventDefault(); stepForward(); break
+        case 'BracketLeft':
+        case 'BracketRight':
+          e.preventDefault(); setRightPanelOpen((v) => !v); break
+        default: break
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Auto-popup của TrainingReport đã bị gỡ theo yêu cầu — nó làm phiền mỗi lần
+  // người dùng bấm Run hoặc chuyển task. Report giờ chỉ mở khi user bấm nút.
   useEffect(() => {
     if (!isTraining && trainingDone && snapshots.length > 0 && reportVersion > lastReportVersionRef.current) {
       lastReportVersionRef.current = reportVersion
-      setReportOpen(true)
     }
-  }, [isTraining, trainingDone, snapshots.length, reportVersion, setReportOpen])
+  }, [isTraining, trainingDone, snapshots.length, reportVersion])
 
   const valAcc = snapshot ? (snapshot.val_acc * 100).toFixed(1) : '--'
   const trainLoss = snapshot ? snapshot.train_loss.toFixed(3) : '--'
@@ -440,9 +427,9 @@ function App() {
                           <ErrorBoundary>
                             {selectedTask === 1 ? <Task1MetricsPanel /> :
                              selectedTask === 2 ? <Task2MetricsPanel /> :
-                             selectedTask === 3 ? <ROCMonitor /> :
-                             selectedTask === 4 ? <ModularityMonitor /> :
-                             selectedTask === 5 ? <StructurePreservation /> :
+                             selectedTask === 3 ? <Task3MetricsPanel /> :
+                             selectedTask === 4 ? <Task4MetricsPanel /> :
+                             selectedTask === 5 ? <Task5MetricsPanel /> :
                              selectedTask === 6 ? <Task6MetricsPanel /> :
                              <MetricsChart />}
                           </ErrorBoundary>

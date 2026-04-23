@@ -1,246 +1,381 @@
 import React, { useMemo, useState } from 'react'
+import {
+  AreaChart, Area, LineChart, Line, BarChart, Bar,
+  ScatterChart, Scatter,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend,
+} from 'recharts'
 import usePlayerStore from '../../store/playerStore'
-import Plot from 'react-plotly.js'
-import MetricsChart from './MetricsChart'
+import useGNNStore from '../../store/useGNNStore'
+import {
+  buildConfusionMatrixK,
+  buildClassDistribution,
+  extractDirichletSeries,
+  computeHomophilyScatter,
+} from '../../utils/task1Metrics'
 
 /**
- * Task1MetricsPanel — Interactive Confusion Matrix with Node Highlighting
- * Tabs: METRICS | CONFUSION MATRIX | OVERSMOOTHING (Dirichlet Energy)
+ * Task1MetricsPanel — per-class diagnostics for Node Classification.
+ * Tabs (max 4 per viz-dashboards skill):
+ *   Overview    — loss/acc curves + macro-F1 + headline accuracy.
+ *   Confusion   — K×K heatmap, per-class P/R/F1 table, click cell to focus node.
+ *   Homophily   — scatter majority_ratio × correctness, highlights heterophilic
+ *                 misclassifieds.
+ *   Diagnostics — dirichlet energy curve (over-smoothing) + GT vs pred class
+ *                 distribution bars.
  */
-import useGNNStore from '../../store/useGNNStore'
+
+const CLASS_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#eab308', '#a855f7', '#06b6d4', '#ec4899']
+
+const TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'confusion', label: 'Confusion' },
+  { id: 'homophily', label: 'Homophily' },
+  { id: 'diagnostics', label: 'Diagnostics' },
+]
 
 export default function Task1MetricsPanel() {
-  const [viewMode, setViewMode] = useState('chart')
-  const [selectedCMCell, setSelectedCMCell] = useState(null) // {trueClass, predClass}
   const { snapshots, currentEpochFloat } = usePlayerStore()
-  const graphData = useGNNStore(s => s.graphData)
-  const setSelectedNode = useGNNStore(s => s.setSelectedNode)
+  const graphData = useGNNStore((s) => s.graphData)
+  const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
+  const [tab, setTab] = useState('overview')
 
-  const { confusionMatrix, numClasses, accuracy, perClassAcc } = useMemo(() => {
-    if (snapshots.length === 0 || !graphData?.nodes)
-      return { confusionMatrix: null, numClasses: 0, accuracy: 0, perClassAcc: [] }
+  const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+  const snap = snapshots[epochInt]
 
-    const maxIdx = Math.max(0, snapshots.length - 1)
-    const epochInt = Math.max(0, Math.min(maxIdx, Math.floor(isNaN(currentEpochFloat) ? maxIdx : currentEpochFloat)))
-    const snap = snapshots[epochInt]
-    const preds = snap?.node_predictions
-    if (!preds) return { confusionMatrix: null, numClasses: 0, accuracy: 0, perClassAcc: [] }
-
-    let maxClass = 0
-    graphData.nodes.forEach(n => { if (n.groundTruth > maxClass) maxClass = n.groundTruth })
-    const nC = maxClass + 1
-    const matrix = Array(nC).fill(0).map(() => Array(nC).fill(0))
-    let correct = 0, total = 0
-    graphData.nodes.forEach((n, i) => {
-      const t = n.groundTruth, p = preds[i]
-      if (t !== undefined && p !== undefined) { matrix[t][p]++; if (t === p) correct++; total++ }
-    })
-    const acc = total > 0 ? (correct / total * 100).toFixed(1) : 0
-    const perClassAcc = matrix.map((row, i) => {
-      const rowTotal = row.reduce((a, b) => a + b, 0)
-      return rowTotal > 0 ? (row[i] / rowTotal * 100).toFixed(0) : '—'
-    })
-    return { confusionMatrix: matrix, numClasses: nC, accuracy: acc, perClassAcc }
-  }, [snapshots, currentEpochFloat, graphData])
-
-  // Dirichlet Energy history — memoized to prevent recomputation
-  const { energyTrace, currentEnergy, isOversmoothed } = useMemo(() => {
-    const hist = snapshots.map((s, i) => ({ epoch: i, energy: s.dirichlet_energy ?? 0 }))
-    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-    const cur = snapshots[epochInt]?.dirichlet_energy ?? 0
-    // Threshold: if energy drops below 5% of initial → likely oversmoothing
-    const initial = hist[0]?.energy || 1
-    const isOver = initial > 0 && cur < initial * 0.05
-    return { energyTrace: hist, currentEnergy: cur, isOversmoothed: isOver }
-  }, [snapshots, currentEpochFloat])
-
-  // Metrics history for charts — memoized to prevent .slice on every render
-  const metricsHistory = useMemo(() => {
-    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-    return snapshots.slice(0, epochInt + 1).map((s, i) => ({
-      epoch: i,
-      train_loss: s.train_loss,
-      val_loss: s.val_loss,
-      train_acc: s.train_acc,
-      val_acc: s.val_acc,
-    }))
-  }, [snapshots, currentEpochFloat])
-
-  const CELL_COLORS = ['#3b82f6','#ef4444','#22c55e','#eab308','#a855f7','#06b6d4','#ec4899']
-
-  // Get nodes in selected confusion matrix cell
-  const nodesInSelectedCell = useMemo(() => {
-    if (!selectedCMCell || snapshots.length === 0 || !graphData?.nodes) return []
-    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-    const snap = snapshots[epochInt]
-    const preds = snap?.node_predictions
-    if (!preds) return []
-
-    const matchingNodes = []
-    graphData.nodes.forEach((node, i) => {
-      if (node.groundTruth === selectedCMCell.trueClass && preds[i] === selectedCMCell.predClass) {
-        matchingNodes.push(node.id)
-      }
-    })
-    return matchingNodes.slice(0, 50) // Limit to 50 nodes to avoid performance issues
-  }, [selectedCMCell, snapshots, currentEpochFloat, graphData])
-
-  const tabs = [
-    { key: 'chart', label: 'Loss / Acc' },
-    { key: 'cm', label: 'Confusion Matrix' },
-  ]
+  if (!snapshots.length) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-slate-500 p-6 gap-2">
+        <div className="text-3xl opacity-40 animate-pulse">...</div>
+        <p className="text-micro text-center">Run training để xem Node Classification metrics</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="w-full h-full flex flex-col">
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 px-3 pt-2 pb-1.5 border-b border-slate-800/60 shrink-0 flex-wrap">
-        {tabs.map(t => (
+    <div className="h-full flex flex-col gap-2 p-2">
+      <div className="flex items-center gap-1 px-1">
+        {TABS.map((t) => (
           <button
-            key={t.key}
-            onClick={() => setViewMode(t.key)}
-            className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all
-              ${viewMode === t.key
-                ? t.key === 'chart' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  : t.key === 'cm' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                  : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
-              }`}
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`text-nano font-bold uppercase tracking-ultra px-2.5 py-1 rounded-md transition-colors ${
+              tab === t.id ? 'bg-slate-800 text-white' : 'bg-transparent text-slate-500 hover:text-slate-300'
+            }`}
           >
             {t.label}
           </button>
         ))}
-        {viewMode === 'cm' && confusionMatrix && (
-          <span className="ml-auto text-[9px] text-cyan-400/80 font-mono">Acc: {accuracy}% · {numClasses} lớp</span>
-        )}
-
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-        {viewMode === 'chart' && (
-          <div className="p-3 space-y-4">
-            <div className="h-[200px] bg-slate-900/20 border border-slate-800/40 rounded-lg p-1 overflow-hidden relative">
-              <div className="absolute top-1 left-2 z-10 text-[8px] uppercase font-bold text-slate-600 tracking-widest">Training Dynamics</div>
-              <MetricsChart />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-slate-900/40 p-2 rounded-lg border border-slate-800/60">
-                <div className="text-[7px] uppercase text-slate-500 font-bold mb-0.5">Accuracy</div>
-                <div className="text-lg font-mono font-black text-cyan-400">{accuracy}%</div>
-              </div>
-              <div className="bg-slate-900/40 p-2 rounded-lg border border-slate-800/60">
-                <div className="text-[7px] uppercase text-slate-500 font-bold mb-0.5">Stability</div>
-                <div className="text-lg font-mono font-black text-emerald-400">{(perClassAcc.reduce((a,b)=>a+(parseInt(b)||0),0)/numClasses).toFixed(0)}%</div>
-              </div>
-            </div>
-          </div>
-        )}
+      {tab === 'overview' && <OverviewTab snapshots={snapshots} epochInt={epochInt} snap={snap} graphData={graphData} />}
+      {tab === 'confusion' && (
+        <ConfusionTab snap={snap} graphData={graphData} onPick={setSelectedNode} snapshots={snapshots} epochInt={epochInt} />
+      )}
+      {tab === 'homophily' && <HomophilyTab snap={snap} onPick={setSelectedNode} />}
+      {tab === 'diagnostics' && <DiagnosticsTab snap={snap} snapshots={snapshots} graphData={graphData} />}
+    </div>
+  )
+}
 
-        {viewMode === 'cm' && (
-          <div className="w-full h-full overflow-auto p-3 flex flex-col items-center">
-            {!confusionMatrix ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
-                <div className="text-4xl opacity-30">🔲</div>
-                <p>Bắt đầu huấn luyện để xem Confusion Matrix</p>
-              </div>
-            ) : (
-              <div className="inline-flex flex-col gap-1 min-w-max">
-                <div className="flex items-center gap-0.5 pl-7">
-                  <span className="text-[8px] text-slate-600 w-full text-center tracking-widest uppercase font-bold">Dự đoán (Predicted) →</span>
-                </div>
-                <div className="flex items-center gap-0.5">
-                  <div className="w-6 shrink-0" />
-                  {Array.from({ length: numClasses }, (_, i) => (
-                    <div key={`hdr-${i}`} className="w-8 h-6 flex items-center justify-center text-[9px] font-bold font-mono rounded-sm shrink-0"
-                      style={{ color: CELL_COLORS[i % CELL_COLORS.length], backgroundColor: `${CELL_COLORS[i % CELL_COLORS.length]}18` }}>
-                      {i}
-                    </div>
+function OverviewTab({ snapshots, epochInt, snap, graphData }) {
+  const series = useMemo(
+    () => snapshots.slice(0, epochInt + 1).map((s, i) => ({
+      epoch: i,
+      train_loss: s.train_loss ?? 0,
+      val_loss: s.val_loss ?? 0,
+      val_acc: (s.val_acc ?? 0) * 100,
+    })),
+    [snapshots, epochInt]
+  )
+
+  const { perClass } = useMemo(() => {
+    const gt = (graphData?.nodes || []).map((n) => n.groundTruth)
+    const preds = snap?.node_predictions || []
+    return buildConfusionMatrixK(gt, preds)
+  }, [snap, graphData])
+
+  const macroF1 = perClass.length ? perClass.reduce((a, p) => a + p.f1, 0) / perClass.length : 0
+  const valAcc = snap?.val_acc ?? 0
+  const trainLoss = snap?.train_loss ?? 0
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-auto">
+      <div className="grid grid-cols-3 gap-2">
+        <StatCell label="Val Acc" value={valAcc * 100} digits={1} suffix="%" tone={valAcc > 0.85 ? 'good' : valAcc > 0.6 ? 'warn' : 'bad'} />
+        <StatCell label="Macro F1" value={macroF1 * 100} digits={1} suffix="%" tone={macroF1 > 0.8 ? 'good' : macroF1 > 0.5 ? 'warn' : 'bad'} />
+        <StatCell label="Train Loss" value={trainLoss} digits={3} tone={trainLoss < 0.2 ? 'good' : trainLoss < 0.6 ? 'warn' : 'bad'} />
+      </div>
+
+      <div className="flex-1 min-h-[140px]">
+        <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra block mb-1">Loss &amp; Val-Acc over Epochs</span>
+        <ResponsiveContainer width="100%" height="90%">
+          <LineChart data={series}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <XAxis dataKey="epoch" tick={{ fill: '#475569', fontSize: 9 }} />
+            <YAxis yAxisId="loss" tick={{ fill: '#475569', fontSize: 9 }} domain={[0, 'auto']} />
+            <YAxis yAxisId="acc" orientation="right" tick={{ fill: '#475569', fontSize: 9 }} domain={[0, 100]} />
+            <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} />
+            <Line yAxisId="loss" type="monotone" dataKey="train_loss" stroke="#f97316" strokeWidth={2} dot={false} name="Train Loss" />
+            <Line yAxisId="loss" type="monotone" dataKey="val_loss" stroke="#ef4444" strokeWidth={2} dot={false} name="Val Loss" />
+            <Line yAxisId="acc" type="monotone" dataKey="val_acc" stroke="#22c55e" strokeWidth={2} dot={false} name="Val Acc (%)" />
+            <Legend wrapperStyle={{ fontSize: 10 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
+function ConfusionTab({ snap, graphData, onPick, snapshots, epochInt }) {
+  const [sel, setSel] = useState(null) // { t, p }
+
+  const { matrix, numClasses, perClass } = useMemo(() => {
+    const gt = (graphData?.nodes || []).map((n) => n.groundTruth)
+    const preds = snap?.node_predictions || []
+    return buildConfusionMatrixK(gt, preds)
+  }, [snap, graphData])
+
+  const handleCellClick = (t, p, count) => {
+    if (!count) return
+    const same = sel && sel.t === t && sel.p === p
+    if (same) {
+      setSel(null)
+      onPick(null)
+      return
+    }
+    setSel({ t, p })
+    const preds = snapshots[epochInt]?.node_predictions
+    if (!preds || !graphData?.nodes) return
+    for (let i = 0; i < graphData.nodes.length; i++) {
+      if (graphData.nodes[i].groundTruth === t && preds[i] === p) {
+        onPick(graphData.nodes[i].id)
+        return
+      }
+    }
+  }
+
+  if (!matrix) return <div className="flex-1 flex items-center justify-center text-slate-500 text-micro">No predictions yet</div>
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-auto">
+      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+        <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/60">
+          <div className="text-nano text-slate-500 uppercase font-bold tracking-ultra mb-1">
+            {numClasses}×{numClasses} Matrix · diag=green, off=red
+          </div>
+          <div className="overflow-auto">
+            <table className="text-nano font-mono">
+              <thead>
+                <tr>
+                  <th className="w-6" />
+                  {Array.from({ length: numClasses }, (_, j) => (
+                    <th key={j} className="w-7 h-5 text-center" style={{ color: CLASS_COLORS[j % CLASS_COLORS.length] }}>
+                      {j}
+                    </th>
                   ))}
-                  <div className="w-12 text-[7px] text-slate-600 text-center pl-1 shrink-0">Recall</div>
-                </div>
-                {confusionMatrix.map((row, i) => {
-                  const rowMax = Math.max(...row, 1)
-                  const color = CELL_COLORS[i % CELL_COLORS.length]
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.map((row, t) => {
+                  const rowMax = Math.max(1, ...row)
                   return (
-                    <div key={`row-${i}`} className="flex items-center gap-0.5">
-                      <div className="w-6 h-8 flex items-center justify-center text-[9px] font-bold font-mono rounded-sm shrink-0"
-                        style={{ color, backgroundColor: `${color}18` }}>{i}</div>
-                      {row.map((val, j) => {
-                        const isDiag = i === j
+                    <tr key={t}>
+                      <td className="w-6 h-6 text-center" style={{ color: CLASS_COLORS[t % CLASS_COLORS.length] }}>
+                        {t}
+                      </td>
+                      {row.map((val, p) => {
+                        const isDiag = t === p
                         const intensity = val / rowMax
-                        const bgColor = val === 0 ? 'rgba(15,23,42,0.4)'
-                          : isDiag ? `rgba(34,197,94,${Math.max(0.12, intensity * 0.85)})`
-                          : `rgba(239,68,68,${Math.max(0.1, intensity * 0.75)})`
-                        const isSelected = selectedCMCell?.trueClass === i && selectedCMCell?.predClass === j
+                        const bg = val === 0 ? 'rgba(15,23,42,0.4)'
+                          : isDiag ? `rgba(34,197,94,${Math.max(0.15, intensity * 0.85)})`
+                          : `rgba(239,68,68,${Math.max(0.12, intensity * 0.75)})`
+                        const isSel = sel && sel.t === t && sel.p === p
                         return (
-                          <div key={`cell-${i}-${j}`}
-                            onClick={() => {
-                              if (val > 0) {
-                                setSelectedCMCell(isSelected ? null : { trueClass: i, predClass: j })
-                                // Select first node in cell
-                                if (!isSelected && val > 0) {
-                                  const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-                                  const snap = snapshots[epochInt]
-                                  const preds = snap?.node_predictions
-                                  if (preds && graphData?.nodes) {
-                                    for (let nodeIdx = 0; nodeIdx < graphData.nodes.length; nodeIdx++) {
-                                      if (graphData.nodes[nodeIdx].groundTruth === i && preds[nodeIdx] === j) {
-                                        setSelectedNode(graphData.nodes[nodeIdx].id)
-                                        break
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            }}
-                            title={`Thực tế lớp ${i} → Dự đoán lớp ${j}: ${val} mẫu${val > 0 ? '\nClick để highlight' : ''}`}
-                            className="w-8 h-8 flex items-center justify-center text-[10px] font-mono rounded transition-all duration-200 hover:scale-110 hover:ring-1 hover:ring-white/20 cursor-pointer shrink-0"
-                            style={{ 
-                              backgroundColor: bgColor, 
-                              color: val === 0 ? '#1e293b' : isDiag ? '#dcfce7' : '#fee2e2', 
-                              fontWeight: isDiag && val > 0 ? 'bold' : 'normal',
-                              ringWidth: isSelected ? '2px' : '0px',
-                              ringColor: isSelected ? '#3b82f6' : 'transparent'
-                            }}>
-                            {val}
-                          </div>
+                          <td key={p}>
+                            <button
+                              disabled={val === 0}
+                              onClick={() => handleCellClick(t, p, val)}
+                              title={`True ${t} → Pred ${p}: ${val}`}
+                              className={`w-7 h-6 rounded-sm text-nano font-bold transition-transform ${
+                                val ? 'hover:scale-110 cursor-pointer' : 'cursor-default'
+                              } ${isSel ? 'ring-1 ring-cyan-400' : ''}`}
+                              style={{ backgroundColor: bg, color: val ? '#f8fafc' : '#1e293b' }}
+                            >
+                              {val}
+                            </button>
+                          </td>
                         )
                       })}
-                      <div className="w-12 text-center shrink-0">
-                        <span className="text-[9px] font-mono font-bold px-1 py-0.5 rounded"
-                          style={{ color: parseInt(perClassAcc[i]) > 70 ? '#4ade80' : parseInt(perClassAcc[i]) > 40 ? '#facc15' : '#f87171', backgroundColor: 'rgba(0,0,0,0.3)' }}>
-                          {perClassAcc[i]}%
-                        </span>
-                      </div>
-                    </div>
+                    </tr>
                   )
                 })}
-                <div className="mt-3 text-[8px] text-slate-600 text-center leading-relaxed">
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-green-500/40 mr-1 align-middle" />Đúng · <span className="inline-block w-2.5 h-2.5 rounded-sm bg-red-500/30 mr-1 align-middle" />Nhầm · Hover để xem chi tiết
-                </div>
-                {selectedCMCell && (
-                  <div className="mt-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                    <div className="text-[9px] text-blue-300 font-bold mb-1">
-                      Selected: True Class {selectedCMCell.trueClass} → Predicted Class {selectedCMCell.predClass}
-                    </div>
-                    <div className="text-[8px] text-slate-400">
-                      {nodesInSelectedCell.length} nodes · Click topology to explore
-                    </div>
-                    <button
-                      onClick={() => setSelectedCMCell(null)}
-                      className="mt-2 text-[7px] text-slate-500 hover:text-slate-300 underline"
-                    >
-                      Clear selection
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+              </tbody>
+            </table>
           </div>
-        )}
+        </div>
 
+        <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/60">
+          <div className="text-nano text-slate-500 uppercase font-bold tracking-ultra mb-1">Per-class · Precision / Recall / F1</div>
+          <table className="text-nano font-mono w-full">
+            <thead>
+              <tr className="text-slate-500">
+                <th className="text-left py-1">#</th>
+                <th className="text-right">Prec</th>
+                <th className="text-right">Recall</th>
+                <th className="text-right">F1</th>
+                <th className="text-right">Support</th>
+              </tr>
+            </thead>
+            <tbody>
+              {perClass.map((pc, c) => (
+                <tr key={c} className="border-t border-slate-800/40">
+                  <td className="py-1" style={{ color: CLASS_COLORS[c % CLASS_COLORS.length] }}>C{c}</td>
+                  <td className="text-right text-slate-200">{(pc.precision * 100).toFixed(1)}%</td>
+                  <td className="text-right text-slate-200">{(pc.recall * 100).toFixed(1)}%</td>
+                  <td className="text-right text-slate-200">{(pc.f1 * 100).toFixed(1)}%</td>
+                  <td className="text-right text-slate-500">{pc.support}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
 
+function HomophilyTab({ snap, onPick }) {
+  const points = useMemo(() => computeHomophilyScatter(snap), [snap])
+
+  if (!points.length) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-micro gap-1">
+        <p>Chưa có dữ liệu homophily.</p>
+        <p className="text-nano">BE cần emit `majority_ratio` và `node_correctness`.</p>
+      </div>
+    )
+  }
+
+  const correctPts = points.filter((p) => p.correct === 1)
+  const wrongPts = points.filter((p) => p.correct === 0)
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-auto">
+      <div className="text-nano text-slate-500 uppercase font-bold tracking-ultra">
+        Neighbor majority ratio × node correctness · click a dot to focus node on canvas
+      </div>
+      <div className="flex-1 min-h-[200px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <XAxis
+              dataKey="ratio"
+              type="number"
+              domain={[0, 1]}
+              tick={{ fill: '#475569', fontSize: 9 }}
+              label={{ value: 'majority_ratio →', fill: '#475569', fontSize: 9, dy: 14 }}
+            />
+            <YAxis
+              dataKey="correct"
+              type="number"
+              domain={[-0.1, 1.1]}
+              ticks={[0, 1]}
+              tick={{ fill: '#475569', fontSize: 9 }}
+              label={{ value: 'correct', fill: '#475569', fontSize: 9, angle: -90, dx: -8 }}
+            />
+            <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} />
+            <ReferenceLine x={0.5} stroke="#f59e0b" strokeDasharray="3 3" strokeOpacity={0.5} />
+            <Scatter name="Correct" data={correctPts} fill="#22c55e" onClick={(d) => onPick(d.id)} />
+            <Scatter name="Wrong" data={wrongPts} fill="#ef4444" onClick={(d) => onPick(d.id)} />
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="text-nano text-slate-500">
+        Heterophilic misclassifieds cluster at low ratio + correct=0 (bottom-left); homophilic correct wins sit at high ratio + correct=1 (top-right).
+      </div>
+    </div>
+  )
+}
+
+function DiagnosticsTab({ snap, snapshots, graphData }) {
+  const energySeries = useMemo(() => extractDirichletSeries(snapshots), [snapshots])
+  const currentEnergy = snap?.dirichlet_energy ?? 0
+  const initialEnergy = energySeries[0]?.energy ?? 0
+  const isOversmooth = initialEnergy > 0 && currentEnergy < initialEnergy * 0.05
+
+  const dist = useMemo(() => {
+    const gt = (graphData?.nodes || []).map((n) => n.groundTruth)
+    const preds = snap?.node_predictions || []
+    return buildClassDistribution(gt, preds)
+  }, [snap, graphData])
+
+  const distData = useMemo(
+    () => dist.gtCounts.map((g, i) => ({ cls: `C${i}`, gt: g, pred: dist.predCounts[i] })),
+    [dist]
+  )
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-auto">
+      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+        <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/60">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra">Dirichlet Energy (over-smoothing)</span>
+            {isOversmooth && <span className="text-nano text-red-400 font-bold">⚠ collapsed</span>}
+          </div>
+          <div className="h-[150px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={energySeries}>
+                <defs>
+                  <linearGradient id="t1energyGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="epoch" tick={{ fill: '#475569', fontSize: 9 }} />
+                <YAxis tick={{ fill: '#475569', fontSize: 9 }} domain={[0, 1]} />
+                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} />
+                <Area type="monotone" dataKey="energy" stroke="#a855f7" fill="url(#t1energyGrad)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="text-nano text-slate-500 mt-1">
+            current {currentEnergy.toFixed(3)} · initial {initialEnergy.toFixed(3)}
+          </div>
+        </div>
+
+        <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/60">
+          <div className="text-nano text-slate-500 uppercase font-bold tracking-ultra mb-1">
+            Class distribution · GT vs Predicted
+          </div>
+          <div className="h-[150px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={distData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="cls" tick={{ fill: '#475569', fontSize: 9 }} />
+                <YAxis tick={{ fill: '#475569', fontSize: 9 }} />
+                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} />
+                <Bar dataKey="gt" name="Ground Truth" fill="#06b6d4" />
+                <Bar dataKey="pred" name="Predicted" fill="#f97316" />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StatCell({ label, value, digits = 2, suffix = '', tone = 'neutral' }) {
+  const toneClass = tone === 'good' ? 'text-emerald-400' : tone === 'warn' ? 'text-amber-400' : tone === 'bad' ? 'text-red-400' : 'text-slate-200'
+  const safe = Number.isFinite(value) ? value : 0
+  return (
+    <div className="bg-slate-900/40 rounded-md px-2 py-1 border border-slate-800/60">
+      <div className="text-nano text-slate-500 uppercase font-bold tracking-ultra">{label}</div>
+      <div className={`text-sm font-mono font-black tabular-nums ${toneClass}`}>
+        {safe.toFixed(digits)}
+        {suffix}
       </div>
     </div>
   )

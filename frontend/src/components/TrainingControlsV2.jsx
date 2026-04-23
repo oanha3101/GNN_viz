@@ -10,8 +10,9 @@ import {
   generateTask5Mock,
   generateTask6Mock,
 } from '../mock/generateMockSnapshots'
+import { API_BASE } from '../utils/api'
 
-const API = 'http://localhost:8000/api'
+const API = API_BASE
 
 const TASK_NAMES = {
   1: 'Phân loại nút',
