@@ -36,6 +36,28 @@ Ràng buộc:
 - Color ramp lấy từ `utils/colors.js` (không tự chế).
 - Dữ liệu thiếu → `<EmptyState>`, không render `--`.
 
+### Layout in dense panels (container-query, NOT viewport)
+Metric tabs render trong right rail (width 260–800px). **Không dùng** Tailwind `sm: / lg: / xl:` — breakpoint theo viewport sẽ sai khi rail hẹp trong 1920×1080. Thay vào đó dùng CSS `auto-fit` grid — container tự thoả 1–3 cột:
+
+```jsx
+<div
+  className="grid gap-3"
+  style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
+>
+  <MatrixBlock />       {/* mỗi block tự đặt min-w-0 để không overflow */}
+  <PerClassTable />
+  <HardCasesList />
+</div>
+```
+
+Rule of thumb: `minmax(180px, 1fr)` cho cards nhỏ (hard-case row), `minmax(240px, 1fr)` cho plot blocks (histogram, scatter). Mỗi con grid item phải có `min-w-0` để tránh overflow-x scroll.
+
+### Pattern: Confusion Matrix block (per-class)
+- Grid `C×C`, diagonal = emerald tint, off-diagonal = red tint, intensity ∝ count / max.
+- Cell là `<button>` để user click pin hard-case filter qua `onSelectCell(predIdx, gtIdx)`.
+- Kèm bảng per-class Precision / Recall / F1 / Support — render ngay cạnh matrix nhờ auto-fit grid.
+- Pure helper `buildConfusionMatrix(predictions, groundTruth)` trong `utils/task2Metrics.js` đảm bảo test unit được và tránh recompute khi re-render.
+
 ## When to trigger
 - Tạo mới / refactor component thuộc `components/MetricsChart/**` hoặc bất cứ file kết thúc bằng `Monitor.jsx`.
 - Thêm field mới từ BE (ví dụ bật `outlier_scores` cho Task 5).

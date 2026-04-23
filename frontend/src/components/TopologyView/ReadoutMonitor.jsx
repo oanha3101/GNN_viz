@@ -106,6 +106,20 @@ export default function ReadoutMonitor() {
   const isCorrect = predRaw === graph.groundTruth
   const predLabel = predRaw !== undefined ? GRAPH_LABELS[predRaw] : 'Analyzing'
 
+  const structural = currSnap?.graph_structural_metrics?.[activeGraphId]
+  const density = structural?.density
+  const clustering = structural?.avg_clustering
+  const avgDeg = structural?.avg_degree
+  const confidence = currSnap?.graph_confidences?.[activeGraphId] ?? 0
+  const contribs = currSnap?.node_contributions?.[activeGraphId] || []
+  const topContribs = (() => {
+    if (!contribs.length) return []
+    return contribs
+      .map((val, idx) => ({ id: idx, val: Number(val) || 0 }))
+      .sort((a, b) => b.val - a.val)
+      .slice(0, 3)
+  })()
+
   return (
     <div className="h-full flex flex-col p-3 text-xs w-full relative bg-slate-950">
       <div className="mb-3 space-y-1.5 z-10">
@@ -135,6 +149,33 @@ export default function ReadoutMonitor() {
         <div className="flex gap-2 text-[9px]">
           <span className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-400">GT: <b className="text-slate-200">{gtLabel}</b></span>
           <span className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-400">PRED: <b className={isCorrect ? 'text-green-400' : 'text-red-400'}>{predLabel}</b></span>
+          <span className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-400">
+            {graph.nodes.length}n / {graph.links.length}e
+          </span>
+        </div>
+      </div>
+
+      {/* Drill-down metadata strip — migrated from left-canvas overlay to keep the graph focus full-bleed */}
+      {structural && (
+        <div className="mb-3 grid grid-cols-3 gap-1.5 rounded-md border border-slate-800/60 bg-slate-900/50 p-2">
+          <MetaStat label="Density" value={density} />
+          <MetaStat label="Clustering" value={clustering} />
+          <MetaStat label="AvgDeg" value={avgDeg} digits={1} />
+        </div>
+      )}
+
+      <div className="mb-3 space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="text-nano text-slate-500 uppercase font-semibold tracking-ultra">Confidence</span>
+          <span className={`text-micro font-mono font-bold tabular-nums ${confidence > 0.8 ? 'text-emerald-400' : 'text-amber-400'}`}>
+            {(confidence * 100).toFixed(1)}%
+          </span>
+        </div>
+        <div className="h-1.5 w-full bg-slate-800/60 rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all duration-500 ${isCorrect ? 'bg-emerald-500' : 'bg-red-500'}`}
+            style={{ width: `${Math.max(0, Math.min(1, confidence)) * 100}%` }}
+          />
         </div>
       </div>
 
@@ -181,6 +222,29 @@ export default function ReadoutMonitor() {
         />
       </div>
 
+      {topContribs.length > 0 && (
+        <div className="mt-3 space-y-1.5 z-10">
+          <span className="text-nano text-slate-500 uppercase font-semibold tracking-ultra block">Top contributors</span>
+          <div className="space-y-1">
+            {topContribs.map((node) => (
+              <div key={node.id} className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="w-5 h-5 rounded-sm flex items-center justify-center bg-slate-800 text-nano font-bold text-slate-100 shrink-0">
+                    {node.id}
+                  </div>
+                  <div className="h-1 flex-1 bg-slate-800/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-500" style={{ width: `${Math.max(0, Math.min(1, node.val)) * 100}%` }} />
+                  </div>
+                </div>
+                <span className="text-nano font-bold font-mono text-amber-400 tabular-nums shrink-0">
+                  {(node.val * 100).toFixed(0)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-3 space-y-1.5 z-10">
         <div className="flex justify-between text-[8px] font-bold text-slate-500 uppercase tracking-widest">
           <span>Trắng = Quan trọng nhất</span>
@@ -191,6 +255,16 @@ export default function ReadoutMonitor() {
           Trắng = Quan trọng nhất | Đen = Bỏ qua. Ghim 📌 để khóa khi rê chuột ra ngoài.
         </p>
       </div>
+    </div>
+  )
+}
+
+function MetaStat({ label, value, digits = 3 }) {
+  const display = value != null && Number.isFinite(value) ? value.toFixed(digits) : '—'
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[8px] text-slate-500 uppercase tracking-ultra font-semibold">{label}</span>
+      <span className="text-micro font-mono font-bold text-slate-200 tabular-nums">{display}</span>
     </div>
   )
 }

@@ -130,8 +130,17 @@ export default function TaskTopology5() {
     // Only zoomToFit once after initial layout — do NOT freeze nodes (fx/fy causes vanish)
     if (fitDoneRef.current || !fgRef.current) return
     fitDoneRef.current = true
-    try { fgRef.current.zoomToFit(400, 60) } catch {} // eslint-disable-line
+    try { fgRef.current.zoomToFit(400, 40) } catch {} // eslint-disable-line
   }, [])
+
+  // Re-fit on resize so the graph always fills the workspace (no dark dead space).
+  useEffect(() => {
+    if (!fgRef.current) return
+    const id = requestAnimationFrame(() => {
+      try { fgRef.current && fgRef.current.zoomToFit(300, 40) } catch { /* settle */ }
+    })
+    return () => cancelAnimationFrame(id)
+  }, [dims.width, dims.height])
 
   const linkCanvasObject = useCallback((link, ctx) => {
     const s = link.source

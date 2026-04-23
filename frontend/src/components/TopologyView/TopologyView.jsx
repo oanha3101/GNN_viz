@@ -94,16 +94,33 @@ export default function TopologyView() {
     }
   }, [snapshots, currentEpochFloat, selectedNodeId, viewMode, groundTruth, selectedModel, attentionHead, kHopEnabled, kHopMaxHops, rawGraphData, showErrorsOnly])
 
-  // Resize handler
+  // Resize handler — re-attach whenever the target node remounts
+  // (e.g. after activeGraphData flips from null → data, the render tree swaps
+  // from the loading placeholder to the real canvas wrapper).
   useEffect(() => {
-    if (!containerRef.current) return
+    const el = containerRef.current
+    if (!el) return
     const ro = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect
       if (width > 0 && height > 0) setDimensions({ width, height })
     })
-    ro.observe(containerRef.current)
+    ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [stableGraphData])
+
+  // Re-fit the graph whenever the workspace resizes so nodes always fill the
+  // full canvas instead of leaving dark dead space (fixes the "dark lower-left
+  // corner" complaint — the initial 800×400 fallback zoom was never re-fit
+  // after the observer reported the real container size).
+  useEffect(() => {
+    if (!fgRef.current) return
+    const id = requestAnimationFrame(() => {
+      try { fgRef.current && fgRef.current.zoomToFit(300, 32) } catch {
+        /* transient fit error while layout settles — next frame will retry */
+      }
+    })
+    return () => cancelAnimationFrame(id)
+  }, [dimensions.width, dimensions.height])
 
   // Đánh chỉ mục cạnh để truy xuất nhanh O(1)
   // Build edge index mapping that matches backend's edge_index order

@@ -51,15 +51,25 @@ export default function TaskTopology3() {
 
   const activeGraphData = stableGraphData || graphData
 
-  // Resize Handler
+  // Resize Handler — reattach when content switches from loading → data.
   useEffect(() => {
-    if (!containerRef.current) return
+    const el = containerRef.current
+    if (!el) return
     const ro = new ResizeObserver(([e]) => {
       if (e.contentRect.width > 0) setDimensions({ width: e.contentRect.width, height: e.contentRect.height })
     })
-    ro.observe(containerRef.current)
+    ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [activeGraphData])
+
+  // Re-fit on resize so the graph always fills the workspace (no dark dead space).
+  useEffect(() => {
+    if (!fgRef.current) return
+    const id = requestAnimationFrame(() => {
+      try { fgRef.current && fgRef.current.zoomToFit(300, 32) } catch { /* settle */ }
+    })
+    return () => cancelAnimationFrame(id)
+  }, [dimensions.width, dimensions.height])
 
   // Setup Lực D3
   useEffect(() => {
