@@ -48,9 +48,12 @@ export default function Task2Diagnostics({ snap, graphs, onSelect, selectedId })
   const projY = (v) => scatterH - ((v - dyMin) / dyRange) * scatterH
 
   return (
-    <div className="flex flex-col gap-5 h-full">
+    <div
+      className="grid gap-4 h-full"
+      style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}
+    >
       {/* Confidence histogram */}
-      <section>
+      <section className="min-w-0">
         <div className="flex items-baseline justify-between mb-2">
           <h4 className="text-nano uppercase tracking-ultra text-slate-500">
             Confidence distribution
@@ -88,7 +91,7 @@ export default function Task2Diagnostics({ snap, graphs, onSelect, selectedId })
 
       {/* Entropy × density scatter */}
       {hasPoints && (
-        <section>
+        <section className="min-w-0">
           <div className="flex items-baseline justify-between mb-2">
             <h4 className="text-nano uppercase tracking-ultra text-slate-500">
               Attention entropy × structural density

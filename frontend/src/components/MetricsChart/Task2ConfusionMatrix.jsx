@@ -47,9 +47,12 @@ export default function Task2ConfusionMatrix({
   }
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div
+      className="grid gap-3 h-full"
+      style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}
+    >
       {/* Matrix */}
-      <div className="flex flex-col items-start">
+      <div className="flex flex-col items-start min-w-0">
         <div className="text-nano uppercase tracking-ultra text-slate-500 mb-2">
           Confusion Matrix · Overall acc {(cm.accuracy * 100).toFixed(1)}%
         </div>
@@ -91,7 +94,7 @@ export default function Task2ConfusionMatrix({
       </div>
 
       {/* Per-class metrics */}
-      <div>
+      <div className="min-w-0">
         <div className="text-nano uppercase tracking-ultra text-slate-500 mb-2">Per-class</div>
         <table className="w-full text-xs">
           <thead>

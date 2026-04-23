@@ -93,17 +93,22 @@ export default function Task2MetricsPanel() {
         )}
 
         {viewMode === 'confusion' && (
-          <div className="flex flex-col gap-5">
-            <Task2ConfusionMatrix
-              predictions={snap?.graph_predictions}
-              groundTruth={groundTruth}
-              classNames={GRAPH_CLASS_NAMES}
-              selectedCell={selectedCell}
-              onSelectCell={(pred, gt) =>
-                setSelectedCell((prev) => (prev && prev.pred === pred && prev.gt === gt ? null : { pred, gt }))
-              }
-            />
-            <div>
+          <div
+            className="grid gap-4"
+            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}
+          >
+            <div className="min-w-0">
+              <Task2ConfusionMatrix
+                predictions={snap?.graph_predictions}
+                groundTruth={groundTruth}
+                classNames={GRAPH_CLASS_NAMES}
+                selectedCell={selectedCell}
+                onSelectCell={(pred, gt) =>
+                  setSelectedCell((prev) => (prev && prev.pred === pred && prev.gt === gt ? null : { pred, gt }))
+                }
+              />
+            </div>
+            <div className="min-w-0">
               <h4 className="text-nano uppercase tracking-ultra text-slate-500 mb-2">
                 Hardest cases (smallest margin)
               </h4>
@@ -111,7 +116,7 @@ export default function Task2MetricsPanel() {
                 snap={snap}
                 graphs={graphs}
                 classNames={GRAPH_CLASS_NAMES}
-                k={8}
+                k={10}
                 selectedId={selectedNodeId}
                 onSelect={setSelectedNode}
               />
