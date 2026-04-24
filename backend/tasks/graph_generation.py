@@ -130,8 +130,10 @@ def _generate_graph(seed, source_degrees, target_density, quality, source_densit
     
     # ── Source vs Generated Comparison ───────────────────────────────────────
     comparison_metrics = {}
+    matches_source = False
     if source_density is not None and source_degrees:
         source_avg_degree = sum(source_degrees) / len(source_degrees) if source_degrees else 0
+        matches_source = abs(density - source_density) < source_density * 0.3
         comparison_metrics = {
             'source_density': float(source_density),
             'generated_density': float(density),
@@ -139,7 +141,7 @@ def _generate_graph(seed, source_degrees, target_density, quality, source_densit
             'source_avg_degree': float(source_avg_degree),
             'generated_avg_degree': float(avg_degree),
             'degree_diff': abs(float(avg_degree) - source_avg_degree),
-            'matches_source': abs(density - source_density) < source_density * 0.3
+            'matches_source': matches_source
         }
 
     return {
@@ -153,6 +155,7 @@ def _generate_graph(seed, source_degrees, target_density, quality, source_densit
         'signature': _graph_signature(edges),
         'invalidity_reason': invalidity_reason,
         'comparison_metrics': comparison_metrics,
+        'matches_source': matches_source,
     }
 
 
@@ -177,7 +180,65 @@ def _compute_latent_points(feature_matrix, max_points, progress):
     return coords.tolist(), point_scores.tolist(), point_validity.tolist()
 
 
-def _epoch_payload(epoch, epochs, data):
+def _sample_source_graphs(data, num_samples=6, min_nodes=5, max_nodes=10):
+    edge_index = data.edge_index.cpu().numpy()
+    num_nodes_total = data.x.size(0)
+    adj = [[] for _ in range(num_nodes_total)]
+    for i in range(edge_index.shape[1]):
+        u, v = int(edge_index[0, i]), int(edge_index[1, i])
+        adj[u].append(v)
+        adj[v].append(u)
+
+    samples = []
+    rng = random.Random(42)  # Fixed seed for consistency
+    
+    # Try to find connected subgraphs
+    nodes_pool = list(range(num_nodes_total))
+    rng.shuffle(nodes_pool)
+    
+    for start_node in nodes_pool:
+        if len(samples) >= num_samples:
+            break
+            
+        # BFS to get a small neighborhood
+        visited = {start_node}
+        queue = [start_node]
+        target_size = rng.randint(min_nodes, max_nodes)
+        
+        curr_idx = 0
+        while curr_idx < len(queue) and len(queue) < target_size:
+            u = queue[curr_idx]
+            curr_idx += 1
+            neighbors = adj[u]
+            rng.shuffle(neighbors)
+            for v in neighbors:
+                if v not in visited:
+                    visited.add(v)
+                    queue.append(v)
+                    if len(queue) >= target_size:
+                        break
+        
+        if len(queue) >= min_nodes:
+            sub_nodes = sorted(list(visited))
+            node_map = {old: new for new, old in enumerate(sub_nodes)}
+            
+            sub_links = []
+            for u in sub_nodes:
+                for v in adj[u]:
+                    if v in node_map and u < v:
+                        sub_links.append({'source': node_map[u], 'target': node_map[v]})
+            
+            samples.append({
+                'id': len(samples),
+                'nodes': [{'id': i} for i in range(len(sub_nodes))],
+                'links': sub_links,
+                'density': _graph_density(len(sub_nodes), len(sub_links)),
+            })
+            
+    return samples
+
+
+def _epoch_payload(epoch, epochs, data, source_graphs_cache=None):
     progress = epoch / max(1, epochs - 1)
     edge_index_np = data.edge_index.cpu().numpy()
     num_nodes = int(data.x.size(0))
@@ -187,8 +248,10 @@ def _epoch_payload(epoch, epochs, data):
 
     generated_graphs = []
     for g_idx in range(6):
+        # Use a stable seed per slot (g_idx) so the base structure stays similar across epochs,
+        # but let the quality and density evolve smoothly.
         graph = _generate_graph(
-            seed=epoch * 997 + g_idx * 137,
+            seed=g_idx * 1337 + 42, 
             source_degrees=source_degrees,
             target_density=max(0.12, min(0.72, source_density * (0.8 + progress * 0.6))),
             quality=0.18 + 0.72 * math.pow(progress, 0.85),
@@ -224,6 +287,7 @@ def _epoch_payload(epoch, epochs, data):
     return {
         'epoch': epoch,
         'generated_graphs': generated_graphs,
+        'source_graphs': source_graphs_cache or [],
         'latent_points': latent_points,
         'latent_point_scores': latent_scores,
         'latent_point_validity': latent_validity,
@@ -243,12 +307,15 @@ async def run_graph_generation(config, data, websocket, stop_flag):
     epochs = config.get('epochs', 50)
     loop = asyncio.get_event_loop()
     snapshots = []
+    
+    # Pre-sample source graphs once
+    source_graphs = _sample_source_graphs(data)
 
     for epoch in range(epochs):
         if stop_flag():
             break
 
-        snapshot = await loop.run_in_executor(executor, _epoch_payload, epoch, epochs, data)
+        snapshot = await loop.run_in_executor(executor, _epoch_payload, epoch, epochs, data, source_graphs)
         snapshots.append(snapshot)
         await send_json_zipped(websocket, {
             'type': 'epoch_snapshot',

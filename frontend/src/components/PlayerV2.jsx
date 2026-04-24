@@ -76,16 +76,6 @@ export default function PlayerV2() {
           }`}
           style={{ left: `calc(${fillPct}% - 7px)` }}
         />
-        {/* Best epoch marker */}
-        {trainingDone && totalEpochs > 1 && (
-          <div
-            className="absolute -top-3.5 pointer-events-none drop-shadow-lg"
-            style={{ left: `calc(${bestPct}% - 6px)` }}
-            title={`Best Epoch: ${bestEpoch}`}
-          >
-            <Star size={12} className="text-yellow-400 fill-yellow-400" />
-          </div>
-        )}
       </div>
 
       <div className="flex items-center justify-between">
@@ -119,12 +109,6 @@ export default function PlayerV2() {
               <span className="text-[8px] uppercase text-slate-500 font-bold">Total</span>
               <span className="text-[11px] font-mono text-slate-300">{snapshots.length}</span>
             </div>
-            {trainingDone && (
-               <div className="flex flex-col">
-                <span className="text-[8px] uppercase text-yellow-600 font-bold flex items-center gap-0.5"><Star size={8} className="fill-yellow-600" /> Best</span>
-                <span className="text-[11px] font-mono text-yellow-400 font-bold">{bestEpoch}</span>
-              </div>
-            )}
           </div>
         </div>
 

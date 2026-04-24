@@ -2,14 +2,15 @@ import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import NodeHoverCard from './NodeHoverCard'
 import { easeInOutCubic, lerp } from '../../engine/interpolate'
 import { CLASS_COLORS } from '../../utils/colors'
 
-// Smooth color interpolation for edges
+// Smooth color interpolation for edges - Tăng độ đậm và rõ màu
 function getLinkColor(score) {
-  if (score > 0.8) return `rgba(16, 185, 129, ${0.7 + (score - 0.8) * 1.5})`; 
-  if (score > 0.4) return `rgba(245, 158, 11, ${0.5 + (score - 0.4) * 1.0})`;
-  return `rgba(239, 68, 68, ${0.15 + score * 0.5})`;
+  if (score > 0.8) return `rgba(16, 185, 129, ${0.85 + (score - 0.8) * 0.7})`; 
+  if (score > 0.4) return `rgba(245, 158, 11, ${0.7 + (score - 0.4) * 0.5})`;
+  return `rgba(239, 68, 68, ${0.4 + score * 0.4})`;
 }
 
 export default function TaskTopology3() {
@@ -21,6 +22,7 @@ export default function TaskTopology3() {
 
   const selectedNodeId = useGNNStore(s => s.selectedNodeId)
   const setSelectedNode = useGNNStore(s => s.setSelectedNode)
+  const setHoveredNode = useGNNStore(s => s.setHoveredNode)
   const focusedEdgeIdx = useGNNStore(s => s.focusedEdgeIdx)
   const setFocusedEdge = useGNNStore(s => s.setFocusedEdge)
 
@@ -129,11 +131,50 @@ export default function TaskTopology3() {
     fg.d3ReheatSimulation()
   }, [activeGraphData])
 
-  // 2. Tính Common Neighbors
+  // 2. Tính 'Liên kết đáng chú ý nhất' (MIL - Most Interesting Link)
+  // Ưu tiên: Link đang hover > Link của nút đang chọn > Link có điểm cao nhất toàn cục
+  const mostInterestingLink = useMemo(() => {
+    if (hoveredLink) return hoveredLink
+    
+    const epochInt = Math.max(0, Math.min(snapshots?.length - 1, Math.floor(currentEpochFloat)))
+    const snap = snapshots?.[epochInt]
+    if (!snap?.edge_scores || !taskData?.testEdges) return null
+
+    // Nếu đang chọn 1 nút, tìm link mạnh nhất của nút đó
+    if (selectedNodeId !== null) {
+      let bestIdx = -1, maxScore = -1
+      taskData.testEdges.forEach((te, i) => {
+        if (te.source === selectedNodeId || te.target === selectedNodeId) {
+          const s = snap.edge_scores[i] || 0
+          if (s > maxScore) { maxScore = s; bestIdx = i }
+        }
+      })
+      if (bestIdx !== -1) {
+        const te = taskData.testEdges[bestIdx]
+        return { source: { id: te.source }, target: { id: te.target }, _idx: bestIdx, score: maxScore, isAuto: true }
+      }
+    }
+
+    // Mặc định: Tìm link 'tương lai' mạnh nhất toàn cục
+    let bestIdx = -1, maxScore = -1
+    taskData.testEdges.forEach((te, i) => {
+      if (!te.exists) { // Ưu tiên các link mới (Future)
+        const s = snap.edge_scores[i] || 0
+        if (s > maxScore) { maxScore = s; bestIdx = i }
+      }
+    })
+    
+    if (bestIdx !== -1 && maxScore > 0.7) {
+      const te = taskData.testEdges[bestIdx]
+      return { source: { id: te.source }, target: { id: te.target }, _idx: bestIdx, score: maxScore, isAuto: true }
+    }
+    return null
+  }, [hoveredLink, selectedNodeId, snapshots, currentEpochFloat, taskData])
+
   const commonNeighbors = useMemo(() => {
-    if (!hoveredLink || !rawGraphData) return new Set()
-    const sId = typeof hoveredLink.source === 'object' ? hoveredLink.source.id : hoveredLink.source
-    const tId = typeof hoveredLink.target === 'object' ? hoveredLink.target.id : hoveredLink.target
+    if (!mostInterestingLink || !rawGraphData) return new Set()
+    const sId = typeof mostInterestingLink.source === 'object' ? mostInterestingLink.source.id : mostInterestingLink.source
+    const tId = typeof mostInterestingLink.target === 'object' ? mostInterestingLink.target.id : mostInterestingLink.target
     const sNeighbors = new Set(), tNeighbors = new Set()
     rawGraphData.links.forEach(l => {
         const u = typeof l.source === 'object' ? l.source.id : l.source
@@ -142,7 +183,7 @@ export default function TaskTopology3() {
         if (u === tId) tNeighbors.add(v); if (v === tId) tNeighbors.add(u)
     })
     return new Set([...sNeighbors].filter(x => tNeighbors.has(x)))
-  }, [hoveredLink, rawGraphData])
+  }, [mostInterestingLink, rawGraphData])
 
   // 3. Hàm vẽ cạnh (Laser & Pulse)
   const linkCanvasObject = useCallback((link, ctx, globalScale) => {
@@ -155,35 +196,64 @@ export default function TaskTopology3() {
     const sId = link.source.id, tId = link.target.id
     const testIdx = testEdges.findIndex(te => (te.source === sId && te.target === tId) || (te.source === tId && te.target === sId))
 
-    let color = 'rgba(148, 163, 184, 0.12)', width = 1.0, score = 0, isFuture = false
+    let color = 'rgba(148, 163, 184, 0.25)', width = 1.5, score = 0, isFuture = false
     const hasSelection = selectedNodeId !== null
     const isConnectedToSelected = sId === selectedNodeId || tId === selectedNodeId
-    let finalAlpha = hasSelection ? (isConnectedToSelected ? 1.0 : 0.04) : 1.0
-
-    const isHovered = hoveredLink && ((hoveredLink.source.id === sId && hoveredLink.target.id === tId) || (hoveredLink.source.id === tId && hoveredLink.target.id === sId))
-    if (hoveredLink && !isHovered) finalAlpha *= 0.2
+    
+    // Logic highlight MIL (Most Interesting Link)
+    const isMIL = mostInterestingLink && ((mostInterestingLink.source.id === sId && mostInterestingLink.target.id === tId) || (mostInterestingLink.source.id === tId && mostInterestingLink.target.id === sId))
+    
+    let finalAlpha = hasSelection ? (isConnectedToSelected ? 1.0 : 0.1) : 1.0
+    if (mostInterestingLink && !isMIL && !mostInterestingLink.isAuto) finalAlpha *= 0.3
 
     if (testIdx !== -1) {
       const scoreA = snapA?.edge_scores?.[testIdx] || 0, scoreB = snapB?.edge_scores?.[testIdx] || scoreA
       score = lerp(scoreA, scoreB, t)
       color = getLinkColor(score)
-      // Cap edge width at 4 — previous `2 + score * 4` let confident edges hit 6
-      // which over-dominates the canvas at narrow workspace widths.
-      width = Math.min(4, 1.5 + score * 3)
+      width = Math.min(5, 2.0 + score * 4)
       isFuture = !testEdges[testIdx].exists && score > 0.5
     }
 
     ctx.save(); ctx.globalAlpha = finalAlpha; ctx.beginPath()
-    if (isFuture && score > 0.85) {
-      ctx.setLineDash([6, 8]); ctx.lineDashOffset = -(performance.now() / 25) % 14
-      ctx.shadowColor = color; ctx.shadowBlur = 12 / globalScale; width *= 1.4
-    } else if (isFuture) ctx.setLineDash([3, 5])
-    else ctx.setLineDash([])
+    
+    // MIL Effect: Luôn phát sáng nhẹ nếu là link quan trọng nhất
+    if (isMIL) {
+      const pulse = Math.sin(performance.now() / 200) * 0.3 + 0.7
+      ctx.shadowColor = color
+      ctx.shadowBlur = (isFuture ? 25 : 12) * pulse / globalScale
+      if (mostInterestingLink.isAuto) ctx.globalAlpha *= 0.8
+    }
 
-    if (isHovered) { ctx.shadowColor = '#fff'; ctx.shadowBlur = 20 / globalScale; width = 6; color = '#fff' }
+    if (isFuture && score > 0.7) {
+      ctx.setLineDash([8, 12]); ctx.lineDashOffset = -(performance.now() / 15) % 20
+      width *= 1.4
+    } else if (isFuture) ctx.setLineDash([3, 5])
+
     ctx.moveTo(link.source.x, link.source.y); ctx.lineTo(link.target.x, link.target.y)
-    ctx.strokeStyle = color; ctx.lineWidth = width / globalScale; ctx.stroke(); ctx.restore()
-  }, [snapshots, currentEpochFloat, taskData, selectedNodeId, hoveredLink])
+    ctx.strokeStyle = color; ctx.lineWidth = width / globalScale; ctx.stroke()
+
+    // Vẽ nhãn % cho MIL hoặc cạnh cực mạnh (Nhìn vào biết liền)
+    if (isMIL || (isFuture && score > 0.92)) {
+      const mx = (link.source.x + link.target.x) / 2
+      const my = (link.source.y + link.target.y) / 2
+      const label = `${(score * 100).toFixed(0)}%`
+      
+      ctx.font = `900 ${10/globalScale}px monospace`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      
+      // Viền đen dày để chữ nổi bật trên bất kỳ nền nào
+      ctx.strokeStyle = 'rgba(2, 6, 23, 0.9)'
+      ctx.lineWidth = 4 / globalScale
+      ctx.strokeText(label, mx, my - 10/globalScale)
+      
+      // Chữ màu trắng sáng
+      ctx.fillStyle = '#ffffff'
+      ctx.fillText(label, mx, my - 10/globalScale)
+    }
+
+    ctx.restore()
+  }, [snapshots, currentEpochFloat, taskData, selectedNodeId, mostInterestingLink])
 
   // 4. Hàm vẽ node (Radar Glow)
   const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
@@ -203,21 +273,29 @@ export default function TaskTopology3() {
     ctx.save(); ctx.globalAlpha = globalAlpha; ctx.shadowColor = color
     ctx.shadowBlur = (isSelected || isCommonNeighbor) ? 25 / globalScale : 0
     ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill()
-    ctx.strokeStyle = (isSelected || isCommonNeighbor) ? '#fff' : 'rgba(255,255,255,0.3)'
-    ctx.lineWidth = (isSelected || isCommonNeighbor ? 3 : 1) / globalScale; ctx.stroke()
+    
+    // Glossy overlay
+    const grad = ctx.createRadialGradient(node.x - r/3, node.y - r/3, r/10, node.x, node.y, r)
+    grad.addColorStop(0, 'rgba(255,255,255,0.2)')
+    grad.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = grad; ctx.fill()
+
+    ctx.strokeStyle = (isSelected || isCommonNeighbor) ? '#fff' : 'rgba(255,255,255,0.4)'
+    ctx.lineWidth = (isSelected || isCommonNeighbor ? 3 : 1.2) / globalScale; ctx.stroke()
 
     // ID Label (Luôn luôn hiện)
-    const fontSize = Math.max(5, (isSelected || isCommonNeighbor ? 13 : 9) / Math.sqrt(globalScale))
-    ctx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`
+    const fontSize = Math.max(4, (isSelected || isCommonNeighbor ? 12 : 8.5) / Math.sqrt(globalScale))
+    ctx.font = `900 ${fontSize}px Inter, system-ui, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     
-    // Vẽ nền cho chữ ID để đảm bảo luôn đọc được
     const text = String(node.id)
-    const tw = ctx.measureText(text).width
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'
-    ctx.fillRect(node.x - tw/2 - 1, node.y - fontSize/2 - 1, tw + 2, fontSize + 2)
-
+    
+    // Thay thế "bôi đen" bằng viền trắng mờ hoặc bóng đổ thông minh
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)'
+    ctx.lineWidth = 2 / globalScale
+    ctx.strokeText(text, node.x, node.y)
+    
     ctx.fillStyle = '#fff'
     ctx.fillText(text, node.x, node.y)
     
@@ -240,6 +318,7 @@ export default function TaskTopology3() {
         linkCanvasObject={linkCanvasObject}
         linkCanvasObjectMode={() => 'replace'}
         onNodeClick={(node) => setSelectedNode(selectedNodeId === node.id ? null : node.id)}
+        onNodeHover={(node) => setHoveredNode(node?.id ?? null)}
         onLinkHover={(link) => setHoveredLink(link)}
         minZoom={0.3}
         maxZoom={3}
@@ -252,6 +331,8 @@ export default function TaskTopology3() {
           fitView(400, 60)
         }}
       />
+
+      <NodeHoverCard />
 
       {/* DYNAMIC GAUGE */}
       <div className="absolute bottom-6 right-6 pointer-events-none flex flex-col items-center">

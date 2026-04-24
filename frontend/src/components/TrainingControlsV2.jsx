@@ -167,6 +167,7 @@ export default function TrainingControlsV2() {
             loadSnapshots(result.snapshots)
         }
         setDone(result.snapshots.length - 1)
+        setTraining(false, 1)
       }, 280)
     } else {
       // Upload file path if available
@@ -198,7 +199,11 @@ export default function TrainingControlsV2() {
 
   const handleStop = useCallback(async () => {
     try {
-      await fetch(`${API}/stop`, { method: 'POST' })
+      await fetch(`${API}/stop`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
     } catch (e) {
       console.error('Failed to notify backend to stop:', e)
     }

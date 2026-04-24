@@ -13,6 +13,7 @@ const BaseForceGraph = forwardRef(({
   onRenderFramePre,
   onNodeClick,
   onNodeRightClick,
+  onNodeHover,
   cooldownTicks = 100,
   forceConfig = { charge: -120, link: 35, center: 0.05 },
   extraForces = null,
@@ -23,6 +24,7 @@ const BaseForceGraph = forwardRef(({
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 })
   const [stableData, setStableData] = useState(null)
   const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
+  const setHoveredNode = useGNNStore((s) => s.setHoveredNode)
 
   useImperativeHandle(ref, () => ({
     fgRef: fgRef,
@@ -71,6 +73,11 @@ const BaseForceGraph = forwardRef(({
     if (onNodeClick) onNodeClick(node)
   }, [setSelectedNode, onNodeClick])
 
+  const handleNodeHover = useCallback((node) => {
+    setHoveredNode(node?.id ?? null)
+    if (onNodeHover) onNodeHover(node)
+  }, [setHoveredNode, onNodeHover])
+
   if (!stableData) return <div ref={containerRef} className="w-full h-full bg-slate-900 animate-pulse flex items-center justify-center text-slate-700 text-[10px] uppercase font-black tracking-widest">Initializing Engine...</div>
 
   return (
@@ -86,6 +93,7 @@ const BaseForceGraph = forwardRef(({
         onRenderFramePre={onRenderFramePre}
         onNodeClick={handleNodeClick}
         onNodeRightClick={onNodeRightClick}
+        onNodeHover={handleNodeHover}
         cooldownTicks={cooldownTicks}
         backgroundColor="rgba(0,0,0,0)"
         enableNodeDrag={true}

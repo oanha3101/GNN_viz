@@ -26,6 +26,7 @@ const useGNNStore = create((set, get) => ({
 
   // ─── Selection / UI ──────────────────────────────────────────
   selectedNodeId: null,
+  hoveredNodeId: null,      // NEW: track node currently under mouse
   hoveredGraphId: null,
   selectedCommunityId: null, // Task 4 — community selected via canvas click / metric table
   focusedEdgeIdx: null,      // Task 3 — edge index a hard-edge row asks the canvas to focus
@@ -63,6 +64,7 @@ const useGNNStore = create((set, get) => ({
       isTraining: false,
       trainingProgress: 0,
       selectedNodeId: null,
+      hoveredNodeId: null,
       selectedTargetNodeId: null,
       task6FilterMode: 'all',
       selectedCommunityId: null,
@@ -88,6 +90,7 @@ const useGNNStore = create((set, get) => ({
       trainMask: null,
       taskData: null,
       selectedNodeId: null,
+      hoveredNodeId: null,
       selectedCommunityId: null,
       focusedEdgeIdx: null,
       outlierPulseIdx: null,
@@ -148,6 +151,7 @@ const useGNNStore = create((set, get) => ({
   },
 
   // ─── Actions: UI ─────────────────────────────────────────────
+  setHoveredNode: (id) => set({ hoveredNodeId: id }),
   setHoveredGraph: (id) => set({ hoveredGraphId: id }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setAttentionHead: (head) => set({ attentionHead: head }),

@@ -66,16 +66,18 @@ def list_datasets():
     return get_available_datasets()
 
 @app.post("/api/stop")
-def stop_training(payload: dict):
+def stop_training(payload: dict = None):
     """Dừng một phiên training cụ thể hoặc toàn bộ (fallback)."""
+    if payload is None:
+        payload = {}
     session_id = payload.get("session_id")
     if session_id:
         session_manager.stop_session(session_id)
         return {"status": "stopping", "session_id": session_id}
     else:
-        # Fallback: Nếu không có ID, thông báo cho toàn bộ (để tương thích FE cũ)
-        # Trong kiến trúc mới, chúng ta khuyến khích dùng session_id
-        return {"status": "error", "message": "Session ID required for precise stopping."}
+        # Fallback: Nếu không có ID, dừng toàn bộ các session đang hoạt động
+        session_manager.stop_all_sessions()
+        return {"status": "stopping_all"}
 
 @app.post("/api/upload-graph")
 async def upload_graph(file: UploadFile = File(...)):

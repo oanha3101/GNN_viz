@@ -1,5 +1,4 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Network, BarChart3, Globe2, BookOpen, FolderUp, Settings, HelpCircle,
   PanelRightOpen, PanelRightClose, FlaskConical, Plug, ChevronLeft, ChevronRight,
@@ -19,8 +18,7 @@ import Task1MetricsPanel from './components/MetricsChart/Task1MetricsPanel'
 import MetricsChart from './components/MetricsChart/MetricsChart'
 import NodeInfoPanel from './components/TopologyView/NodeInfoPanelV2'
 import Player from './components/PlayerV2'
-import TaskSelector from './components/TaskSelectorV2'
-import ModelSelector from './components/ModelSelectorV2'
+import LeftSidebar from './components/Shell/LeftSidebar'
 import TrainingControls from './components/TrainingControlsV2'
 import ConfigPanel from './components/ConfigPanel/ConfigPanel'
 import InductiveDemo from './components/TopologyView/InductiveDemo'
@@ -93,45 +91,6 @@ function PanelHeading({ title, subtitle, align = 'left' }) {
           <span className="text-nano text-slate-400 font-bold uppercase tracking-wide leading-none">{subtitle}</span>
         </>
       )}
-    </div>
-  )
-}
-
-// ─── Sidebar Navigation ─────────────────────────────
-function AppSidebar({ collapsed, onToggle, activeTab, setActiveRightTab, rightPanelOpen, setRightPanelOpen, onOpenLibrary, onOpenDataInput, onOpenConfig }) {
-  const nav = [
-    { icon: Network, label: 'Topology', id: 'topology', action: () => {} },
-    { icon: Globe2, label: 'Latent Space', id: 'embedding', action: () => { setRightPanelOpen(true); setActiveRightTab('embedding') } },
-    { icon: BarChart3, label: 'Performance', id: 'metrics', action: () => { setRightPanelOpen(true); setActiveRightTab('metrics') } },
-  ]
-  const tools = [
-    { icon: BookOpen, label: 'Library', action: onOpenLibrary },
-    { icon: FolderUp, label: 'Upload Data', action: onOpenDataInput },
-    { icon: Settings, label: 'Settings', action: onOpenConfig },
-  ]
-  return (
-    <div className="h-full flex flex-col bg-[#050c19]/40 backdrop-blur-2xl border-r border-white/5 shadow-2xl">
-      <div className="flex items-center justify-center py-3 border-b border-slate-800/40">
-        <button onClick={onToggle} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-all">
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
-      </div>
-      <div className="flex-1 flex flex-col py-3 px-2 gap-1">
-        {!collapsed && <div className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.2em] mb-2 px-2">Views</div>}
-        {nav.map((item) => (
-          <SidebarButton key={item.id} icon={item.icon} label={item.label}
-            active={item.id === 'topology' ? true : rightPanelOpen && activeTab === item.id}
-            collapsed={collapsed} onClick={item.action} />
-        ))}
-        <div className="h-px bg-slate-800/50 my-3" />
-        {!collapsed && <div className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.2em] mb-2 px-2">Tools</div>}
-        {tools.map((item) => (
-          <SidebarButton key={item.label} icon={item.icon} label={item.label} collapsed={collapsed} onClick={item.action} />
-        ))}
-      </div>
-      <div className="py-3 px-2 border-t border-slate-800/40">
-        <SidebarButton icon={HelpCircle} label="Help & Guide" collapsed={collapsed} onClick={() => {}} />
-      </div>
     </div>
   )
 }
@@ -251,12 +210,16 @@ function App() {
   const trainingDone = usePlayerStore((s) => s.trainingDone)
   const reportVersion = usePlayerStore((s) => s.reportVersion)
   const selectedTask = useGNNStore((s) => s.selectedTask)
+  const selectedNodeId = useGNNStore((s) => s.selectedNodeId)
   const snapshot = snapshots[currentEpoch]
   const lastReportVersionRef = useRef(0)
 
   const [isDataInputOpen, setIsDataInputOpen] = useState(false)
   const [isLibraryOpen, setIsLibraryOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('gnnSidebarCollapsed')
+    return saved !== null ? JSON.parse(saved) : false
+  })
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
   const [activeRightTab, setActiveRightTab] = useState('embedding')
 
@@ -288,13 +251,58 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Auto-popup của TrainingReport đã bị gỡ theo yêu cầu — nó làm phiền mỗi lần
-  // người dùng bấm Run hoặc chuyển task. Report giờ chỉ mở khi user bấm nút.
   useEffect(() => {
     if (!isTraining && trainingDone && snapshots.length > 0 && reportVersion > lastReportVersionRef.current) {
       lastReportVersionRef.current = reportVersion
     }
   }, [isTraining, trainingDone, snapshots.length, reportVersion])
+
+  // Persist sidebar state
+  useEffect(() => {
+    localStorage.setItem('gnnSidebarCollapsed', JSON.stringify(sidebarCollapsed))
+  }, [sidebarCollapsed])
+
+  // Auto-open right panel when a node is selected
+  useEffect(() => {
+    if (selectedNodeId !== null) {
+      setRightPanelOpen(true)
+      setActiveRightTab('metrics')
+    }
+  }, [selectedNodeId])
+
+  // Handle training request from sidebar
+  useEffect(() => {
+    const handler = () => {
+      // Find and click the hidden TrainingControls start button
+      // or we can just trigger the same event TrainingControls expects
+      const gnnState = useGNNStore.getState()
+      const hp = gnnState.hyperparams
+      const up = gnnState.uploadedFilePath
+      
+      if (!gnnState.mockMode && !up) {
+         alert("⚠️ CHƯA CÓ DỮ LIỆU UPLOAD!\n\nVui lòng nhấn nút 'Tải dữ liệu' ở sidebar để tải dữ liệu của bạn lên trước khi chạy mô hình thực tế.")
+         return
+      }
+
+      window.dispatchEvent(new CustomEvent('gnn:start-training', {
+        detail: {
+          task: gnnState.selectedTask,
+          model: gnnState.selectedModel,
+          dataset: hp.dataset || 'cora',
+          epochs: hp.epochs,
+          lr: hp.lr,
+          hidden: hp.hidden,
+          dropout: hp.dropout,
+          heads: hp.heads,
+          aggregator: hp.aggregator,
+          ...(up ? { uploaded_file_path: up } : {}),
+          ...(gnnState.taskConfig || {})
+        }
+      }))
+    }
+    window.addEventListener('gnn:request-start-training', handler)
+    return () => window.removeEventListener('gnn:request-start-training', handler)
+  }, [])
 
   const valAcc = snapshot ? (snapshot.val_acc * 100).toFixed(1) : '--'
   const trainLoss = snapshot ? snapshot.train_loss.toFixed(3) : '--'
@@ -334,8 +342,6 @@ function App() {
           })()}
           <div className="h-6 w-px bg-slate-800" />
           <div className="flex items-center gap-2">
-            <TaskSelector />
-            <ModelSelector />
             <InductiveDemo />
           </div>
         </div>
@@ -374,11 +380,11 @@ function App() {
       {/* ═══ Main Workspace ═══ */}
       <main className="flex-1 flex overflow-hidden relative bg-[#020617] min-h-0">
         {/* Floating Sidebar Overlay */}
-        <div className={`absolute left-0 top-0 bottom-0 z-40 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'w-[56px]' : 'w-[200px]'}`}>
-          <AppSidebar
+        <div className={`absolute left-0 top-0 bottom-0 z-40 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'w-[64px]' : 'w-[240px]'}`}>
+          <LeftSidebar
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-            activeTab={activeRightTab}
+            activeRightTab={activeRightTab}
             setActiveRightTab={setActiveRightTab}
             rightPanelOpen={rightPanelOpen}
             setRightPanelOpen={setRightPanelOpen}
@@ -389,7 +395,10 @@ function App() {
         </div>
 
         {/* Full-width content area (Sidebar is an overlay) */}
-        <div className="flex-1 flex min-w-0 h-full relative">
+        <div 
+          className="flex-1 flex min-w-0 h-full relative transition-all duration-300 ease-in-out"
+          style={{ paddingLeft: sidebarCollapsed ? '64px' : '240px' }}
+        >
           <ResizableWorkspace
             rightPanelOpen={rightPanelOpen}
             leftContent={
@@ -417,25 +426,23 @@ function App() {
                     </button>
                   </div>
                   <div className="flex-1 relative overflow-hidden min-h-0">
-                    <AnimatePresence mode="wait">
-                      {activeRightTab === 'embedding' ? (
-                        <motion.div key="embedding" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full">
-                          <ErrorBoundary><EmbeddingRouter /></ErrorBoundary>
-                        </motion.div>
-                      ) : (
-                        <motion.div key="metrics" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full overflow-y-auto custom-scrollbar p-4 space-y-6">
-                          <ErrorBoundary>
-                            {selectedTask === 1 ? <Task1MetricsPanel /> :
-                             selectedTask === 2 ? <Task2MetricsPanel /> :
-                             selectedTask === 3 ? <Task3MetricsPanel /> :
-                             selectedTask === 4 ? <Task4MetricsPanel /> :
-                             selectedTask === 5 ? <Task5MetricsPanel /> :
-                             selectedTask === 6 ? <Task6MetricsPanel /> :
-                             <MetricsChart />}
-                          </ErrorBoundary>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    {activeRightTab === 'embedding' ? (
+                      <div className="h-full">
+                        <ErrorBoundary><EmbeddingRouter /></ErrorBoundary>
+                      </div>
+                    ) : (
+                      <div className="h-full overflow-y-auto custom-scrollbar p-4 space-y-6">
+                        <ErrorBoundary>
+                          {selectedTask === 1 ? <Task1MetricsPanel /> :
+                            selectedTask === 2 ? <Task2MetricsPanel /> :
+                            selectedTask === 3 ? <Task3MetricsPanel /> :
+                            selectedTask === 4 ? <Task4MetricsPanel /> :
+                            selectedTask === 5 ? <Task5MetricsPanel /> :
+                            selectedTask === 6 ? <Task6MetricsPanel /> :
+                            <MetricsChart />}
+                        </ErrorBoundary>
+                      </div>
+                    )}
                   </div>
                 </div>
               }

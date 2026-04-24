@@ -3,6 +3,27 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import usePlayerStore from '../../store/playerStore'
 
 /**
+ * ValidityBar — Single horizontal progress bar with label and value.
+ * Smooth transition-all for the fill width.
+ */
+function ValidityBar({ label, value, color }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-[9px] font-bold uppercase tracking-wider">
+        <span className="text-slate-500">{label}</span>
+        <span style={{ color }}>{(value * 100).toFixed(1)}%</span>
+      </div>
+      <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5">
+        <div 
+          className="h-full rounded-full transition-all duration-300 ease-out"
+          style={{ width: `${value * 100}%`, backgroundColor: color, boxShadow: `0 0 8px ${color}44` }} 
+        />
+      </div>
+    </div>
+  )
+}
+
+/**
  * ValidityMonitor — Info panel for Task 6 (Graph Generation)
  * Shows 3 metrics over epochs: Validity%, Uniqueness%, Novelty%
  */
@@ -36,29 +57,23 @@ export default function ValidityMonitor() {
   }
 
   return (
-    <div className="h-full flex flex-col p-3 text-xs overflow-auto bg-slate-950">
-      <h3 className="text-micro font-black text-slate-400 uppercase tracking-ultra mb-3">
+    <div className="h-full flex flex-col p-4 text-xs overflow-auto bg-slate-950 custom-scrollbar">
+      <h3 className="text-micro font-black text-slate-400 uppercase tracking-ultra mb-4">
         Generation Quality
       </h3>
 
-      {/* Metric cards */}
-      <div className="grid grid-cols-3 gap-1.5 mb-3">
-        <div className="bg-green-900/20 rounded-lg px-1.5 py-1.5 text-center border border-green-500/20">
-          <span className="text-nano text-green-500/70 block uppercase font-bold">Valid</span>
-          <span className="text-sm font-black font-mono text-green-400">{(validity * 100).toFixed(0)}%</span>
-        </div>
-        <div className="bg-blue-900/20 rounded-lg px-1.5 py-1.5 text-center border border-blue-500/20">
-          <span className="text-nano text-blue-500/70 block uppercase font-bold">Unique</span>
-          <span className="text-sm font-black font-mono text-blue-400">{(uniqueness * 100).toFixed(0)}%</span>
-        </div>
-        <div className="bg-purple-900/20 rounded-lg px-1.5 py-1.5 text-center border border-purple-500/20">
-          <span className="text-nano text-purple-500/70 block uppercase font-bold">Novel</span>
-          <span className="text-sm font-black font-mono text-purple-400">{(novelty * 100).toFixed(0)}%</span>
-        </div>
+      {/* Progress Bars */}
+      <div className="flex flex-col gap-4 mb-6">
+        <ValidityBar label="Validity" value={validity} color="#22c55e" />
+        <ValidityBar label="Uniqueness" value={uniqueness} color="#3b82f6" />
+        <ValidityBar label="Novelty" value={novelty} color="#a855f7" />
       </div>
 
+      <div className="h-px bg-slate-800/40 mb-4" />
+
       {/* Stacked area chart */}
-      <div className="flex-1 min-h-[120px] mb-2">
+      <div className="flex-1 min-h-[160px] mb-4">
+        <div className="text-[9px] font-bold text-slate-600 uppercase tracking-wider mb-2">Historique Qualité</div>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={historyData}>
             <defs>
@@ -90,14 +105,14 @@ export default function ValidityMonitor() {
         </ResponsiveContainer>
       </div>
 
-      {/* Loss cards */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="bg-slate-900/60 rounded-lg px-2 py-1.5 text-center border border-slate-800/50">
-          <span className="text-nano text-slate-500 block uppercase font-bold">Recon Loss</span>
+      {/* Loss metrics */}
+      <div className="grid grid-cols-2 gap-2 mt-auto">
+        <div className="bg-slate-900/60 rounded-lg px-2 py-2 text-center border border-slate-800/50">
+          <span className="text-nano text-slate-500 block uppercase font-bold mb-1">Recon Loss</span>
           <span className="text-xs font-bold font-mono text-orange-400">{reconLoss.toFixed(3)}</span>
         </div>
-        <div className="bg-slate-900/60 rounded-lg px-2 py-1.5 text-center border border-slate-800/50">
-          <span className="text-nano text-slate-500 block uppercase font-bold">KL Loss</span>
+        <div className="bg-slate-900/60 rounded-lg px-2 py-2 text-center border border-slate-800/50">
+          <span className="text-nano text-slate-500 block uppercase font-bold mb-1">KL Loss</span>
           <span className="text-xs font-bold font-mono text-purple-400">{klLoss.toFixed(3)}</span>
         </div>
       </div>

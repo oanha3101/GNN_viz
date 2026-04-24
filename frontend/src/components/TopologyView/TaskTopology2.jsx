@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import NodeHoverCard from './NodeHoverCard'
 
 const GRAPH_LABELS = ['Dense Structure', 'Sparse Network']
 
@@ -101,6 +102,7 @@ export default function TaskTopology2() {
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const taskData = useGNNStore((s) => s.taskData)
   const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
+  const setHoveredNode = useGNNStore((s) => s.setHoveredNode)
   const selectedNodeId = useGNNStore((s) => s.selectedNodeId)
   const [selectedGraphIdx, setSelectedGraphIdx] = useState(null)
   const fgRefDetail = useRef()
@@ -208,6 +210,7 @@ export default function TaskTopology2() {
             graphData={detailGraphData}
             nodeCanvasObject={renderNodeDetail}
             nodeCanvasObjectMode={() => 'replace'}
+            onNodeHover={(node) => setHoveredNode(node?.id ?? null)}
             linkColor={() => 'rgba(59, 130, 246, 0.15)'}
             linkWidth={1.5}
             backgroundColor="transparent"
@@ -216,6 +219,8 @@ export default function TaskTopology2() {
             }}
           />
         </div>
+
+        <NodeHoverCard />
 
         {/* Corner-only exit control; full metadata lives in the right-rail Inspector */}
         <div className="absolute top-3 left-3 z-50">

@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import NodeHoverCard from './NodeHoverCard'
 import { polygonHull } from 'd3-polygon'
 import { normalizeCommunityCenters } from '../../utils/task4Metrics'
 
@@ -26,6 +27,7 @@ export default function TaskTopology4() {
   const rawGraphData = useGNNStore(s => s.graphData)
   const selectedCommunityId = useGNNStore(s => s.selectedCommunityId)
   const setSelectedCommunity = useGNNStore(s => s.setSelectedCommunity)
+  const setHoveredNode = useGNNStore(s => s.setHoveredNode)
   const { snapshots, currentEpochFloat } = usePlayerStore()
 
   const containerRef = useRef()
@@ -235,8 +237,11 @@ export default function TaskTopology4() {
           const cid = snapshots[epochInt]?.node_predictions?.[node.id]
           if (cid !== undefined) setSelectedCommunity(cid)
         }}
+        onNodeHover={(node) => setHoveredNode(node?.id ?? null)}
         onBackgroundClick={() => setSelectedCommunity(null)}
       />
+
+      <NodeHoverCard />
 
       {/* Q HUD + Legend — top-right to avoid the dark lower-left band */}
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 items-end">

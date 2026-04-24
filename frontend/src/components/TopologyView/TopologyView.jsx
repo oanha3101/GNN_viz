@@ -10,6 +10,7 @@ import { drawTask1Node } from '../../engine/drawTask1Node'
 import { computeKHopNeighbors } from '../../utils/khop'
 import { isNodeMisclassified, countMisclassified } from '../../utils/misclassification'
 import { logger } from '../../utils/logger'
+import NodeHoverCard from './NodeHoverCard'
 
 export default function TopologyView() {
   // 1. Dữ liệu tĩnh
@@ -19,6 +20,7 @@ export default function TopologyView() {
   const viewMode = useGNNStore(s => s.viewMode)
   const selectedNodeId = useGNNStore(s => s.selectedNodeId)
   const setSelectedNode = useGNNStore(s => s.setSelectedNode)
+  const setHoveredNode = useGNNStore(s => s.setHoveredNode)
   const attentionHead = useGNNStore(s => s.attentionHead)
   const setAttentionHead = useGNNStore(s => s.setAttentionHead)
 
@@ -35,10 +37,6 @@ export default function TopologyView() {
 
   // Context Menu state
   const [contextMenu, setContextMenu] = useState(null) // { x, y, nodeId }
-
-  // Tooltip state
-  const [hoveredNode, setHoveredNode] = useState(null)
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
 
   // K-Hop neighborhood state
   const [kHopEnabled, setKHopEnabled] = useState(true)
@@ -300,8 +298,7 @@ export default function TopologyView() {
         nodeCanvasObject={nodeCanvasObject}
         nodeCanvasObjectMode={() => 'replace'}
         onNodeRightClick={handleNodeRightClick}
-        onNodeHover={(node) => setHoveredNode(node)}
-        onMouseMove={(e) => setTooltipPos({ x: e.clientX, y: e.clientY })}
+        onNodeHover={(node) => setHoveredNode(node?.id ?? null)}
         // Ép vẽ lại bằng cách đưa CEF vào một prop mà thư viện theo dõi
         onRenderFramePre={() => { }}
         linkColor={(link) => {
@@ -396,79 +393,7 @@ export default function TopologyView() {
         enableNodeDrag={true}
       />
 
-      {/* Custom Tooltip */}
-      <AnimatePresence>
-        {hoveredNode && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 10 }}
-            className="absolute z-[100] pointer-events-none px-4 py-3 rounded-2xl border border-slate-700/40 bg-[#020617]/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] min-w-[180px]"
-            style={{ 
-              left: tooltipPos.x + 20, 
-              top: tooltipPos.y - 40,
-            }}
-          >
-            <div className="flex items-center justify-between gap-4 mb-2">
-              <div className="flex items-center gap-2">
-                <span 
-                  className="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]" 
-                  style={{ backgroundColor: CLASS_COLORS[groundTruth?.[hoveredNode.id] || 0] }} 
-                />
-                <span className="text-[11px] font-black text-white uppercase tracking-tighter">
-                  Node #{hoveredNode.original_id || hoveredNode.id}
-                </span>
-              </div>
-              <div className="text-[9px] bg-slate-800/80 px-1.5 py-0.5 rounded text-slate-400 font-mono">
-                ID {hoveredNode.id}
-              </div>
-            </div>
-
-            {hoveredNode.label_name && (
-               <div className="text-[10px] text-indigo-300 font-bold mb-2 flex items-center gap-1.5 bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/20">
-                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                 Label: {hoveredNode.label_name}
-               </div>
-            )}
-
-            <div className="space-y-1.5 mb-2">
-              <div className="flex justify-between items-center text-[9px]">
-                <span className="text-slate-500 uppercase font-bold">Ground Truth</span>
-                <span className="text-slate-300 font-mono">{CLASS_NAMES[groundTruth?.[hoveredNode.id]] || groundTruth?.[hoveredNode.id] || 'N/A'}</span>
-              </div>
-              
-              {snapshots?.[Math.floor(currentEpochFloat)]?.node_predictions?.[hoveredNode.id] !== undefined && (
-                <div className="flex justify-between items-center text-[9px]">
-                  <span className="text-slate-500 uppercase font-bold">GNN Prediction</span>
-                  <span className="text-cyan-400 font-black">
-                    {CLASS_NAMES?.[snapshots[Math.floor(currentEpochFloat)].node_predictions[hoveredNode.id]] 
-                       || snapshots[Math.floor(currentEpochFloat)].node_predictions[hoveredNode.id]}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Quick Features Preview */}
-            {hoveredNode.features && Object.keys(hoveredNode.features).length > 0 && (
-              <div className="pt-2 border-t border-slate-800/60 mt-2 space-y-1">
-                {Object.entries(hoveredNode.features).slice(0, 3).map(([key, val]) => (
-                  <div key={key} className="flex justify-between items-center text-[8px]">
-                    <span className="text-slate-500 truncate w-20">{key}</span>
-                    <span className="text-emerald-400 font-mono font-bold">
-                      {typeof val === 'number' ? val.toFixed(3) : String(val).substring(0, 8)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-3 pt-2 border-t border-slate-800/60 text-[8px] text-slate-500 italic flex items-center justify-center gap-1.5 bg-slate-900/40 -mx-4 -mb-3 rounded-b-2xl py-2">
-               <Info size={10} className="text-indigo-400" /> 
-               <span>CLICK ĐỂ XEM CHI TIẾT META</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <NodeHoverCard />
 
       {/* Context Menu */}
       <AnimatePresence>

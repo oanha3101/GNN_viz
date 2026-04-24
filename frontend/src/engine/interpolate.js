@@ -59,6 +59,13 @@ export function interpolateSnapshots(snapA, snapB, t) {
   
   const res = { ...snapA }
   
+  // Basic metrics
+  if (snapA.train_loss != null && snapB.train_loss != null) res.train_loss = lerp(snapA.train_loss, snapB.train_loss, eT)
+  if (snapA.val_loss != null && snapB.val_loss != null) res.val_loss = lerp(snapA.val_loss, snapB.val_loss, eT)
+  if (snapA.train_acc != null && snapB.train_acc != null) res.train_acc = lerp(snapA.train_acc, snapB.train_acc, eT)
+  if (snapA.val_acc != null && snapB.val_acc != null) res.val_acc = lerp(snapA.val_acc, snapB.val_acc, eT)
+
+  // Embeddings & Points
   if (snapA.embeddings_2d && snapB.embeddings_2d) {
     res.embeddings_2d = snapA.embeddings_2d.map((ptA, i) => {
       const ptB = snapB.embeddings_2d[i] || ptA
@@ -72,7 +79,21 @@ export function interpolateSnapshots(snapA, snapB, t) {
       return [lerp(ptA[0], ptB[0], eT), lerp(ptA[1], ptB[1], eT)]
     })
   }
+
+  // Task 6: Latent Points
+  if (snapA.latent_points && snapB.latent_points) {
+    res.latent_points = snapA.latent_points.map((ptA, i) => {
+      const ptB = snapB.latent_points[i] || ptA
+      return [lerp(ptA[0], ptB[0], eT), lerp(ptA[1], ptB[1], eT)]
+    })
+  }
+  if (snapA.latent_point_scores && snapB.latent_point_scores) {
+    res.latent_point_scores = snapA.latent_point_scores.map((sA, i) =>
+      lerp(sA, snapB.latent_point_scores[i] || sA, eT)
+    )
+  }
   
+  // Task specific metrics
   if (snapA.node_contributions && snapB.node_contributions) {
     res.node_contributions = snapA.node_contributions.map((arrA, i) => {
       const arrB = snapB.node_contributions[i] || arrA
@@ -94,7 +115,21 @@ export function interpolateSnapshots(snapA, snapB, t) {
   
   if (snapA.auc != null && snapB.auc != null) res.auc = lerp(snapA.auc, snapB.auc, eT)
   if (snapA.ap != null && snapB.ap != null) res.ap = lerp(snapA.ap, snapB.ap, eT)
+
+  // Task 6: Generation Quality
+  if (snapA.validity_rate != null && snapB.validity_rate != null) res.validity_rate = lerp(snapA.validity_rate, snapB.validity_rate, eT)
+  if (snapA.uniqueness_rate != null && snapB.uniqueness_rate != null) res.uniqueness_rate = lerp(snapA.uniqueness_rate, snapB.uniqueness_rate, eT)
+  if (snapA.novelty_rate != null && snapB.novelty_rate != null) res.novelty_rate = lerp(snapA.novelty_rate, snapB.novelty_rate, eT)
+  if (snapA.recon_loss != null && snapB.recon_loss != null) res.recon_loss = lerp(snapA.recon_loss, snapB.recon_loss, eT)
+  if (snapA.kl_loss != null && snapB.kl_loss != null) res.kl_loss = lerp(snapA.kl_loss, snapB.kl_loss, eT)
   
+  // For discrete data, we usually keep snapB as the target, but maybe show snapA if t < 0.5
+  if (t > 0.5) {
+    res.generated_graphs = snapB.generated_graphs
+  } else {
+    res.generated_graphs = snapA.generated_graphs
+  }
+
   return res
 }
 

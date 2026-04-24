@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import NodeHoverCard from './NodeHoverCard'
 import { CLASS_COLORS } from '../../utils/colors'
 
 const EDGE_COLOR_COLD = [6, 182, 212]
@@ -39,6 +40,7 @@ export default function TaskTopology5() {
   const hasLabels = graphMeta?.has_labels || (rawGraphData?.nodes?.[0]?.groundTruth !== undefined)
   const selectedNodeId = useGNNStore(s => s.selectedNodeId)
   const setSelectedNode = useGNNStore(s => s.setSelectedNode)
+  const setHoveredNode = useGNNStore(s => s.setHoveredNode)
   const outlierPulseIdx = useGNNStore(s => s.outlierPulseIdx)
   const setOutlierPulse = useGNNStore(s => s.setOutlierPulse)
 
@@ -306,6 +308,7 @@ export default function TaskTopology5() {
             linkCanvasObject={linkCanvasObject}
             linkCanvasObjectMode={() => 'replace'}
             onNodeClick={node => setSelectedNode(node.id)}
+            onNodeHover={node => setHoveredNode(node?.id ?? null)}
             onBackgroundClick={() => setSelectedNode(null)}
             cooldownTicks={200}
             warmupTicks={30}
@@ -319,6 +322,8 @@ export default function TaskTopology5() {
               fitView()
             }}
           />
+
+          <NodeHoverCard />
 
           {/* Proximity Legend */}
           <div className="absolute bottom-2 left-2 bg-slate-900/90 backdrop-blur-md rounded-lg px-2 py-1 border border-slate-700/40 z-10 pointer-events-none">
