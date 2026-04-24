@@ -254,13 +254,14 @@ Frontend (DataInputView.jsx)
 ---
 
 ## 6. Database Schema
-
-### MySQL / SQLite (Relational Metadata)
+### MySQL (Relational Metadata - Port 3344)
 
 ```sql
+-- Database: gnn_db
 -- users
 CREATE TABLE users (
     id INT PRIMARY KEY,
+...
     email VARCHAR(100) UNIQUE,
     username VARCHAR(50) UNIQUE,
     hashed_password VARCHAR(200),

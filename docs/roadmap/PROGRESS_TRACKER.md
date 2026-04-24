@@ -52,16 +52,16 @@
 
 ---
 
-## 🏗️ SPRINT 4 — BatchHeatmap (Task 2) + CommunityEvolution (Task 4)
+## 🏗️ SPRINT 5 — Unification & Data Standards (Cập nhật 2026-04-24)
 
-| # | Hạng mục | Trạng thái | File | Ghi chú |
-|:--|:---------|:-----------|:-----|:--------|
-| 4.1 | BE: graph_correct per graph | ✅ Xong | `graph_classification.py` | Array boolean đúng/sai mỗi graph |
-| 4.2 | FE: Task2MetricsPanel + BatchHeatmap | ✅ Xong | `Task2MetricsPanel.jsx` | 2 tabs: 📈 Loss/Acc + 🗂 Batch Heatmap |
-| 4.3 | BE: community_transitions | ✅ Xong | `community_detection.py` | Dict `"X→Y": count` mỗi epoch |
-| 4.4 | FE: CommunityEvolution — Area + Sankey | ✅ Xong | `CommunityEvolution.jsx` | Stacked area full-height, Sankey chỉ khi có data |
-| 4.5 | App.jsx routing cập nhật | ✅ Xong | `App.jsx` | Task 2 → Task2MetricsPanel, Task 4 Embedding → CommunityEvolution |
-| 4.6 | Fix title dynamic ở EmbeddingRouter | ✅ Xong | `App.jsx` | Task 4 hiện "Community Evolution" thay vì "Không gian embedding" |
+| # | Hạng mục | Trạng thái | Ghi chú |
+|:--|:---------|:-----------|:--------|
+| 5.1 | Unified Docker Infra (MySQL 3344, Mongo, Redis) | ✅ Xong | Đồng bộ port và kết nối ổn định |
+| 5.2 | Start Scripts (`start_all.sh`, `start_backend.sh`) | ✅ Xong | Khởi động 1-click + auto-clean zombie processes |
+| 5.3 | Excel Dataset Restructuring (Split files) | ✅ Xong | Cora, Karate, MUTAG tách thành nodes/edges/graphs.xlsx |
+| 5.4 | Task-based Mapping UI | ✅ Xong | Ẩn/hiện mapping field linh hoạt theo Task |
+| 5.5 | Fix: Experiment Duplication Bug | ✅ Xong | Thêm `isHistory` flag vào `setDone` |
+| 5.6 | Fix: UTC Timezone Offset Bug | ✅ Xong | Ép kiểu `replace(tzinfo=timezone.utc)` ở Backend |
 
 ---
 
@@ -69,12 +69,10 @@
 
 | # | Mô tả | Mức độ | Vị trí | Ghi chú |
 |:--|:------|:-------|:-------|:--------|
-| ~~B1~~ | **~~Top-K Links chỉ là badge text~~** | ✅ Đã sửa | `TaskTopology3.jsx` | Đã vẽ glowing link trực tiếp lên canvas qua `onRenderFramePost`. |
-| ~~B2~~ | **~~CommunityEvolution Sankey thường trống~~** | ➖ Bỏ qua | `community_detection.py` | (Tính chất thuật toán) GNN hội tụ nhanh nên KMeans ổn định sớm, Sankey trống là data thực tế. Dùng soft assignment nếu muốn thay đổi. |
-| ~~B3~~ | **~~DendrogramView bị mất khỏi UI Task 4~~** | ➖ Bỏ qua | `App.jsx` | (Chủ ý Thiết kế) Nhường chỗ cho CommunityEvolution. Dendrogram vẫn xem được ở InspectorDrawer (icon bên phải). |
-| ~~B4~~ | **~~FloatPanel không đóng bằng ESC~~** | ✅ Đã sửa | `FloatPanel.jsx` | Đã thêm `useEffect` lắng nghe sự kiện keydown. |
-| ~~B5~~ | **~~Bundle size 6.2MB~~** | ✅ Đã sửa | `vite.config.js` | Đã dùng `manualChunks` tách `plotly` và `vendor` ra khỏi bundle chính (index giảm còn 500KB). |
-| ~~B6~~ | **~~PanelHeading chồng chữ~~** | ✅ Đã sửa | `EmbeddingSpaceB.jsx`, `LatentSpaceView.jsx` | Đã dịch chuyển các selector/tiêu đề xuống thấp hơn `pt-8`. |
+| B1-B6 | Các lỗi cũ của Sprint 1-4 | ✅ Đã sửa | Nhiều nơi | Xem lịch sử commit |
+| B7 | Task 1 Error Mode bị khóa logic | ❌ Đang làm | `TopologyView.jsx` | Cần mở lại filter misclassified |
+| B8 | Thiếu validation dữ liệu upload ở FE | ❌ Đang làm | `DataInputView.jsx` | Cần check trùng ID, missing edges |
+
 
 ---
 

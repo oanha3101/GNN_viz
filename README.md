@@ -4,23 +4,29 @@ An interactive web application that visualizes how GNNs learn — epoch by epoch
 
 ## Quick Start
 
-### Frontend (Mock Mode — no backend needed)
+### 1. Infrastructure (Docker)
+Ensure Docker/Colima is running.
 ```bash
-cd frontend
-npm install
-npm run dev
-# Open http://localhost:5173
-# Click [Mock Mode] → [Start Training] → [▶ Play]
+docker-compose up -d
+# Runs MySQL (3344), MongoDB (27017), Redis (6379)
 ```
 
-### Backend (Live Mode — real model training)
+### 2. Launch Unified (FE + BE)
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python main.py
+./start_all.sh
+# Automated: environment setup, venv activation, FE+BE startup.
 ```
+
+### Manual Launch
+- **Frontend**: `cd frontend && npm install && npm run dev`
+- **Backend**: `cd backend && source venv/bin/activate && python3 main.py`
+
+## Project Documentation
+All documentation is now organized in the `docs/` folder:
+- **`docs/user/`**: [Dataset Mapping Guide](docs/user/DATASET_MAPPING_GUIDE.md), Visualization tips.
+- **`docs/technical/`**: [Project Overview](docs/technical/PROJECT_OVERVIEW.md), Architecture details.
+- **`docs/roadmap/`**: Progress tracker and future plans.
+
 
 ## Features
 - **6 Tasks**: Node Classification, Graph Classification, Link Prediction, Community Detection, Graph Embedding, Graph Generation

@@ -122,9 +122,37 @@ export default function DataInputView({ onClose }) {
           )
         } else {
           const wb = XLSX.read(bstr, { type: 'binary' })
-          const wsname = wb.SheetNames[0]
-          const ws = wb.Sheets[wsname]
-          jsonData = XLSX.utils.sheet_to_json(ws)
+          
+          // Smart Multi-sheet Detection
+          const sheetNames = wb.SheetNames
+          const hasNodes = sheetNames.includes('Nodes')
+          const hasEdges = sheetNames.includes('Edges')
+          const hasGraphs = sheetNames.includes('Graphs')
+
+          if (hasNodes || hasEdges || hasGraphs) {
+             console.log("Detected GNN-Insight Multi-sheet format. Auto-loading all sheets...")
+             if (hasNodes) {
+               const nodes = XLSX.utils.sheet_to_json(wb.Sheets['Nodes'])
+               setNodesData(nodes)
+               setNodeCols(Object.keys(nodes[0] || {}))
+               if (type === 'nodes') jsonData = nodes // For the current selection flow
+             }
+             if (hasEdges) {
+               const edges = XLSX.utils.sheet_to_json(wb.Sheets['Edges'])
+               setEdgesData(edges)
+               setEdgeCols(Object.keys(edges[0] || {}))
+             }
+             if (hasGraphs) {
+               const graphs = XLSX.utils.sheet_to_json(wb.Sheets['Graphs'])
+               setGraphsData(graphs)
+               setGraphCols(Object.keys(graphs[0] || {}))
+             }
+             // If we loaded everything, we can jump to mapping or just stay here
+          } else {
+            const wsname = wb.SheetNames[0]
+            const ws = wb.Sheets[wsname]
+            jsonData = XLSX.utils.sheet_to_json(ws)
+          }
         }
 
         if (!jsonData || jsonData.length === 0) throw new Error("File is empty or invalid format")
@@ -170,12 +198,12 @@ export default function DataInputView({ onClose }) {
       return ''
     }
 
-    m.node_id = matchCol(nodeCols, ['id', 'node_id', 'name'])
-    m.node_label = matchCol(nodeCols, ['label', 'class', 'target', 'y'])
+    m.node_id = matchCol(nodeCols, ['id', 'node_id', 'name', 'paper_id', 'pmid'])
+    m.node_label = matchCol(nodeCols, ['label', 'class', 'target', 'y', 'topic', 'club'])
     m.node_features = nodeCols.filter(c => c !== m.node_id && c !== m.node_label && !c.toLowerCase().includes('graph') && !c.toLowerCase().includes('community'))
     
-    m.edge_source = matchCol(edgeCols, ['source', 'src', 'from'])
-    m.edge_target = matchCol(edgeCols, ['target', 'dst', 'to'])
+    m.edge_source = matchCol(edgeCols, ['source', 'src', 'from', 'citing'])
+    m.edge_target = matchCol(edgeCols, ['target', 'dst', 'to', 'cited'])
     m.edge_weight = matchCol(edgeCols, ['weight', 'value'])
     m.edge_label = matchCol(edgeCols, ['label', 'type', 'relation'])
     
@@ -560,51 +588,51 @@ export default function DataInputView({ onClose }) {
                       {nodeCols.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
 
-                    {/* Show label only for T1, T4 */}
-                    {(task === 1 || task === 4) && (
+                    {/* Dynamic Label Mapping */}
+                    {task === 1 && (
                       <>
-                        <label className="text-sm text-slate-400">{task === 4 ? 'Community GT' : 'Label (Y)'}</label>
-                        <select
-                          value={task === 4 ? mapping.community_label : mapping.node_label}
-                          onChange={e => {
-                            if (task === 4) setMapping({...mapping, community_label: e.target.value})
-                            else setMapping({...mapping, node_label: e.target.value})
-                          }}
-                          className="bg-slate-950 border border-slate-700 rounded p-2 text-sm"
-                        >
-                          <option value="">-- {task === 4 ? 'No GT (Unsupervised)' : 'Unsupervised / None'} --</option>
+                        <label className="text-sm text-slate-400">Label (Y) *</label>
+                        <select value={mapping.node_label} onChange={e => setMapping({...mapping, node_label: e.target.value})} className="bg-slate-950 border border-slate-700 rounded p-2 text-sm">
+                          <option value="">-- Select Label Column --</option>
                           {nodeCols.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                       </>
                     )}
 
-                    {task === 1 && (
+                    {task === 4 && (
                       <>
-                        <label className="text-sm text-slate-400">Label (Y)</label>
-                        <select value={mapping.node_label} onChange={e => setMapping({...mapping, node_label: e.target.value})} className="bg-slate-950 border border-slate-700 rounded p-2 text-sm">
-                          <option value="">-- Unsupervised / None --</option>
+                        <label className="text-sm text-slate-400">Community GT</label>
+                        <select
+                          value={mapping.community_label}
+                          onChange={e => setMapping({...mapping, community_label: e.target.value})}
+                          className="bg-slate-950 border border-slate-700 rounded p-2 text-sm"
+                        >
+                          <option value="">-- No GT (Unsupervised) --</option>
                           {nodeCols.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                       </>
                     )}
                   </div>
                   
-                  <div>
-                    <label className="text-sm text-slate-400 block mb-2">Features (X)</label>
-                    <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto border border-slate-800 rounded p-2 bg-slate-950/50">
-                      {nodeCols.map(c => {
-                        const isSel = mapping.node_features.includes(c);
-                        return (
-                          <button key={c} onClick={() => {
-                            const newF = isSel ? mapping.node_features.filter(x => x!==c) : [...mapping.node_features, c]
-                            setMapping({...mapping, node_features: newF})
-                          }} className={`px-2 py-1 rounded text-xs transition-colors ${isSel ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
-                            {c}
-                          </button>
-                        )
-                      })}
+                  {/* Features only for tasks that use them */}
+                  {task !== 4 && task !== 6 && (
+                    <div>
+                      <label className="text-sm text-slate-400 block mb-2">Features (X)</label>
+                      <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto border border-slate-800 rounded p-2 bg-slate-950/50">
+                        {nodeCols.map(c => {
+                          const isSel = mapping.node_features.includes(c);
+                          return (
+                            <button key={c} onClick={() => {
+                              const newF = isSel ? mapping.node_features.filter(x => x!==c) : [...mapping.node_features, c]
+                              setMapping({...mapping, node_features: newF})
+                            }} className={`px-2 py-1 rounded text-xs transition-colors ${isSel ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
+                              {c}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Edge Schema */}
