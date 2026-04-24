@@ -133,6 +133,7 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
                 'node_probabilities': node_probabilities,
                 'node_confidence': node_confidence,
                 'node_correctness': node_correctness,
+                'majority_ratio': [m['majority_ratio'] for m in neighbor_majority],
                 'neighbor_majority': neighbor_majority,
                 'embeddings_2d': emb_2d,
                 'attention_weights': attn_data,

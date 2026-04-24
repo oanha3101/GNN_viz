@@ -63,14 +63,54 @@ class BaseTaskAdapter(ABC):
         """Common processing shared across all tasks: features, labels, edge_index."""
         m = mapping
 
-        # ── Extract Features ──
+        # ── Extract Features (Smart Processing) ──
         if m.node_features:
             valid_features = [f for f in m.node_features if f in df_nodes.columns]
             if valid_features:
-                features_df = df_nodes[valid_features].apply(pd.to_numeric, errors='coerce')
-                features = features_df.fillna(0).values
-                scaler = StandardScaler()
-                features = scaler.fit_transform(features).tolist()
+                processed_parts = []
+                for col in valid_features:
+                    series = df_nodes[col]
+                    
+                    # 1. Nếu là kiểu số (Numeric)
+                    if pd.api.types.is_numeric_dtype(series):
+                        val = pd.to_numeric(series, errors='coerce').fillna(0).values.reshape(-1, 1)
+                        scaler = StandardScaler()
+                        processed_parts.append(scaler.fit_transform(val))
+                    
+                    # 2. Nếu là kiểu thời gian (Datetime)
+                    elif pd.api.types.is_datetime64_any_dtype(series) or 'date' in col.lower() or 'time' in col.lower():
+                        try:
+                            dt = pd.to_datetime(series, errors='coerce').fillna(pd.Timestamp('2020-01-01'))
+                            dt_features = np.column_stack([
+                                dt.dt.year.values,
+                                dt.dt.month.values,
+                                dt.dt.day.values,
+                                dt.dt.hour.values
+                            ]).astype(float)
+                            scaler = StandardScaler()
+                            processed_parts.append(scaler.fit_transform(dt_features))
+                        except:
+                            # Nếu fail thì coi như categorical ở bước sau
+                            pass
+
+                    # 3. Nếu là kiểu phân loại (Categorical)
+                    else:
+                        nunique = series.nunique()
+                        # Nếu số lượng nhóm ít (Low cardinality) -> One-Hot Encoding
+                        if nunique <= 25:
+                            dummies = pd.get_dummies(series, prefix=col, dummy_na=True).values
+                            processed_parts.append(dummies.astype(float))
+                        # Nếu số lượng nhóm quá lớn -> Label Encoding chuẩn hóa về [0, 1]
+                        else:
+                            le = LabelEncoder()
+                            encoded = le.fit_transform(series.astype(str).fillna('Unknown')).reshape(-1, 1)
+                            processed_parts.append(encoded.astype(float) / max(1, nunique - 1))
+                
+                if processed_parts:
+                    features = np.hstack(processed_parts).tolist()
+                else:
+                    # Fallback if all processing failed
+                    features = [[1.0]] * num_nodes
             else:
                 features = [[1.0]] * num_nodes
         else:
@@ -79,12 +119,14 @@ class BaseTaskAdapter(ABC):
         # ── Extract Labels ──
         labels = [0] * num_nodes
         num_classes = 1
+        class_names = []
         if m.node_label and m.node_label in df_nodes.columns:
             encoder = LabelEncoder()
             labels = encoder.fit_transform(
                 df_nodes[m.node_label].fillna('Unknown')
             ).astype(int).tolist()
             num_classes = len(encoder.classes_)
+            class_names = encoder.classes_.tolist()
 
         # ── Edge Index ──
         src_arr = df_edges['_internal_source'].values
@@ -167,6 +209,7 @@ class BaseTaskAdapter(ABC):
             'deg_map': deg_map,
             'G': G,
             'base_nodes': base_nodes,
+            'class_names': class_names,
         }
 
     @abstractmethod
@@ -225,6 +268,7 @@ class NodeClassificationAdapter(BaseTaskAdapter):
         graph_json = {
             "graphData": {"nodes": nodes_json, "links": common['edges_json']},
             "groundTruth": common['labels'],
+            "classNames": common['class_names']
         }
 
         # Build PyG Data

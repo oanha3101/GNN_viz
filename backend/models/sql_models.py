@@ -1,7 +1,17 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, JSON, UniqueConstraint, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from database import Base
+import enum
+
+
+class SessionStatus(str, enum.Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    STOPPED = "stopped"
+
 
 class User(Base):
     __tablename__ = "users"
@@ -11,10 +21,12 @@ class User(Base):
     hashed_password = Column(String(200), nullable=False)
     full_name = Column(String(100))
     is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
     profile_image = Column(String(255))
     created_at = Column(DateTime, default=datetime.utcnow)
 
     projects = relationship("Project", back_populates="owner")
+    training_sessions = relationship("TrainingSession", back_populates="user")
 
 class Project(Base):
     __tablename__ = "projects"
@@ -59,3 +71,43 @@ class Experiment(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     project = relationship("Project", back_populates="experiments")
+
+
+class TrainingSession(Base):
+    """Persistent training session — survives WS disconnect."""
+    __tablename__ = "training_sessions"
+    id = Column(String(36), primary_key=True)  # UUID
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    task_type = Column(Integer, nullable=False)  # 1-6
+    model_type = Column(String(20), default="GCN")
+    dataset_name = Column(String(100), default="cora")
+    config_json = Column(JSON)  # Full training config
+    status = Column(String(20), default=SessionStatus.PENDING.value)
+    last_epoch = Column(Integer, default=-1)
+    total_epochs = Column(Integer, default=100)
+    last_seq = Column(Integer, default=0)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    ended_at = Column(DateTime, nullable=True)
+    error_message = Column(Text, nullable=True)
+
+    user = relationship("User", back_populates="training_sessions")
+    snapshots = relationship("SessionSnapshot", back_populates="session",
+                            cascade="all, delete-orphan",
+                            order_by="SessionSnapshot.epoch")
+
+
+class SessionSnapshot(Base):
+    """Per-epoch snapshot blob reference."""
+    __tablename__ = "session_snapshots"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String(36), ForeignKey("training_sessions.id"), nullable=False)
+    epoch = Column(Integer, nullable=False)
+    blob_ref = Column(String(500), nullable=False)  # Path to .json.gz file
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    session = relationship("TrainingSession", back_populates="snapshots")
+
+    __table_args__ = (
+        UniqueConstraint('session_id', 'epoch', name='uq_session_epoch'),
+    )

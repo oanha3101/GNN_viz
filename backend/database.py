@@ -7,7 +7,7 @@ import redis
 # ── 1. MySQL (Relational Meta-data) ──────────────────────────────────────────
 Base = declarative_base()
 
-MYSQL_URL = os.getenv("MYSQL_URL", "mysql+pymysql://root@127.0.0.1:3307/gnn_insight")
+MYSQL_URL = os.getenv("MYSQL_URL", "mysql+pymysql://root:root@127.0.0.1:3344/gnn_db")
 
 # Fallback to SQLite if MySQL fails or isn't needed locally
 try:
@@ -20,7 +20,7 @@ except Exception:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
-    from models.sql_models import User, Project, Experiment
+    from models.sql_models import User, Project, Experiment, TrainingSession, SessionSnapshot
     Base.metadata.create_all(bind=engine)
     print("Relational Database initialized.")
 

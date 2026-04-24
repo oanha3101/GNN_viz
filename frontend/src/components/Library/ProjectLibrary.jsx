@@ -119,7 +119,7 @@ export default function ProjectLibrary({ isOpen, onClose }) {
       // Restore snapshots and enable replay
       if (exp.snapshots_json && exp.snapshots_json.length > 0) {
         loadSnapshots(exp.snapshots_json)
-        setDone(exp.snapshots_json.length - 1)
+        setDone(exp.snapshots_json.length - 1, true)
       }
 
       // Mark as mock mode false (real data is loaded)

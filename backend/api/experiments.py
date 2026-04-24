@@ -175,7 +175,7 @@ def list_experiments(task_type: Optional[int] = None, limit: int = 50, db: Sessi
             accuracy=r.accuracy or 0.0,
             loss=r.loss or 0.0,
             is_mock=r.is_mock if r.is_mock is not None else False,
-            created_at=r.created_at.isoformat() if r.created_at else "",
+            created_at=r.created_at.replace(tzinfo=timezone.utc).isoformat() if r.created_at else "",
         ))
     return result
 
@@ -223,7 +223,7 @@ def get_experiment(exp_id: int, db: Session = Depends(get_db)):
         ground_truth_json=heavy_data.get("ground_truth_json") or exp.ground_truth_json,
         task_data_json=heavy_data.get("task_data_json") or exp.task_data_json,
         is_mock=exp.is_mock if exp.is_mock is not None else False,
-        created_at=exp.created_at.isoformat() if exp.created_at else "",
+        created_at=exp.created_at.replace(tzinfo=timezone.utc).isoformat() if exp.created_at else "",
     )
 
 

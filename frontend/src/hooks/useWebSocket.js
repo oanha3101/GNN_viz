@@ -3,6 +3,8 @@ import useGNNStore from '../store/useGNNStore'
 import usePlayerStore from '../store/playerStore'
 import { WS_URL } from '../utils/api'
 import { logger } from '../utils/logger'
+import { parseWSMessage, getPayload } from '../contracts/wsMessages'
+import { getErrorMessage } from '../contracts/errorCodes'
 
 export default function useWebSocket() {
   const wsRef       = useRef(null)
@@ -17,6 +19,7 @@ export default function useWebSocket() {
   const setGroundTruth = useGNNStore((s) => s.setGroundTruth)
   const setTaskData   = useGNNStore((s) => s.setTaskData)
   const setTask5Meta  = useGNNStore((s) => s.setTask5Meta)
+  const setClassNames = useGNNStore((s) => s.setClassNames)
 
   const addSnapshot   = usePlayerStore((s) => s.addSnapshot)
   const loadSnapshots = usePlayerStore((s) => s.loadSnapshots)
@@ -54,7 +57,7 @@ export default function useWebSocket() {
     }
 
     wsRef.current.onmessage = async (event) => {
-      let msg;
+      let rawMsg;
       
       // Kiểm tra nếu dữ liệu là nhị phân (Blob) -> Cần giải nén GZIP
       if (event.data instanceof Blob) {
@@ -63,18 +66,39 @@ export default function useWebSocket() {
           const decompressedStream = event.data.stream().pipeThrough(ds);
           const response = new Response(decompressedStream);
           const text = await response.text();
-          msg = JSON.parse(text);
+          rawMsg = JSON.parse(text);
         } catch (err) {
           console.error('WS Decompression Error:', err);
           return;
         }
       } else {
         // Dữ liệu text thông thường
-        msg = JSON.parse(event.data);
+        rawMsg = JSON.parse(event.data);
       }
 
+      // ── Parse through contract validator ──────────────────────────────
+      let msg;
+      try {
+        msg = parseWSMessage(rawMsg);
+      } catch (driftErr) {
+        // Contract drift detected — log but don't crash
+        console.warn('[Contract Drift]', driftErr.message, driftErr.details);
+        // Fallback: try to handle as legacy format
+        msg = {
+          v: 0,
+          type: rawMsg.type || 'unknown',
+          ts: Date.now(),
+          seq: -1,
+          payload: rawMsg.data || rawMsg,
+          progress: rawMsg.progress || null,
+        };
+      }
+
+      // ── Extract payload (handles both v3 envelope and legacy) ─────────
+      const payload = getPayload(msg);
+
       if (msg.type === 'graph_data') {
-        const d = msg.data
+        const d = payload;
 
         // Task 1 & 3: node-level graph structure
         if (d.graphData) {
@@ -83,6 +107,9 @@ export default function useWebSocket() {
         // Task 1 & 3: ground truth node labels
         if (d.groundTruth) {
           setGroundTruth(d.groundTruth)
+        }
+        if (d.classNames) {
+          setClassNames(d.classNames)
         }
         // Task 2: synthetic graphs list
         if (d.graphs) {
@@ -106,29 +133,38 @@ export default function useWebSocket() {
 
       } else if (msg.type === 'graph_metadata') {
         // Task 5: auto-detected graph properties
-        setTask5Meta(msg.data)
+        setTask5Meta(payload)
 
       } else if (msg.type === 'epoch_snapshot') {
-        addSnapshot(msg.data)
+        addSnapshot(payload)
         setTraining(true, msg.progress)
 
       } else if (msg.type === 'training_complete') {
-        // Always load the complete snapshots from backend to ensure consistency
-        // This prevents race conditions where late epoch_snapshots might arrive
-        if (msg.all_snapshots && msg.all_snapshots.length > 0) {
-          loadSnapshots(msg.all_snapshots)
+        // v3: payload = { all_snapshots, session_id }
+        // legacy: top-level all_snapshots
+        const allSnaps = payload?.all_snapshots || rawMsg.all_snapshots;
+        if (allSnaps && allSnaps.length > 0) {
+          loadSnapshots(allSnaps)
         }
         setTraining(false, 1)
         // Don't auto-seek to 0 - let user stay at the latest epoch they were watching
-        setDone(msg.all_snapshots.length - 1)
+        if (allSnaps && allSnaps.length > 0) {
+          setDone(allSnaps.length - 1)
+        }
 
       } else if (msg.type === 'error') {
-        console.error('Training error:', msg.message)
-        console.error(msg.traceback)
+        // v3: structured error with code, message, retriable (no traceback)
+        // legacy: raw message + traceback
+        const errPayload = payload || {};
+        const errMsg = errPayload.message || errPayload.code || 'Unknown error';
+        const userMsg = errPayload.code 
+          ? getErrorMessage(errPayload.code, errPayload.message)
+          : errMsg;
+        console.error('Training error:', userMsg);
         setTraining(false, 0)
 
-      } else if (msg.type === 'ping') {
-        // Keepalive, ignore
+      } else if (msg.type === 'pong' || msg.type === 'ping' || msg.type === 'session_created') {
+        // Protocol messages — handled in future phases
       }
     }
 

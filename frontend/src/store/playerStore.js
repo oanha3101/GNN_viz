@@ -57,8 +57,12 @@ const usePlayerStore = create((set, get) => ({
     })
   },
 
-  setDone: (bestEpoch) => {
-    set((s) => ({ trainingDone: true, bestEpoch, reportVersion: s.reportVersion + 1 }))
+  setDone: (bestEpoch, isHistory = false) => {
+    set((s) => ({ 
+      trainingDone: true, 
+      bestEpoch, 
+      reportVersion: isHistory ? s.reportVersion : s.reportVersion + 1 
+    }))
     const { snapshots } = get()
     // Go back to the beginning after training is finished, so user can press play
     if (snapshots.length > 0) {

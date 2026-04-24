@@ -11,6 +11,7 @@ export default function NodeInfoPanelV2() {
   const groundTruth = useGNNStore((s) => s.groundTruth)
   const graphData = useGNNStore((s) => s.graphData)
   const selectedModel = useGNNStore((s) => s.selectedModel)
+  const classNames = useGNNStore((s) => s.classNames)
   const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
   const { snapshots, currentEpochFloat } = usePlayerStore()
 
@@ -102,7 +103,9 @@ export default function NodeInfoPanelV2() {
       <div className="mb-4 flex items-center justify-between">
         <div>
           <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Nút đang chọn</div>
-          <h3 className="text-lg font-semibold text-white">Nút #{selectedNodeId}</h3>
+          <h3 className="text-lg font-semibold text-white">
+            {node?.original_id ? `Nút ${node.original_id}` : `Nút #${selectedNodeId}`}
+          </h3>
         </div>
         <button
           onClick={() => setSelectedNode(null)}
@@ -117,7 +120,9 @@ export default function NodeInfoPanelV2() {
           <div className="mb-2 text-[10px] uppercase tracking-[0.2em] text-slate-500">Nhãn thật</div>
           <div className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-full" style={{ backgroundColor: getClassColor(gt) }} />
-            <span className="text-sm text-slate-100">{CLASS_NAMES[gt] || `Lớp ${gt}`}</span>
+            <span className="text-sm text-slate-100">
+              {node?.label_name || (classNames && classNames[gt]) || CLASS_NAMES[gt] || `Lớp ${gt}`}
+            </span>
           </div>
         </div>
         <div className={`rounded-2xl border p-4 ${isCorrect ? 'border-emerald-500/30 bg-emerald-500/8' : 'border-red-500/30 bg-red-500/8'}`}>
@@ -125,7 +130,7 @@ export default function NodeInfoPanelV2() {
           <div className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-full" style={{ backgroundColor: getClassColor(pred) }} />
             <span className={`text-sm ${isCorrect ? 'text-emerald-300' : 'text-red-300'}`}>
-              {CLASS_NAMES[pred] || `Lớp ${pred}`} {isCorrect ? 'đúng' : 'sai'}
+              {(classNames && classNames[pred]) || CLASS_NAMES[pred] || `Lớp ${pred}`} {isCorrect ? 'đúng' : 'sai'}
             </span>
           </div>
         </div>
@@ -155,24 +160,20 @@ export default function NodeInfoPanelV2() {
               {Array.isArray(node.features) ? node.features.length : Object.keys(node.features).length} dims
             </span>
           </div>
-          <div className="grid max-h-32 grid-cols-4 gap-1 overflow-y-auto pr-1 custom-scrollbar">
-            {(Array.isArray(node.features) ? node.features : Object.values(node.features)).map((val, idx) => {
-              if (idx >= 60) return null;
+          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+            {Object.entries(node.features || {}).map(([key, val], idx) => {
               return (
                 <div 
-                  key={idx} 
-                  className="rounded bg-slate-800/50 px-1.5 py-1 text-center font-mono text-[9px] text-slate-300"
-                  title={`Dimension ${idx}`}
+                  key={key} 
+                  className="flex items-center justify-between rounded bg-slate-800/50 px-2 py-1.5 border border-white/5"
                 >
-                  {typeof val === 'number' ? val.toFixed(2) : val}
+                  <span className="text-[10px] text-slate-500 font-medium truncate mr-2" title={key}>{key}</span>
+                  <span className="font-mono text-[10px] text-cyan-300 font-bold">
+                    {typeof val === 'number' ? val.toFixed(4) : val}
+                  </span>
                 </div>
               );
             })}
-            {(Array.isArray(node.features) ? node.features.length : Object.keys(node.features).length) > 60 && (
-               <div className="col-span-4 mt-1 text-center text-[9px] italic text-slate-500">
-                 ... và {(Array.isArray(node.features) ? node.features.length : Object.keys(node.features).length) - 60} dimensions khác
-               </div>
-            )}
           </div>
         </div>
       )}

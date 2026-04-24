@@ -1,0 +1,179 @@
+# GNN-Insight WebSocket Contract — Single Source of Truth
+# Version 3.0
+#
+# This file defines the contract between Backend (FastAPI/Python)
+# and Frontend (React/JS) for all WebSocket communication.
+#
+# Changes here MUST be reflected in:
+#   - backend/schemas/constants.py
+#   - backend/schemas/ws.py
+#   - frontend/src/contracts/wsMessages.js
+#   - frontend/src/contracts/errorCodes.js
+
+schema_version: "3.0"
+
+# ─── Tasks ───────────────────────────────────────────────────────────────────
+tasks:
+  1:
+    name: node_classification
+    snapshot: SnapshotTask1
+    description: "Phân loại nút (Cora/CiteSeer)"
+  2:
+    name: graph_classification
+    snapshot: SnapshotTask2
+    description: "Phân loại đồ thị (ER vs Scale-free)"
+  3:
+    name: link_prediction
+    snapshot: SnapshotTask3
+    description: "Dự đoán cạnh thiếu"
+  4:
+    name: community_detection
+    snapshot: SnapshotTask4
+    description: "Phát hiện cộng đồng"
+  5:
+    name: graph_embedding
+    snapshot: SnapshotTask5
+    description: "Embedding unsupervised"
+  6:
+    name: graph_generation
+    snapshot: SnapshotTask6
+    description: "Sinh đồ thị mới"
+
+# ─── Message Types ───────────────────────────────────────────────────────────
+messages:
+  WS_IN:
+    - start
+    - pause
+    - resume
+    - seek
+    - stop
+    - ping
+    - ack
+  WS_OUT:
+    - session_created
+    - graph_data
+    - graph_metadata
+    - epoch_snapshot
+    - training_complete
+    - error
+    - pong
+
+# ─── Wire Envelope ───────────────────────────────────────────────────────────
+envelope:
+  v: int           # schema version (3)
+  type: string     # one of WS_OUT
+  ts: int          # milliseconds since epoch
+  seq: int         # monotonic sequence per session
+  payload: object  # type-specific payload
+  progress: float  # optional, 0..1 for epoch_snapshot
+
+# ─── Error Codes ─────────────────────────────────────────────────────────────
+error_codes:
+  - ERR_INVALID_CONFIG
+  - ERR_TRAINING_FAILED
+  - ERR_SESSION_NOT_FOUND
+  - ERR_DATA_LOAD_FAILED
+  - ERR_MODEL_BUILD_FAILED
+  - ERR_INTERNAL
+  - ERR_AUTH_REQUIRED
+  - ERR_AUTH_INVALID
+
+# ─── Snapshot Schemas ────────────────────────────────────────────────────────
+snapshots:
+  SnapshotTask1:
+    epoch: int
+    node_predictions: array[int]
+    node_probabilities: array[array[float]]
+    node_confidence: array[float]
+    node_correctness: array[int]
+    neighbor_majority: array[{majority_class: int, majority_ratio: float, total_neighbors: int}]
+    embeddings_2d: array[array[float]]
+    attention_weights: array | null
+    train_loss: float
+    val_loss: float
+    train_acc: float
+    val_acc: float
+    dirichlet_energy: float
+
+  SnapshotTask2:
+    epoch: int
+    graph_predictions: array[int]
+    graph_probabilities: array[array[float]]
+    graph_confidences: array[float]
+    confidence_margins: array[float]
+    attention_entropy: array[float]
+    graph_structural_metrics: array[{density: float, avg_clustering: float, avg_degree: float}]
+    graph_correct: array[int]
+    graph_embeddings_2d: array[array[float]]
+    node_contributions: array[array[float]]
+    train_loss: float
+    val_loss: float
+    train_acc: float
+    val_acc: float
+
+  SnapshotTask3:
+    epoch: int
+    edge_scores: array[float]
+    edge_classifications: array[{type: string, score: float, classification: string}]
+    test_edge_common_neighbors: array[{source: int, target: int, is_positive: bool, common_neighbors: int, embedding_distance: float}]
+    embeddings_2d: array[array[float]]
+    knn_preservation: float
+    train_loss: float
+    val_loss: float
+    auc: float
+    val_acc: float
+    top_k_links: array[{source: int, target: int, score: float}]
+
+  SnapshotTask4:
+    epoch: int
+    node_predictions: array[int]
+    bridge_nodes: array[bool]
+    bridge_strength: array[float]
+    silhouette_scores: array[float]
+    cluster_confidence: array[float]
+    cluster_centers: array[array[float]]
+    per_community_metrics: array[{community_id: int, size: int, density: float, conductance: float, internal_edges: int, external_edges: int}]
+    community_stability: float
+    modularity_q: float
+    conductance: float
+    community_sizes: array[int]
+    linkage_matrix: array[array[float]] | null
+    nmi_score: float | null
+    community_transitions: map[string, int]
+    train_loss: float
+    val_acc: float
+
+  SnapshotTask5:
+    epoch: int
+    embeddings_2d: array[array[float]]
+    tsne_2d: array[array[float]] | null
+    knn_preservation: float
+    link_recon_auc: float
+    isotropy_score: float
+    reconstruction_loss: float
+    proximity_scores: array[{source: int, target: int, score: float}]
+    per_node_knn_preservation: map[string, float]
+    per_edge_reconstruction_error: array[{source: int, target: int, reconstruction_score: float, error: float, is_correct: bool}]
+    embedding_norms: array[float]
+    outlier_scores: array[{node_id: int, avg_distance_to_neighbors: float, is_outlier: bool | null}]
+    train_loss: float
+    val_loss: float
+    val_acc: float
+    node_predictions: array[int]
+
+  SnapshotTask6:
+    epoch: int
+    generated_graphs: array[GeneratedGraph]
+    source_graphs: array[object]
+    latent_points: array[array[float]]
+    latent_point_scores: array[float]
+    latent_point_validity: array[float]
+    validity_rate: float
+    uniqueness_rate: float
+    novelty_rate: float
+    recon_loss: float
+    kl_loss: float
+    train_loss: float
+    val_loss: float
+    train_acc: float
+    val_acc: float

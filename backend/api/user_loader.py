@@ -94,7 +94,8 @@ def _parse_and_align(df_nodes: pd.DataFrame, df_edges: pd.DataFrame,
 
 
 def _save_pyg_data(result: dict) -> str:
-    """Save PyG Data (single or list) to temp file. Returns file path."""
+    """Save PyG Data (single or list) to temp file. Returns file path.
+    Also saves the rich graph_json alongside it."""
     datasets_dir = os.path.join(os.path.dirname(__file__), '..', 'datasets')
     os.makedirs(datasets_dir, exist_ok=True)
 
@@ -108,6 +109,11 @@ def _save_pyg_data(result: dict) -> str:
         torch.save(result['pyg_data_list'], tmp_path)
     else:
         torch.save(result['pyg_data'], tmp_path)
+        
+    # Save the rich graph_json
+    if 'graph_json' in result:
+        with open(tmp_path + ".json", 'w') as jf:
+            json.dump(result['graph_json'], jf)
 
     return tmp_path
 

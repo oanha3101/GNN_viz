@@ -1,6 +1,7 @@
 import asyncio
 import json
 import traceback
+import logging
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -10,9 +11,12 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from core.session_manager import session_manager
 from utils.model_utils import build_model
 from utils.data_utils import get_data_from_config
-from utils.ws_msg import send_json_zipped
+from utils.ws_msg import send_json_zipped, SequenceCounter
 from database import redis_client, mongo_available
 from data.loaders import auto_detect_graph
+from schemas.constants import ErrorCode
+
+logger = logging.getLogger(__name__)
 
 # Import training tasks
 from tasks.node_classification import run_node_classification
@@ -60,6 +64,7 @@ def build_graph_json_flexible(data):
 async def train_websocket(websocket: WebSocket):
     await websocket.accept()
     session_id = session_manager.create_session()
+    seq = SequenceCounter()  # v3 envelope sequence counter
 
     try:
         config = await websocket.receive_json()
@@ -71,11 +76,17 @@ async def train_websocket(websocket: WebSocket):
         if not HAS_TORCH:
             await send_json_zipped(websocket, {
                 'type': 'error',
-                'message': 'Backend running in API-only mode (No training).'
-            })
+                'data': {
+                    'code': ErrorCode.ERR_INTERNAL,
+                    'message': 'Backend running in API-only mode (No training).',
+                    'retriable': False,
+                },
+            }, seq_counter=seq)
             return
 
         task_id = config.get('task', 1)
+        if task_id not in [1, 2, 3, 4, 5, 6]:
+            raise ValueError(f"Unknown task ID: {task_id}")
 
         # ── Task 2: Graph Classification ───────────────────────────────────
         if task_id == 2:
@@ -86,9 +97,8 @@ async def train_websocket(websocket: WebSocket):
             )
             await send_json_zipped(websocket, {
                 'type': 'training_complete',
-                'all_snapshots': epoch_snapshots,
-                'session_id': session_id
-            })
+                'data': {'all_snapshots': epoch_snapshots, 'session_id': session_id},
+            }, seq_counter=seq)
             return
 
         # ── Task 3: Link Prediction ────────────────────────────────────────
@@ -104,7 +114,7 @@ async def train_websocket(websocket: WebSocket):
                     'graphData': graph_json,
                     'groundTruth': data.y.cpu().tolist() if hasattr(data, 'y') and data.y is not None else [],
                 },
-            })
+            }, seq_counter=seq)
 
             model_type = config.get('model', 'GCN')
             config['edge_split_ratio'] = config.get('edge_split_ratio', 0.15)
@@ -113,9 +123,8 @@ async def train_websocket(websocket: WebSocket):
             )
             await send_json_zipped(websocket, {
                 'type': 'training_complete',
-                'all_snapshots': epoch_snapshots,
-                'session_id': session_id
-            })
+                'data': {'all_snapshots': epoch_snapshots, 'session_id': session_id},
+            }, seq_counter=seq)
             return
 
         # ── Task 4: Community Detection ────────────────────────────────────
@@ -131,7 +140,7 @@ async def train_websocket(websocket: WebSocket):
                     'graphData': graph_json,
                     'groundTruth': data.y.cpu().tolist() if hasattr(data, 'y') and data.y is not None else [],
                 },
-            })
+            }, seq_counter=seq)
 
             model_type = config.get('model', 'GCN')
             num_communities = config.get('num_communities', 4)
@@ -143,9 +152,8 @@ async def train_websocket(websocket: WebSocket):
             )
             await send_json_zipped(websocket, {
                 'type': 'training_complete',
-                'all_snapshots': epoch_snapshots,
-                'session_id': session_id
-            })
+                'data': {'all_snapshots': epoch_snapshots, 'session_id': session_id},
+            }, seq_counter=seq)
             return
 
         # ── Task 5: Graph Embedding ────────────────────────────────────────
@@ -155,7 +163,7 @@ async def train_websocket(websocket: WebSocket):
             data, graph_meta = auto_detect_graph(data)
             model_type = config.get('model', 'GCN')
 
-            await send_json_zipped(websocket, {'type': 'graph_metadata', 'data': graph_meta})
+            await send_json_zipped(websocket, {'type': 'graph_metadata', 'data': graph_meta}, seq_counter=seq)
             graph_json = build_graph_json_flexible(data)
             await send_json_zipped(websocket, {
                 'type': 'graph_data',
@@ -163,7 +171,7 @@ async def train_websocket(websocket: WebSocket):
                     'graphData': graph_json,
                     'groundTruth': data.y.cpu().tolist() if hasattr(data, 'y') and data.y is not None else [],
                 },
-            })
+            }, seq_counter=seq)
 
             epoch_snapshots, final_embeddings = await run_graph_embedding(
                 config, data, model_type, websocket, stop_check
@@ -174,9 +182,8 @@ async def train_websocket(websocket: WebSocket):
 
             await send_json_zipped(websocket, {
                 'type': 'training_complete',
-                'all_snapshots': epoch_snapshots,
-                'session_id': session_id
-            })
+                'data': {'all_snapshots': epoch_snapshots, 'session_id': session_id},
+            }, seq_counter=seq)
             return
 
         # ── Task 6: Graph Generation ───────────────────────────────────────
@@ -188,9 +195,8 @@ async def train_websocket(websocket: WebSocket):
             )
             await send_json_zipped(websocket, {
                 'type': 'training_complete',
-                'all_snapshots': epoch_snapshots,
-                'session_id': session_id
-            })
+                'data': {'all_snapshots': epoch_snapshots, 'session_id': session_id},
+            }, seq_counter=seq)
             return
 
         # ── Task 1: Node Classification ────────────────────────────────────
@@ -207,14 +213,39 @@ async def train_websocket(websocket: WebSocket):
                 model = build_model(config, data, num_classes=num_classes)
                 optimizer = torch.optim.Adam(model.parameters(), lr=config.get('lr', 0.01))
 
-        graph_json = build_graph_json_flexible(data)
-        await send_json_zipped(websocket, {
-            'type': 'graph_data',
-            'data': {
-                'graphData': graph_json,
-                'groundTruth': data.y.cpu().tolist() if hasattr(data, 'y') and data.y is not None else [],
-            },
-        })
+        import os, json
+        graph_json = None
+        if config.get('uploaded_file_path'):
+            json_path = config.get('uploaded_file_path') + ".json"
+            if os.path.exists(json_path):
+                try:
+                    with open(json_path, 'r') as f:
+                        graph_json = json.load(f)
+                except:
+                    pass
+        
+        if not graph_json:
+            graph_json = build_graph_json_flexible(data)
+
+        if graph_json and isinstance(graph_json, dict) and 'graphData' in graph_json:
+            # Rich format from TaskAdapters
+            await send_json_zipped(websocket, {
+                'type': 'graph_data',
+                'data': {
+                    'graphData': graph_json['graphData'],
+                    'groundTruth': graph_json.get('groundTruth', []),
+                    'classNames': graph_json.get('classNames', [])
+                },
+            }, seq_counter=seq)
+        else:
+            # Standard format from build_graph_json_flexible
+            await send_json_zipped(websocket, {
+                'type': 'graph_data',
+                'data': {
+                    'graphData': graph_json,
+                    'groundTruth': data.y.cpu().tolist() if hasattr(data, 'y') and data.y is not None else [],
+                },
+            }, seq_counter=seq)
 
         epoch_snapshots = await run_node_classification(
             config, data, model, optimizer, websocket, stop_check
@@ -222,17 +253,24 @@ async def train_websocket(websocket: WebSocket):
 
         await send_json_zipped(websocket, {
             'type': 'training_complete',
-            'all_snapshots': epoch_snapshots,
-            'session_id': session_id
-        })
+            'data': {'all_snapshots': epoch_snapshots, 'session_id': session_id},
+        }, seq_counter=seq)
 
     except WebSocketDisconnect:
-        print(f"WebSocket disconnected: Session {session_id}")
+        logger.info(f"WebSocket disconnected: Session {session_id}")
     except Exception as e:
-        await send_json_zipped(websocket, {
-            'type': 'error',
-            'message': str(e),
-            'traceback': traceback.format_exc(),
-        })
+        # Log full traceback internally, send structured error to FE (no traceback leak)
+        logger.error(f"Training error session={session_id}: {e}", exc_info=True)
+        try:
+            await send_json_zipped(websocket, {
+                'type': 'error',
+                'data': {
+                    'code': ErrorCode.ERR_TRAINING_FAILED,
+                    'message': str(e),
+                    'retriable': True,
+                },
+            }, seq_counter=seq)
+        except Exception:
+            pass  # WS may already be closed
     finally:
         session_manager.cleanup_session(session_id)

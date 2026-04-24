@@ -1,3 +1,5 @@
+import useGNNStore from '../store/useGNNStore'
+
 /**
  * buildHoverSummary — Builds a task-aware summary of a node for the HoverCard.
  * 
@@ -22,6 +24,20 @@ export function buildHoverSummary(taskId, nodeId, snapshot, graphData, groundTru
     ]
   }
 
+  // Add custom features if available (top 6)
+  if (node.features && typeof node.features === 'object') {
+    const featEntries = Object.entries(node.features)
+    featEntries.slice(0, 6).forEach(([key, val]) => {
+      summary.rows.push({ 
+        label: key, 
+        value: typeof val === 'number' ? val.toFixed(3) : val 
+      })
+    })
+    if (featEntries.length > 6) {
+      summary.rows.push({ label: '...', value: `+${featEntries.length - 6} more` })
+    }
+  }
+
   // Common fields (if available)
   const gt = groundTruth?.[nodeId]
   if (gt !== undefined) {
@@ -36,11 +52,17 @@ export function buildHoverSummary(taskId, nodeId, snapshot, graphData, groundTru
       
       if (pred !== undefined) {
         const isCorrect = gt !== undefined ? pred === gt : null
+        // Get string names for labels
+        const classNames = useGNNStore.getState().classNames
+        const predName = (classNames && classNames[pred]) || `Lớp ${pred}`
+        const gtName = node.label_name || (classNames && classNames[gt]) || `Lớp ${gt}`
+
         summary.chips.push({
           label: isCorrect === null ? 'Predicted' : (isCorrect ? 'Correct' : 'Incorrect'),
-          value: pred,
+          value: predName,
           tone: isCorrect === null ? 'blue' : (isCorrect ? 'green' : 'red')
         })
+        summary.rows.push({ label: 'Ground Truth', value: gtName })
         summary.rows.push({ label: 'Confidence', value: `${((conf ?? 0) * 100).toFixed(1)}%` })
       }
       break

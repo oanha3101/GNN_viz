@@ -15,7 +15,11 @@ from database import init_db, redis_client
 from api.user_loader import router as user_loader_router
 from api.experiments import router as experiments_router
 from api.routers.training_router import router as training_router
+from api.routers.sessions import router as sessions_router
+from api.routers.auth import router as auth_router
 from core.session_manager import session_manager
+from core.logging_config import setup_logging
+from core.metrics import metrics
 from utils.data_utils import load_csv, load_custom_graph
 from data.loaders import auto_detect_graph, get_available_datasets
 
@@ -29,12 +33,13 @@ except ImportError:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Khởi tạo database
+    # Startup: structured logging + database
+    setup_logging()
     init_db()
     yield
-    # Shutdown logic (nếu có)
+    # Shutdown
 
-app = FastAPI(title="GNN-Insight API v2", lifespan=lifespan)
+app = FastAPI(title="GNN-Insight API v3", lifespan=lifespan)
 
 # Middlewares
 app.add_middleware(
@@ -48,6 +53,8 @@ app.add_middleware(
 # Gắn các Routers
 app.include_router(user_loader_router, prefix="/api")
 app.include_router(experiments_router, prefix="/api")
+app.include_router(sessions_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
 app.include_router(training_router) # WebSocket router
 
 # ── REST API Endpoints (Gọn nhẹ) ─────────────────────────────────────────────
@@ -56,8 +63,8 @@ app.include_router(training_router) # WebSocket router
 def read_root():
     return {
         "status": "online",
-        "version": "2.0.0",
-        "message": "GNN-Insight Backend Modular Architecture is running."
+        "version": "3.0.0",
+        "message": "GNN-Insight Backend Unified Architecture is running."
     }
 
 @app.get("/api/datasets")
@@ -75,8 +82,9 @@ def stop_training(payload: dict = None):
         session_manager.stop_session(session_id)
         return {"status": "stopping", "session_id": session_id}
     else:
-        # Fallback: Nếu không có ID, dừng toàn bộ các session đang hoạt động
-        session_manager.stop_all_sessions()
+        # Fallback: stop all active sessions in RAM
+        for sid in list(session_manager._active_sessions.keys()):
+            session_manager.stop_session(sid)
         return {"status": "stopping_all"}
 
 @app.post("/api/upload-graph")
@@ -110,6 +118,11 @@ async def upload_csv(nodes: UploadFile = File(...), edges: UploadFile = File(...
             'num_features': data.x.size(1),
             'num_classes': int(data.y.max().item()) + 1,
         }
+
+@app.get("/metrics")
+def get_metrics():
+    """Application metrics endpoint for observability."""
+    return metrics.get_all()
 
 if __name__ == "__main__":
     import uvicorn

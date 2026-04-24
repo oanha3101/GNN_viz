@@ -23,6 +23,7 @@ const useGNNStore = create((set, get) => ({
   groundTruth: null,
   trainMask: null,
   taskData: null,
+  classNames: null,
 
   // ─── Selection / UI ──────────────────────────────────────────
   selectedNodeId: null,
@@ -45,6 +46,7 @@ const useGNNStore = create((set, get) => ({
 
   // ─── Uploaded file path (for custom datasets) ───────────────
   uploadedFilePath: null,
+  datasetName: null,
 
   // ─── Task-specific upload data ─────────────────────────────
   communityGroundTruth: null,  // T4: array of community labels
@@ -76,6 +78,7 @@ const useGNNStore = create((set, get) => ({
         groundTruth: null,
         trainMask: null,
         taskData: null,
+        classNames: null,
       } : {}),
       // Clear task 5 meta when leaving
       ...(leavingTask5 ? { task5Meta: null } : {}),
@@ -104,6 +107,7 @@ const useGNNStore = create((set, get) => ({
   // ─── Actions: Data ───────────────────────────────────────────
   setGraphData: (gd) => set({ graphData: gd }),
   setGroundTruth: (gt) => set({ groundTruth: gt }),
+  setClassNames: (names) => set({ classNames: names }),
   setTrainMask: (mask) => set({ trainMask: mask }),
   setTaskData: (td) => set({ taskData: td }),
   setSelectedNode: (id) => {
@@ -170,6 +174,7 @@ const useGNNStore = create((set, get) => ({
   setReferenceGraph: (g) => set({ referenceGraph: g }),
   setUploadMetadata: (meta) => set({ uploadMetadata: meta }),
   setTaskConfig: (cfg) => set({ taskConfig: cfg }),
+  setDatasetName: (name) => set({ datasetName: name }),
 }))
 
 export default useGNNStore
