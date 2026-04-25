@@ -8,6 +8,7 @@ def build_model(config, data=None, num_features=None, num_classes=None):
     model_type = config.get('model', 'GCN')
     hidden = config.get('hidden', 64)
     dropout = config.get('dropout', 0.5)
+    num_layers = config.get('num_layers', 3)
     
     if data is not None:
         num_features = data.x.size(1)
@@ -18,14 +19,14 @@ def build_model(config, data=None, num_features=None, num_classes=None):
         num_classes = 7
 
     if model_type == 'GCN':
-        return GCNModel(num_features, hidden, num_classes, dropout)
+        return GCNModel(num_features, hidden, num_classes, num_layers, dropout)
     elif model_type == 'GAT':
         heads = config.get('heads', 4)
-        return GATModel(num_features, hidden, num_classes, heads, dropout)
+        return GATModel(num_features, hidden, num_classes, heads, num_layers, dropout)
     elif model_type == 'SAGE':
-        return GraphSAGEModel(num_features, hidden, num_classes, dropout)
+        return GraphSAGEModel(num_features, hidden, num_classes, num_layers, dropout)
     else:
-        return GCNModel(num_features, hidden, num_classes, dropout)
+        return GCNModel(num_features, hidden, num_classes, num_layers, dropout)
 
 def should_take_snapshot(epoch: int, total_epochs: int) -> bool:
     """
