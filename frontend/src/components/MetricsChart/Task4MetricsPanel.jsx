@@ -103,9 +103,13 @@ function OverviewTab({ snap, snapshots, epochInt }) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-            <XAxis dataKey="epoch" tick={{ fill: '#475569', fontSize: 9 }} />
-            <YAxis domain={[-0.1, 1]} tick={{ fill: '#475569', fontSize: 9 }} />
-            <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} labelStyle={{ color: '#94a3b8' }} />
+            <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 9 }} />
+            <YAxis domain={[-0.1, 1]} tick={{ fill: '#94a3b8', fontSize: 9 }} />
+            <Tooltip 
+            contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} 
+            itemStyle={{ color: '#e2e8f0' }}
+            labelStyle={{ color: '#94a3b8' }} 
+          />
             <ReferenceLine y={0.4} stroke="#22c55e" strokeDasharray="3 3" strokeOpacity={0.4} />
             <Area type="monotone" dataKey="modularity" stroke="#22c55e" fill="url(#modGrad)" strokeWidth={2} name="Modularity Q" />
             <Area type="monotone" dataKey="conductance" stroke="#f97316" fill="url(#condGrad)" strokeWidth={2} name="Conductance" />
@@ -177,9 +181,13 @@ function StabilityTab({ snapshots }) {
         <ResponsiveContainer width="100%" height={90}>
           <LineChart data={lineData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-            <XAxis dataKey="epoch" tick={{ fill: '#475569', fontSize: 8 }} />
-            <YAxis domain={[0, 1]} tick={{ fill: '#475569', fontSize: 8 }} />
-            <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} />
+            <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 8 }} />
+            <YAxis domain={[0, 1]} tick={{ fill: '#94a3b8', fontSize: 8 }} />
+            <Tooltip 
+              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} 
+              itemStyle={{ color: '#e2e8f0' }}
+              labelStyle={{ color: '#94a3b8' }}
+            />
             <Line type="monotone" dataKey="stability" stroke="#22d3ee" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>

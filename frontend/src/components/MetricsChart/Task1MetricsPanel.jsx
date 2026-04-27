@@ -111,10 +111,14 @@ function OverviewTab({ snapshots, epochInt, snap, graphData }) {
         <ResponsiveContainer width="100%" height="90%">
           <LineChart data={series}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-            <XAxis dataKey="epoch" tick={{ fill: '#475569', fontSize: 9 }} />
-            <YAxis yAxisId="loss" tick={{ fill: '#475569', fontSize: 9 }} domain={[0, 'auto']} />
-            <YAxis yAxisId="acc" orientation="right" tick={{ fill: '#475569', fontSize: 9 }} domain={[0, 100]} />
-            <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} />
+            <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 9 }} />
+            <YAxis yAxisId="loss" tick={{ fill: '#94a3b8', fontSize: 9 }} domain={[0, 'auto']} />
+            <YAxis yAxisId="acc" orientation="right" tick={{ fill: '#94a3b8', fontSize: 9 }} domain={[0, 100]} />
+            <Tooltip 
+              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} 
+              itemStyle={{ color: '#e2e8f0' }}
+              labelStyle={{ color: '#94a3b8' }}
+            />
             <Line yAxisId="loss" type="monotone" dataKey="train_loss" stroke="#f97316" strokeWidth={2} dot={false} name="Train Loss" />
             <Line yAxisId="loss" type="monotone" dataKey="val_loss" stroke="#ef4444" strokeWidth={2} dot={false} name="Val Loss" />
             <Line yAxisId="acc" type="monotone" dataKey="val_acc" stroke="#22c55e" strokeWidth={2} dot={false} name="Val Acc (%)" />
@@ -199,7 +203,7 @@ function ConfusionTab({ snap, graphData, onPick, snapshots, epochInt }) {
                               className={`w-7 h-6 rounded-sm text-nano font-bold transition-transform ${
                                 val ? 'hover:scale-110 cursor-pointer' : 'cursor-default'
                               } ${isSel ? 'ring-1 ring-cyan-400' : ''}`}
-                              style={{ backgroundColor: bg, color: val ? '#f8fafc' : '#1e293b' }}
+                              style={{ backgroundColor: bg, color: val ? '#f8fafc' : '#475569' }}
                             >
                               {val}
                             </button>
@@ -272,18 +276,22 @@ function HomophilyTab({ snap, onPick }) {
               dataKey="ratio"
               type="number"
               domain={[0, 1]}
-              tick={{ fill: '#475569', fontSize: 9 }}
-              label={{ value: 'majority_ratio →', fill: '#475569', fontSize: 9, dy: 14 }}
+              tick={{ fill: '#94a3b8', fontSize: 9 }}
+              label={{ value: 'majority_ratio →', fill: '#94a3b8', fontSize: 9, dy: 14 }}
             />
             <YAxis
               dataKey="correct"
               type="number"
               domain={[-0.1, 1.1]}
               ticks={[0, 1]}
-              tick={{ fill: '#475569', fontSize: 9 }}
-              label={{ value: 'correct', fill: '#475569', fontSize: 9, angle: -90, dx: -8 }}
+              tick={{ fill: '#94a3b8', fontSize: 9 }}
+              label={{ value: 'correct', fill: '#94a3b8', fontSize: 9, angle: -90, dx: -8 }}
             />
-            <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} />
+            <Tooltip 
+              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} 
+              itemStyle={{ color: '#e2e8f0' }}
+              labelStyle={{ color: '#94a3b8' }}
+            />
             <ReferenceLine x={0.5} stroke="#f59e0b" strokeDasharray="3 3" strokeOpacity={0.5} />
             <Scatter name="Correct" data={correctPts} fill="#22c55e" onClick={(d) => onPick(d.id)} />
             <Scatter name="Wrong" data={wrongPts} fill="#ef4444" onClick={(d) => onPick(d.id)} />
@@ -332,9 +340,13 @@ function DiagnosticsTab({ snap, snapshots, graphData }) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="epoch" tick={{ fill: '#475569', fontSize: 9 }} />
-                <YAxis tick={{ fill: '#475569', fontSize: 9 }} domain={[0, 1]} />
-                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} />
+                <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 9 }} />
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 9 }} domain={[0, 1]} />
+                <Tooltip 
+              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} 
+              itemStyle={{ color: '#e2e8f0' }}
+              labelStyle={{ color: '#94a3b8' }}
+            />
                 <Area type="monotone" dataKey="energy" stroke="#a855f7" fill="url(#t1energyGrad)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
@@ -352,9 +364,13 @@ function DiagnosticsTab({ snap, snapshots, graphData }) {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={distData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="cls" tick={{ fill: '#475569', fontSize: 9 }} />
-                <YAxis tick={{ fill: '#475569', fontSize: 9 }} />
-                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} />
+                <XAxis dataKey="cls" tick={{ fill: '#94a3b8', fontSize: 9 }} />
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 9 }} />
+                <Tooltip 
+              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }} 
+              itemStyle={{ color: '#e2e8f0' }}
+              labelStyle={{ color: '#94a3b8' }}
+            />
                 <Bar dataKey="gt" name="Ground Truth" fill="#06b6d4" />
                 <Bar dataKey="pred" name="Predicted" fill="#f97316" />
                 <Legend wrapperStyle={{ fontSize: 10 }} />

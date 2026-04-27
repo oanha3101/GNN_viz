@@ -1,34 +1,38 @@
-# Task 1: Node Classification — Phân loại Nút 🟢 (Hướng dẫn chi tiết)
+# Task 1: Node Classification — Phân loại Đỉnh 🟢
 
-## 1. Bài toán: "AI làm nghề quản lý cư dân"
-Hãy tưởng tượng bạn có một mạng xã hội khổng lồ. Bạn muốn biết ai là "Lập trình viên", ai là "Nghệ sĩ" nhưng không phải ai cũng khai báo hồ sơ. AI sẽ nhìn vào:
-- **Bạn bè của họ là ai?** (Nếu bạn chơi với 10 ông code, khả năng cao bạn cũng là dân code).
-- **Họ viết gì?** (Thuộc tính/Features của nút).
-- **Kết quả:** AI tự động gán nhãn cho hàng triệu người chỉ trong vài giây.
+## 1. Mục tiêu Kỹ thuật & Bài toán
+- **Bài toán:** Thực hiện phân loại đa lớp (Multi-class Classification) trên dữ liệu dạng đồ thị. Mục tiêu là gán mỗi nút (node) vào một lớp (class) chính xác dựa trên thuộc tính bản thân và cấu trúc lân cận.
+- **Dataset (Cora):** Đây là tập dữ liệu chuẩn về mạng lưới trích dẫn khoa học.
+    - **Nút:** 2,708 bài báo.
+    - **Đặc trưng (Features):** Mỗi bài báo có 1,433 chiều dữ liệu nhị phân (0 và 1). Mỗi chiều đại diện cho một từ vựng trong từ điển chuyên ngành. Giá trị 1 nghĩa là bài báo có chứa từ đó.
+    - **Cạnh:** Các đường trích dẫn giữa các bài báo.
+    - **Nhãn:** 7 chủ đề khoa học (như AI, Genetic Algorithms, Theory...).
 
-## 2. Mockdata: "Bản mô phỏng xã hội Barabási-Albert"
-Dự án dùng mô hình toán học **Barabási-Albert** để tạo dữ liệu giả. 
-- **Đặc điểm:** Đây là mô hình "người giàu càng giàu": một vài nút cực kỳ nổi tiếng (Hubs) sẽ có rất nhiều bạn, giống hệt cấu trúc mạng xã hội thực tế.
-- **Mục đích:** Giúp bạn thấy cách AI lần theo các "ông trùm" này để phân loại cả một vùng lân cận.
+## 2. Cơ chế Khả thị hóa (Visualization)
 
-## 3. Quá trình "Lột xác" qua từng Epoch
-- **Giai đoạn Mò mẫm (Epoch 0-20):** Đồ thị trông như một mớ dây điện rối rắm. AI đoán mò nên màu sắc nhảy liên tục. Biểu đồ **Train Loss** cao chót vót.
-- **Giai đoạn Học tập (Epoch 20-60):** Các nút cùng màu bắt đầu di chuyển lại gần nhau trong không gian **Embedding (2D)**. AI bắt đầu nhận ra các "vùng lãnh thổ" màu sắc rõ rệt.
-- **Giai đoạn Hội tụ (Epoch 80+):** Đồ thị bên trái hiện lên các cụm màu ổn định. Những nút bị dự đoán sai (có viền đỏ bao quanh) biến mất dần.
+### A. Khu vực trung tâm (Network Topology)
+- **Node Coloring:** Màu sắc của mỗi nút hiển thị kết quả dự đoán (Prediction) hoặc nhãn gốc (Ground Truth) tùy theo View Mode.
+- **Error Highlighting:** Các nút bị dự đoán sai sẽ được bao quanh bởi một vòng nhẫn màu đỏ (Misclassified Ring). Tần suất nhấp nháy của vòng nhẫn tỷ lệ thuận với độ sai lệch xác suất.
+- **Attention Glow (GAT):** Nếu sử dụng mô hình Graph Attention Network, các cạnh sẽ phát sáng với độ đậm nhạt khác nhau dựa trên **Attention Weights**. Cạnh càng sáng nghĩa là mô hình đang tập trung lấy thông tin từ láng giềng đó nhiều hơn.
+- **K-Hop Neighborhood:** Khi click chọn 1 nút, hệ thống hiển thị phạm vi lan truyền thông tin qua 1-hop (xanh), 2-hop (tím), và 3-hop (vàng).
 
-## 4. Giải mã Panel bên phải (Các chỉ số "vàng")
+### B. Latent Space (Không gian ẩn)
+- **Cơ chế:** Hệ thống trích xuất vector embedding 64D/128D từ lớp ẩn cuối cùng của GNN, sau đó dùng thuật toán **PCA** hoặc **t-SNE** để nén xuống 2D.
+- **Ý nghĩa:** Quan sát quá trình các nút cùng loại "di cư" và co cụm lại thành các vùng lãnh thổ riêng biệt. Sự tách biệt giữa các cụm ảnh phản ánh khả năng phân loại của mô hình.
 
-### 📊 Tab Overview (Cái nhìn tổng thể)
-- **Val Acc (Độ chính xác):** Con số này càng cao, AI càng giỏi. Mục tiêu là > 85%.
-- **Loss Curve:** Đường cong sai số. Nếu đường này cắm đầu đi xuống là tin vui, AI đang học rất tốt.
+## 3. Giải thích các chỉ số Panel phải (Metrics)
 
-### 🧩 Tab Confusion (Điểm mù của AI)
-- Đây là bảng soi lỗi. Ví dụ: Nếu ô giao giữa nhãn "Khoa học" và "Công nghệ" có số lớn, nghĩa là AI của bạn đang bị "ngây thơ" không phân biệt được hai lĩnh vực này.
-- **Mẹo:** Bấm vào một con số trong ô màu đỏ, màn hình sẽ Zoom thẳng vào các nút bị nhầm lẫn đó để bạn kiểm tra xem tại sao AI lại sai.
+### 📊 Tab Overview
+- **Val Acc (Accuracy):** Tỷ lệ phần trăm dự đoán đúng trên tập dữ liệu kiểm tra (Validation set). Đây là chỉ số quan trọng nhất đo lường hiệu năng.
+- **Macro F1:** Trung bình cộng chỉ số F1 của 7 lớp. Chỉ số này giúp đánh giá xem mô hình có bị học lệch (chỉ đoán đúng lớp nhiều dữ liệu) hay không.
+- **Loss Curves:** Theo dõi sự hội tụ. Nếu Val Loss tăng trong khi Train Loss giảm, mô hình đang bị quá khớp (Overfitting).
 
-### 📍 Tab Homophily (Sức mạnh láng giềng)
-- Biểu đồ này giải thích: "Tôi dự đoán đúng vì tôi ở cạnh những người giống tôi". 
-- Các chấm ở góc trên bên phải là những nút "ngoan", ở cùng hội cùng thuyền với hàng xóm nên AI rất dễ đoán đúng.
+### 🧩 Tab Confusion (Ma trận nhầm lẫn)
+- Hiển thị bảng $7 \times 7$. Hàng là nhãn thực tế, Cột là nhãn dự đoán.
+- Các con số nằm ngoài đường chéo chính chỉ ra chính xác mô hình đang nhầm lẫn giữa các chủ đề nào (ví dụ: hay nhầm bài báo AI thành bài báo ML).
 
-### 🔬 Tab Diagnostics (Chẩn đoán bệnh của AI)
-- **Dirichlet Energy:** Nếu con số này tụt về gần 0, AI đang bị "mù màu" — nó thấy mọi nút đều giống hệt nhau (**Oversmoothing**). Đây là căn bệnh kinh niên của GNN khi model quá sâu.
+### 🔬 Tab Diagnostics
+- **Dirichlet Energy:** Chỉ số đo độ mịn của embedding trên đồ thị. 
+    - *Energy cao:* Các nút láng giềng có embedding rất khác nhau (tốt cho phân loại giai đoạn đầu).
+    - *Energy thấp (gần 0):* Xảy ra hiện tượng **Oversmoothing**. Mọi nút đều có embedding giống hệt nhau, khiến mô hình không thể phân biệt các lớp.
+- **Class Distribution:** So sánh biểu đồ cột giữa phân phối nhãn thực tế và nhãn dự đoán của AI.

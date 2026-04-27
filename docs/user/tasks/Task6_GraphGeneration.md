@@ -1,27 +1,32 @@
-# Task 6: Graph Generation — Sinh Đồ thị 🔴 (Hướng dẫn chi tiết)
+# Task 6: Graph Generation — Sinh Đồ thị 🔴
 
-## 1. Bài toán: "AI làm họa sĩ thiết kế"
-AI học "gu" thiết kế của tập mẫu để tự tạo ra cái mới.
-- **Ví dụ thực tế:** Học cấu trúc của 100 phân tử thuốc chữa bệnh để tự thiết kế ra bản vẽ phân tử thứ 101 có tác dụng tương tự nhưng mới lạ hơn.
+## 1. Mục tiêu Kỹ thuật & Bài toán
+- **Bài toán:** Học phân phối xác suất của các cấu trúc đồ thị thực tế để tạo ra các đồ thị mới hoàn toàn nhưng mang đặc tính tương tự. 
+- **Dữ liệu:** Các bộ đồ thị tham chiếu với chỉ số thống kê mục tiêu (ví dụ: mật độ cạnh 30%, tính co cụm cao).
 
-## 2. Mockdata: "Bản vẽ phân phối mục tiêu"
-AI học một bộ quy luật cấu trúc (ví dụ: đồ thị phải có 10 nút và mật độ cạnh là 30%). Sau đó nó bắt đầu tập vẽ từ những nét nguệch ngoạc đầu tiên.
+## 2. Cơ chế Khả thị hóa (Visualization)
 
-## 3. Quá trình Khả thị hóa
-- **Trên đồ thị:** Các đồ thị hiện ra liên tục. Epoch đầu tiên, chúng trông rất "dị dạng" ( Validity < 10%). 
-- **Theo thời gian:** Đồ thị bắt đầu đẹp dần, các nút kết nối liền mạch và có cấu trúc hình học (dạng lưới, dạng vòng).
+### A. Khu vực trung tâm (Generation Monitor)
+- **Real-time Building:** Hiển thị quá trình các đỉnh và cạnh được "vẽ" ra từ hư không qua từng epoch. Người dùng có thể quan sát xem mô hình có học được các luật hình học cơ bản (như tính liên thông) hay không.
 
-## 4. Giải mã Panel bên phải (Các chỉ số "vàng")
+### B. Latent Space (Nội suy cấu trúc)
+- **Interpolation Mode:** Đây là tính năng độc đáo. Người dùng click chọn 2 điểm (A và B) trong không gian tiềm ẩn. AI sẽ sinh ra một chuỗi các đồ thị nằm giữa 2 điểm đó.
+- **Ý nghĩa:** Quan sát sự biến đổi cấu trúc mượt mà (ví dụ: đồ thị biến đổi từ dạng đường thẳng sang dạng vòng tròn).
 
-### 📊 Tab Overview (Chất lượng "vẽ")
-- **Validity (Tính hợp lệ):** AI vẽ ra có "đúng luật" không? Ví dụ vẽ nhà thì phải có mái. Nếu Validity thấp, AI đang vẽ ra những đồ thị bị hỏng (rời rạc, lẻ loi).
-- **Novelty (Tính mới lạ):** AI có đang "copy-paste" bài cũ không? Novelty cao nghĩa là AI đã thực sự sáng tạo ra một mẫu thiết kế chưa từng có trong lịch sử nhưng vẫn rất "đẹp".
-- **Uniqueness (Tính độc bản):** Trong 100 bản vẽ sinh ra, có bao nhiêu bản bị trùng nhau? Nếu AI chỉ vẽ đi vẽ lại 1 kiểu, nó đang bị bí ý tưởng (**Mode Collapse**).
+## 3. Giải thích các chỉ số Panel phải (Metrics)
 
-### ⚖️ Tab Comparison (So sánh phong cách)
-- Biểu đồ này so sánh "Phong cách đồ thị nguồn" (Màu xám) và "Phong cách đồ thị AI vẽ" (Màu xanh). 
-- **Lý tưởng:** Hai biểu đồ này phải khớp khít với nhau, nghĩa là AI đã lĩnh hội được hoàn toàn phong cách của tập dữ liệu mẫu.
+### 📊 Tab Overview
+- **Validity Rate:** Tỷ lệ đồ thị sinh ra đáp ứng các tiêu chuẩn tối thiểu (ví dụ: không có đỉnh cô lập, không bị rời rạc).
+- **Uniqueness:** Đo độ đa dạng. Nếu uniqueness thấp, mô hình đang bị lỗi **Mode Collapse** (chỉ sinh ra 1 kiểu đồ thị duy nhất).
+- **Novelty:** Tỷ lệ đồ thị mới so với tập dữ liệu mẫu. Novelty cao chứng tỏ AI không "copy-paste" dữ liệu cũ.
 
-### 🚫 Tab Invalidity (Bảng soi lỗi)
-- Liệt kê tại sao AI vẽ sai: `Disconnected` (bị đứt đoạn), `Too Sparse` (quá nghèo nàn). 
-- **Mẹo:** Bấm vào một dòng lỗi để xem tận mắt những "tác phẩm hỏng" đó trên màn hình.
+### ⚖️ Tab Comparison
+- **Histogram So sánh:** So sánh phân phối của các đặc trưng topo (Density, Clustering) giữa tập Nguồn và tập Sinh ra. Nếu 2 biểu đồ khớp nhau, mô hình đã học được "phong cách" đồ thị cực tốt.
+
+### 🔑 Tab Signatures
+- **Graph Signatures:** Mỗi đồ thị có một mã định danh cấu trúc (Signature). Bảng này liệt kê các cấu trúc phổ biến nhất được AI sáng tác.
+- **Memorized Flag:** Cảnh báo nếu mô hình đang "học vẹt" nguyên xi một đồ thị trong tập huấn luyện.
+
+### 🔬 Tab Diagnostics
+- **Invalidity Breakdown:** Phân tích nguyên nhân tại sao đồ thị sinh ra bị hỏng (Disconnected, Too Sparse...).
+- **Latent Quality:** Đánh giá độ "mịn" của không gian tiềm ẩn qua chỉ số KL Loss.

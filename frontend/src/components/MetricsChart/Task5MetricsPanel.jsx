@@ -103,7 +103,11 @@ function OverviewTab({ snap, snapshots, epochInt }) {
               <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="pct" domain={[0, 100]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="loss" orientation="right" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} />
+              <Tooltip 
+              contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} 
+              itemStyle={{ color: '#e2e8f0' }}
+              labelStyle={{ color: '#94a3b8' }}
+            />
               <Legend wrapperStyle={{ fontSize: 9 }} />
               <Line yAxisId="pct" type="monotone" dataKey="knn" stroke="#22d3ee" strokeWidth={2} dot={false} name="kNN %" />
               <Line yAxisId="pct" type="monotone" dataKey="auc" stroke="#a855f7" strokeWidth={2} dot={false} name="AUC %" />
@@ -200,7 +204,7 @@ function KnnTab({ snap, graphData }) {
                 dataKey="degree"
                 type="number"
                 tick={{ fontSize: 9, fill: '#64748b' }}
-                label={{ value: 'degree →', position: 'insideBottom', offset: -4, fill: '#475569', fontSize: 9 }}
+                label={{ value: 'degree →', position: 'insideBottom', offset: -4, fill: '#94a3b8', fontSize: 9 }}
                 axisLine={false} tickLine={false}
               />
               <YAxis
@@ -248,7 +252,11 @@ function DiagnosticsTab({ snap }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} />
+                  <Tooltip 
+              contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} 
+              itemStyle={{ color: '#e2e8f0' }}
+              labelStyle={{ color: '#94a3b8' }}
+            />
                   <Bar dataKey="count" fill="#22d3ee" />
                 </BarChart>
               </ResponsiveContainer>

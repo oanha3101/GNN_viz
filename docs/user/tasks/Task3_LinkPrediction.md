@@ -1,27 +1,36 @@
-# Task 3: Link Prediction — Dự đoán Cạnh 🔵 (Hướng dẫn chi tiết)
+# Task 3: Link Prediction — Dự đoán Cạnh 🔵
 
-## 1. Bài toán: "AI làm nghề mai mối"
-"Bạn có thể biết người này". AI dự đoán các liên kết **ẩn** chưa xuất hiện.
-- **Ví dụ thực tế:** Gợi ý kết bạn trên Facebook, gợi ý mua kèm sản phẩm, hoặc dự đoán tội phạm sắp liên lạc với nhau.
+## 1. Mục tiêu Kỹ thuật & Bài toán
+- **Bài toán:** Dự đoán sự tồn tại tiềm ẩn của liên kết giữa 2 đỉnh. Mục tiêu là học cấu trúc hình học của đồ thị để xác định các cặp đỉnh có xác suất kết nối cao nhất.
+- **Dữ liệu (Cora/Facebook):**
+    - Hệ thống thực hiện phương pháp **Edge Masking**: Xóa ngẫu nhiên 20% cạnh thực tế (Positive edges) và chọn ra một lượng tương đương các cặp đỉnh không có cạnh (Negative edges).
+    - Mô hình phải học cách phân biệt giữa hai nhóm này.
 
-## 2. Mockdata: "Bài kiểm tra giấu cạnh"
-AI lấy một đồ thị thật, bí mật xóa đi 20% số cạnh (như cắt đứt liên lạc giữa một vài cặp đôi). Sau đó nó bắt Model phải đi tìm xem 20% đó là những cặp nào.
-- **Thử thách:** AI phải phân biệt được đâu là "người lạ có tiềm năng thành bạn" và đâu là "người lạ sẽ mãi là người lạ".
+## 2. Cơ chế Khả thị hóa (Visualization)
 
-## 3. Quá trình Khả thị hóa
-- Bạn sẽ thấy các đường **Nét đứt (Dự đoán)** nhấp nháy trên màn hình. 
-- Qua thời gian, các đường này sẽ bớt nhảy loạn xạ và chỉ tập trung vào các cặp nút có nhiều "bạn chung" hoặc cùng sở thích.
+### A. Khu vực trung tâm (Network Topology)
+- **Glowing Links (Predicted):** Các cạnh tiềm năng do mô hình dự đoán (với điểm số > 0.5) được vẽ bằng nét đứt phát sáng. Cạnh càng sáng, mô hình càng tự tin.
+- **Ground Truth Highlighting:** Nếu cạnh dự đoán trùng khớp với cạnh bị xóa ban đầu, nó sẽ có màu xanh. Nếu sai (False Positive), nó sẽ có màu đỏ mờ.
 
-## 4. Giải mã Panel bên phải (Các chỉ số "vàng")
+### B. Latent Space (Khoảng cách Vector)
+- Quan sát quá trình các cặp đỉnh có liên kết thực tế di chuyển lại gần nhau trong không gian vector. 
+- Link Prediction trong GNN thực chất là bài toán **Similarity Learning** (học độ tương đồng).
 
-### 📈 Tab Curves (Đường cong tiên tri)
-- **ROC Curve:** Nếu đường cong này phồng to lên góc trên bên trái, AI của bạn là một "nhà ngoại cảm" thực thụ. Nếu nó là một đường chéo phẳng, AI đang chỉ "đoán mò".
-- **AUC:** Diện tích dưới đường cong. AUC = 1.0 là thần thánh, AUC = 0.5 là vứt đi.
+## 3. Giải thích các chỉ số Panel phải (Metrics)
 
-### 🔦 Tab Hard Edges (Những ca khó)
-- **False Positives:** Danh sách các cặp nút mà AI "thề sống thề chết" là có bạn chung nhưng thực tế lại không. 
-- **False Negatives:** Những cạnh thật sự tồn tại mà AI lại "mù tịt" không thấy.
-- **Mẹo:** Bấm vào một hàng để Zoom vào vị trí lỗi trên đồ thị. Bạn sẽ thường thấy AI sai ở những nút cực kỳ cô đơn, không có thông tin gì để bám víu.
+### 📊 Tab Overview
+- **AUC (Area Under ROC):** Chỉ số vàng cho dự đoán cạnh. AUC = 0.5 là dự đoán ngẫu nhiên. AUC > 0.9 là mô hình rất mạnh.
+- **Acc@0.5:** Độ chính xác dự đoán đúng cạnh thật/giả tại ngưỡng 0.5.
 
-### 🔬 Tab Diagnostics (Xác suất yêu)
-- **Score Distribution:** AI xếp những cặp có xác suất cao sang bên phải (màu xanh) và xác suất thấp sang bên trái (màu đỏ). Một model tốt là khi hai đống màu này tách rời nhau, không bị trộn lẫn ở giữa.
+### 📉 Tab Curves
+- **ROC Curve:** Biểu đồ tỷ lệ dương tính thật (TPR) và dương tính giả (FPR). 
+- **Precision-Recall Curve:** Đánh giá độ tin cậy của các đề xuất liên kết được đưa ra.
+
+### 🔦 Tab Hard Edges
+- **False Positives (Top FP):** Danh sách các cặp đỉnh mô hình đoán có cạnh nhưng thực tế không có. Thường là các đỉnh có nhiều hàng xóm chung.
+- **False Negatives (Top FN):** Các cạnh thực tế bị mô hình bỏ lỡ.
+- **Tương tác:** Click vào một dòng để Focus vào vị trí đó trên đồ thị chính để kiểm tra cấu trúc cục bộ.
+
+### 🔬 Tab Diagnostics
+- **Score Distribution (Histogram):** Biểu đồ cột chồng so sánh xác suất mà mô hình gán cho cạnh Thật và cạnh Giả. Nếu hai phân phối này tách biệt rõ ràng, mô hình đã hội tụ thành công.
+- **Common Neighbors vs Prediction:** Giải thích dự đoán dựa trên cấu trúc (ví dụ: dự đoán có cạnh vì có 5 hàng xóm chung).

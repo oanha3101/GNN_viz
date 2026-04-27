@@ -1,27 +1,33 @@
-# Task 4: Community Detection — Phát hiện Cộng đồng 🟡 (Hướng dẫn chi tiết)
+# Task 4: Community Detection — Phát hiện Cộng đồng 🟡
 
-## 1. Bài toán: "AI tìm băng đảng"
-Tìm các nhóm tự phát mà không cần ai bảo trước. 
-- **Ví dụ thực tế:** Tìm ra các nhóm người có chung sở thích trên diễn đàn, hoặc các nhóm tội phạm liên kết ngầm với nhau qua các cuộc điện thoại.
+## 1. Mục tiêu Kỹ thuật & Bài toán
+- **Bài toán:** Phân cụm các đỉnh không giám sát (Unsupervised Clustering). Mục tiêu là tự động chia đồ thị thành các nhóm (Islands) có liên kết nội bộ dày đặc.
+- **Dữ liệu (SBM):** Sử dụng mô hình **Stochastic Block Model**.
+    - Đây là mô hình chuẩn để kiểm tra thuật toán phân cụm, nơi xác suất có cạnh nối giữa các đỉnh cùng nhóm cao hơn nhiều so với giữa các đỉnh khác nhóm.
 
-## 2. Mockdata: "Hòn đảo hoang Stochastic Block"
-AI tạo ra 3-4 "hòn đảo" (cụm). Trong đảo thì dân cư chơi với nhau rất thân, nhưng rất ít khi nói chuyện với dân đảo khác.
-- **Mục tiêu:** AI phải tự vẽ ra ranh giới giữa các hòn đảo này mà không cần nhìn vào "hộ khẩu" (Label) của họ.
+## 2. Cơ chế Khả thị hóa (Visualization)
 
-## 3. Quá trình Khả thị hóa
-- **Ban đầu (Hỗn loạn):** Toàn bộ các nút dính chùm vào nhau ở giữa màn hình.
-- **Tách biệt:** Các nút "cùng chí hướng" bắt đầu đẩy nhau ra khỏi khối trung tâm, hình thành các cụm nhỏ màu sắc (Islands).
-- **Hội tụ:** Các hòn đảo cộng đồng ổn định vị trí, không còn ai "nhảy đảo" nữa.
+### A. Khu vực trung tâm (Topology Islands)
+- **Islands Effect:** Lực đẩy (charge) giữa các đỉnh thuộc cộng đồng khác nhau được tăng cường. Theo thời gian, bạn sẽ thấy đồ thị tự động "tách mảng" thành các hòn đảo riêng biệt.
+- **Node Coloring:** Các đỉnh cùng cụm sẽ được gán cùng một màu sắc duy nhất.
+- **Bridge Highlighting:** Các cạnh nối giữa hai cộng đồng (Inter-community edges) được làm mờ đi để làm nổi bật cấu trúc cụm.
 
-## 4. Giải mã Panel bên phải (Các chỉ số "vàng")
+### B. Latent Space (Cụm không giám sát)
+- Quan sát sự phân cụm tự phát mà không cần nhãn hỗ trợ. Các điểm ảnh co cụm lại phản ánh độ "khít" của thuật toán phân cụm.
 
-### 📊 Tab Overview (Độ đoàn kết)
-- **Modularity Q (Độ khít):** Con số này càng cao (>0.4), nghĩa là các "băng đảng" càng đoàn kết và tách biệt. Nếu Q thấp, xã hội đồ thị của bạn đang bị "hòa tan".
-- **Bridges (Người giao liên):** Số lượng nút nắm giữ thông tin liên lạc giữa các cộng đồng. Những nút này cực kỳ nguy hiểm vì họ là mắt xích yếu nhất của mạng lưới.
+## 3. Giải thích các chỉ số Panel phải (Metrics)
 
-### 🔄 Tab Stability (Độ bền)
-- **Stability Heatmap:** Cho biết cộng đồng nào đang bị biến động mạnh qua từng Epoch. Nếu một dòng có nhiều màu **Đỏ**, nghĩa là dân cư ở đó đang liên tục "bỏ nhóm" để sang cụm khác.
+### 📊 Tab Overview
+- **Modularity Q:** Chỉ số đo độ mạnh của cấu trúc cộng đồng. Q > 0.4 cho thấy đồ thị có cộng đồng cực kỳ rõ rệt.
+- **Conductance:** Đo tỷ lệ cạnh rò rỉ ra ngoài cộng đồng. Giá trị thấp đồng nghĩa với việc cộng đồng đó rất khép kín và ổn định.
 
-### 🔬 Tab Diagnostics (Chẩn đoán)
-- **NMI (Độ khớp):** So sánh kết quả AI tự tìm với thực tế (Ground Truth). 1.0 là AI thông minh ngang người thật.
-- **Silhouette Score:** Đo độ xa cách. Càng cao nghĩa là các "hòn đảo" càng cách xa nhau, ranh giới càng rõ rệt.
+### 🔄 Tab Stability
+- **Stability Heatmap:** Hàng là ID cộng đồng, Cột là Epoch.
+- **Màu sắc:** Màu xanh cho biết cộng đồng đó đã ổn định dân số. Màu đỏ cho thấy các nút đang liên tục "nhảy nhóm" giữa các cộng đồng.
+
+### 🌉 Tab Bridges
+- **Bridge Strength Ranking:** Liệt kê các đỉnh nằm ở "biên giới" giữa các cộng đồng. Những đỉnh này có chỉ số **Betweenness** cao và đóng vai trò cầu nối thông tin.
+
+### 🔬 Tab Diagnostics
+- **NMI (Normalized Mutual Information):** Đo độ chính xác so với Ground Truth (nếu có).
+- **Silhouette Score:** Đo độ xa cách giữa các cụm ảnh. Nếu Silhouette âm, các cụm đang bị chồng lấn nghiêm trọng.

@@ -39,3 +39,5 @@ temp/
 *.db
 *.pt
 backend/datasets/Cora/
+backend/data/saved_experiments/
+backend/datasets/*.json

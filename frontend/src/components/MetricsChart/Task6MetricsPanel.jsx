@@ -113,8 +113,8 @@ function OverviewTab({ snapshots, snap }) {
         <ResponsiveContainer width="100%" height={240}>
           <LineChart data={lossHistory} margin={{ top: 10, right: 10, bottom: 0, left: -10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-            <XAxis dataKey="epoch" tick={{ fill: '#475569', fontSize: 10 }} />
-            <YAxis tick={{ fill: '#475569', fontSize: 10 }} />
+            <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 10 }} />
+            <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
             <Tooltip
               contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 6, fontSize: 11 }}
               labelStyle={{ color: '#94a3b8' }}
@@ -169,8 +169,8 @@ function HistBlock({ title, metric }) {
       <div className="text-nano text-slate-400 font-black uppercase tracking-ultra mb-1 px-1">{title}</div>
       <ResponsiveContainer width="100%" height={140}>
         <BarChart data={rows} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
-          <XAxis dataKey="bin" tick={{ fill: '#475569', fontSize: 9 }} />
-          <YAxis tick={{ fill: '#475569', fontSize: 9 }} />
+          <XAxis dataKey="bin" tick={{ fill: '#94a3b8', fontSize: 9 }} />
+          <YAxis tick={{ fill: '#94a3b8', fontSize: 9 }} />
           <Tooltip
             contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 6, fontSize: 10 }}
             labelStyle={{ color: '#94a3b8' }}

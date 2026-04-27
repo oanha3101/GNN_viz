@@ -103,7 +103,11 @@ function OverviewTab({ snap, snapshots, epochInt, paired }) {
               <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="auc" domain={[0.4, 1]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="loss" orientation="right" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} />
+              <Tooltip 
+                contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} 
+                itemStyle={{ color: '#e2e8f0' }}
+                labelStyle={{ color: '#94a3b8' }}
+              />
               <Line yAxisId="auc" type="monotone" dataKey="auc" stroke="#22d3ee" strokeWidth={2} dot={false} />
               <Line yAxisId="loss" type="monotone" dataKey="loss" stroke="#f59e0b" strokeWidth={2} dot={false} />
             </LineChart>
@@ -131,9 +135,14 @@ function CurvesTab({ paired }) {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={roc.points} margin={{ top: 6, right: 10, bottom: 14, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="fpr" type="number" domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} label={{ value: 'FPR', position: 'insideBottom', offset: -2, fill: '#475569', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="fpr" type="number" domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} label={{ value: 'FPR', position: 'insideBottom', offset: -2, fill: '#94a3b8', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <YAxis dataKey="tpr" type="number" domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} formatter={(v) => v.toFixed(3)} />
+                <Tooltip 
+                  contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} 
+                  itemStyle={{ color: '#e2e8f0' }}
+                  labelStyle={{ color: '#94a3b8' }}
+                  formatter={(v) => v.toFixed(3)} 
+                />
                 <Line type="monotone" dataKey="tpr" stroke="#3b82f6" strokeWidth={2} dot={false} />
                 <Line data={[{ fpr: 0, tpr: 0 }, { fpr: 1, tpr: 1 }]} type="linear" dataKey="tpr" stroke="#475569" strokeWidth={1} strokeDasharray="3 3" dot={false} />
               </LineChart>
@@ -146,9 +155,14 @@ function CurvesTab({ paired }) {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={pr.points} margin={{ top: 6, right: 10, bottom: 14, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="recall" type="number" domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} label={{ value: 'Recall', position: 'insideBottom', offset: -2, fill: '#475569', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="recall" type="number" domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} label={{ value: 'Recall', position: 'insideBottom', offset: -2, fill: '#94a3b8', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <YAxis dataKey="precision" type="number" domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} formatter={(v) => v.toFixed(3)} />
+                <Tooltip 
+                  contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} 
+                  itemStyle={{ color: '#e2e8f0' }}
+                  labelStyle={{ color: '#94a3b8' }}
+                  formatter={(v) => v.toFixed(3)} 
+                />
                 <Line type="monotone" dataKey="precision" stroke="#a855f7" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -229,7 +243,11 @@ function DiagnosticsTab({ paired }) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} />
+                <Tooltip 
+                contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} 
+                itemStyle={{ color: '#e2e8f0' }}
+                labelStyle={{ color: '#94a3b8' }}
+              />
                 <Legend wrapperStyle={{ fontSize: 9 }} />
                 <Bar dataKey="positive" stackId="a" fill="#22c55e" name="Positive" />
                 <Bar dataKey="negative" stackId="a" fill="#ef4444" name="Negative" />
