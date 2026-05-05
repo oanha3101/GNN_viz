@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { Play, Square, Loader2 } from 'lucide-react'
 import useGNNStore from '../store/useGNNStore'
 import usePlayerStore from '../store/playerStore'
+import useSessionStore from '../store/sessionStore'
 import {
   generateTask1Mock,
   generateTask2Mock,
@@ -10,9 +11,7 @@ import {
   generateTask5Mock,
   generateTask6Mock,
 } from '../mock/generateMockSnapshots'
-import { API_BASE } from '../utils/api'
-
-const API = API_BASE
+import { apiUrl, getAuthHeaders } from '../utils/api'
 
 const TASK_NAMES = {
   1: 'Phân loại nút',
@@ -26,7 +25,7 @@ const TASK_NAMES = {
 /**
  * Save the completed training run to backend database.
  */
-async function saveExperiment(taskType, modelType, hyperparams, snapshots, graphData, groundTruth, taskData, isMock) {
+async function saveExperiment(taskType, modelType, hyperparams, snapshots, graphData, groundTruth, taskData, isMock, extra = {}) {
   try {
     const lastSnap = snapshots[snapshots.length - 1] || {}
     const payload = {
@@ -46,16 +45,18 @@ async function saveExperiment(taskType, modelType, hyperparams, snapshots, graph
       ground_truth_json: groundTruth,
       task_data_json: taskData,
       is_mock: isMock,
+      ...extra,
     }
 
     const res = await fetch(`${API}/experiments`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(payload),
     })
 
     if (res.ok) {
       const data = await res.json()
+      useSessionStore.getState().setSavedExperiment(data)
       console.log('Experiment saved:', data)
       // Notify Library to refresh
       window.dispatchEvent(new Event('gnn:experiment-saved'))
@@ -81,6 +82,8 @@ export default function TrainingControlsV2() {
   const setTrainMask = useGNNStore((s) => s.setTrainMask)
   const setTaskData = useGNNStore((s) => s.setTaskData)
   const setReportOpen = useGNNStore((s) => s.setReportOpen)
+  const createSession = useSessionStore((s) => s.createSession)
+  const setSessionStatus = useSessionStore((s) => s.setStatus)
 
   const playerSnapshots = usePlayerStore((s) => s.snapshots)
   const loadSnapshots = usePlayerStore((s) => s.loadSnapshots)
@@ -111,10 +114,20 @@ export default function TrainingControlsV2() {
       gnnState.groundTruth,
       gnnState.taskData,
       gnnState.mockMode,
+      {
+        project_id: gnnState.activeProjectId,
+        dataset_version_id: gnnState.activeDatasetVersionId,
+        session_id: useSessionStore.getState().sessionId,
+        upload_metadata: gnnState.uploadMetadata,
+        uploaded_file_path: gnnState.uploadedFilePath,
+      },
     )
   }, [trainingDone, reportVersion])
 
-  const handleStart = useCallback(() => {
+  const handleStart = useCallback(async () => {
+    if (isTraining) {
+      return
+    }
     resetForTraining()
     setReportOpen(false)
 
@@ -176,11 +189,38 @@ export default function TrainingControlsV2() {
         alert("⚠️ CHƯA CÓ DỮ LIỆU UPLOAD!\n\nVui lòng nhấn nút 'Upload Data' ở bảng điều khiển bên phải để tải dữ liệu của bạn lên trước khi chạy mô hình thực tế.")
         return
       }
+      const gnnState = useGNNStore.getState()
+      if (!gnnState.activeProjectId || !gnnState.activeDatasetVersionId) {
+        alert("â ï¸ THIáº¾U PROJECT / DATASET VERSION!\n\nHÃ£y vá» Workspace Ä‘á»ƒ chá»n project vĂ  dataset version trÆ°á»›c khi cháº¡y huáº¥n luyá»‡n live.")
+        return
+      }
+      let sessionId = useSessionStore.getState().sessionId
+      try {
+        const session = await createSession({
+          project_id: gnnState.activeProjectId,
+          dataset_version_id: gnnState.activeDatasetVersionId,
+          task: selectedTask,
+          model: gnnState.selectedModel,
+          dataset: hyperparams.dataset || 'cora',
+          epochs: hyperparams.epochs,
+          lr: hyperparams.lr,
+          hidden: hyperparams.hidden,
+          config: {
+            dropout: hyperparams.dropout,
+            heads: hyperparams.heads,
+            aggregator: hyperparams.aggregator,
+          },
+        })
+        sessionId = session.session_id
+        setSessionStatus('pending')
+      } catch (e) {
+        console.error('Failed to create session before training:', e)
+      }
       const taskConfig = useGNNStore.getState().taskConfig || {}
       window.dispatchEvent(new CustomEvent('gnn:start-training', {
         detail: {
           task: selectedTask,
-          model: useGNNStore.getState().selectedModel,
+          model: gnnState.selectedModel,
           dataset: hyperparams.dataset || 'cora',
           epochs: hyperparams.epochs,
           lr: hyperparams.lr,
@@ -188,6 +228,9 @@ export default function TrainingControlsV2() {
           dropout: hyperparams.dropout,
           heads: hyperparams.heads,
           aggregator: hyperparams.aggregator,
+          project_id: gnnState.activeProjectId,
+          dataset_version_id: gnnState.activeDatasetVersionId,
+          session_id: sessionId,
           ...(uploadedPath ? { uploaded_file_path: uploadedPath } : {}),
           // Task-specific config from upload
           ...taskConfig,
@@ -195,20 +238,40 @@ export default function TrainingControlsV2() {
       }))
       setTraining(true, 0)
     }
-  }, [mockMode, hyperparams, selectedTask, setTraining, setGraphData, setGroundTruth, setTrainMask, setTaskData, loadSnapshots, setDone, resetForTraining, setReportOpen])
+  }, [hyperparams, isTraining, mockMode, selectedTask, setTraining, setGraphData, setGroundTruth, setTrainMask, setTaskData, loadSnapshots, setDone, resetForTraining, setReportOpen])
+
+  useEffect(() => {
+    const handler = () => {
+      void handleStart()
+    }
+    window.addEventListener('gnn:request-start-training', handler)
+    return () => window.removeEventListener('gnn:request-start-training', handler)
+  }, [handleStart])
 
   const handleStop = useCallback(async () => {
+    if (mockMode) {
+      setSessionStatus('stopped')
+      setTraining(false, trainingProgress)
+      return
+    }
+
+    const sessionId = useSessionStore.getState().sessionId
+    if (!sessionId) {
+      console.error('Cannot stop live training without a session id')
+      return
+    }
+
     try {
-      await fetch(`${API}/stop`, { 
+      await fetch(apiUrl(`/sessions/${sessionId}/stop`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       })
     } catch (e) {
       console.error('Failed to notify backend to stop:', e)
     }
+    setSessionStatus('stopped')
     setTraining(false, trainingProgress)
-  }, [setTraining, trainingProgress])
+  }, [mockMode, setSessionStatus, setTraining, trainingProgress])
 
   return (
     <div className="flex flex-col gap-2">

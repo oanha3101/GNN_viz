@@ -12,7 +12,7 @@ from utils.ws_msg import send_json_zipped
 from utils.model_utils import should_take_snapshot
 
 
-async def run_node_classification(config, data, model, optimizer, websocket, stop_flag):
+async def run_node_classification(config, data, model, optimizer, websocket, stop_flag, snapshot_hook=None):
     """
     Main training loop for node classification.
     Streams one snapshot per epoch via WebSocket.
@@ -144,6 +144,8 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
                 'dirichlet_energy': dirichlet_energy,
             }
             epoch_snapshots.append(snapshot)
+            if snapshot_hook:
+                await snapshot_hook(epoch, snapshot)
 
             # ── Stream to Frontend ──────────────────────────────────────────────
             await send_json_zipped(websocket, {

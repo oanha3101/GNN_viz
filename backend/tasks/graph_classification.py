@@ -100,7 +100,7 @@ def generate_synthetic_graphs(num_graphs=50):
 # ───────────────────────────────────────────────────────────────────────────────
 # Main Training Loop
 # ───────────────────────────────────────────────────────────────────────────────
-async def run_graph_classification(config, websocket, stop_flag, custom_graphs=None):
+async def run_graph_classification(config, websocket, stop_flag, custom_graphs=None, snapshot_hook=None):
     """Train graph classification model and stream snapshots.
     
     Args:
@@ -339,6 +339,8 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             'val_acc': float(val_acc.item()),
         }
         epoch_snapshots.append(snapshot)
+        if snapshot_hook:
+            await snapshot_hook(epoch, snapshot)
 
         await send_json_zipped(websocket, {
             'type': 'epoch_snapshot',

@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { X, RefreshCw, Trash2, Play, AlertTriangle, Loader2, FolderOpen, Network, BarChart3, Link2, Users, Globe2, Dna } from 'lucide-react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
-import { API_BASE } from '../../utils/api'
+import { API_BASE, getAuthHeaders, normalizeCollectionPayload } from '../../utils/api'
 
 const API = API_BASE
 
@@ -39,6 +39,8 @@ export default function ProjectLibrary({ isOpen, onClose }) {
   const setTaskData = useGNNStore((s) => s.setTaskData)
   const setMockMode = useGNNStore((s) => s.setMockMode)
   const setHyperparams = useGNNStore((s) => s.setHyperparams)
+  const setActiveProjectContext = useGNNStore((s) => s.setActiveProjectContext)
+  const setActiveDatasetContext = useGNNStore((s) => s.setActiveDatasetContext)
   const loadSnapshots = usePlayerStore((s) => s.loadSnapshots)
   const setDone = usePlayerStore((s) => s.setDone)
 
@@ -49,10 +51,10 @@ export default function ProjectLibrary({ isOpen, onClose }) {
       const url = filterTask
         ? `${API}/experiments?task_type=${filterTask}`
         : `${API}/experiments`
-      const res = await fetch(url)
+      const res = await fetch(url, { headers: { ...getAuthHeaders() } })
       if (res.ok) {
         const data = await res.json()
-        setExperiments(data)
+        setExperiments(normalizeCollectionPayload(data).items)
         setError(null)
       } else {
         throw new Error(`Server returned ${res.status}`)
@@ -82,7 +84,7 @@ export default function ProjectLibrary({ isOpen, onClose }) {
   const handleLoadExperiment = async (expId) => {
     setLoadingId(expId)
     try {
-      const res = await fetch(`${API}/experiments/${expId}`)
+      const res = await fetch(`${API}/experiments/${expId}`, { headers: { ...getAuthHeaders() } })
       if (!res.ok) throw new Error('Failed to load experiment')
       const exp = await res.json()
 
@@ -106,14 +108,21 @@ export default function ProjectLibrary({ isOpen, onClose }) {
       }
 
       // Restore graph data
-      if (exp.graph_data_json) {
-        setGraphData(exp.graph_data_json)
+      if (exp.project_id) {
+        setActiveProjectContext(exp.project_id, exp.title)
       }
-      if (exp.ground_truth_json) {
-        setGroundTruth(exp.ground_truth_json)
+      if (exp.dataset_version_id) {
+        setActiveDatasetContext(exp.dataset_id || null, exp.dataset_version_id, `${exp.dataset_name || 'dataset'} • version #${exp.dataset_version_id}`)
       }
-      if (exp.task_data_json) {
-        setTaskData(exp.task_data_json)
+      const graphPayload = exp.graph_payload || {}
+      if (graphPayload.graph_data_json) {
+        setGraphData(graphPayload.graph_data_json)
+      }
+      if (graphPayload.ground_truth_json) {
+        setGroundTruth(graphPayload.ground_truth_json)
+      }
+      if (graphPayload.task_data_json) {
+        setTaskData(graphPayload.task_data_json)
       }
 
       // Restore snapshots and enable replay
@@ -137,7 +146,7 @@ export default function ProjectLibrary({ isOpen, onClose }) {
   // Delete experiment
   const handleDelete = async (expId) => {
     try {
-      const res = await fetch(`${API}/experiments/${expId}`, { method: 'DELETE' })
+      const res = await fetch(`${API}/experiments/${expId}`, { method: 'DELETE', headers: { ...getAuthHeaders() } })
       if (res.ok) {
         setExperiments(prev => prev.filter(e => e.id !== expId))
         setDeleteConfirm(null)
@@ -151,7 +160,7 @@ export default function ProjectLibrary({ isOpen, onClose }) {
   const handleDeleteAll = async () => {
     if (!window.confirm("Bạn có chắc chắn muốn xoá toàn bộ thí nghiệm và file dữ liệu đi kèm trong thư viện?")) return;
     try {
-      const res = await fetch(`${API}/experiments`, { method: 'DELETE' })
+      const res = await fetch(`${API}/experiments`, { method: 'DELETE', headers: { ...getAuthHeaders() } })
       if (res.ok) {
         setExperiments([])
         setDeleteConfirm(null)

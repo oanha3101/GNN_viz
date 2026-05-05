@@ -10,8 +10,8 @@ export default defineConfig({
           plotly: ['react-plotly.js', 'plotly.js-dist-min'],
           vendor: ['react', 'react-dom', 'zustand', 'react-force-graph-2d', 'd3-force', 'framer-motion', 'recharts']
         }
-      }
-    }
+      },
+    },
   },
   server: {
     port: 5173,

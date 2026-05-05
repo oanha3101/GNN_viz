@@ -1,5 +1,27 @@
 # 🧠 GNN-INSIGHT — Tổng Quan Dự Án (Master Reference)
 
+> **Architecture note**: `docs/technical/ARCHITECTURE.md` is the current
+> source of truth for storage ownership, retention, replay, compare-runs, and
+> governance flows. Use this overview for orientation, but defer to
+> `ARCHITECTURE.md` when details conflict.
+> **API note**: `docs/technical/API_CONTRACT.md` is the current source of truth
+> for page-facing REST payload shapes, especially list endpoints used by the
+> app shell and admin shell.
+> **Frontend note**: `docs/technical/FRONTEND_STRUCTURE.md` explains the
+> route-first frontend structure and current shell boundaries.
+> **Testing note**: `docs/technical/TESTING_STRATEGY.md` defines the current
+> TDD and verification gates.
+> **Deployment note**: `docs/technical/DEPLOYMENT.md` captures the local stack,
+> env vars, and MinIO-ready blob settings.
+
+> **Frontend shell note**: The product flow is now `auth-first` with real page
+> routes. Use `/login` and `/register` for public access, `/app/*` for the
+> researcher or viewer shell, and `/admin/*` for the admin shell. Do not treat
+> the old overlay-style app entry as the intended product UX.
+> `Dashboard`, `Projects`, `Datasets`, and the admin surfaces are now being
+> extracted into page-first routes so the Lab can stay focused on training and
+> replay instead of acting as a multi-purpose navigation shell.
+
 > **Mục đích file này**: Khi AI bắt đầu phiên mới, đọc file này để hiểu ngay dự án đang làm gì, kiến trúc ra sao, các file nằm ở đâu, và trạng thái hiện tại.
 
 ---

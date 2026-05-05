@@ -47,6 +47,11 @@ const useGNNStore = create((set, get) => ({
   // ─── Uploaded file path (for custom datasets) ───────────────
   uploadedFilePath: null,
   datasetName: null,
+  activeProjectId: null,
+  activeProjectName: null,
+  activeDatasetId: null,
+  activeDatasetVersionId: null,
+  activeDatasetVersionName: null,
 
   // ─── Task-specific upload data ─────────────────────────────
   communityGroundTruth: null,  // T4: array of community labels
@@ -175,6 +180,20 @@ const useGNNStore = create((set, get) => ({
   setUploadMetadata: (meta) => set({ uploadMetadata: meta }),
   setTaskConfig: (cfg) => set({ taskConfig: cfg }),
   setDatasetName: (name) => set({ datasetName: name }),
+  setActiveProjectId: (id) => set({ activeProjectId: id }),
+  setActiveProjectName: (name) => set({ activeProjectName: name }),
+  setActiveDatasetId: (id) => set({ activeDatasetId: id }),
+  setActiveDatasetVersionId: (id) => set({ activeDatasetVersionId: id }),
+  setActiveDatasetVersionName: (name) => set({ activeDatasetVersionName: name }),
+  setActiveProjectContext: (id, name = null) => set({
+    activeProjectId: id,
+    activeProjectName: name,
+  }),
+  setActiveDatasetContext: (datasetId, versionId, versionName = null) => set({
+    activeDatasetId: datasetId,
+    activeDatasetVersionId: versionId,
+    activeDatasetVersionName: versionName,
+  }),
 }))
 
 export default useGNNStore

@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect } from 'react'
 import useGNNStore from '../store/useGNNStore'
 import usePlayerStore from '../store/playerStore'
+import useSessionStore from '../store/sessionStore'
 import { WS_URL } from '../utils/api'
 import { logger } from '../utils/logger'
 import { parseWSMessage, getPayload } from '../contracts/wsMessages'
@@ -138,6 +139,9 @@ export default function useWebSocket() {
       } else if (msg.type === 'epoch_snapshot') {
         addSnapshot(payload)
         setTraining(true, msg.progress)
+        if (typeof payload?.epoch === 'number') {
+          useSessionStore.getState().onEpochReceived(payload.epoch, msg.seq)
+        }
 
       } else if (msg.type === 'training_complete') {
         // v3: payload = { all_snapshots, session_id }
@@ -147,6 +151,7 @@ export default function useWebSocket() {
           loadSnapshots(allSnaps)
         }
         setTraining(false, 1)
+        useSessionStore.getState().setStatus('completed')
         // Don't auto-seek to 0 - let user stay at the latest epoch they were watching
         if (allSnaps && allSnaps.length > 0) {
           setDone(allSnaps.length - 1)
@@ -162,6 +167,7 @@ export default function useWebSocket() {
           : errMsg;
         console.error('Training error:', userMsg);
         setTraining(false, 0)
+        useSessionStore.getState().setStatus('failed')
 
       } else if (msg.type === 'pong' || msg.type === 'ping' || msg.type === 'session_created') {
         // Protocol messages — handled in future phases
@@ -171,6 +177,7 @@ export default function useWebSocket() {
     wsRef.current.onerror = () => {
       statusRef.current = 'disconnected'
       setTraining(false, 0)
+      useSessionStore.getState().setStatus('failed')
     }
 
     wsRef.current.onclose = (event) => {
@@ -178,6 +185,7 @@ export default function useWebSocket() {
       // Disable auto-reconnect for training tasks to avoid infinite crash loops.
       // If the backend fails, the user should be notified and choose to rerun manually.
       setTraining(false, 0)
+      useSessionStore.getState().onDisconnect()
       
       if (event.code === 1006) {
         console.warn('WebSocket closed abnormally (1006). Potential backend crash or network issue.')

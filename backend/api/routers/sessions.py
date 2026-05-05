@@ -2,17 +2,22 @@
 Sessions REST API — CRUD for training sessions.
 Supports session creation, status lookup, and resume data retrieval.
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Optional
-from database import get_db
 from sqlalchemy.orm import Session
-from core.session_manager import session_manager
+
+from api.routers.auth import get_current_user, get_optional_user
+from database import get_db
+from models.sql_models import User
+from services import session_service
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
 class CreateSessionRequest(BaseModel):
+    project_id: Optional[int] = None
+    dataset_version_id: Optional[int] = None
     task: int = 1
     model: str = "GCN"
     dataset: str = "cora"
@@ -27,54 +32,37 @@ class UpdateStatusRequest(BaseModel):
 
 
 @router.post("")
-async def create_session(req: CreateSessionRequest):
+async def create_session(req: CreateSessionRequest, user: Optional[User] = Depends(get_optional_user)):
     """Create a new training session. Returns session_id + ws_url."""
-    config = {**req.config, "task": req.task, "model": req.model,
-              "dataset": req.dataset, "epochs": req.epochs,
-              "lr": req.lr, "hidden": req.hidden}
-    session_id = session_manager.create_session(
-        config=config, task_type=req.task,
-        model_type=req.model, dataset_name=req.dataset,
-    )
-    return {
-        "session_id": session_id,
-        "ws_url": f"/ws/sessions/{session_id}",
-        "status": "pending",
-    }
+    return session_service.create_session(payload=req.model_dump(), user=user)
 
 
 @router.get("/{session_id}")
 async def get_session(session_id: str):
     """Get session details."""
-    session = session_manager.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return session
+    return session_service.get_session_or_404(session_id)
 
 
 @router.get("/{session_id}/resume")
-async def get_resume_data(session_id: str):
+async def get_resume_data(
+    session_id: str,
+    db: Session = Depends(get_db),
+):
     """Get resume data: last epoch + snapshots for replay."""
-    session = session_manager.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    snapshots = session_manager.get_snapshots_from(session_id, 0)
-    return {
-        "session_id": session_id,
-        "last_epoch": session['last_epoch'],
-        "last_seq": session['last_seq'],
-        "status": session['status'],
-        "snapshot_count": len(snapshots),
-        "snapshots": snapshots,
-    }
+    return session_service.get_resume_data(db, session_id)
 
 
 @router.patch("/{session_id}")
 async def update_session_status(session_id: str, req: UpdateStatusRequest):
     """Update session status."""
-    session = session_manager.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    session_manager.update_status(session_id, req.status)
-    return {"session_id": session_id, "status": req.status}
+    return session_service.update_session_status(session_id=session_id, status=req.status)
+
+
+@router.post("/{session_id}/stop")
+async def stop_session(
+    session_id: str,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    """Stop a concrete training session by id."""
+    return session_service.stop_session(db=db, session_id=session_id, user=user)

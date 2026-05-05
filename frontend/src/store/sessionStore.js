@@ -3,24 +3,42 @@
  * Enables resume-from-disconnect by tracking session_id + lastEpoch.
  */
 import { create } from 'zustand';
-import { apiUrl } from '../utils/api';
+import { apiUrl, getAuthHeaders } from '../utils/api';
+
+const RECOVERY_KEY = 'gnn_last_session';
+
+function isTerminalStatus(status) {
+  return ['completed', 'failed', 'stopped', 'idle'].includes(status);
+}
+
+function clearRecoveryStorage() {
+  try {
+    localStorage.removeItem(RECOVERY_KEY);
+  } catch {
+    // ignore storage failures
+  }
+}
 
 const useSessionStore = create((set, get) => ({
   sessionId: null,
-  status: 'idle', // idle | pending | running | completed | failed | stopped
+  status: 'idle', // idle | pending | running | disconnected | completed | failed | stopped
   lastEpoch: -1,
   lastSeq: -1,
   wsUrl: null,
   error: null,
+  experimentId: null,
+  reportPath: null,
+  replayPath: null,
 
   /**
    * Create a new session via REST, store session_id.
    */
   createSession: async (config) => {
     try {
+      clearRecoveryStorage();
       const res = await fetch(apiUrl('/sessions'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify(config),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -32,6 +50,9 @@ const useSessionStore = create((set, get) => ({
         lastEpoch: -1,
         lastSeq: -1,
         error: null,
+        experimentId: null,
+        reportPath: null,
+        replayPath: null,
       });
       return data;
     } catch (err) {
@@ -43,7 +64,12 @@ const useSessionStore = create((set, get) => ({
   /**
    * Update session status.
    */
-  setStatus: (status) => set({ status }),
+  setStatus: (status) => {
+    if (isTerminalStatus(status)) {
+      clearRecoveryStorage();
+    }
+    set({ status });
+  },
 
   /**
    * Track epoch progress from WS messages.
@@ -56,17 +82,20 @@ const useSessionStore = create((set, get) => ({
    * Handle WS disconnect — store resume info.
    */
   onDisconnect: () => {
-    const { sessionId, lastEpoch, lastSeq } = get();
-    if (sessionId && lastEpoch >= 0) {
+    const { sessionId, lastEpoch, lastSeq, status } = get();
+    if (isTerminalStatus(status)) {
+      return;
+    }
+    if (sessionId) {
       // Persist to localStorage for reconnect
       try {
-        localStorage.setItem('gnn_last_session', JSON.stringify({
+        localStorage.setItem(RECOVERY_KEY, JSON.stringify({
           sessionId, lastEpoch, lastSeq,
           disconnectedAt: Date.now(),
         }));
       } catch { /* ignore */ }
     }
-    set({ status: 'stopped' });
+    set({ status: 'disconnected' });
   },
 
   /**
@@ -74,7 +103,9 @@ const useSessionStore = create((set, get) => ({
    */
   resumeSession: async (sessionId) => {
     try {
-      const res = await fetch(apiUrl(`/sessions/${sessionId}/resume`));
+      const res = await fetch(apiUrl(`/sessions/${sessionId}/resume`), {
+        headers: { ...getAuthHeaders() },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       set({
@@ -82,7 +113,11 @@ const useSessionStore = create((set, get) => ({
         lastEpoch: data.last_epoch,
         lastSeq: data.last_seq,
         status: data.status,
+        wsUrl: data.ws_url || '/ws/train',
         error: null,
+        experimentId: data.experiment_id ?? null,
+        reportPath: data.report_path ?? null,
+        replayPath: data.replay_path ?? null,
       });
       return data;
     } catch (err) {
@@ -96,12 +131,12 @@ const useSessionStore = create((set, get) => ({
    */
   tryRecoverSession: () => {
     try {
-      const raw = localStorage.getItem('gnn_last_session');
+      const raw = localStorage.getItem(RECOVERY_KEY);
       if (!raw) return null;
       const data = JSON.parse(raw);
       // Only recover if less than 30 minutes old
       if (Date.now() - data.disconnectedAt > 30 * 60 * 1000) {
-        localStorage.removeItem('gnn_last_session');
+        clearRecoveryStorage();
         return null;
       }
       return data;
@@ -110,13 +145,27 @@ const useSessionStore = create((set, get) => ({
     }
   },
 
+  clearRecoveredSession: () => clearRecoveryStorage(),
+
+  setSavedExperiment: (payload) => {
+    set({
+      experimentId: payload?.id ?? null,
+      reportPath: payload?.report_path ?? null,
+      replayPath: payload?.replay_path ?? null,
+    });
+  },
+
   /**
    * Clear session state.
    */
-  reset: () => set({
-    sessionId: null, status: 'idle', lastEpoch: -1, lastSeq: -1,
-    wsUrl: null, error: null,
-  }),
+  reset: () => {
+    clearRecoveryStorage();
+    set({
+      sessionId: null, status: 'idle', lastEpoch: -1, lastSeq: -1,
+      wsUrl: null, error: null,
+      experimentId: null, reportPath: null, replayPath: null,
+    });
+  },
 }));
 
 export default useSessionStore;

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import { Network, BarChart3, Link2, Users, Globe2, Dna, Upload, X, CheckCircle2, Sparkles, ArrowLeft, ArrowRight, Loader2, AlertCircle, Download, Eye } from 'lucide-react'
 import useGNNStore from '../../store/useGNNStore'
-import { API_BASE } from '../../utils/api'
+import { API_BASE, getAuthHeaders } from '../../utils/api'
 
 const API = API_BASE
 
@@ -347,6 +347,65 @@ export default function DataInputView({ onClose }) {
         store.setUploadMetadata(configRes.metadata)
       }
 
+      let syncMessage = ''
+      try {
+        const sourceFiles = {
+          nodes_file: nodesFile?.name || null,
+          edges_file: edgesFile?.name || null,
+          graphs_file: graphsFile?.name || null,
+        }
+        const datasetPayload = {
+          name: datasetName || configRes.dataset_name || 'custom',
+          description: `Uploaded via DataInputView for task ${task}`,
+          summary_json: configRes.metadata || {},
+          validation_json: {
+            valid: true,
+            warnings: configRes.validation_warnings || [],
+            upload_mode: useServerUpload ? 'server' : 'client',
+          },
+          source_files_json: sourceFiles,
+          processed_blob_key: configRes.uploaded_file_path || null,
+        }
+        const authHeaders = { 'Content-Type': 'application/json', ...getAuthHeaders() }
+        const activeDatasetId = store.activeDatasetId
+        const syncRes = activeDatasetId
+          ? await fetch(`${API}/datasets/${activeDatasetId}/versions`, {
+              method: 'POST',
+              headers: authHeaders,
+              body: JSON.stringify({
+                summary_json: datasetPayload.summary_json,
+                validation_json: datasetPayload.validation_json,
+                source_files_json: datasetPayload.source_files_json,
+                processed_blob_key: datasetPayload.processed_blob_key,
+              }),
+            })
+          : await fetch(`${API}/datasets`, {
+              method: 'POST',
+              headers: authHeaders,
+              body: JSON.stringify(datasetPayload),
+            })
+
+        if (syncRes.ok) {
+          const syncData = await syncRes.json()
+          if (activeDatasetId) {
+            store.setActiveDatasetContext(
+              activeDatasetId,
+              syncData.id,
+              `${datasetPayload.name} • v${syncData.version} (${syncData.lifecycle})`
+            )
+          } else {
+            store.setActiveDatasetContext(
+              syncData.dataset.id,
+              syncData.version.id,
+              `${syncData.dataset.name} • v${syncData.version.version} (${syncData.version.lifecycle})`
+            )
+          }
+          syncMessage = '\n🗂 Dataset metadata synced into Workspace'
+        }
+      } catch (syncErr) {
+        console.warn('Dataset sync skipped:', syncErr)
+      }
+
       // Set graph data for visualization
       const graphJson = configRes.graph_json || {}
       if (graphJson.graphData) {
@@ -380,7 +439,8 @@ export default function DataInputView({ onClose }) {
         `📐 ${meta.num_features || '?'} features, ${meta.num_classes || '?'} classes\n` +
         (meta.num_graphs > 1 ? `📦 ${meta.num_graphs} graphs\n` : '') +
         (meta.has_community_gt ? `🏘️ Community GT available\n` : '') +
-        (warnings.length > 0 ? `\n⚠️ Warnings:\n${warnings.map(w => '  • ' + w).join('\n')}` : '')
+        (warnings.length > 0 ? `\n⚠️ Warnings:\n${warnings.map(w => '  • ' + w).join('\n')}` : '') +
+        syncMessage
       
       alert(msg)
       onClose()

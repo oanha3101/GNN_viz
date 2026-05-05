@@ -106,7 +106,7 @@ def compute_metrics_sync(
 
 # ── Main Training Loop ────────────────────────────────────────────────────────
 
-async def run_graph_embedding(config, data, model_type, websocket, stop_flag):
+async def run_graph_embedding(config, data, model_type, websocket, stop_flag, snapshot_hook=None):
     """
     Unsupervised GCN training via link reconstruction.
     Streams per-epoch snapshots over WebSocket.
@@ -352,6 +352,8 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag):
             except Exception as e:
                 print(f"Outlier scores failed: {e}")
             epoch_snapshots.append(snapshot)
+            if snapshot_hook:
+                await snapshot_hook(epoch, snapshot)
 
             await send_json_zipped(websocket, {
                 'type': 'epoch_snapshot',

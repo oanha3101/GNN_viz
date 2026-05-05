@@ -51,7 +51,7 @@ def calculate_modularity(G, community_map):
         return 0.0
 
 async def run_community_detection(config, data, model_type, websocket, stop_flag,
-                                   num_communities=4, community_gt=None):
+                                   num_communities=4, community_gt=None, snapshot_hook=None):
     """Train community detection model.
     
     Args:
@@ -312,6 +312,8 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
             else:
                 snapshot['community_transitions'] = {}
             epoch_snapshots.append(snapshot)
+            if snapshot_hook:
+                await snapshot_hook(epoch, snapshot)
             
             await send_json_zipped(websocket, {
                 'type': 'epoch_snapshot',

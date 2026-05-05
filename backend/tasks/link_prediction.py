@@ -77,7 +77,7 @@ def split_edges(edge_index, val_ratio=0.1, test_ratio=0.1):
 # ───────────────────────────────────────────────────────────────────────────────
 # Main Training Loop
 # ───────────────────────────────────────────────────────────────────────────────
-async def run_link_prediction(config, data, model_type, websocket, stop_flag):
+async def run_link_prediction(config, data, model_type, websocket, stop_flag, snapshot_hook=None):
     """Train link prediction model and stream snapshots."""
     epochs = config.get('epochs', 80)
 
@@ -350,6 +350,8 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag):
                 'top_k_links': top_k_links,
             }
             epoch_snapshots.append(snapshot)
+            if snapshot_hook:
+                await snapshot_hook(epoch, snapshot)
 
             await send_json_zipped(websocket, {
                 'type': 'epoch_snapshot',

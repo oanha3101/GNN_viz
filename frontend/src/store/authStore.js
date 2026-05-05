@@ -3,9 +3,9 @@
  * Stores access_token in localStorage for persistence across page reloads.
  */
 import { create } from 'zustand';
-import { apiUrl } from '../utils/api';
+import { apiUrl, AUTH_TOKEN_KEY } from '../utils/api';
 
-const TOKEN_KEY = 'gnn_access_token';
+const TOKEN_KEY = AUTH_TOKEN_KEY;
 const USER_KEY = 'gnn_user';
 
 const useAuthStore = create((set, get) => ({

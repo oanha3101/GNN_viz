@@ -303,7 +303,7 @@ def _epoch_payload(epoch, epochs, data, source_graphs_cache=None):
     }
 
 
-async def run_graph_generation(config, data, websocket, stop_flag):
+async def run_graph_generation(config, data, websocket, stop_flag, snapshot_hook=None):
     epochs = config.get('epochs', 50)
     loop = asyncio.get_event_loop()
     snapshots = []
@@ -317,6 +317,8 @@ async def run_graph_generation(config, data, websocket, stop_flag):
 
         snapshot = await loop.run_in_executor(executor, _epoch_payload, epoch, epochs, data, source_graphs)
         snapshots.append(snapshot)
+        if snapshot_hook:
+            await snapshot_hook(epoch, snapshot)
         await send_json_zipped(websocket, {
             'type': 'epoch_snapshot',
             'data': snapshot,

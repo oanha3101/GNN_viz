@@ -27,11 +27,11 @@ describe('buildHoverSummary', () => {
     
     const result0 = buildHoverSummary(1, 0, snapshot, mockGraphData, groundTruth)
     expect(result0.title).toBe('Node #0')
-    expect(result0.chips[0]).toEqual({ label: 'Correct', value: 2, tone: 'green' })
+    expect(result0.chips[0]).toEqual({ label: 'Correct', value: 'Lớp 2', tone: 'green' })
     expect(result0.rows).toContainEqual({ label: 'Confidence', value: '85.0%' })
 
     const result1 = buildHoverSummary(1, 1, snapshot, mockGraphData, groundTruth)
-    expect(result1.chips[0]).toEqual({ label: 'Incorrect', value: 1, tone: 'red' })
+    expect(result1.chips[0]).toEqual({ label: 'Incorrect', value: 'Lớp 1', tone: 'red' })
   })
 
   it('handles Task 4 (Community Detection)', () => {

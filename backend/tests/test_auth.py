@@ -51,3 +51,28 @@ def test_login_invalid():
             "password": "wrong"
         })
         assert resp.status_code == 401
+
+
+def test_register_rejects_duplicate_email_or_username():
+    with TestClient(app) as client:
+        import uuid
+        uid = str(uuid.uuid4())[:8]
+        email = f"duplicate_{uid}@example.com"
+        username = f"duplicate_user_{uid}"
+
+        first = client.post("/api/auth/register", json={
+            "email": email,
+            "username": username,
+            "password": "password123",
+            "full_name": "Duplicate Test",
+        })
+        assert first.status_code == 200, first.text
+
+        duplicate = client.post("/api/auth/register", json={
+            "email": email,
+            "username": username,
+            "password": "password123",
+            "full_name": "Duplicate Test",
+        })
+        assert duplicate.status_code == 400
+        assert duplicate.json()["detail"] == "Email or username already exists"

@@ -1,28 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from pydantic import BaseModel, ConfigDict
-from typing import Optional, List, Any
 from datetime import datetime, timezone
-import os
-import json
-import gzip
-import uuid
-from bson.objectid import ObjectId
+from typing import Any, Dict, List, Optional
 
-from database import get_db, mongo_experiments, mongo_available
-from models.sql_models import Experiment, Project
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy.orm import Session
+
+from api.routers.auth import get_optional_user
+from database import get_db
+from models.sql_models import User
+from services import experiment_service
 
 router = APIRouter()
 
-# Thư mục lưu trữ dữ liệu nén
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "saved_experiments")
-os.makedirs(DATA_DIR, exist_ok=True)
-
-
-# ── Pydantic Schemas ─────────────────────────────────────────────────────────
 
 class ExperimentCreate(BaseModel):
     title: str = "Untitled Run"
+    project_id: Optional[int] = None
+    dataset_id: Optional[int] = None
+    dataset_version_id: Optional[int] = None
+    session_id: Optional[str] = None
     task_type: int = 1
     model_type: str = "GCN"
     dataset_name: str = "cora"
@@ -32,12 +28,27 @@ class ExperimentCreate(BaseModel):
     dropout: float = 0.5
     accuracy: float = 0.0
     loss: float = 0.0
+    best_epoch: int = 0
     config_json: Optional[Any] = None
-    snapshots_json: Optional[Any] = None
+    snapshots_json: Optional[List[Dict[str, Any]]] = None
     graph_data_json: Optional[Any] = None
     ground_truth_json: Optional[Any] = None
     task_data_json: Optional[Any] = None
+    upload_metadata: Optional[Any] = None
+    uploaded_file_path: Optional[str] = None
+    notes: Optional[str] = None
+    is_best: bool = False
     is_mock: bool = False
+
+
+class CompareRunsRequest(BaseModel):
+    experiment_ids: List[int]
+
+
+class ExperimentUpdate(BaseModel):
+    title: Optional[str] = None
+    notes: Optional[str] = None
+    is_best: Optional[bool] = None
 
 
 class ExperimentSummary(BaseModel):
@@ -45,222 +56,164 @@ class ExperimentSummary(BaseModel):
 
     id: int
     title: str
+    project_id: Optional[int]
+    owner_id: Optional[int]
+    dataset_id: Optional[int]
+    dataset_version_id: Optional[int]
     task_type: int
     model_type: str
     dataset_name: str
     epoch_count: int
     accuracy: float
     loss: float
+    best_epoch: int
+    status: str
+    is_best: bool
     is_mock: bool
+    retention_state: str
     created_at: str
+    notes: Optional[str] = None
 
 
-class ExperimentDetail(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    title: str
-    task_type: int
-    model_type: str
-    dataset_name: str
-    epoch_count: int
+class ExperimentDetail(ExperimentSummary):
     learning_rate: float
     hidden_dim: int
     dropout: float
-    accuracy: float
-    loss: float
     config_json: Optional[Any] = None
+    graph_payload: Optional[Any] = None
     snapshots_json: Optional[Any] = None
-    graph_data_json: Optional[Any] = None
-    ground_truth_json: Optional[Any] = None
-    task_data_json: Optional[Any] = None
-    is_mock: bool
-    created_at: str
+    metrics_json: Optional[Any] = None
+    notes: Optional[str] = None
 
-
-# ── Helpers ──────────────────────────────────────────────────────────────────
-
-def save_heavy_data(data: dict) -> str:
-    """Nén và lưu dữ liệu nặng xuống ổ cứng, trả về đường dẫn file."""
-    file_id = uuid.uuid4().hex
-    file_path = os.path.join(DATA_DIR, f"exp_{file_id}.json.gz")
-    with gzip.open(file_path, "wt", encoding="utf-8") as f:
-        json.dump(data, f)
-    return file_path
-
-def load_heavy_data(file_path: str) -> dict:
-    """Đọc và giải nén dữ liệu từ ổ cứng."""
-    if not file_path or not os.path.exists(file_path):
-        return {}
-    try:
-        with gzip.open(file_path, "rt", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"Lỗi đọc file dữ liệu nén: {e}")
-        return {}
-
-
-# ── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.post("/experiments", response_model=dict)
-def save_experiment(payload: ExperimentCreate, db: Session = Depends(get_db)):
-    """Save a completed training run. Dữ liệu nặng được nén và lưu file để tránh giới hạn MongoDB 16MB."""
-    
-    # 1. Gói dữ liệu nặng
-    heavy_payload = {
-        "snapshots_json": payload.snapshots_json,
-        "graph_data_json": payload.graph_data_json,
-        "ground_truth_json": payload.ground_truth_json,
-        "task_data_json": payload.task_data_json,
-        "config_json": payload.config_json
-    }
-    
-    # 2. Lưu file vật lý (Gỡ bom 16MB)
-    file_path = save_heavy_data(heavy_payload)
-    
-    # 3. Lưu record vào MongoDB (chỉ lưu đường dẫn + metadata nhẹ)
-    mongo_id = None
-    if mongo_available:
-        try:
-            mongo_doc = {
-                "file_path": file_path,
-                "config_json": payload.config_json, # Giữ config để query nhanh nếu cần
-                "created_at": datetime.now(timezone.utc)
-            }
-            insert_result = mongo_experiments.insert_one(mongo_doc)
-            mongo_id = str(insert_result.inserted_id)
-        except Exception as e:
-            print(f"MongoDB insert failed: {e}")
-
-    # 4. Lưu relational metadata vào SQL (MySQL/SQLite)
-    exp = Experiment(
-        task_type=payload.task_type,
-        model_type=payload.model_type,
-        dataset_name=payload.dataset_name,
-        epoch_count=payload.epoch_count,
-        learning_rate=payload.learning_rate,
-        hidden_dim=payload.hidden_dim,
-        dropout=payload.dropout,
-        accuracy=payload.accuracy,
-        loss=payload.loss,
-        mongo_doc_id=mongo_id,
-        # Nếu MongoDB lỗi, SQL sẽ lưu file_path vào trường snapshots_json (dạng string)
-        snapshots_json=file_path if not mongo_id else None,
-        is_mock=payload.is_mock,
+def save_experiment(
+    payload: ExperimentCreate,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    return experiment_service.save_experiment(
+        db,
+        payload=payload.model_dump(),
+        user=user,
     )
-    db.add(exp)
-    db.commit()
-    db.refresh(exp)
-    
-    return {"id": exp.id, "status": "saved", "mongo_id": mongo_id}
 
 
-@router.get("/experiments", response_model=List[ExperimentSummary])
-def list_experiments(task_type: Optional[int] = None, limit: int = 50, db: Session = Depends(get_db)):
-    """Lấy danh sách các experiment (chỉ lấy metadata nhẹ)."""
-    q = db.query(Experiment)
-    if task_type is not None:
-        q = q.filter(Experiment.task_type == task_type)
-    rows = q.order_by(Experiment.created_at.desc()).limit(limit).all()
-
-    result = []
-    for r in rows:
-        result.append(ExperimentSummary(
-            id=r.id,
-            title=f"Task {r.task_type} – {r.model_type}",
-            task_type=r.task_type or 1,
-            model_type=r.model_type or "GCN",
-            dataset_name=r.dataset_name or "cora",
-            epoch_count=r.epoch_count or 0,
-            accuracy=r.accuracy or 0.0,
-            loss=r.loss or 0.0,
-            is_mock=r.is_mock if r.is_mock is not None else False,
-            created_at=r.created_at.replace(tzinfo=timezone.utc).isoformat() if r.created_at else "",
-        ))
-    return result
+@router.get("/experiments")
+def list_experiments(
+    task_type: Optional[int] = None,
+    project_id: Optional[int] = None,
+    dataset_version_id: Optional[int] = None,
+    owner_id: Optional[int] = None,
+    model_type: Optional[str] = None,
+    status: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = Query(default=50, le=200),
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    return experiment_service.list_experiment_summaries(
+        db,
+        user=user,
+        task_type=task_type,
+        project_id=project_id,
+        dataset_version_id=dataset_version_id,
+        owner_id=owner_id,
+        model_type=model_type,
+        status=status,
+        q=q,
+        limit=limit,
+    )
 
 
 @router.get("/experiments/{exp_id}", response_model=ExperimentDetail)
-def get_experiment(exp_id: int, db: Session = Depends(get_db)):
-    """Lấy toàn bộ dữ liệu experiment (tự động giải nén file và gộp dữ liệu)."""
-    exp = db.query(Experiment).filter(Experiment.id == exp_id).first()
-    if not exp:
-        raise HTTPException(status_code=404, detail="Experiment not found")
-        
-    file_path = None
-    mongo_doc = {}
-    
-    # 1. Tìm file_path từ MongoDB
-    if exp.mongo_doc_id and mongo_available:
-        try:
-            mongo_doc = mongo_experiments.find_one({"_id": ObjectId(exp.mongo_doc_id)})
-            if mongo_doc:
-                file_path = mongo_doc.get("file_path")
-        except Exception: pass
-            
-    # 2. Fallback tìm file_path từ SQL (nếu MongoDB hỏng)
-    if not file_path and exp.snapshots_json and isinstance(exp.snapshots_json, str):
-        file_path = exp.snapshots_json
+def get_experiment(
+    exp_id: int,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    return experiment_service.get_experiment_detail(db, exp_id=exp_id, user=user)
 
-    # 3. Đọc dữ liệu nén
-    heavy_data = load_heavy_data(file_path) if file_path else {}
-            
-    return ExperimentDetail(
-        id=exp.id,
-        title=f"Task {exp.task_type} – {exp.model_type}",
-        task_type=exp.task_type or 1,
-        model_type=exp.model_type or "GCN",
-        dataset_name=exp.dataset_name or "cora",
-        epoch_count=exp.epoch_count or 0,
-        learning_rate=exp.learning_rate or 0.01,
-        hidden_dim=exp.hidden_dim or 64,
-        dropout=exp.dropout or 0.5,
-        accuracy=exp.accuracy or 0.0,
-        loss=exp.loss or 0.0,
-        config_json=heavy_data.get("config_json") or exp.config_json,
-        snapshots_json=heavy_data.get("snapshots_json") or exp.snapshots_json,
-        graph_data_json=heavy_data.get("graph_data_json") or exp.graph_data_json,
-        ground_truth_json=heavy_data.get("ground_truth_json") or exp.ground_truth_json,
-        task_data_json=heavy_data.get("task_data_json") or exp.task_data_json,
-        is_mock=exp.is_mock if exp.is_mock is not None else False,
-        created_at=exp.created_at.replace(tzinfo=timezone.utc).isoformat() if exp.created_at else "",
+
+@router.post("/experiments/{exp_id}/replay")
+def replay_experiment(
+    exp_id: int,
+    epoch: Optional[int] = Query(default=None),
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    return experiment_service.replay_experiment(
+        db,
+        exp_id=exp_id,
+        epoch=epoch,
+        user=user,
     )
 
 
-@router.delete("/experiments/{exp_id}")
-def delete_experiment(exp_id: int, db: Session = Depends(get_db)):
-    """Xóa experiment và file vật lý tương ứng."""
-    exp = db.query(Experiment).filter(Experiment.id == exp_id).first()
-    if not exp:
-        raise HTTPException(status_code=404, detail="Experiment not found")
-    
-    file_path = None
-    # Xóa record MongoDB và lấy file_path
-    if exp.mongo_doc_id and mongo_available:
-        try:
-            doc = mongo_experiments.find_one({"_id": ObjectId(exp.mongo_doc_id)})
-            if doc:
-                file_path = doc.get("file_path")
-            mongo_experiments.delete_one({"_id": ObjectId(exp.mongo_doc_id)})
-        except Exception: pass
-            
-    # Xóa file vật lý
-    if not file_path and exp.snapshots_json and isinstance(exp.snapshots_json, str):
-        file_path = exp.snapshots_json
-        
-    if file_path and os.path.exists(file_path):
-        try: os.remove(file_path)
-        except Exception: pass
+@router.post("/experiments/compare")
+def compare_runs(
+    payload: CompareRunsRequest,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    return experiment_service.compare_runs(
+        db,
+        experiment_ids=payload.experiment_ids,
+        user=user,
+    )
 
-    db.delete(exp)
-    db.commit()
-    return {"status": "deleted", "id": exp_id}
+
+@router.patch("/experiments/{exp_id}", response_model=ExperimentDetail)
+def update_experiment(
+    exp_id: int,
+    payload: ExperimentUpdate,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    return experiment_service.update_experiment(
+        db,
+        exp_id=exp_id,
+        updates=payload.model_dump(exclude_unset=True),
+        user=user,
+    )
+
+
+@router.get("/experiments/{exp_id}/report")
+def get_experiment_report(
+    exp_id: int,
+    track_export: bool = Query(default=False),
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    return experiment_service.get_experiment_report(
+        db,
+        exp_id=exp_id,
+        track_export=track_export,
+        user=user,
+    )
+
+
+@router.post("/experiments/retention")
+def run_retention(
+    dry_run: bool = Query(default=True),
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    return experiment_service.run_retention(db=db, user=user, dry_run=dry_run)
+
+
+@router.delete("/experiments/{exp_id}")
+def delete_experiment(
+    exp_id: int,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    return experiment_service.delete_experiment(db, exp_id=exp_id, user=user)
 
 
 @router.delete("/experiments")
-def delete_all_experiments(db: Session = Depends(get_db)):
-    """Xóa sạch sành sanh mọi thứ (Database + Files)."""
-    experiments = db.query(Experiment).all()
-    for exp in experiments:
-        delete_experiment(exp.id, db)
-    return {"status": "all deleted"}
+def delete_all_experiments(
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    return experiment_service.delete_all_experiments(db, user=user)

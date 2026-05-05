@@ -1,3 +1,4 @@
+python-dotenv
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 torch>=2.0.0
@@ -12,7 +13,10 @@ sqlalchemy
 pymysql
 pymongo
 redis
+minio
 cryptography
+passlib[bcrypt]
+python-jose[cryptography]
 openpyxl>=3.1.0
 pytest>=7.4.0
 httpx>=0.25.0

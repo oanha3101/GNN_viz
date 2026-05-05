@@ -29,6 +29,8 @@ yarn-debug.log*
 yarn-error.log*
 logs/
 *.log
+out.txt
+Untitled-1.html
 
 # Misc
 .cache/

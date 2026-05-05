@@ -17,7 +17,9 @@ from api.experiments import router as experiments_router
 from api.routers.training_router import router as training_router
 from api.routers.sessions import router as sessions_router
 from api.routers.auth import router as auth_router
-from core.session_manager import session_manager
+from api.routers.admin import router as admin_router
+from api.routers.projects import router as projects_router
+from api.routers.datasets import router as managed_datasets_router
 from core.logging_config import setup_logging
 from core.metrics import metrics
 from utils.data_utils import load_csv, load_custom_graph
@@ -55,6 +57,9 @@ app.include_router(user_loader_router, prefix="/api")
 app.include_router(experiments_router, prefix="/api")
 app.include_router(sessions_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
+app.include_router(projects_router, prefix="/api")
+app.include_router(managed_datasets_router, prefix="/api")
 app.include_router(training_router) # WebSocket router
 
 # ── REST API Endpoints (Gọn nhẹ) ─────────────────────────────────────────────
@@ -67,25 +72,18 @@ def read_root():
         "message": "GNN-Insight Backend Unified Architecture is running."
     }
 
-@app.get("/api/datasets")
-def list_datasets():
+@app.get("/api/datasets/catalog")
+def list_builtin_datasets():
     if not HAS_TORCH: return ["Mock Data"]
     return get_available_datasets()
 
 @app.post("/api/stop")
 def stop_training(payload: dict = None):
     """Dừng một phiên training cụ thể hoặc toàn bộ (fallback)."""
-    if payload is None:
-        payload = {}
-    session_id = payload.get("session_id")
-    if session_id:
-        session_manager.stop_session(session_id)
-        return {"status": "stopping", "session_id": session_id}
-    else:
-        # Fallback: stop all active sessions in RAM
-        for sid in list(session_manager._active_sessions.keys()):
-            session_manager.stop_session(sid)
-        return {"status": "stopping_all"}
+    raise HTTPException(
+        status_code=410,
+        detail="Deprecated route. Use POST /api/sessions/{session_id}/stop instead.",
+    )
 
 @app.post("/api/upload-graph")
 async def upload_graph(file: UploadFile = File(...)):

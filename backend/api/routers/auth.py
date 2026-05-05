@@ -4,17 +4,17 @@ Supports DISABLE_AUTH=1 env var for development.
 """
 import os
 import logging
-from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
 from database import get_db
 from models.sql_models import User
+from services import auth_service
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,7 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     full_name: Optional[str] = None
+    role: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -66,45 +67,43 @@ class UserResponse(BaseModel):
     email: str
     username: str
     full_name: Optional[str]
+    role: str
     is_active: bool
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+def _token_codec_kwargs() -> dict:
+    return {
+        "secret_key": SECRET_KEY,
+        "algorithm": ALGORITHM,
+        "has_jose": HAS_JOSE,
+        "jwt_module": jwt if HAS_JOSE else None,
+        "fallback_hashlib": hashlib if not HAS_JOSE else None,
+        "fallback_json": json if not HAS_JOSE else None,
+        "fallback_base64": base64 if not HAS_JOSE else None,
+    }
+
+
+def _token_factory(data: dict) -> str:
+    return create_access_token(data)
+
+
 def create_access_token(data: dict) -> str:
     """Create JWT access token."""
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-
-    if HAS_JOSE:
-        return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    else:
-        # Simple fallback token (NOT for production)
-        payload = json.dumps(to_encode, default=str)
-        sig = hashlib.sha256(f"{payload}{SECRET_KEY}".encode()).hexdigest()[:16]
-        token = base64.urlsafe_b64encode(payload.encode()).decode() + "." + sig
-        return token
+    return auth_service.create_access_token(
+        data=data,
+        expire_minutes=ACCESS_TOKEN_EXPIRE_MINUTES,
+        **_token_codec_kwargs(),
+    )
 
 
 def decode_token(token: str) -> Optional[dict]:
     """Decode and verify JWT token."""
-    try:
-        if HAS_JOSE:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            return payload
-        else:
-            parts = token.rsplit(".", 1)
-            if len(parts) != 2:
-                return None
-            payload_b64, sig = parts
-            payload_str = base64.urlsafe_b64decode(payload_b64).decode()
-            expected_sig = hashlib.sha256(f"{payload_str}{SECRET_KEY}".encode()).hexdigest()[:16]
-            if sig != expected_sig:
-                return None
-            return json.loads(payload_str)
-    except Exception:
-        return None
+    return auth_service.decode_token(
+        token=token,
+        **_token_codec_kwargs(),
+    )
 
 
 def get_current_user(
@@ -115,30 +114,12 @@ def get_current_user(
     Dependency to get current user from JWT.
     If DISABLE_AUTH=1, returns None (anonymous access allowed).
     """
-    if DISABLE_AUTH:
-        return None
-
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
-
-    payload = decode_token(credentials.credentials)
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        )
-
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
-
-    user = db.query(User).filter_by(id=int(user_id)).first()
-    if not user or not user.is_active:
-        raise HTTPException(status_code=401, detail="User not found or inactive")
-    return user
+    return auth_service.get_current_user_from_credentials(
+        credentials=credentials,
+        db=db,
+        disable_auth=DISABLE_AUTH,
+        **_token_codec_kwargs(),
+    )
 
 
 def get_optional_user(
@@ -146,17 +127,17 @@ def get_optional_user(
     db: Session = Depends(get_db),
 ) -> Optional[User]:
     """Like get_current_user but returns None instead of raising 401."""
-    if DISABLE_AUTH:
-        return None
-    if not credentials:
-        return None
-    payload = decode_token(credentials.credentials)
-    if not payload:
-        return None
-    user_id = payload.get("sub")
-    if not user_id:
-        return None
-    return db.query(User).filter_by(id=int(user_id), is_active=True).first()
+    return auth_service.get_optional_user_from_credentials(
+        credentials=credentials,
+        db=db,
+        disable_auth=DISABLE_AUTH,
+        **_token_codec_kwargs(),
+    )
+
+
+def require_admin_user(user: Optional[User] = Depends(get_current_user)) -> Optional[User]:
+    """Require an admin user when auth is enabled; allow None in DISABLE_AUTH dev mode."""
+    return auth_service.require_admin_user(user)
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -164,57 +145,33 @@ def get_optional_user(
 @router.post("/register", response_model=TokenResponse)
 async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     """Register a new user."""
-    # Check duplicates
-    existing = db.query(User).filter(
-        (User.email == req.email) | (User.username == req.username)
-    ).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Email or username already exists")
-
-    user = User(
+    payload = auth_service.register_user(
+        db,
         email=req.email,
         username=req.username,
-        hashed_password=pwd_context.hash(req.password),
+        password=req.password,
         full_name=req.full_name,
+        role=req.role,
+        password_hash=pwd_context.hash(req.password),
+        token_factory=_token_factory,
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    token = create_access_token({"sub": str(user.id), "username": user.username})
-    return TokenResponse(
-        access_token=token,
-        user={"id": user.id, "email": user.email, "username": user.username,
-              "full_name": user.full_name},
-    )
+    return TokenResponse(access_token=payload["access_token"], user=payload["user"])
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(req: LoginRequest, db: Session = Depends(get_db)):
     """Login with username/password."""
-    user = db.query(User).filter_by(username=req.username).first()
-    if not user or not pwd_context.verify(req.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="Account disabled")
-
-    token = create_access_token({"sub": str(user.id), "username": user.username})
-    return TokenResponse(
-        access_token=token,
-        user={"id": user.id, "email": user.email, "username": user.username,
-              "full_name": user.full_name},
+    payload = auth_service.login_user(
+        db,
+        username=req.username,
+        password=req.password,
+        password_verifier=lambda plain, hashed: pwd_context.verify(plain, hashed),
+        token_factory=_token_factory,
     )
+    return TokenResponse(access_token=payload["access_token"], user=payload["user"])
 
 
 @router.get("/me")
 async def get_me(user: User = Depends(get_current_user)):
     """Get current user profile."""
-    if user is None:
-        return {"id": None, "username": "anonymous", "message": "Auth disabled"}
-    return {
-        "id": user.id,
-        "email": user.email,
-        "username": user.username,
-        "full_name": user.full_name,
-        "is_active": user.is_active,
-    }
+    return auth_service.get_me_payload(user)
