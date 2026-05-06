@@ -38,24 +38,34 @@ async def create_session(req: CreateSessionRequest, user: Optional[User] = Depen
 
 
 @router.get("/{session_id}")
-async def get_session(session_id: str):
+async def get_session(
+    session_id: str,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
     """Get session details."""
-    return session_service.get_session_or_404(session_id)
+    return session_service.get_session_payload(db, session_id, user)
 
 
 @router.get("/{session_id}/resume")
 async def get_resume_data(
     session_id: str,
     db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
 ):
     """Get resume data: last epoch + snapshots for replay."""
-    return session_service.get_resume_data(db, session_id)
+    return session_service.get_resume_data(db, session_id, user)
 
 
 @router.patch("/{session_id}")
-async def update_session_status(session_id: str, req: UpdateStatusRequest):
+async def update_session_status(
+    session_id: str,
+    req: UpdateStatusRequest,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
     """Update session status."""
-    return session_service.update_session_status(session_id=session_id, status=req.status)
+    return session_service.update_session_status(db=db, session_id=session_id, status=req.status, user=user)
 
 
 @router.post("/{session_id}/stop")

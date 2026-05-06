@@ -1,41 +1,126 @@
-Để chạy dự án GNN-Insight trên Windows với XAMPP, bạn có thể thực hiện theo
-  các bước sau:
+# Setup Local cho GNN-Insight
 
-  1. Chạy Backend (Python FastAPI)
-  Mở một terminal mới (PowerShell hoặc CMD) tại thư mục gốc của dự án:
+Tai lieu nay mo ta duong chay local chuan cua repo tren Windows.
 
-   1 cd backend
-   2 # Kích hoạt môi trường ảo
-   3 .\venv\Scripts\activate
-   4 # Khởi chạy server
-   5 python main.py
-  Lưu ý: Server Backend mặc định sẽ chạy tại http://localhost:8000.
+## 1. Khoi dong ha tang
 
-  2. Chạy Frontend (React + Vite)
-  Mở một terminal thứ hai tại thư mục gốc của dự án:
+Chay tu thu muc goc:
 
-   1 cd frontend
-   2 # Chạy ở chế độ development
-   3 npm run dev
-  Lưu ý: Vite thường sẽ chạy tại http://localhost:5173.
+```powershell
+docker-compose up -d
+```
 
-  3. Cấu hình Database (MySQL từ XAMPP)
-  Vì bạn dùng XAMPP, MySQL thường chạy ở cổng 3306 (trong khi dự án mặc định để
-  3344 cho Docker). Bạn nên kiểm tra hoặc tạo file .env trong thư mục backend/
-  với nội dung tương tự sau:
+Stack mac dinh:
 
-   1 # Thay đổi user/pass và port cho đúng với XAMPP của bạn (thông thường là
-     root/không pass và port 3306)
-   2 MYSQL_URL=mysql+pymysql://root:@127.0.0.1:3306/gnn_db
-   3 MONGO_URI=mongodb://127.0.0.1:27017/
-   4 REDIS_URL=redis://127.0.0.1:6379/0
+- MySQL: `127.0.0.1:3344`
+- MongoDB: `127.0.0.1:27017`
+- Redis: `127.0.0.1:6379`
+- MinIO API: `127.0.0.1:9000`
+- MinIO Console: `http://127.0.0.1:9001`
+- phpMyAdmin: `http://127.0.0.1:8080`
 
-  Một số lệnh hữu ích khác:
-   - Kiểm tra kết nối MySQL: Trong thư mục backend, bạn có thể chạy:
-    python scratch/test_mysql_connection.py
-   - Tạo Database: Hãy đảm bảo bạn đã tạo database tên là gnn_db trong
-     phpMyAdmin hoặc MySQL Workbench trước khi chạy.
+Kiem tra nhanh:
 
-  Nếu bạn gặp lỗi về môi trường hoặc thiếu thư viện, hãy cho tôi biết nhé!
+```powershell
+docker-compose ps
+```
 
+## 2. Cai backend
 
+```powershell
+cd backend
+python -m pip install -r requirements.txt
+```
+
+Neu truoc do backend bao thieu `PyMongo` hoac `redis`, lenh tren se cai dung
+dependency theo repo.
+
+## 3. Chay backend
+
+```powershell
+cd backend
+python main.py
+```
+
+Backend mac dinh chay tai `http://127.0.0.1:8000`.
+
+Mot so bien moi truong local quan trong trong `backend/.env`:
+
+```env
+MYSQL_URL=mysql+pymysql://root:root@127.0.0.1:3344/gnn_db
+MONGO_URI=mongodb://admin:password@127.0.0.1:27017/
+REDIS_URL=redis://127.0.0.1:6379/0
+```
+
+## 4. Chay frontend
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend mac dinh chay tai `http://127.0.0.1:5173`.
+
+## 5. Dong bo schema MySQL khi can
+
+Neu database cu chua co du bang hoac cot moi:
+
+```powershell
+Get-Content backend/sql/mysql_schema_sync.sql -Raw | mysql -h 127.0.0.1 -P 3344 -u root -proot gnn_db
+```
+
+Neu database cu co constraint hoac index legacy bi trung:
+
+```powershell
+Get-Content backend/sql/mysql_schema_cleanup_legacy_constraints.sql -Raw | mysql -h 127.0.0.1 -P 3344 -u root -proot gnn_db
+```
+
+## 6. Xem bang MySQL
+
+Co hai cach nhanh:
+
+1. phpMyAdmin: `http://127.0.0.1:8080`
+2. CLI:
+
+```powershell
+mysql -h 127.0.0.1 -P 3344 -u root -proot gnn_db
+```
+
+## 7. Chay full test va build
+
+Tu thu muc goc:
+
+```powershell
+.\scripts\verify_all.ps1
+```
+
+Script nay chay:
+
+- `pytest backend/tests -q`
+- `npm test`
+- `npm run build`
+
+## 8. Check runtime stack
+
+```powershell
+.\scripts\check_runtime.ps1
+```
+
+Script nay check nhanh:
+
+- MySQL
+- MongoDB
+- Redis
+- MinIO
+- phpMyAdmin
+- backend `/api/health`
+
+## 9. Smoke check toi thieu
+
+Sau khi boot xong, nen kiem tra:
+
+1. `GET /api/health`
+2. `GET /api/auth/me`
+3. `GET /api/experiments`
+4. dang nhap vao frontend roi kiem tra route `/app/dashboard` hoac `/admin/overview`

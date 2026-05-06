@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
-import Plot from 'react-plotly.js'
 import usePlayerStore from '../../store/playerStore'
 import useGNNStore from '../../store/useGNNStore'
+import LazyPlot from '../primitives/LazyPlot'
 import { CLASS_COLORS } from '../../utils/colors'
 
 function computeAxisRange(values, paddingRatio = 0.18, minSpan = 6) {
@@ -177,7 +177,7 @@ export default function EmbeddingSpaceB() {
 
   return (
     <div ref={plotContainerRef} className="w-full h-full relative">
-      <Plot
+      <LazyPlot
         data={plotData}
         layout={{
           paper_bgcolor: 'transparent',

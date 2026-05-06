@@ -11,13 +11,23 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.session_manager import session_manager, SNAPSHOT_DIR
+from core import session_manager as session_manager_module
 from models.sql_models import SessionStatus
 from database import init_db
 from main import app
+from services import hybrid_store
+from services.hybrid_store import PersistenceUnavailableError
 
 init_db()
 client = TestClient(app)
+session_manager = session_manager_module.session_manager
+
+
+def _cleanup_snapshot_files(session_id: str) -> None:
+    snapshot_dir = session_manager_module.SNAPSHOT_DIR
+    for filename in os.listdir(snapshot_dir):
+        if filename.startswith(session_id):
+            os.remove(os.path.join(snapshot_dir, filename))
 
 
 class TestSessionCRUD:
@@ -97,9 +107,19 @@ class TestSnapshotPersistence:
         assert len(snaps) == 1
         assert snaps[0]['v'] == 2
         # Cleanup
-        for f in os.listdir(SNAPSHOT_DIR):
-            if f.startswith(sid):
-                os.remove(os.path.join(SNAPSHOT_DIR, f))
+        _cleanup_snapshot_files(sid)
+        session_manager.cleanup_session(sid)
+
+    def test_strict_mode_blocks_local_snapshot_fallback(self, monkeypatch):
+        sid = session_manager.create_session(config={"task": 1})
+        monkeypatch.setattr(hybrid_store, "STRICT_RUNTIME_STACK", True)
+        monkeypatch.setattr(session_manager_module.mongo_runs, "is_strict_mode", lambda: True)
+        monkeypatch.setattr(session_manager_module.mongo_runs, "is_document_store_available", lambda: False)
+
+        with pytest.raises(PersistenceUnavailableError):
+            session_manager.save_snapshot(sid, epoch=0, data={"epoch": 0, "loss": 0.5})
+
+        _cleanup_snapshot_files(sid)
         session_manager.cleanup_session(sid)
 
 
@@ -165,9 +185,7 @@ class TestSessionApiContracts:
         assert payload["config"]["dropout"] == 0.4
         assert [item["epoch"] for item in payload["snapshots"]] == [0, 1, 2]
 
-        for f in os.listdir(SNAPSHOT_DIR):
-            if f.startswith(session_id):
-                os.remove(os.path.join(SNAPSHOT_DIR, f))
+        _cleanup_snapshot_files(session_id)
         session_manager.cleanup_session(session_id)
 
     def test_get_snapshots_from_epoch(self):
@@ -180,9 +198,7 @@ class TestSessionApiContracts:
         assert snaps[0]['epoch'] == 2
         assert snaps[-1]['epoch'] == 4
         # Cleanup
-        for f in os.listdir(SNAPSHOT_DIR):
-            if f.startswith(sid):
-                os.remove(os.path.join(SNAPSHOT_DIR, f))
+        _cleanup_snapshot_files(sid)
         session_manager.cleanup_session(sid)
 
     def test_get_all_snapshots(self):
@@ -192,9 +208,7 @@ class TestSessionApiContracts:
         snaps = session_manager.get_snapshots_from(sid, 0)
         assert len(snaps) == 3
         # Cleanup
-        for f in os.listdir(SNAPSHOT_DIR):
-            if f.startswith(sid):
-                os.remove(os.path.join(SNAPSHOT_DIR, f))
+        _cleanup_snapshot_files(sid)
         session_manager.cleanup_session(sid)
 
     def test_get_session_and_patch_status_contract(self):

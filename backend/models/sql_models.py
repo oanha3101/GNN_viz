@@ -57,7 +57,7 @@ class AuditAction(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     email = Column(String(100), unique=True, index=True, nullable=False)
     username = Column(String(50), unique=True, index=True, nullable=False)
     hashed_password = Column(String(200), nullable=False)
@@ -87,7 +87,7 @@ class User(Base):
 class Project(Base):
     __tablename__ = "projects"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     title = Column(String(100), nullable=False)
     description = Column(Text)
     task_type = Column(Integer)
@@ -104,7 +104,7 @@ class Project(Base):
 class Dataset(Base):
     __tablename__ = "datasets"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     name = Column(String(150), nullable=False, index=True)
     slug = Column(String(180), nullable=False, unique=True, index=True)
     description = Column(Text)
@@ -127,7 +127,7 @@ class Dataset(Base):
 class DatasetVersion(Base):
     __tablename__ = "dataset_versions"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     dataset_id = Column(Integer, ForeignKey("datasets.id"), nullable=False, index=True)
     version = Column(Integer, nullable=False, default=1)
     lifecycle = Column(String(20), default=DatasetLifecycle.DRAFT.value, nullable=False, index=True)
@@ -154,7 +154,7 @@ class DatasetVersion(Base):
 class Experiment(Base):
     __tablename__ = "experiments"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     title = Column(String(200), nullable=False, default="Untitled Run")
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=True, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
@@ -242,7 +242,7 @@ class SessionSnapshot(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     action = Column(String(50), nullable=False, index=True)
     target_type = Column(String(50), nullable=False, index=True)

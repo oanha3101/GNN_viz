@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 from database import SessionLocal
 from models.sql_models import Experiment, SessionSnapshot, SessionStatus, TrainingSession
-from services.hybrid_store import mongo_runs
+from services.hybrid_store import PersistenceUnavailableError, mongo_runs
 
 logger = logging.getLogger(__name__)
 
@@ -124,11 +124,18 @@ class SessionManager:
     def save_snapshot(self, session_id: str, epoch: int, data: dict) -> Optional[str]:
         filepath = None
         try:
-            filename = f"{session_id}_epoch_{epoch}.json.gz"
-            filepath = os.path.join(SNAPSHOT_DIR, filename)
-            json_bytes = json.dumps(data).encode("utf-8")
-            with gzip.open(filepath, "wb") as handle:
-                handle.write(json_bytes)
+            use_local_fallback = not mongo_runs.is_document_store_available()
+            if mongo_runs.is_strict_mode() and use_local_fallback:
+                raise PersistenceUnavailableError(
+                    f"Session snapshot persistence for {session_id} requires MongoDB in strict mode."
+                )
+
+            if use_local_fallback:
+                filename = f"{session_id}_epoch_{epoch}.json.gz"
+                filepath = os.path.join(SNAPSHOT_DIR, filename)
+                json_bytes = json.dumps(data).encode("utf-8")
+                with gzip.open(filepath, "wb") as handle:
+                    handle.write(json_bytes)
 
             db = SessionLocal()
             try:
@@ -144,8 +151,9 @@ class SessionManager:
                         snapshot=data,
                     )
                 existing = db.query(SessionSnapshot).filter_by(session_id=session_id, epoch=epoch).first()
+                blob_ref = filepath if use_local_fallback else f"mongo://session:{session_id}:{epoch}"
                 if existing:
-                    existing.blob_ref = filepath
+                    existing.blob_ref = blob_ref
                     existing.experiment_id = session.experiment_id if session else None
                 else:
                     db.add(
@@ -153,13 +161,15 @@ class SessionManager:
                             session_id=session_id,
                             experiment_id=session.experiment_id if session else None,
                             epoch=epoch,
-                            blob_ref=filepath,
+                            blob_ref=blob_ref,
                         )
                     )
                 db.commit()
             finally:
                 db.close()
             return filepath
+        except PersistenceUnavailableError:
+            raise
         except Exception as exc:
             logger.warning("Snapshot save failed: %s", exc)
             return filepath
@@ -199,6 +209,10 @@ class SessionManager:
         mongo_snapshots = mongo_runs.get_session_snapshots(session_id, from_epoch)
         if mongo_snapshots:
             return mongo_snapshots
+        if mongo_runs.is_strict_mode():
+            raise PersistenceUnavailableError(
+                f"Session replay snapshots for {session_id} are unavailable in strict mode."
+            )
 
         snapshots = []
         try:

@@ -132,6 +132,35 @@ def test_viewer_cannot_create_project_or_dataset():
         )
         assert dataset_response.status_code == 403
 
+        session_response = client.post(
+            "/api/sessions",
+            json={
+                "task": 1,
+                "model": "GCN",
+                "dataset": "viewer_dataset",
+                "epochs": 3,
+            },
+            headers=headers,
+        )
+        assert session_response.status_code == 403
+
+        experiment_response = client.post(
+            "/api/experiments",
+            json={
+                "title": "Viewer Experiment",
+                "task_type": 1,
+                "model_type": "GCN",
+                "dataset_name": "viewer_dataset",
+                "epoch_count": 1,
+                "snapshots_json": [{"epoch": 0}],
+                "graph_data_json": {"nodes": [], "links": []},
+                "ground_truth_json": [],
+                "task_data_json": {},
+            },
+            headers=headers,
+        )
+        assert experiment_response.status_code == 403
+
 
 def test_private_dataset_is_hidden_from_other_researchers():
     with TestClient(app) as client:
@@ -191,3 +220,46 @@ def test_admin_can_run_retention_dry_run():
         payload = retention_response.json()
         assert payload["dry_run"] is True
         assert isinstance(payload["results"], list)
+
+
+def test_session_routes_are_scoped_to_owner_or_admin():
+    with TestClient(app) as client:
+        owner_token = _register_and_token(client, "researcher", "session_owner_scope")
+        other_token = _register_and_token(client, "researcher", "session_other_scope")
+        admin_token = _register_and_token(client, "admin", "session_admin_scope")
+
+        owner_headers = {"Authorization": f"Bearer {owner_token}"}
+        other_headers = {"Authorization": f"Bearer {other_token}"}
+        admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+        session_response = client.post(
+            "/api/sessions",
+            json={
+                "task": 3,
+                "model": "GAT",
+                "dataset": "owner-only-session",
+                "epochs": 4,
+            },
+            headers=owner_headers,
+        )
+        assert session_response.status_code == 200, session_response.text
+        session_id = session_response.json()["session_id"]
+
+        owner_detail = client.get(f"/api/sessions/{session_id}", headers=owner_headers)
+        assert owner_detail.status_code == 200, owner_detail.text
+
+        other_detail = client.get(f"/api/sessions/{session_id}", headers=other_headers)
+        assert other_detail.status_code == 403, other_detail.text
+
+        other_resume = client.get(f"/api/sessions/{session_id}/resume", headers=other_headers)
+        assert other_resume.status_code == 403, other_resume.text
+
+        other_patch = client.patch(
+            f"/api/sessions/{session_id}",
+            json={"status": "running"},
+            headers=other_headers,
+        )
+        assert other_patch.status_code == 403, other_patch.text
+
+        admin_detail = client.get(f"/api/sessions/{session_id}", headers=admin_headers)
+        assert admin_detail.status_code == 200, admin_detail.text

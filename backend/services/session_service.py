@@ -4,7 +4,7 @@ from fastapi import HTTPException
 
 from core.session_manager import session_manager
 from models.sql_models import AuditAction, DatasetVersion, Project, SessionStatus, TrainingSession, User
-from services.hybrid_store import record_audit_log
+from services.hybrid_store import PersistenceUnavailableError, record_audit_log
 
 
 def build_session_config(payload: Dict[str, Any]) -> dict:
@@ -20,6 +20,9 @@ def build_session_config(payload: Dict[str, Any]) -> dict:
 
 
 def create_session(*, payload: Dict[str, Any], user: Optional[User]) -> dict:
+    if user and user.role == "viewer":
+        raise HTTPException(status_code=403, detail="Viewer accounts cannot create training sessions")
+
     config = build_session_config(payload)
     session_id = session_manager.create_session(
         config=config,
@@ -42,6 +45,24 @@ def get_session_or_404(session_id: str) -> dict:
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
+
+
+def _get_session_row_or_404(db, session_id: str) -> TrainingSession:
+    session_row = db.query(TrainingSession).filter(TrainingSession.id == session_id).first()
+    if not session_row:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session_row
+
+
+def ensure_session_access(session_row: TrainingSession, user: Optional[User], *, write: bool = False) -> None:
+    if user is None:
+        return
+    if user.is_superuser or user.role == "admin":
+        return
+    if write and user.role == "viewer":
+        raise HTTPException(status_code=403, detail="Viewer accounts cannot modify training sessions")
+    if session_row.user_id not in (None, user.id):
+        raise HTTPException(status_code=403, detail="Not allowed to access this session")
 
 
 RESUME_CONFIG_KEYS = {
@@ -68,11 +89,17 @@ def _build_dataset_version_name(version: Optional[DatasetVersion]) -> Optional[s
     return f"Version #{version.id}"
 
 
-def get_resume_data(db, session_id: str) -> dict:
+def get_session_payload(db, session_id: str, user: Optional[User]) -> dict:
     session = get_session_or_404(session_id)
-    session_row = db.query(TrainingSession).filter(TrainingSession.id == session_id).first()
-    if not session_row:
-        raise HTTPException(status_code=404, detail="Session not found")
+    session_row = _get_session_row_or_404(db, session_id)
+    ensure_session_access(session_row, user)
+    return session
+
+
+def get_resume_data(db, session_id: str, user: Optional[User]) -> dict:
+    session = get_session_or_404(session_id)
+    session_row = _get_session_row_or_404(db, session_id)
+    ensure_session_access(session_row, user)
 
     project = db.query(Project).filter(Project.id == session_row.project_id).first() if session_row.project_id else None
     dataset_version = (
@@ -81,7 +108,10 @@ def get_resume_data(db, session_id: str) -> dict:
         else None
     )
     config = session["config"] or {}
-    snapshots = session_manager.get_snapshots_from(session_id, 0)
+    try:
+        snapshots = session_manager.get_snapshots_from(session_id, 0)
+    except PersistenceUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     best_epoch = session_row.experiment.best_epoch if session_row.experiment else session["last_epoch"]
     task_config = {
         key: value
@@ -118,7 +148,9 @@ def get_resume_data(db, session_id: str) -> dict:
     }
 
 
-def update_session_status(*, session_id: str, status: str) -> dict:
+def update_session_status(*, db, session_id: str, status: str, user: Optional[User]) -> dict:
+    session_row = _get_session_row_or_404(db, session_id)
+    ensure_session_access(session_row, user, write=True)
     get_session_or_404(session_id)
     session_manager.update_status(session_id, status)
     return {"session_id": session_id, "status": status}
@@ -126,9 +158,8 @@ def update_session_status(*, session_id: str, status: str) -> dict:
 
 def stop_session(*, db, session_id: str, user: Optional[User]) -> dict:
     session = get_session_or_404(session_id)
-
-    if user and user.role != "admin" and session.get("user_id") not in (None, user.id):
-        raise HTTPException(status_code=403, detail="Not allowed to stop this session")
+    session_row = _get_session_row_or_404(db, session_id)
+    ensure_session_access(session_row, user, write=True)
 
     if session["status"] in {
         SessionStatus.COMPLETED.value,

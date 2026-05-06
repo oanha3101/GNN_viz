@@ -29,6 +29,8 @@ def ensure_project_write_access(project: Project, user: Optional[User]) -> None:
         return
     if user.is_superuser or user.role == "admin":
         return
+    if user.role == "viewer":
+        raise HTTPException(status_code=403, detail="Viewer accounts cannot modify projects")
     if project.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not allowed to modify this project")
 

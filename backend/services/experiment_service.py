@@ -10,6 +10,7 @@ from services.hybrid_store import (
     ensure_default_dataset_version,
     ensure_default_project,
     mongo_runs,
+    PersistenceUnavailableError,
     record_audit_log,
     retention_service,
 )
@@ -49,15 +50,22 @@ def serialize_experiment_summary(row: Experiment) -> dict:
 
 
 def serialize_experiment_detail(exp: Experiment) -> dict:
+    try:
+        graph_payload = mongo_runs.get_graph_payload(exp)
+        snapshots_json = mongo_runs.list_snapshots(exp)
+        metrics_json = mongo_runs.get_metrics(exp)
+    except PersistenceUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
     return {
         **serialize_experiment_summary(exp),
         "learning_rate": exp.learning_rate or 0.01,
         "hidden_dim": exp.hidden_dim or 64,
         "dropout": exp.dropout or 0.5,
         "config_json": exp.config_json,
-        "graph_payload": mongo_runs.get_graph_payload(exp),
-        "snapshots_json": mongo_runs.list_snapshots(exp),
-        "metrics_json": mongo_runs.get_metrics(exp),
+        "graph_payload": graph_payload,
+        "snapshots_json": snapshots_json,
+        "metrics_json": metrics_json,
         "notes": exp.notes,
     }
 
@@ -69,6 +77,12 @@ def ensure_experiment_access(experiment: Experiment, user: Optional[User]) -> No
         return
     if experiment.owner_id and experiment.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not allowed to access this experiment")
+
+
+def ensure_experiment_write_access(experiment: Experiment, user: Optional[User]) -> None:
+    if user and user.role == "viewer":
+        raise HTTPException(status_code=403, detail="Viewer accounts cannot modify experiments")
+    ensure_experiment_access(experiment, user)
 
 
 def get_experiment_or_404(db: Session, exp_id: int) -> Experiment:
@@ -101,6 +115,9 @@ def _resolve_project_and_dataset(db: Session, payload: Dict[str, Any], user: Opt
 
 
 def save_experiment(db: Session, *, payload: Dict[str, Any], user: Optional[User]) -> dict:
+    if user and user.role == "viewer":
+        raise HTTPException(status_code=403, detail="Viewer accounts cannot create experiments")
+
     project, dataset_id, dataset_version_id = _resolve_project_and_dataset(db, payload, user)
     session = None
     final_status = SessionStatus.COMPLETED.value
@@ -135,17 +152,20 @@ def save_experiment(db: Session, *, payload: Dict[str, Any], user: Optional[User
     db.add(exp)
     db.flush()
 
-    graph_payload_id = mongo_runs.save_graph_payload(
-        exp,
-        payload.get("config_json"),
-        payload.get("graph_data_json"),
-        payload.get("ground_truth_json"),
-        payload.get("task_data_json"),
-    )
-    snapshots = payload.get("snapshots_json") or []
-    snapshot_ids = mongo_runs.save_snapshots(exp, snapshots)
-    metrics_id = mongo_runs.save_metrics(exp, snapshots, payload.get("config_json"))
-    metrics_doc = mongo_runs.get_metrics(exp) or {}
+    try:
+        graph_payload_id = mongo_runs.save_graph_payload(
+            exp,
+            payload.get("config_json"),
+            payload.get("graph_data_json"),
+            payload.get("ground_truth_json"),
+            payload.get("task_data_json"),
+        )
+        snapshots = payload.get("snapshots_json") or []
+        snapshot_ids = mongo_runs.save_snapshots(exp, snapshots)
+        metrics_id = mongo_runs.save_metrics(exp, snapshots, payload.get("config_json"))
+        metrics_doc = mongo_runs.get_metrics(exp) or {}
+    except PersistenceUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     exp.mongo_run_id = str(exp.id)
     exp.mongo_graph_payload_id = graph_payload_id
@@ -236,16 +256,26 @@ def replay_experiment(db: Session, *, exp_id: int, epoch: Optional[int], user: O
     exp = get_experiment_or_404(db, exp_id)
     ensure_experiment_access(exp, user)
 
-    graph_payload = mongo_runs.get_graph_payload(exp)
+    try:
+        graph_payload = mongo_runs.get_graph_payload(exp)
+    except PersistenceUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     if epoch is None:
+        try:
+            snapshots = mongo_runs.list_snapshots(exp)
+        except PersistenceUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {
             "experiment_id": exp.id,
             "graph_payload": graph_payload,
-            "snapshots": mongo_runs.list_snapshots(exp),
+            "snapshots": snapshots,
             "best_epoch": exp.best_epoch or 0,
         }
 
-    snapshot = mongo_runs.get_snapshot(exp, epoch)
+    try:
+        snapshot = mongo_runs.get_snapshot(exp, epoch)
+    except PersistenceUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     if snapshot is None:
         raise HTTPException(status_code=404, detail=f"Snapshot epoch {epoch} not found")
     return {
@@ -268,6 +298,10 @@ def compare_runs(db: Session, *, experiment_ids: List[int], user: Optional[User]
     results = []
     for experiment in experiments:
         ensure_experiment_access(experiment, user)
+        try:
+            metrics = mongo_runs.get_metrics(experiment)
+        except PersistenceUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         results.append(
             {
                 "experiment": {
@@ -283,7 +317,7 @@ def compare_runs(db: Session, *, experiment_ids: List[int], user: Optional[User]
                     "loss": experiment.loss or 0.0,
                     "created_at": iso_or_blank(experiment.created_at),
                 },
-                "metrics": mongo_runs.get_metrics(experiment),
+                "metrics": metrics,
             }
         )
     return {"results": results}
@@ -291,7 +325,7 @@ def compare_runs(db: Session, *, experiment_ids: List[int], user: Optional[User]
 
 def update_experiment(db: Session, *, exp_id: int, updates: Dict[str, Any], user: Optional[User]) -> dict:
     exp = get_experiment_or_404(db, exp_id)
-    ensure_experiment_access(exp, user)
+    ensure_experiment_write_access(exp, user)
 
     changed = False
     if "title" in updates and updates["title"] is not None:
@@ -362,7 +396,10 @@ def _recommend_next_action(experiment: Experiment, metrics: Dict[str, Any]) -> s
 
 
 def build_report_payload(exp: Experiment, db: Session) -> Dict[str, Any]:
-    metrics = mongo_runs.get_metrics(exp) or {}
+    try:
+        metrics = mongo_runs.get_metrics(exp) or {}
+    except PersistenceUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     project = db.query(Project).filter(Project.id == exp.project_id).first() if exp.project_id else None
     dataset = exp.dataset
     dataset_version = exp.dataset_version
@@ -446,7 +483,7 @@ def run_retention(*, db: Session, user: Optional[User], dry_run: bool) -> dict:
 
 def delete_experiment(db: Session, *, exp_id: int, user: Optional[User]) -> dict:
     exp = get_experiment_or_404(db, exp_id)
-    ensure_experiment_access(exp, user)
+    ensure_experiment_write_access(exp, user)
 
     mongo_runs.delete_experiment(exp)
     record_audit_log(

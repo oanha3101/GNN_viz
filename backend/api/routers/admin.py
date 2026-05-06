@@ -117,3 +117,12 @@ def run_admin_retention(
     admin: Optional[User] = Depends(require_admin_user),
 ):
     return admin_service.run_retention(db, dry_run=dry_run)
+
+
+@router.post("/blob-cleanup")
+def run_admin_blob_cleanup(
+    dry_run: bool = Query(default=True),
+    db: Session = Depends(get_db),
+    admin: Optional[User] = Depends(require_admin_user),
+):
+    return admin_service.run_blob_cleanup(db, dry_run=dry_run, admin=admin)

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
-import Plot from 'react-plotly.js'
 import usePlayerStore from '../../store/playerStore'
+import LazyPlot from '../primitives/LazyPlot'
 
 const COMMUNITY_COLORS = ['#3b82f6','#ef4444','#22c55e','#eab308','#a855f7','#06b6d4','#ec4899','#f97316']
 
@@ -152,7 +152,7 @@ export default function CommunityEvolution() {
           
           <div className="flex-1 min-h-0">
             {areaData.length > 0 ? (
-              <Plot
+              <LazyPlot
                 data={areaData}
                 layout={{
                   paper_bgcolor: 'transparent',
@@ -185,7 +185,7 @@ export default function CommunityEvolution() {
               Node Migration Flow (±5 epochs từ Epoch {epochInt})
             </div>
             <div className="flex-1 min-h-0">
-              <Plot
+              <LazyPlot
                 data={flowSankey}
                 layout={{
                   paper_bgcolor: 'transparent',

@@ -28,6 +28,7 @@ Focus areas:
 - project/dataset governance
 - experiment replay, compare, report, retention
 - session lifecycle and reconnect metadata
+- runtime health and strict stack validation
 - websocket protocol stability
 
 ### Frontend
@@ -59,12 +60,21 @@ Minimum gates for significant product changes:
 - `pytest backend/tests -q`
 - `npm test`
 - `npm run build`
+- `.\scripts\verify_all.ps1` for the Windows local all-in-one verification path
 - GitHub Actions workflow: `.github/workflows/ci.yml`
 
 Additional checks when touching contracts or storage:
 
 - update `docs/technical/API_CONTRACT.md`
 - update `docs/technical/ARCHITECTURE.md` if lifecycle or ownership changed
+
+Runtime hygiene for tests:
+
+- backend pytest runtime files should default to the OS temp directory via
+  `PYTEST_RUNTIME_DIR` instead of writing `.sqlite` and snapshot artifacts into
+  the repo tree
+- if you need to inspect runtime artifacts locally, point `PYTEST_RUNTIME_DIR`
+  at a dedicated scratch folder outside the tracked source tree
 
 ## Special Watch-outs
 

@@ -1,8 +1,8 @@
 import gzip
+import io
 import json
 import os
 import re
-import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -34,6 +34,7 @@ from models.sql_models import (
     Experiment,
     Project,
     SessionStatus,
+    TrainingSession,
     User,
 )
 
@@ -42,6 +43,11 @@ LOCAL_MONGO_FALLBACK_DIR = os.path.join(BASE_DIR, "data", "mongo_fallback")
 LOCAL_BLOB_DIR = os.path.join(BASE_DIR, "data", "blob_store")
 os.makedirs(LOCAL_MONGO_FALLBACK_DIR, exist_ok=True)
 os.makedirs(LOCAL_BLOB_DIR, exist_ok=True)
+STRICT_RUNTIME_STACK = os.getenv("REQUIRE_RUNTIME_STACK", "0") == "1"
+
+
+class PersistenceUnavailableError(RuntimeError):
+    """Raised when a primary persistence backend is required but unavailable."""
 
 
 def slugify(value: str) -> str:
@@ -77,18 +83,47 @@ class BlobStore:
     """Small abstraction layer so Phase 1 code does not hard-code local file paths."""
 
     def __init__(self):
-        self.provider = os.getenv("BLOB_STORE_PROVIDER", "local")
+        self.provider = os.getenv("BLOB_STORE_PROVIDER", "local").strip().lower()
         self.root_dir = os.getenv("LOCAL_BLOB_ROOT", LOCAL_BLOB_DIR)
         self.bucket = os.getenv("S3_BUCKET", "gnn-insight")
+        self.endpoint = os.getenv("S3_ENDPOINT", "127.0.0.1:9000")
+        self.secure = os.getenv("S3_SECURE", "0") == "1"
         self._client = None
-        if self.provider == "minio" and Minio is not None:
+        self._available = self.provider == "local"
+        self._last_error: Optional[str] = None
+        self._initialize_runtime()
+
+    def _initialize_runtime(self) -> None:
+        if self.provider == "local":
+            self._available = True
+            self._last_error = None
+            os.makedirs(self.root_dir, exist_ok=True)
+            return
+
+        if self.provider != "minio":
+            self._available = False
+            self._last_error = f"Unsupported blob provider: {self.provider}"
+            return
+
+        if Minio is None:
+            self._available = False
+            self._last_error = "minio package is not installed"
+            return
+
+        try:
             self._client = Minio(
-                os.getenv("S3_ENDPOINT", "127.0.0.1:9000"),
+                self.endpoint,
                 access_key=os.getenv("S3_ACCESS_KEY", "minioadmin"),
                 secret_key=os.getenv("S3_SECRET_KEY", "minioadmin"),
-                secure=os.getenv("S3_SECURE", "0") == "1",
+                secure=self.secure,
             )
             self._ensure_bucket()
+            self._available = True
+            self._last_error = None
+        except Exception as exc:
+            self._client = None
+            self._available = False
+            self._last_error = str(exc)
 
     def _ensure_bucket(self) -> None:
         if not self._client:
@@ -96,6 +131,30 @@ class BlobStore:
         found = self._client.bucket_exists(self.bucket)
         if not found:
             self._client.make_bucket(self.bucket)
+
+    def get_runtime_status(self) -> Dict[str, Any]:
+        if self.provider == "local":
+            return {
+                "provider": self.provider,
+                "root_dir": self.root_dir,
+                "bucket": None,
+                "configured_endpoint": None,
+                "available": True,
+                "fallback_active": False,
+                "strict_ready": False,
+                "error": None,
+            }
+
+        return {
+            "provider": self.provider,
+            "root_dir": None,
+            "bucket": self.bucket,
+            "configured_endpoint": self.endpoint,
+            "available": self._available,
+            "fallback_active": False,
+            "strict_ready": self.provider == "minio" and self._available,
+            "error": self._last_error,
+        }
 
     def _put_minio_bytes(self, key: str, payload: bytes, content_type: str) -> str:
         if not self._client:
@@ -116,7 +175,7 @@ class BlobStore:
         if self.provider == "minio" and self._client:
             data = json.dumps(payload, ensure_ascii=True, default=str).encode("utf-8")
             return self._put_minio_bytes(key, data, "application/json")
-        path = os.path.join(self.root_dir, key.replace("/", os.sep))
+        path = self._local_path(key)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, ensure_ascii=True, default=str)
@@ -125,14 +184,147 @@ class BlobStore:
     def put_bytes(self, key: str, payload: bytes) -> str:
         if self.provider == "minio" and self._client:
             return self._put_minio_bytes(key, payload, "application/octet-stream")
-        path = os.path.join(self.root_dir, key.replace("/", os.sep))
+        path = self._local_path(key)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as handle:
             handle.write(payload)
         return key
 
+    def get_bytes(self, key: str) -> bytes:
+        if self.provider == "minio" and self._client:
+            response = self._client.get_object(self.bucket, key)
+            try:
+                return response.read()
+            finally:
+                response.close()
+                response.release_conn()
+        path = self._local_path(key)
+        with open(path, "rb") as handle:
+            return handle.read()
+
+    def get_json(self, key: str) -> Any:
+        raw = self.get_bytes(key)
+        return json.loads(raw.decode("utf-8"))
+
+    def _local_path(self, key: str) -> str:
+        return os.path.join(self.root_dir, key.replace("/", os.sep))
+
+    def exists(self, key: str) -> bool:
+        if self.provider == "minio" and self._client:
+            try:
+                self._client.stat_object(self.bucket, key)
+                return True
+            except Exception:
+                return False
+        return os.path.exists(self._local_path(key))
+
+    def delete(self, key: str) -> bool:
+        if self.provider == "minio" and self._client:
+            if not self.exists(key):
+                return False
+            self._client.remove_object(self.bucket, key)
+            return True
+
+        path = self._local_path(key)
+        if not os.path.exists(path):
+            return False
+        os.remove(path)
+        current_dir = os.path.dirname(path)
+        root_dir = os.path.abspath(self.root_dir)
+        while current_dir.startswith(root_dir) and current_dir != root_dir:
+            if os.listdir(current_dir):
+                break
+            os.rmdir(current_dir)
+            current_dir = os.path.dirname(current_dir)
+        return True
+
+    def list_keys(self, prefix: str = "") -> List[str]:
+        normalized_prefix = prefix.strip("/")
+        if self.provider == "minio" and self._client:
+            objects = self._client.list_objects(self.bucket, prefix=normalized_prefix, recursive=True)
+            return sorted(obj.object_name for obj in objects if not obj.is_dir)
+
+        base_dir = self.root_dir
+        if normalized_prefix:
+            base_dir = self._local_path(normalized_prefix)
+            if not os.path.exists(base_dir):
+                return []
+        if not os.path.exists(base_dir):
+            return []
+        keys = []
+        for current_root, _, filenames in os.walk(base_dir):
+            for filename in filenames:
+                full_path = os.path.join(current_root, filename)
+                relative_path = os.path.relpath(full_path, self.root_dir)
+                keys.append(relative_path.replace(os.sep, "/"))
+        return sorted(keys)
+
 
 blob_store = BlobStore()
+
+
+def get_blob_runtime_status() -> Dict[str, Any]:
+    return blob_store.get_runtime_status()
+
+
+def validate_blob_runtime_requirements(require_runtime_stack: bool | None = None) -> Dict[str, Any]:
+    require_runtime_stack = STRICT_RUNTIME_STACK if require_runtime_stack is None else require_runtime_stack
+    status = get_blob_runtime_status()
+    if not require_runtime_stack:
+        return status
+
+    if status["provider"] == "local":
+        raise RuntimeError(
+            "Blob store is configured in local mode. Strict runtime mode requires MinIO or another S3-compatible provider."
+        )
+    if not status["available"]:
+        raise RuntimeError(
+            f"Blob store provider '{status['provider']}' is unavailable in strict mode."
+        )
+    return status
+
+
+def collect_referenced_blob_keys(db: Session) -> set[str]:
+    keys: set[str] = set()
+    for raw_blob_key, processed_blob_key in db.query(
+        DatasetVersion.raw_blob_key,
+        DatasetVersion.processed_blob_key,
+    ).all():
+        if raw_blob_key:
+            keys.add(raw_blob_key)
+        if processed_blob_key:
+            keys.add(processed_blob_key)
+    for (config_json,) in db.query(TrainingSession.config_json).all():
+        if not isinstance(config_json, dict):
+            continue
+        uploaded_file_path = config_json.get("uploaded_file_path")
+        if isinstance(uploaded_file_path, str) and uploaded_file_path.strip():
+            keys.add(uploaded_file_path.strip())
+    return keys
+
+
+def find_orphan_blob_keys(db: Session, *, prefix: str = "") -> List[str]:
+    referenced_keys = collect_referenced_blob_keys(db)
+    available_keys = blob_store.list_keys(prefix=prefix)
+    return sorted(key for key in available_keys if key not in referenced_keys)
+
+
+def cleanup_orphan_blob_keys(db: Session, *, dry_run: bool = True, prefix: str = "") -> Dict[str, Any]:
+    orphan_keys = find_orphan_blob_keys(db, prefix=prefix)
+    deleted_keys: List[str] = []
+    if not dry_run:
+        for key in orphan_keys:
+            if blob_store.delete(key):
+                deleted_keys.append(key)
+    return {
+        "provider": blob_store.provider,
+        "dry_run": dry_run,
+        "orphan_keys": orphan_keys,
+        "deleted_keys": deleted_keys,
+        "object_count": len(blob_store.list_keys(prefix=prefix)),
+        "orphan_count": len(orphan_keys),
+        "deleted_count": len(deleted_keys),
+    }
 
 
 def record_audit_log(
@@ -211,12 +403,15 @@ def ensure_default_dataset_version(
         return dataset, version
 
     processed_blob_key = None
-    if uploaded_file_path and os.path.exists(uploaded_file_path):
-        with open(uploaded_file_path, "rb") as handle:
-            processed_blob_key = blob_store.put_bytes(
-                f"datasets/raw/{slug}/processed.pt",
-                handle.read(),
-            )
+    if uploaded_file_path:
+        if os.path.exists(uploaded_file_path):
+            with open(uploaded_file_path, "rb") as handle:
+                processed_blob_key = blob_store.put_bytes(
+                    f"datasets/raw/{slug}/processed.pt",
+                    handle.read(),
+                )
+        elif blob_store.exists(uploaded_file_path):
+            processed_blob_key = uploaded_file_path
 
     version = DatasetVersion(
         dataset_id=dataset.id,
@@ -234,6 +429,20 @@ def ensure_default_dataset_version(
 
 
 class MongoRunRepository:
+    def is_strict_mode(self) -> bool:
+        return STRICT_RUNTIME_STACK
+
+    def is_document_store_available(self) -> bool:
+        return mongo_available
+
+    def _require_document_store(self, operation: str) -> None:
+        if mongo_available:
+            return
+        raise PersistenceUnavailableError(
+            f"MongoDB document store is unavailable for {operation}. "
+            "Strict runtime mode does not allow local replay fallbacks in the main product flow."
+        )
+
     def _fallback_path(self, category: str, experiment_id: int) -> str:
         path = os.path.join(LOCAL_MONGO_FALLBACK_DIR, category)
         os.makedirs(path, exist_ok=True)
@@ -280,6 +489,8 @@ class MongoRunRepository:
                 return str(result["_id"])
             created = mongo_graph_payloads.find_one({"experiment_id": experiment.id}, {"_id": 1})
             return str(created["_id"])
+        if self.is_strict_mode():
+            self._require_document_store("graph payload persistence")
         return self._write_fallback("graph_payloads", experiment.id, payload)
 
     def get_graph_payload(self, experiment: Experiment) -> Dict[str, Any]:
@@ -288,6 +499,12 @@ class MongoRunRepository:
             if doc:
                 doc.pop("_id", None)
                 return doc
+            if self.is_strict_mode():
+                raise PersistenceUnavailableError(
+                    f"Graph payload for experiment {experiment.id} is missing from MongoDB."
+                )
+        elif self.is_strict_mode():
+            self._require_document_store("graph payload replay")
         return self._read_fallback("graph_payloads", experiment.id) or {}
 
     def save_snapshots(self, experiment: Experiment, snapshots: List[Dict[str, Any]], run_id: Optional[str] = None) -> List[str]:
@@ -314,6 +531,8 @@ class MongoRunRepository:
                 )
                 ids.append(f"{experiment.id}:{epoch}")
             return ids
+        if self.is_strict_mode():
+            self._require_document_store("snapshot persistence")
 
         fallback_payload = {
             "experiment_id": experiment.id,
@@ -330,7 +549,14 @@ class MongoRunRepository:
                 {"run_id": run_id},
                 {"payload": 1, "_id": 0},
             ).sort("epoch", 1)
-            return [row["payload"] for row in rows]
+            payloads = [row["payload"] for row in rows]
+            if self.is_strict_mode() and not payloads:
+                raise PersistenceUnavailableError(
+                    f"Replay snapshots for experiment {experiment.id} are missing from MongoDB."
+                )
+            return payloads
+        if self.is_strict_mode():
+            self._require_document_store("snapshot replay")
         doc = self._read_fallback("snapshots", experiment.id) or {}
         return doc.get("snapshots", [])
 
@@ -341,7 +567,15 @@ class MongoRunRepository:
                 {"run_id": run_id, "epoch": epoch},
                 {"payload": 1, "_id": 0},
             )
-            return row["payload"] if row else None
+            if row:
+                return row["payload"]
+            if self.is_strict_mode():
+                raise PersistenceUnavailableError(
+                    f"Replay snapshot epoch {epoch} for experiment {experiment.id} is missing from MongoDB."
+                )
+            return None
+        if self.is_strict_mode():
+            self._require_document_store("snapshot replay")
         for snapshot in self.list_snapshots(experiment):
             if int(snapshot.get("epoch", -1)) == epoch:
                 return snapshot
@@ -377,6 +611,8 @@ class MongoRunRepository:
                 upsert=True,
             )
             return f"{run_id}:{epoch}"
+        if self.is_strict_mode():
+            self._require_document_store("session snapshot persistence")
         return None
 
     def get_session_snapshots(self, session_id: str, from_epoch: int = 0) -> List[Dict[str, Any]]:
@@ -387,6 +623,8 @@ class MongoRunRepository:
                 {"payload": 1, "_id": 0},
             ).sort("epoch", 1)
             return [row["payload"] for row in rows]
+        if self.is_strict_mode():
+            self._require_document_store("session resume replay")
         return []
 
     def save_metrics(
@@ -432,6 +670,8 @@ class MongoRunRepository:
             )
             row = mongo_experiment_metrics.find_one({"experiment_id": experiment.id}, {"_id": 1})
             return str(row["_id"])
+        if self.is_strict_mode():
+            self._require_document_store("metrics persistence")
         return self._write_fallback("metrics", experiment.id, summary)
 
     def get_metrics(self, experiment: Experiment) -> Dict[str, Any]:
@@ -440,6 +680,12 @@ class MongoRunRepository:
             if row:
                 row.pop("_id", None)
                 return row
+            if self.is_strict_mode():
+                raise PersistenceUnavailableError(
+                    f"Metrics summary for experiment {experiment.id} is missing from MongoDB."
+                )
+        elif self.is_strict_mode():
+            self._require_document_store("metrics query")
         return self._read_fallback("metrics", experiment.id) or {}
 
     def delete_experiment(self, experiment: Experiment) -> None:
@@ -455,6 +701,8 @@ class MongoRunRepository:
             mongo_experiment_metrics.delete_many({"experiment_id": experiment.id})
             mongo_graph_payloads.delete_many({"experiment_id": experiment.id})
             return
+        if self.is_strict_mode():
+            self._require_document_store("experiment delete")
         for category in ("snapshots", "metrics", "graph_payloads"):
             path = self._fallback_path(category, experiment.id)
             if os.path.exists(path):
@@ -476,6 +724,8 @@ class MongoRunRepository:
                     {"run_id": f"experiment:{experiment.id}", "epoch": {"$in": delete_epochs}}
                 )
             return {"kept_epochs": keep_epochs, "deleted_epochs": delete_epochs, "mode": "mongo"}
+        if self.is_strict_mode():
+            self._require_document_store("retention compaction")
 
         snapshots = self.list_snapshots(experiment)
         kept = [snapshot for snapshot in snapshots if int(snapshot.get("epoch", -1)) in keep_epochs]

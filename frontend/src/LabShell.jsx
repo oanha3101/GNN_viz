@@ -5,16 +5,16 @@ import useGNNStore from './store/useGNNStore'
 import usePlayerStore from './store/playerStore'
 import useSessionStore from './store/sessionStore'
 import useWebSocket from './hooks/useWebSocket'
-import Player from './components/PlayerV2'
 import LeftSidebar from './components/Shell/LeftSidebar'
-import TrainingControls from './components/TrainingControlsV2'
-import ConfigPanel from './components/ConfigPanel/ConfigPanel'
 import InductiveDemo from './components/TopologyView/InductiveDemo'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import DataInputView from './components/UploadPanel/DataInputView'
-import TrainingReport from './components/TrainingReport'
 import useAuthStore from './store/authStore'
 
+const Player = lazy(() => import('./components/PlayerV2'))
+const TrainingControls = lazy(() => import('./components/TrainingControlsV2'))
+const ConfigPanel = lazy(() => import('./components/ConfigPanel/ConfigPanel'))
+const DataInputView = lazy(() => import('./components/UploadPanel/DataInputView'))
+const TrainingReport = lazy(() => import('./components/TrainingReport'))
 const TopologyView = lazy(() => import('./components/TopologyView/TopologyView'))
 const TaskTopology2 = lazy(() => import('./components/TopologyView/TaskTopology2'))
 const TaskTopology3 = lazy(() => import('./components/TopologyView/TaskTopology3'))
@@ -587,16 +587,26 @@ function LabShell() {
       </div>
 
         {/* Global Overlays */}
-        <TrainingReport />
-        <ConfigPanel />
-        {isDataInputOpen && <DataInputView onClose={() => setIsDataInputOpen(false)} />}
+        <Suspense fallback={null}>
+          <TrainingReport />
+          <ConfigPanel />
+          {isDataInputOpen ? <DataInputView onClose={() => setIsDataInputOpen(false)} /> : null}
+        </Suspense>
       </main>
 
       {/* ═══ Footer Controls ═══ */}
       <footer className="h-20 bg-[#050c19]/90 backdrop-blur-xl border-t border-slate-800/60 px-6 flex items-center gap-6 z-50 shrink-0">
-        <div className="flex-1"><Player /></div>
+        <div className="flex-1">
+          <Suspense fallback={<PanelLoader label="Dang tai player..." />}>
+            <Player />
+          </Suspense>
+        </div>
         <div className="w-px h-10 bg-slate-800" />
-        <div className="w-[300px]"><TrainingControls /></div>
+        <div className="w-[300px]">
+          <Suspense fallback={<PanelLoader label="Dang tai controls..." />}>
+            <TrainingControls />
+          </Suspense>
+        </div>
       </footer>
     </div>
   )

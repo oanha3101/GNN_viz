@@ -7,11 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 import pickle
 import tempfile
+import uuid
 
 # Thêm đường dẫn gốc vào python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from database import init_db, redis_client
+from database import get_runtime_status, init_db, redis_client, validate_runtime_requirements
 from api.user_loader import router as user_loader_router
 from api.experiments import router as experiments_router
 from api.routers.training_router import router as training_router
@@ -22,6 +23,7 @@ from api.routers.projects import router as projects_router
 from api.routers.datasets import router as managed_datasets_router
 from core.logging_config import setup_logging
 from core.metrics import metrics
+from services.hybrid_store import blob_store, get_blob_runtime_status, slugify, validate_blob_runtime_requirements
 from utils.data_utils import load_csv, load_custom_graph
 from data.loaders import auto_detect_graph, get_available_datasets
 
@@ -38,6 +40,8 @@ async def lifespan(app: FastAPI):
     # Startup: structured logging + database
     setup_logging()
     init_db()
+    validate_runtime_requirements()
+    validate_blob_runtime_requirements()
     yield
     # Shutdown
 
@@ -72,6 +76,22 @@ def read_root():
         "message": "GNN-Insight Backend Unified Architecture is running."
     }
 
+
+@app.get("/api/health")
+def get_health():
+    runtime = get_runtime_status()
+    runtime["blob"] = get_blob_runtime_status()
+    degraded = [
+        name
+        for name in ("mysql", "mongo", "redis", "blob")
+        if runtime[name]["fallback_active"] or not runtime[name]["available"]
+    ]
+    return {
+        "status": "degraded" if degraded else "ok",
+        "runtime": runtime,
+        "degraded_services": degraded,
+    }
+
 @app.get("/api/datasets/catalog")
 def list_builtin_datasets():
     if not HAS_TORCH: return ["Mock Data"]
@@ -88,19 +108,26 @@ def stop_training(payload: dict = None):
 @app.post("/api/upload-graph")
 async def upload_graph(file: UploadFile = File(...)):
     if not HAS_TORCH: return {"error": "PyTorch not installed"}
-    suffix = os.path.splitext(file.filename)[1]
+    suffix = os.path.splitext(file.filename)[1] or ".bin"
+    upload_bytes = await file.read()
+    runtime_key = f"datasets/runtime/{slugify(os.path.splitext(file.filename)[0])}/{uuid.uuid4().hex}{suffix}"
+    blob_store.put_bytes(runtime_key, upload_bytes)
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir=os.path.join(os.path.dirname(__file__), 'datasets')) as tmp:
-        tmp.write(await file.read())
+        tmp.write(upload_bytes)
         tmp_path = tmp.name
     try:
         data = load_custom_graph(tmp_path)
         data, metadata = auto_detect_graph(data)
-        metadata['file_path'] = tmp_path
+        metadata['uploaded_file_path'] = runtime_key
+        metadata['blob_key'] = runtime_key
         metadata['filename'] = file.filename
         return metadata
     except Exception as e:
-        if os.path.exists(tmp_path): os.unlink(tmp_path)
+        blob_store.delete(runtime_key)
         return {"error": str(e)}
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
 @app.post("/api/upload")
 async def upload_csv(nodes: UploadFile = File(...), edges: UploadFile = File(...)):

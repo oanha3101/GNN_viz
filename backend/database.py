@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from sqlalchemy.engine import make_url
 
 load_dotenv()
 
@@ -21,6 +22,8 @@ except ImportError:
 Base = declarative_base()
 
 MYSQL_URL = os.getenv("MYSQL_URL", "mysql+pymysql://root:root@127.0.0.1:3344/gnn_db")
+STRICT_RUNTIME_STACK = os.getenv("REQUIRE_RUNTIME_STACK", "0") == "1"
+mysql_fallback_active = False
 
 try:
     engine = create_engine(MYSQL_URL, pool_pre_ping=True)
@@ -28,6 +31,7 @@ try:
 except Exception:
     print("Warning: MySQL connection failed, falling back to SQLite.")
     engine = create_engine("sqlite:///./gnn_insight.db", connect_args={"check_same_thread": False})
+    mysql_fallback_active = True
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -120,6 +124,7 @@ def ensure_mongo_indexes():
 
 # 3. Redis (Ephemeral cache)
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+redis_available = False
 if redis is None:
     print("Warning: redis package not installed. Redis cache disabled.")
     redis_client = NullRedisClient()
@@ -127,9 +132,62 @@ else:
     redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=False)
     try:
         redis_client.ping()
+        redis_available = True
     except Exception:
         print("Warning: Redis connection failed.")
         redis_client = NullRedisClient()
+
+
+def _safe_engine_url() -> str:
+    try:
+        return str(make_url(str(engine.url)))
+    except Exception:
+        return str(engine.url)
+
+
+def get_runtime_status() -> dict:
+    return {
+        "strict_runtime_stack": STRICT_RUNTIME_STACK,
+        "mysql": {
+            "configured_url": MYSQL_URL,
+            "engine_url": _safe_engine_url(),
+            "available": not mysql_fallback_active,
+            "fallback_active": mysql_fallback_active,
+            "driver": engine.dialect.name,
+        },
+        "mongo": {
+            "configured_url": MONGO_URI,
+            "available": mongo_available,
+            "fallback_active": not mongo_available,
+        },
+        "redis": {
+            "configured_url": REDIS_URL,
+            "available": redis_available,
+            "fallback_active": not redis_available,
+        },
+    }
+
+
+def validate_runtime_requirements(require_runtime_stack: bool | None = None) -> dict:
+    status = get_runtime_status()
+    require_runtime_stack = STRICT_RUNTIME_STACK if require_runtime_stack is None else require_runtime_stack
+    if not require_runtime_stack:
+        return status
+
+    degraded_services = []
+    if status["mysql"]["fallback_active"]:
+        degraded_services.append("mysql")
+    if status["mongo"]["fallback_active"]:
+        degraded_services.append("mongo")
+    if status["redis"]["fallback_active"]:
+        degraded_services.append("redis")
+
+    if degraded_services:
+        joined = ", ".join(degraded_services)
+        raise RuntimeError(
+            f"Runtime stack is incomplete in strict mode. Degraded services: {joined}."
+        )
+    return status
 
 
 def init_db():

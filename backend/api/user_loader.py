@@ -12,8 +12,10 @@ import tempfile
 import os
 import json
 import io
+import uuid
 
 from api.task_adapters import get_adapter, TASK_ADAPTERS
+from services.hybrid_store import blob_store, slugify
 
 router = APIRouter()
 
@@ -93,29 +95,22 @@ def _parse_and_align(df_nodes: pd.DataFrame, df_edges: pd.DataFrame,
     return df_nodes, df_edges, node_mapper, num_nodes, num_edges
 
 
-def _save_pyg_data(result: dict) -> str:
-    """Save PyG Data (single or list) to temp file. Returns file path.
-    Also saves the rich graph_json alongside it."""
-    datasets_dir = os.path.join(os.path.dirname(__file__), '..', 'datasets')
-    os.makedirs(datasets_dir, exist_ok=True)
-
-    f = tempfile.NamedTemporaryFile(
-        delete=False, suffix=".pt", dir=datasets_dir
-    )
-    tmp_path = f.name
-    f.close()
+def _save_pyg_data(result: dict, dataset_name: Optional[str] = None) -> str:
+    """Persist runtime training artifacts to blob storage and return the object key."""
+    slug = slugify(dataset_name or "custom-runtime")
+    object_key = f"datasets/runtime/{slug}/{uuid.uuid4().hex}.pt"
+    payload_buffer = io.BytesIO()
 
     if 'pyg_data_list' in result:
-        torch.save(result['pyg_data_list'], tmp_path)
+        torch.save(result['pyg_data_list'], payload_buffer)
     else:
-        torch.save(result['pyg_data'], tmp_path)
-        
-    # Save the rich graph_json
-    if 'graph_json' in result:
-        with open(tmp_path + ".json", 'w') as jf:
-            json.dump(result['graph_json'], jf)
+        torch.save(result['pyg_data'], payload_buffer)
+    blob_store.put_bytes(object_key, payload_buffer.getvalue())
 
-    return tmp_path
+    if 'graph_json' in result:
+        blob_store.put_json(f"{object_key}.json", result['graph_json'])
+
+    return object_key
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -153,7 +148,7 @@ async def configure_dataset(payload: ConfigurePayload):
         result = adapter.process(df_nodes, df_edges, df_graphs, m, node_mapper, num_nodes)
 
         # Save PyG data
-        tmp_path = _save_pyg_data(result)
+        tmp_path = _save_pyg_data(result, m.dataset_name)
 
         return {
             "status": "success",
@@ -284,7 +279,7 @@ async def upload_files(
         result = adapter.process(df_nodes, df_edges, df_graphs, m, node_mapper, num_nodes)
 
         # Save PyG data
-        tmp_path = _save_pyg_data(result)
+        tmp_path = _save_pyg_data(result, m.dataset_name)
 
         return {
             "status": "success",

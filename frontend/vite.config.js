@@ -3,13 +3,21 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+    globals: true,
+  },
   build: {
     rollupOptions: {
       output: {
         manualChunks: {
-          plotly: ['react-plotly.js', 'plotly.js-dist-min'],
-          vendor: ['react', 'react-dom', 'zustand', 'react-force-graph-2d', 'd3-force', 'framer-motion', 'recharts']
-        }
+          plotly: ['react-plotly.js', 'plotly.js'],
+          graphViz: ['react-force-graph-2d', 'graphology', 'graphology-layout-forceatlas2'],
+          dataTools: ['xlsx'],
+          charts: ['recharts'],
+          vendor: ['react', 'react-dom', 'react-router-dom', 'zustand', 'framer-motion', 'lucide-react'],
+        },
       },
     },
   },

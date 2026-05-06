@@ -1,7 +1,7 @@
 import { useMemo, useRef, useEffect, useCallback, useState } from 'react'
-import Plot from 'react-plotly.js'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import LazyPlot from '../primitives/LazyPlot'
 import { CLASS_COLORS, getClassColor } from '../../utils/colors'
 import { easeInOutCubic, interpolateSnapshots } from '../../engine/interpolate'
 
@@ -335,7 +335,7 @@ export default function EmbeddingView() {
 
   return (
     <div ref={plotContainerRef} className="w-full h-full relative bg-[#020617]/40">
-      <Plot
+      <LazyPlot
         data={plotData}
         layout={{
           paper_bgcolor: 'transparent',

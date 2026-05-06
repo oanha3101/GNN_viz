@@ -56,6 +56,102 @@ All page-facing list endpoints should return this shape:
   - the updated domain object, or
   - a compact action payload such as `{ "status": "deleted", "id": 123 }`
 
+## Runtime and Health Routes
+
+### `GET /api/health`
+
+```json
+{
+  "status": "ok",
+  "runtime": {
+    "strict_runtime_stack": false,
+    "mysql": {
+      "configured_url": "mysql+pymysql://root:root@127.0.0.1:3344/gnn_db",
+      "engine_url": "mysql+pymysql://root:***@127.0.0.1:3344/gnn_db",
+      "available": true,
+      "fallback_active": false,
+      "driver": "mysql"
+    },
+    "mongo": {
+      "configured_url": "mongodb://admin:password@127.0.0.1:27017/",
+      "available": true,
+      "fallback_active": false
+    },
+    "redis": {
+      "configured_url": "redis://127.0.0.1:6379/0",
+      "available": true,
+      "fallback_active": false
+    },
+    "blob": {
+      "provider": "minio",
+      "root_dir": null,
+      "bucket": "gnn-insight",
+      "configured_endpoint": "127.0.0.1:9000",
+      "available": true,
+      "fallback_active": false,
+      "strict_ready": true,
+      "error": null
+    }
+  },
+  "degraded_services": []
+}
+```
+
+Rules:
+
+- `status = "ok"` when MySQL, MongoDB, and Redis are all online.
+- `status = "degraded"` when one or more runtime services are unavailable or a fallback is active.
+- in strict mode (`REQUIRE_RUNTIME_STACK=1`), startup should fail before this endpoint is exposed if the required stack is degraded.
+
+## Runtime Dataset Configuration Routes
+
+### `POST /api/configure` and `POST /api/upload-files`
+
+These routes return a training-ready artifact pointer for custom dataset flows.
+
+```json
+{
+  "status": "success",
+  "metadata": {
+    "task": 1,
+    "num_nodes": 24,
+    "num_edges": 48,
+    "schema_version": "2.0"
+  },
+  "graph_json": {},
+  "uploaded_file_path": "datasets/runtime/custom-dataset/4bf4d4cc3d9346e5a9309001d35fc9c6.pt",
+  "dataset_name": "custom-dataset",
+  "validation_warnings": [],
+  "task_config": {}
+}
+```
+
+Rules:
+
+- `uploaded_file_path` is now the blob-backed runtime object key for the processed
+  training artifact, not a product contract that assumes a local filesystem path.
+- When a companion graph JSON is stored, it lives beside the artifact using
+  `${uploaded_file_path}.json`.
+- Frontend may still keep the legacy field name for compatibility, but product-like
+  flows should treat it as an object reference that survives process restarts.
+
+### `POST /api/upload-graph`
+
+```json
+{
+  "num_nodes": 3,
+  "num_edges": 4,
+  "uploaded_file_path": "datasets/runtime/runtime-graph/5c2d8d3b8b8048fba8c1f7de4fa6a7ec.json",
+  "blob_key": "datasets/runtime/runtime-graph/5c2d8d3b8b8048fba8c1f7de4fa6a7ec.json",
+  "filename": "runtime-graph.json"
+}
+```
+
+Rules:
+
+- This route must not expose a local temporary filesystem path in product-like flows.
+- `uploaded_file_path` and `blob_key` point to the same runtime artifact in blob storage.
+
 ## Current Detail Route Shapes
 
 ### `GET /api/datasets/{dataset_id}`
@@ -93,6 +189,12 @@ All page-facing list endpoints should return this shape:
 }
 ```
 
+Rule:
+
+- `uploaded_file_path` should be treated as a resumable artifact reference. It may
+  look path-like, but the backend can resolve it from blob storage even when the
+  original local temp file no longer exists.
+
 ### `GET /api/admin/summary`
 
 ```json
@@ -108,6 +210,8 @@ All page-facing list endpoints should return this shape:
   "retention_compacted_runs": 7,
   "recent_audit_events": 14,
   "blob_provider": "local",
+  "blob_object_count": 6,
+  "blob_orphan_count": 1,
   "mongo_available": true,
   "redis_available": true,
   "admin_user": {
@@ -232,6 +336,10 @@ All page-facing list endpoints should return this shape:
   - a session action payload from session manager, currently including `session_id`, `status`, and connection metadata when available
 - `POST /api/admin/retention?dry_run=true|false` returns:
   - `{ "results": [], "dry_run": true }`
+- `POST /api/admin/blob-cleanup?dry_run=true|false` returns:
+  - `{ "provider": "local", "dry_run": true, "orphan_keys": [], "deleted_keys": [], "object_count": 0, "orphan_count": 0, "deleted_count": 0 }`
+  - real runs (`dry_run=false`) also create one `audit_logs` entry with `action = "retention_purged"` and `target_type = "blob_store"`
+  - runtime artifacts still referenced by `dataset_versions` or `training_sessions.config_json.uploaded_file_path` must not appear in `orphan_keys`
 
 ### Session actions
 

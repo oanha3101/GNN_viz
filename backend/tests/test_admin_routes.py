@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api.routers import auth
 from main import app
+from services.hybrid_store import blob_store
 
 auth.DISABLE_AUTH = False
 
@@ -40,6 +41,8 @@ def test_admin_summary_and_user_role_update():
         summary = summary_response.json()
         assert summary["users"] >= 2
         assert "active_sessions" in summary
+        assert "blob_object_count" in summary
+        assert "blob_orphan_count" in summary
 
         users_response = client.get("/api/admin/users", headers=admin_headers)
         assert users_response.status_code == 200, users_response.text
@@ -190,3 +193,47 @@ def test_admin_dataset_listing_includes_usage_and_current_version():
         assert target["usage_count"] >= 1
         assert target["current_version"]["id"] == version["id"]
         assert target["current_version"]["version"] == 1
+
+
+def test_admin_can_run_blob_cleanup_dry_run_and_real_run():
+    orphan_key = f"datasets/raw/orphan-{uuid.uuid4().hex[:8]}.bin"
+
+    with TestClient(app) as client:
+        admin_data = _register(client, "admin", "admin_blob_cleanup")
+        admin_headers = {"Authorization": f"Bearer {admin_data['access_token']}"}
+        blob_store.put_bytes(orphan_key, b"orphan-payload")
+        assert blob_store.exists(orphan_key) is True
+
+        dry_run_response = client.post("/api/admin/blob-cleanup", params={"dry_run": "true"}, headers=admin_headers)
+        assert dry_run_response.status_code == 200, dry_run_response.text
+        dry_run_payload = dry_run_response.json()
+        assert dry_run_payload["dry_run"] is True
+        assert orphan_key in dry_run_payload["orphan_keys"]
+        assert blob_store.exists(orphan_key) is True
+
+        dry_run_audit_response = client.get(
+            "/api/admin/audit-logs",
+            params={"action": "retention_purged"},
+            headers=admin_headers,
+        )
+        assert dry_run_audit_response.status_code == 200, dry_run_audit_response.text
+        assert dry_run_audit_response.json()["total"] == 0
+
+        run_response = client.post("/api/admin/blob-cleanup", params={"dry_run": "false"}, headers=admin_headers)
+        assert run_response.status_code == 200, run_response.text
+        run_payload = run_response.json()
+        assert run_payload["dry_run"] is False
+        assert orphan_key in run_payload["deleted_keys"]
+        assert blob_store.exists(orphan_key) is False
+
+        audit_response = client.get(
+            "/api/admin/audit-logs",
+            params={"action": "retention_purged"},
+            headers=admin_headers,
+        )
+        assert audit_response.status_code == 200, audit_response.text
+        audit_payload = audit_response.json()
+        assert audit_payload["total"] == 1
+        assert audit_payload["items"][0]["target_type"] == "blob_store"
+        assert audit_payload["items"][0]["target_id"] == blob_store.provider
+        assert orphan_key in audit_payload["items"][0]["details_json"]["deleted_keys"]

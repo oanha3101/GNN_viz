@@ -43,3 +43,5 @@ temp/
 backend/datasets/Cora/
 backend/data/saved_experiments/
 backend/datasets/*.json
+backend/tests/.runtime/
+backend/datasets/snapshots/*.json.gz

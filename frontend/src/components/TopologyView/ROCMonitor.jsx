@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
-import Plot from 'react-plotly.js'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import LazyPlot from '../primitives/LazyPlot'
 
 export default function ROCMonitor() {
   const { snapshots, currentEpochFloat } = usePlayerStore()
@@ -157,7 +157,7 @@ export default function ROCMonitor() {
         )}
       </div>
       <div className="flex-1 bg-slate-900/30 rounded-xl border border-slate-800/50 overflow-hidden">
-        <Plot
+        <LazyPlot
           data={(viewMode === 'roc' ? rocData : viewMode === 'pr' ? prData : distData) || []}
           layout={{
             paper_bgcolor: 'transparent',

@@ -10,6 +10,7 @@ from core.session_manager import session_manager
 from data.loaders import auto_detect_graph
 from database import redis_client
 from schemas.constants import ErrorCode
+from services.hybrid_store import blob_store
 from tasks.community_detection import run_community_detection
 from tasks.graph_classification import run_graph_classification
 from tasks.graph_embedding import run_graph_embedding
@@ -272,6 +273,11 @@ def resolve_node_graph_json(config: Dict[str, Any], data) -> dict:
             try:
                 with open(json_path, "r", encoding="utf-8") as handle:
                     graph_json = json.load(handle)
+            except Exception:
+                graph_json = None
+        elif blob_store.exists(json_path):
+            try:
+                graph_json = blob_store.get_json(json_path)
             except Exception:
                 graph_json = None
     if not graph_json:

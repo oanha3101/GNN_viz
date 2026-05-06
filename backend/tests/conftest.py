@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -9,8 +10,8 @@ from sqlalchemy.orm import close_all_sessions
 
 TESTS_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = TESTS_DIR.parent
-TEST_RUNTIME_DIR = TESTS_DIR / ".runtime"
-TEST_DB_PATH = TEST_RUNTIME_DIR / "gnn_test.sqlite3"
+TEST_RUNTIME_DIR = Path(os.getenv("PYTEST_RUNTIME_DIR", Path(tempfile.gettempdir()) / "gnn_insight_test_runtime"))
+TEST_DB_PATH = TEST_RUNTIME_DIR / f"gnn_test_{os.getpid()}.sqlite3"
 TEST_SNAPSHOT_DIR = TEST_RUNTIME_DIR / "snapshots"
 TEST_MONGO_FALLBACK_DIR = TEST_RUNTIME_DIR / "mongo_fallback"
 TEST_BLOB_DIR = TEST_RUNTIME_DIR / "blob_store"
@@ -30,14 +31,13 @@ from services import hybrid_store  # noqa: E402
 
 
 def _reset_dir(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
+    shutil.rmtree(path, ignore_errors=True)
     path.mkdir(parents=True, exist_ok=True)
 
 
 def _reset_sqlite_db_file() -> None:
     if TEST_DB_PATH.exists():
-        TEST_DB_PATH.unlink()
+        TEST_DB_PATH.unlink(missing_ok=True)
 
 
 def _clear_relational_tables() -> None:
@@ -69,6 +69,7 @@ session_manager_module.SNAPSHOT_DIR = str(TEST_SNAPSHOT_DIR)
 os.makedirs(session_manager_module.SNAPSHOT_DIR, exist_ok=True)
 hybrid_store.LOCAL_MONGO_FALLBACK_DIR = str(TEST_MONGO_FALLBACK_DIR)
 hybrid_store.LOCAL_BLOB_DIR = str(TEST_BLOB_DIR)
+hybrid_store.blob_store.root_dir = str(TEST_BLOB_DIR)
 os.makedirs(hybrid_store.LOCAL_MONGO_FALLBACK_DIR, exist_ok=True)
 os.makedirs(hybrid_store.LOCAL_BLOB_DIR, exist_ok=True)
 
@@ -92,6 +93,15 @@ def initialize_test_runtime():
 
 @pytest.fixture(autouse=True)
 def isolate_test_state():
+    session_manager_module.SNAPSHOT_DIR = str(TEST_SNAPSHOT_DIR)
+    hybrid_store.LOCAL_MONGO_FALLBACK_DIR = str(TEST_MONGO_FALLBACK_DIR)
+    hybrid_store.LOCAL_BLOB_DIR = str(TEST_BLOB_DIR)
+    hybrid_store.blob_store.provider = "local"
+    hybrid_store.blob_store.root_dir = str(TEST_BLOB_DIR)
+    hybrid_store.blob_store._client = None
+    os.makedirs(session_manager_module.SNAPSHOT_DIR, exist_ok=True)
+    os.makedirs(hybrid_store.LOCAL_MONGO_FALLBACK_DIR, exist_ok=True)
+    os.makedirs(hybrid_store.LOCAL_BLOB_DIR, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     yield
 

@@ -20,7 +20,13 @@ from models.sql_models import (
     UserRole,
 )
 from services.experiment_service import serialize_experiment_summary
-from services.hybrid_store import blob_store, record_audit_log, retention_service
+from services.hybrid_store import (
+    blob_store,
+    cleanup_orphan_blob_keys,
+    find_orphan_blob_keys,
+    record_audit_log,
+    retention_service,
+)
 from services.list_response import build_list_response
 
 
@@ -72,6 +78,8 @@ def get_admin_summary(db: Session, admin: Optional[User]) -> dict:
         redis_online = bool(redis_client.ping())
     except Exception:
         redis_online = False
+    blob_keys = blob_store.list_keys()
+    orphan_blob_keys = find_orphan_blob_keys(db)
     return {
         "users": db.query(func.count(User.id)).scalar() or 0,
         "projects": db.query(func.count(Project.id)).scalar() or 0,
@@ -99,6 +107,8 @@ def get_admin_summary(db: Session, admin: Optional[User]) -> dict:
         .scalar()
         or 0,
         "blob_provider": blob_store.provider,
+        "blob_object_count": len(blob_keys),
+        "blob_orphan_count": len(orphan_blob_keys),
         "mongo_available": mongo_available,
         "redis_available": redis_online,
         "admin_user": serialize_user(admin) if admin else None,
@@ -285,3 +295,23 @@ def list_audit_logs(
 
 def run_retention(db: Session, *, dry_run: bool) -> dict:
     return {"results": retention_service.run(db, dry_run=dry_run), "dry_run": dry_run}
+
+
+def run_blob_cleanup(db: Session, *, dry_run: bool, admin: Optional[User]) -> dict:
+    result = cleanup_orphan_blob_keys(db, dry_run=dry_run)
+    if not dry_run:
+        record_audit_log(
+            db,
+            AuditAction.RETENTION_PURGED.value,
+            "blob_store",
+            blob_store.provider,
+            actor_user_id=admin.id if admin else None,
+            details={
+                "provider": result["provider"],
+                "deleted_keys": result["deleted_keys"],
+                "deleted_count": result["deleted_count"],
+                "orphan_count": result["orphan_count"],
+            },
+        )
+        db.commit()
+    return result

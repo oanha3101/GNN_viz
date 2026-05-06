@@ -88,6 +88,7 @@ source of truth beside this architecture file.
 ### Blob Prefixes
 
 - `datasets/raw/...`
+- `datasets/runtime/...`
 - `models/weights/...`
 - `reports/export/...`
 
@@ -98,10 +99,12 @@ source of truth beside this architecture file.
 1. User uploads raw files.
 2. Files are stored in blob storage and referenced by object key.
 3. Validation produces schema summary and warnings.
-4. A `dataset_version` is created in `draft`.
-5. Once validated, it moves to `validated`.
-6. Admin or owner can publish to `published`.
-7. Deprecated versions remain readable for old experiments but cannot be used for new runs.
+4. Runtime-ready processed artifacts produced during mapping/configuration may be stored
+   under `datasets/runtime/...` before they are promoted into a governed dataset version.
+5. A `dataset_version` is created in `draft`.
+6. Once validated, it moves to `validated`.
+7. Admin or owner can publish to `published`.
+8. Deprecated versions remain readable for old experiments but cannot be used for new runs.
 
 ### Training Lifecycle
 
@@ -185,6 +188,10 @@ For older non-best runs:
 
 - Raw dataset files and model artifacts without active references may be deleted
   after 90 days.
+- Runtime upload artifacts under `datasets/runtime/...` must either be referenced by
+  `dataset_versions.processed_blob_key`, active `training_sessions.config_json.uploaded_file_path`,
+  or other governed blob pointers before they are eligible for
+  orphan cleanup.
 - Blob deletion must be reference-aware and audit-logged.
 
 ## Audit Policy

@@ -8,8 +8,10 @@ os.environ["DISABLE_AUTH"] = "0"
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient
+from database import SessionLocal
 from main import app
 from api.routers import auth
+from models.sql_models import AuditLog
 auth.DISABLE_AUTH = False
 
 def test_register_login_me():
@@ -76,3 +78,40 @@ def test_register_rejects_duplicate_email_or_username():
         })
         assert duplicate.status_code == 400
         assert duplicate.json()["detail"] == "Email or username already exists"
+
+
+def test_register_and_login_create_audit_entries():
+    with TestClient(app) as client:
+        import uuid
+
+        uid = str(uuid.uuid4())[:8]
+        email = f"audit_{uid}@example.com"
+        username = f"audit_user_{uid}"
+
+        register = client.post("/api/auth/register", json={
+            "email": email,
+            "username": username,
+            "password": "password123",
+            "full_name": "Audit User"
+        })
+        assert register.status_code == 200, register.text
+
+        login = client.post("/api/auth/login", json={
+            "username": username,
+            "password": "password123"
+        })
+        assert login.status_code == 200, login.text
+
+        db = SessionLocal()
+        try:
+            audit_rows = (
+                db.query(AuditLog)
+                .filter(AuditLog.action == "login", AuditLog.target_id == str(register.json()["user"]["id"]))
+                .order_by(AuditLog.id.asc())
+                .all()
+            )
+            events = [row.details_json.get("event") for row in audit_rows]
+            assert "register" in events
+            assert "login" in events
+        finally:
+            db.close()
