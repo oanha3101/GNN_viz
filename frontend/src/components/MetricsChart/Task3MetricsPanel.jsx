@@ -85,7 +85,7 @@ function OverviewTab({ snap, snapshots, epochInt, paired }) {
 
   const auc = snap?.auc ?? 0.5
   const acc = accuracyAtThreshold(paired, 0.5)
-  const loss = snap?.loss ?? null
+  const loss = snap?.train_loss ?? snap?.loss ?? null
 
   return (
     <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">

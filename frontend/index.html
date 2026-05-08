@@ -7,6 +7,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <title>GNN-Insight</title>
+    <script>
+      // Polyfill for libraries that expect 'global' or 'process' to exist (e.g. Plotly, xlsx)
+      window.global = window;
+      window.process = { env: { NODE_ENV: 'development' } };
+    </script>
   </head>
   <body class="bg-slate-950 text-slate-100">
     <div id="root"></div>

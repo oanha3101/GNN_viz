@@ -200,7 +200,7 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag, sn
             
             try:
                 auc = float(roc_auc_score(all_labels, all_scores))
-            except:
+            except Exception:
                 auc = 0.5
 
             # PCA
@@ -345,6 +345,7 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag, sn
                 'knn_preservation': knn_pres,
                 'train_loss': float(loss.item()),
                 'val_loss': float(val_loss.item()),
+                'train_acc': auc,  # Use AUC as train_acc for link prediction
                 'auc': auc,
                 'val_acc': auc,
                 'top_k_links': top_k_links,

@@ -1,4 +1,4 @@
-import { CLASS_COLORS, getClassColor } from '../utils/colors'
+import { getClassColor } from '../utils/colors'
 
 export function lerp(a, b, t) {
   return a + (b - a) * Math.max(0, Math.min(1, t))
@@ -112,9 +112,51 @@ export function interpolateSnapshots(snapA, snapB, t) {
       lerp(sA, snapB.edge_scores[i] || sA, eT)
     )
   }
-  
+
   if (snapA.auc != null && snapB.auc != null) res.auc = lerp(snapA.auc, snapB.auc, eT)
   if (snapA.ap != null && snapB.ap != null) res.ap = lerp(snapA.ap, snapB.ap, eT)
+
+  // Task 4: Community Detection
+  if (snapA.bridge_strength && snapB.bridge_strength) {
+    res.bridge_strength = snapA.bridge_strength.map((sA, i) =>
+      lerp(sA, snapB.bridge_strength[i] || sA, eT)
+    )
+  }
+  if (snapA.silhouette_scores && snapB.silhouette_scores) {
+    res.silhouette_scores = snapA.silhouette_scores.map((sA, i) =>
+      lerp(sA, snapB.silhouette_scores[i] || sA, eT)
+    )
+  }
+  if (snapA.cluster_confidence && snapB.cluster_confidence) {
+    res.cluster_confidence = snapA.cluster_confidence.map((sA, i) =>
+      lerp(sA, snapB.cluster_confidence[i] || sA, eT)
+    )
+  }
+
+  // Task 5: Graph Embedding
+  if (snapA.proximity_scores && snapB.proximity_scores) {
+    res.proximity_scores = snapA.proximity_scores.map((pA, i) => {
+      const pB = snapB.proximity_scores[i] || pA
+      return { source: pA.source, target: pA.target, score: lerp(pA.score, pB.score, eT) }
+    })
+  }
+  if (snapA.per_node_knn_preservation && snapB.per_node_knn_preservation) {
+    res.per_node_knn_preservation = snapA.per_node_knn_preservation.map((kA, i) =>
+      lerp(kA, snapB.per_node_knn_preservation[i] || kA, eT)
+    )
+  }
+
+  // Task 2: Graph Classification
+  if (snapA.graph_confidences && snapB.graph_confidences) {
+    res.graph_confidences = snapA.graph_confidences.map((cA, i) =>
+      lerp(cA, snapB.graph_confidences[i] || cA, eT)
+    )
+  }
+  if (snapA.confidence_margins && snapB.confidence_margins) {
+    res.confidence_margins = snapA.confidence_margins.map((mA, i) =>
+      lerp(mA, snapB.confidence_margins[i] || mA, eT)
+    )
+  }
 
   // Task 6: Generation Quality
   if (snapA.validity_rate != null && snapB.validity_rate != null) res.validity_rate = lerp(snapA.validity_rate, snapB.validity_rate, eT)

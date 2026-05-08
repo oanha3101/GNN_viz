@@ -42,6 +42,14 @@ async def lifespan(app: FastAPI):
     init_db()
     validate_runtime_requirements()
     validate_blob_runtime_requirements()
+    # Attempt MongoDB reconnect if it was unavailable at import time
+    try:
+        import database as _db
+        if not _db.mongo_available and _db.mongo_client is not None:
+            _db.mongo_client.admin.command('ping')
+            _db.mongo_available = True
+    except Exception:
+        pass
     yield
     # Shutdown
 
@@ -124,7 +132,7 @@ async def upload_graph(file: UploadFile = File(...)):
         return metadata
     except Exception as e:
         blob_store.delete(runtime_key)
-        return {"error": str(e)}
+        raise HTTPException(status_code=400, detail=str(e))
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)

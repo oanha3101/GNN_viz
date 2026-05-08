@@ -123,6 +123,55 @@ export default function Task4CommunityInspector() {
           )}
         </div>
       </div>
+
+      {/* Node Migration Flow section — clearly separated with spacing */}
+      {epochInt > 0 && (
+        <div className="mt-8 pt-4 border-t border-slate-800/80">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-nano text-amber-500 uppercase font-black tracking-widest">
+              NODE MIGRATION FLOW
+            </span>
+            <span className="text-[10px] text-slate-500 font-mono italic">Epoch {epochInt}</span>
+          </div>
+          
+          <div className="bg-slate-900/40 rounded-lg p-2 border border-amber-500/10">
+            {(() => {
+              const prevSnap = snapshots[epochInt - 1]
+              const migrants = nodesInComm.filter(id => prevSnap?.node_predictions?.[id] !== selectedCommunityId)
+              
+              if (migrants.length === 0) {
+                return (
+                  <div className="py-2 text-center">
+                    <span className="text-[10px] text-slate-600 font-medium italic">
+                      No migrations this epoch
+                    </span>
+                  </div>
+                )
+              }
+              
+              return (
+                <div className="flex flex-wrap gap-1.5">
+                  {migrants.slice(0, 20).map(id => (
+                    <div key={id} className="group relative flex items-center gap-1 px-2 py-1 rounded bg-amber-500/5 border border-amber-500/20 text-nano font-mono text-amber-300">
+                      <span className="font-bold">#{id}</span>
+                      <span className="text-slate-600 opacity-60">←</span>
+                      <span className="text-amber-500/70">C{prevSnap?.node_predictions?.[id]}</span>
+                    </div>
+                  ))}
+                  {migrants.length > 20 && (
+                    <span className="text-nano text-slate-600 self-center pl-1">
+                      + {migrants.length - 20} more
+                    </span>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+          <p className="mt-2 text-[9px] text-slate-600 leading-tight">
+            Nodes that switched into this community from others.
+          </p>
+        </div>
+      )}
     </div>
   )
 }

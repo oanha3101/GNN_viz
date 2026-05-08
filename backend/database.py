@@ -1,10 +1,11 @@
 import os
+import sys
 from dotenv import load_dotenv
 from sqlalchemy.engine import make_url
 
 load_dotenv()
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 try:
@@ -26,10 +27,27 @@ STRICT_RUNTIME_STACK = os.getenv("REQUIRE_RUNTIME_STACK", "0") == "1"
 mysql_fallback_active = False
 
 try:
+    # Explicitly check for MySQL connection if configured
+    if "mysql" in MYSQL_URL:
+        # We use a temporary engine to check if database exists
+        base_url = MYSQL_URL.rsplit('/', 1)[0] + '/'
+        temp_engine = create_engine(base_url, pool_pre_ping=True)
+        with temp_engine.connect() as conn:
+            db_name = MYSQL_URL.rsplit('/', 1)[1]
+            # Use AUTOCOMMIT for DDL
+            conn.execution_options(isolation_level="AUTOCOMMIT").execute(
+                text(f"CREATE DATABASE IF NOT EXISTS {db_name}")
+            )
+        temp_engine.dispose()
+    
     engine = create_engine(MYSQL_URL, pool_pre_ping=True)
     engine.connect().close()
-except Exception:
-    print("Warning: MySQL connection failed, falling back to SQLite.")
+    print(f"✅ Connected to MySQL: {MYSQL_URL}")
+except Exception as e:
+    if STRICT_RUNTIME_STACK:
+        print(f"❌ CRITICAL: MySQL connection failed and STRICT_RUNTIME_STACK is enabled: {e}")
+        sys.exit(1)
+    print(f"⚠️ Warning: MySQL connection failed, falling back to SQLite: {e}")
     engine = create_engine("sqlite:///./gnn_insight.db", connect_args={"check_same_thread": False})
     mysql_fallback_active = True
 
@@ -49,12 +67,27 @@ class NullCollection:
         return None
 
     def find(self, *args, **kwargs):
-        return []
+        return self
+
+    def sort(self, *args, **kwargs):
+        return self
+
+    def limit(self, *args, **kwargs):
+        return self
+
+    def __iter__(self):
+        return iter([])
 
     def create_index(self, *args, **kwargs):
         return None
 
     def update_one(self, *args, **kwargs):
+        return None
+
+    def insert_one(self, *args, **kwargs):
+        return None
+
+    def delete_one(self, *args, **kwargs):
         return None
 
     def delete_many(self, *args, **kwargs):
@@ -71,6 +104,9 @@ class NullRedisClient:
     def get(self, *args, **kwargs):
         return None
 
+    def delete(self, *args, **kwargs):
+        return 0
+
 
 # 2. MongoDB (Replay payloads, metrics, graph JSON)
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:password@localhost:27017/")
@@ -86,13 +122,18 @@ else:
     try:
         mongo_client.server_info()
         mongo_available = True
-    except Exception:
-        print("Warning: MongoDB connection failed. Mongo-backed replay will use local fallbacks.")
+        print(f"✅ Connected to MongoDB: {MONGO_URI}")
+    except Exception as e:
+        if STRICT_RUNTIME_STACK:
+            print(f"❌ CRITICAL: MongoDB connection failed and STRICT_RUNTIME_STACK is enabled: {e}")
+            sys.exit(1)
+        print(f"⚠️ Warning: MongoDB connection failed, falling back to local files: {e}")
+        mongo_available = False
 
-    mongo_db = mongo_client["gnn_insight"]
-    mongo_experiment_snapshots = mongo_db["experiment_snapshots"]
-    mongo_experiment_metrics = mongo_db["experiment_metrics"]
-    mongo_graph_payloads = mongo_db["graph_payloads"]
+    mongo_db = mongo_client["gnn_insight"] if mongo_available else None
+    mongo_experiment_snapshots = mongo_db["experiment_snapshots"] if mongo_available else NullCollection()
+    mongo_experiment_metrics = mongo_db["experiment_metrics"] if mongo_available else NullCollection()
+    mongo_graph_payloads = mongo_db["graph_payloads"] if mongo_available else NullCollection()
 
 
 def ensure_mongo_indexes():
@@ -133,8 +174,12 @@ else:
     try:
         redis_client.ping()
         redis_available = True
-    except Exception:
-        print("Warning: Redis connection failed.")
+        print(f"✅ Connected to Redis: {REDIS_URL}")
+    except Exception as e:
+        if STRICT_RUNTIME_STACK:
+            print(f"❌ CRITICAL: Redis connection failed and STRICT_RUNTIME_STACK is enabled: {e}")
+            sys.exit(1)
+        print(f"⚠️ Warning: Redis connection failed, falling back to in-memory: {e}")
         redis_client = NullRedisClient()
 
 
@@ -203,6 +248,8 @@ def init_db():
     )
 
     Base.metadata.create_all(bind=engine)
+    # Satisfy linters that complain about unused imports used for metadata registration
+    _ = [AuditLog, Dataset, DatasetVersion, Experiment, Project, SessionSnapshot, TrainingSession, User]
     ensure_mongo_indexes()
     print("Relational Database initialized.")
 

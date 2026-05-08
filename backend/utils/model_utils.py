@@ -7,7 +7,9 @@ def build_model(config, data=None, num_features=None, num_classes=None):
     """Xây dựng mô hình GNN dựa trên cấu hình và dữ liệu đầu vào."""
     model_type = config.get('model', 'GCN')
     hidden = config.get('hidden', 64)
-    dropout = config.get('dropout', 0.5)
+    # GAT convention: default dropout 0.6; GCN/SAGE: 0.5
+    default_dropout = 0.6 if model_type == 'GAT' else 0.5
+    dropout = config.get('dropout', default_dropout)
     num_layers = config.get('num_layers', 3)
     
     if data is not None:

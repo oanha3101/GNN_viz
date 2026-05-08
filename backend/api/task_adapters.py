@@ -89,7 +89,7 @@ class BaseTaskAdapter(ABC):
                             ]).astype(float)
                             scaler = StandardScaler()
                             processed_parts.append(scaler.fit_transform(dt_features))
-                        except:
+                        except Exception:
                             # Nếu fail thì coi như categorical ở bước sau
                             pass
 

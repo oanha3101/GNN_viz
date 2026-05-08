@@ -25,26 +25,29 @@ class GATModel(nn.Module):
         # Output layer
         self.convs.append(GATConv(hidden_channels * heads, out_channels, heads=1, concat=False, dropout=dropout))
 
+        # Projection to match GCN/GraphSAGE embedding dimension (hidden_channels)
+        self.embedding_proj = nn.Linear(hidden_channels * heads, hidden_channels)
+
     def forward(self, x, edge_index):
         # We'll capture attention weights from the first layer for visualization
         attention_weights = None
-        
+
         for i in range(self.num_layers - 1):
             x_res = x if i > 0 else 0
-            
+
             if i == 0:
                 # Capture attention from first layer
                 x, (edge_index_att, alpha) = self.convs[i](x, edge_index, return_attention_weights=True)
                 attention_weights = alpha.mean(dim=1).detach()
             else:
                 x = self.convs[i](x, edge_index)
-                
+
             x = self.norms[i](x)
             x = F.elu(x)
             x = x + x_res
             x = F.dropout(x, p=self.dropout, training=self.training)
 
-        embedding = x.detach()
+        embedding = self.embedding_proj(x).detach()  # (N, hidden_channels) — consistent with GCN/SAGE
         x = self.convs[-1](x, edge_index)
-        
+
         return x, embedding, attention_weights

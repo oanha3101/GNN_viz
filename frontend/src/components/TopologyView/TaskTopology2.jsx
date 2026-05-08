@@ -3,6 +3,7 @@ import ForceGraph2D from 'react-force-graph-2d'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
 import NodeHoverCard from './NodeHoverCard'
+import { interpolateSnapshots } from '../../engine/interpolate'
 
 const GRAPH_LABELS = ['Dense Structure', 'Sparse Network']
 
@@ -121,7 +122,10 @@ export default function TaskTopology2() {
   }, [selectedGraphIdx, graphs])
 
   const epochInt = Math.floor(currentEpochFloat)
-  const snap = snapshots[epochInt] || snapshots[snapshots.length - 1]
+  const frac = currentEpochFloat - epochInt
+  const snapA = snapshots[epochInt] || snapshots[snapshots.length - 1]
+  const snapB = snapshots[Math.min(epochInt + 1, snapshots.length - 1)]
+  const snap = frac > 0 && snapB ? interpolateSnapshots(snapA, snapB, frac) : snapA
 
   const contributions = snap?.node_contributions || []
   const predictions = snap?.graph_predictions || []

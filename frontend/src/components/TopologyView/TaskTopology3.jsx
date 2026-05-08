@@ -28,7 +28,6 @@ export default function TaskTopology3() {
 
   const [showNodes, setShowNodes] = useState(true)
   const [showTriangles, setShowTriangles] = useState(true)
-  const [showErrorsOnly, setShowErrorsOnly] = useState(false)
   const [hoveredLink, setHoveredLink] = useState(null)
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 })
   const [stableGraphData, setStableGraphData] = useState(null)
@@ -300,7 +299,7 @@ export default function TaskTopology3() {
     ctx.fillText(text, node.x, node.y)
     
     ctx.restore()
-  }, [groundTruth, selectedNodeId, commonNeighbors, showNodes])
+  }, [groundTruth, selectedNodeId, commonNeighbors, showNodes, hoveredLink])
 
   if (!activeGraphData) return <div className="w-full h-full bg-slate-950 flex items-center justify-center text-slate-500 text-[10px] uppercase font-black">Loading...</div>
 
@@ -354,7 +353,6 @@ export default function TaskTopology3() {
 
       <div className="absolute top-4 right-4 z-20 flex gap-2">
         <button onClick={() => setShowNodes(!showNodes)} className={`px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border transition-all ${showNodes ? 'bg-slate-900/90 border-slate-700 text-slate-400 hover:text-white' : 'bg-indigo-600/30 border-indigo-500 text-indigo-300'}`}>Nodes</button>
-        <button onClick={() => setShowErrorsOnly(!showErrorsOnly)} className={`px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border transition-all ${showErrorsOnly ? 'bg-red-500/20 border-red-500/40 text-red-400' : 'bg-slate-900/80 border-slate-700 text-slate-500'}`}>Errors</button>
         <button
           onClick={() => fitView(600, 60)}
           title="Fit to view (F)"

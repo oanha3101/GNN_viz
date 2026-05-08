@@ -27,6 +27,7 @@ const useGNNStore = create((set, get) => ({
 
   // ─── Selection / UI ──────────────────────────────────────────
   selectedNodeId: null,
+  selectedTargetNodeId: null, // Task 3 — target node for pair proximity
   hoveredNodeId: null,      // NEW: track node currently under mouse
   hoveredGraphId: null,
   selectedCommunityId: null, // Task 4 — community selected via canvas click / metric table

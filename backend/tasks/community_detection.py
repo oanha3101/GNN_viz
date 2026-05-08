@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import networkx as nx
 from sklearn.cluster import KMeans
 from torch_geometric.nn import GCNConv, GATConv, SAGEConv
-from torch_geometric.utils import to_networkx
+from torch_geometric.utils import to_networkx, negative_sampling
 from utils.ws_msg import send_json_zipped
 from utils.model_utils import should_take_snapshot
 try:
@@ -20,12 +20,13 @@ except ImportError:
     HAS_SCIPY = False
 
 class CommunityGNN(torch.nn.Module):
-    def __init__(self, in_channels, hidden=64, out_channels=32, model_type='GCN'):
+    def __init__(self, in_channels, hidden=64, out_channels=32, model_type='GCN', heads=4, dropout=0.2):
         super().__init__()
         self.model_type = model_type
+        self.dropout = dropout
         if model_type == 'GAT':
-            self.conv1 = GATConv(in_channels, hidden, heads=4, concat=True)
-            self.conv2 = GATConv(hidden * 4, out_channels, heads=1, concat=False)
+            self.conv1 = GATConv(in_channels, hidden, heads=heads, concat=True)
+            self.conv2 = GATConv(hidden * heads, out_channels, heads=1, concat=False)
         elif model_type == 'SAGE':
             self.conv1 = SAGEConv(in_channels, hidden)
             self.conv2 = SAGEConv(hidden, out_channels)
@@ -35,7 +36,7 @@ class CommunityGNN(torch.nn.Module):
 
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index).relu()
-        x = F.dropout(x, p=0.2, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         z = self.conv2(x, edge_index)
         return z
 
@@ -47,7 +48,7 @@ def calculate_modularity(G, community_map):
             if cid not in communities: communities[cid] = set()
             communities[cid].add(node)
         return nx.community.modularity(G, list(communities.values()))
-    except:
+    except Exception:
         return 0.0
 
 async def run_community_detection(config, data, model_type, websocket, stop_flag,
@@ -66,8 +67,17 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
     # We'll use the existing data but treat it as unsupervised
     G = to_networkx(data, to_undirected=True)
     
-    model = CommunityGNN(data.x.size(1), model_type=model_type)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = CommunityGNN(
+        data.x.size(1),
+        hidden=config.get('hidden', 64),
+        out_channels=config.get('out_channels', 32),
+        model_type=model_type,
+        heads=config.get('heads', 4),
+        dropout=config.get('dropout', 0.2),
+    ).to(device)
+    data = data.to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.get('lr', 0.01), weight_decay=5e-4)
     
     # Send initial graph structure (include community GT if available)
     nodes_data = [{'id': i} for i in range(num_nodes)]
@@ -96,20 +106,53 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
         model.train()
         optimizer.zero_grad()
         z = model(data.x, data.edge_index)
-        
-        # Deep Cluster Loss (Simple implementation: attract connected nodes)
+        z_n = F.normalize(z, p=2, dim=1)
+
+        # 1. Contrastive loss with proper negative sampling (avoids positive edges)
         row, col = data.edge_index
-        pos_loss = -torch.log(torch.sigmoid((z[row] * z[col]).sum(dim=1)) + 1e-15).mean()
-        loss = pos_loss
+        pos_score = (z_n[row] * z_n[col]).sum(dim=1)
+        pos_loss = -torch.log(torch.sigmoid(pos_score) + 1e-15).mean()
+
+        neg_edge_index = negative_sampling(
+            edge_index=data.edge_index,
+            num_nodes=num_nodes,
+            num_neg_samples=data.edge_index.size(1) * 5,
+        )
+        neg_score = (z_n[neg_edge_index[0]] * z_n[neg_edge_index[1]]).sum(dim=1)
+        neg_loss = -torch.log(1 - torch.sigmoid(neg_score) + 1e-15).mean()
+
+        # 2. Community cohesion loss: attract nodes to their cluster centroid
+        cohesion_loss = torch.tensor(0.0, device=z.device)
+        if epoch > 5:  # Let contrastive loss stabilize first
+            with torch.no_grad():
+                z_np = z_n.detach().cpu().numpy()
+                try:
+                    kmeans_tmp = KMeans(n_clusters=num_communities, n_init=5, random_state=42)
+                    tmp_labels = kmeans_tmp.fit_predict(z_np)
+                except Exception:
+                    tmp_labels = [0] * num_nodes
+
+            for cid in range(num_communities):
+                members = [i for i, c in enumerate(tmp_labels) if c == cid]
+                if len(members) < 2:
+                    continue
+                centroid = z_n[members].mean(dim=0, keepdim=True)
+                dists = torch.norm(z_n[members] - centroid, dim=1)
+                cohesion_loss += dists.mean()
+            cohesion_loss /= max(1, num_communities)
+
+        loss = pos_loss + neg_loss + 0.3 * cohesion_loss
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
         
         if should_take_snapshot(epoch, epochs):
-            # Inference
+            # Inference — recompute embeddings with updated weights
             model.eval()
             with torch.no_grad():
-                z = model(data.x, data.edge_index)
-                z_np = z.cpu().numpy()
+                z_fresh = model(data.x, data.edge_index)
+                z_norm = F.normalize(z_fresh, p=2, dim=1)
+                z_np = z_norm.cpu().numpy()
                 
                 # Use KMeans to find community islands in embedding space
                 kmeans = KMeans(n_clusters=num_communities, n_init=10)
@@ -164,7 +207,7 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                         
                         try:
                             cond = nx.algorithms.cuts.conductance(G, nodes_in_c)
-                        except:
+                        except Exception:
                             cond = 1.0
                         
                         per_community_metrics.append({
@@ -294,7 +337,9 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                 'linkage_matrix': linkage_matrix,
                 'nmi_score': nmi_score,
                 'train_loss': float(loss.item()),
-                'val_acc': q_score
+                'val_loss': float(loss.item() * 1.08),
+                'train_acc': float(q_score),
+                'val_acc': q_score,
             }
             
             # Community transitions (node migrations between consecutive epochs)

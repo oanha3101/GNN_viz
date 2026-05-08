@@ -154,13 +154,8 @@ async def run_link_prediction_task(websocket, *, config, seq, session_id, stop_c
     if config.get("uploaded_file_path"):
         data, _ = auto_detect_graph(data)
 
-    graph_json = build_graph_json_flexible(data)
-    await send_graph_payload(
-        websocket,
-        seq=seq,
-        graph_json=graph_json,
-        ground_truth=data.y.cpu().tolist() if hasattr(data, "y") and data.y is not None else [],
-    )
+    graph_json = resolve_node_graph_json(config, data)
+    await send_node_graph_data(websocket, seq=seq, graph_json=graph_json, data=data)
 
     config["edge_split_ratio"] = config.get("edge_split_ratio", 0.15)
     epoch_snapshots = await run_link_prediction(
@@ -181,15 +176,15 @@ async def run_community_detection_task(websocket, *, config, seq, session_id, st
     if config.get("uploaded_file_path"):
         data, _ = auto_detect_graph(data)
 
-    graph_json = build_graph_json_flexible(data)
-    await send_graph_payload(
-        websocket,
-        seq=seq,
-        graph_json=graph_json,
-        ground_truth=data.y.cpu().tolist() if hasattr(data, "y") and data.y is not None else [],
-    )
+    graph_json = resolve_node_graph_json(config, data)
+    await send_node_graph_data(websocket, seq=seq, graph_json=graph_json, data=data)
 
     has_community_gt = config.get("has_community_gt", False)
+    # Auto-detect: built-in datasets (Karate, Cora, CitSeer) have meaningful labels in data.y
+    if not has_community_gt and hasattr(data, "y") and data.y is not None:
+        unique_labels = data.y.unique()
+        if len(unique_labels) > 1:
+            has_community_gt = True
     epoch_snapshots = await run_community_detection(
         config,
         data,
@@ -212,13 +207,8 @@ async def run_graph_embedding_task(websocket, *, config, seq, session_id, stop_c
     data, graph_meta = auto_detect_graph(data)
 
     await send_json_zipped(websocket, {"type": "graph_metadata", "data": graph_meta}, seq_counter=seq)
-    graph_json = build_graph_json_flexible(data)
-    await send_graph_payload(
-        websocket,
-        seq=seq,
-        graph_json=graph_json,
-        ground_truth=data.y.cpu().tolist() if hasattr(data, "y") and data.y is not None else [],
-    )
+    graph_json = resolve_node_graph_json(config, data)
+    await send_node_graph_data(websocket, seq=seq, graph_json=graph_json, data=data)
 
     epoch_snapshots, final_embeddings = await run_graph_embedding(
         config,
@@ -229,7 +219,7 @@ async def run_graph_embedding_task(websocket, *, config, seq, session_id, stop_c
         snapshot_hook=snapshot_hook,
     )
     try:
-        redis_client.set(f"last_embeddings_{session_id}", pickle.dumps(final_embeddings))
+        redis_client.set(f"last_embeddings_{session_id}", pickle.dumps(final_embeddings), ex=3600)
     except Exception:
         pass
 
@@ -240,6 +230,28 @@ async def run_graph_generation_task(websocket, *, config, seq, session_id, stop_
     data = get_data_from_config(config)
     if isinstance(data, list):
         data = data[0]
+    # Send reference graph data so frontend has it (especially on reconnect)
+    graph_json = resolve_node_graph_json(config, data)
+    # Extract rich nodes/links (handle both wrapped and flat formats)
+    ref_nodes = graph_json.get('graphData', {}).get('nodes', graph_json.get('nodes', []))
+    ref_links = graph_json.get('graphData', {}).get('links', graph_json.get('links', []))
+    ref_density = float(config.get('reference_density', 0))
+    ref_avg_degree = float(config.get('reference_avg_degree', 0))
+    await send_json_zipped(websocket, {
+        'type': 'graph_data',
+        'data': {
+            'graphData': graph_json if 'graphData' not in graph_json else graph_json['graphData'],
+            'groundTruth': data.y.cpu().tolist() if hasattr(data, 'y') and data.y is not None else [],
+            'referenceGraph': {
+                'numNodes': int(data.x.size(0)),
+                'numEdges': int(data.edge_index.size(1) // 2),
+                'density': ref_density,
+                'avgDegree': ref_avg_degree,
+                'nodes': ref_nodes,
+                'links': ref_links,
+            },
+        },
+    }, seq_counter=seq)
     epoch_snapshots = await run_graph_generation(
         config, data, websocket, stop_check, snapshot_hook=snapshot_hook
     )

@@ -4,6 +4,7 @@ import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
 import NodeHoverCard from './NodeHoverCard'
 import { CLASS_COLORS } from '../../utils/colors'
+import { interpolateSnapshots } from '../../engine/interpolate'
 
 const EDGE_COLOR_COLD = [6, 182, 212]
 const EDGE_COLOR_MID = [234, 179, 8]
@@ -78,13 +79,16 @@ export default function TaskTopology5() {
     if (displayGraphData) setGraphData({ ...displayGraphData })
   }, [displayGraphData])
 
-  // Subscribe to player store for animated proximity data
+  // Subscribe to player store for animated proximity data (with interpolation)
   useEffect(() => {
     const unsub = usePlayerStore.subscribe((state) => {
       const { snapshots, currentEpochFloat } = state
       if (!snapshots.length) return
       const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-      const snap = snapshots[epochInt]
+      const frac = currentEpochFloat - epochInt
+      const snapA = snapshots[epochInt]
+      const snapB = snapshots[Math.min(epochInt + 1, snapshots.length - 1)]
+      const snap = frac > 0 && snapB ? interpolateSnapshots(snapA, snapB, frac) : snapA
       if (snap?.proximity_scores) {
         const map = {}
         snap.proximity_scores.forEach(p => {
@@ -96,6 +100,7 @@ export default function TaskTopology5() {
       if (snap?.node_predictions) {
         animRef.current.predictions = snap.node_predictions
       }
+      animRef.current.snap = snap
     })
     return unsub
   }, [])
@@ -112,7 +117,7 @@ export default function TaskTopology5() {
     const rect = el.getBoundingClientRect()
     if (rect.width > 10 && rect.height > 10) setDims({ width: rect.width, height: rect.height })
     return () => ro.disconnect()
-  })
+  }, [])
 
   // Apply force params when graph data changes
   useEffect(() => {
@@ -219,9 +224,7 @@ export default function TaskTopology5() {
     const r = Math.max(NODE_R_MIN, Math.min(NODE_R_MAX, Math.sqrt(degree) * 1.8 + 3))
     let color = '#6366f1'
     if (showAnomalies) {
-      const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-      const snap = snapshots[epochInt]
-      const knnScore = snap?.per_node_knn_preservation?.[node.id]
+      const knnScore = animRef.current.snap?.per_node_knn_preservation?.[node.id]
       if (knnScore !== undefined) {
         if (knnScore > 0.8) color = '#22c55e'
         else if (knnScore >= 0.5) color = '#eab308'
@@ -273,7 +276,7 @@ export default function TaskTopology5() {
       ctx.fillText(`${node.id}`, node.x, node.y)
     }
     ctx.globalAlpha = 1.0
-  }, [hasLabels, selectedNodeId, showAnomalies, snapshots, currentEpochFloat, outlierPulseIdx, pulseTick])
+  }, [hasLabels, selectedNodeId, showAnomalies, outlierPulseIdx, pulseTick])
 
   return (
     <div ref={containerRef} className="w-full h-full relative bg-slate-950 overflow-hidden">

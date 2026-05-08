@@ -93,7 +93,8 @@ class SnapshotTask1(BaseModel):
     node_predictions: List[int]
     node_probabilities: List[List[float]]
     node_confidence: List[float]
-    node_correctness: List[int]
+    node_correctness: List[Any]  # bool[] from Python, checked with === false/=== 0 in FE
+    majority_ratio: List[float] = Field(default_factory=list)
     neighbor_majority: List[NeighborMajority]
     embeddings_2d: List[List[float]]
     attention_weights: Optional[List[Any]] = None

@@ -11,6 +11,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from concurrent.futures import ThreadPoolExecutor
+from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics import roc_auc_score
@@ -118,7 +119,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
     edge_index = data.edge_index
 
     # Build model (out_channels = hidden for embedding output)
-    from main import build_model
+    from utils.model_utils import build_model
     model = build_model(config, data=data, num_classes=hidden)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
 
@@ -242,6 +243,14 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                 except Exception:
                     auc = 0.5
 
+            # KMeans cluster labels for node coloring (replaces all-zeros placeholder)
+            try:
+                n_clusters = max(2, min(8, num_nodes // 5))
+                kmeans = KMeans(n_clusters=n_clusters, n_init=5, random_state=42)
+                cluster_labels = kmeans.fit_predict(z_np).tolist()
+            except Exception:
+                cluster_labels = [0] * num_nodes
+
             snapshot = {
                 'epoch': epoch,
                 'embeddings_2d': pca_2d,
@@ -251,26 +260,27 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                 'isotropy_score': isotropy,
                 'reconstruction_loss': float(avg_loss),
                 'proximity_scores': proximity_scores[:500],  # cap for WS payload
-                
+
                 # ── Explainability Data ─────────────────────────────────────────
-                
+
                 # 1. Per-node kNN preservation score (sampled nodes only)
                 'per_node_knn_preservation': {},  # {node_id: preservation_score}
-                
+
                 # 2. Per-edge reconstruction error
                 'per_edge_reconstruction_error': [],  # [{source, target, error, correct}]
-                
+
                 # 3. Embedding norms per node (influence indicator)
                 'embedding_norms': [float(np.linalg.norm(z_np[i])) for i in range(num_nodes)],
-                
+
                 # 4. Outlier scores (distance to k-nearest embedding neighbors)
                 'outlier_scores': [],  # [{node_id, avg_distance_to_neighbors, is_outlier}]
-                
+
                 # Compatibility fields for shared MetricsChart
                 'train_loss': float(avg_loss),
                 'val_loss': float(avg_loss * 1.1),
+                'train_acc': float(knn_pres),
                 'val_acc': auc,
-                'node_predictions': [0] * num_nodes,  # placeholder for cluster coloring
+                'node_predictions': cluster_labels,
             }
             
             # Compute per-node kNN preservation

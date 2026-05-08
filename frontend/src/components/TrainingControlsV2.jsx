@@ -48,7 +48,7 @@ async function saveExperiment(taskType, modelType, hyperparams, snapshots, graph
       ...extra,
     }
 
-    const res = await fetch(`${API}/experiments`, {
+    const res = await fetch(apiUrl('/experiments'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(payload),

@@ -5,6 +5,7 @@ import usePlayerStore from '../../store/playerStore'
 import NodeHoverCard from './NodeHoverCard'
 import { polygonHull } from 'd3-polygon'
 import { normalizeCommunityCenters } from '../../utils/task4Metrics'
+import { interpolateSnapshots } from '../../engine/interpolate'
 
 const COMMUNITY_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#eab308', '#a855f7', '#06b6d4', '#ec4899']
 // Reference anchors on a 600-unit world. They are re-scaled to the live
@@ -51,16 +52,23 @@ export default function TaskTopology4() {
     [dimensions.width, dimensions.height]
   )
 
+  // Interpolated snapshot for smooth scrubbing
+  const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+  const frac = currentEpochFloat - epochInt
+  const snapA = snapshots[epochInt] || snapshots[0]
+  const snapB = snapshots[Math.min(epochInt + 1, snapshots.length - 1)]
+  const snap = frac > 0 && snapB ? interpolateSnapshots(snapA, snapB, frac) : snapA
+  // Discrete predictions for force layout and hulls (community labels must be integers)
+  const discretePreds = snapA?.node_predictions || []
+
   // Island force — pull each node toward its predicted community center.
   useEffect(() => {
     if (!(fgRef.current && snapshots.length > 0 && graphData)) return
-    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-    const preds = snapshots[epochInt]?.node_predictions || []
     const fg = fgRef.current
 
     fg.d3Force('community', (alpha) => {
       graphData.nodes.forEach((node) => {
-        const cid = preds[node.id] ?? 0
+        const cid = discretePreds[node.id] ?? 0
         const center = centers[cid % centers.length]
         node.vx += (center.x - node.x) * alpha * 0.08
         node.vy += (center.y - node.y) * alpha * 0.08
@@ -69,7 +77,7 @@ export default function TaskTopology4() {
     const charge = fg.d3Force('charge')
     if (charge) charge.strength(-120)
     fg.d3ReheatSimulation()
-  }, [currentEpochFloat, snapshots, graphData, centers])
+  }, [currentEpochFloat, snapshots, graphData, centers, discretePreds])
 
   // Resize handler — re-attach whenever the container remounts.
   useEffect(() => {
@@ -120,12 +128,10 @@ export default function TaskTopology4() {
 
   const communityHulls = useMemo(() => {
     if (snapshots.length === 0 || !graphData) return []
-    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-    const preds = snapshots[epochInt]?.node_predictions || []
 
     const communities = {}
     graphData.nodes.forEach((node) => {
-      const cid = preds[node.id] ?? 0
+      const cid = discretePreds[node.id] ?? 0
       if (!communities[cid]) communities[cid] = []
       communities[cid].push([node.x, node.y])
     })
@@ -139,8 +145,6 @@ export default function TaskTopology4() {
   const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
     if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
 
-    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-    const snap = snapshots[epochInt] || snapshots[0]
     const communityId = snap?.node_predictions?.[node.id] ?? 0
     const isBridge = snap?.bridge_nodes?.[node.id] || false
     const isSelectedComm = selectedCommunityId != null && communityId === selectedCommunityId
@@ -169,7 +173,8 @@ export default function TaskTopology4() {
     ctx.fillStyle = grad
     ctx.fill()
 
-    if (globalScale > 2) {
+    // ALWAYS show node ID if zoomed in enough to read
+    if (globalScale > 0.6) {
       ctx.font = `bold ${10 / globalScale}px Inter, sans-serif`
       ctx.textAlign = 'center'
       ctx.fillStyle = 'white'
@@ -177,7 +182,7 @@ export default function TaskTopology4() {
     }
 
     ctx.globalAlpha = 1
-  }, [snapshots, currentEpochFloat, selectedCommunityId])
+  }, [snap, selectedCommunityId])
 
   const drawBefore = useCallback((ctx) => {
     communityHulls.forEach((hull) => {
@@ -199,7 +204,10 @@ export default function TaskTopology4() {
 
   if (!graphData) return null
 
-  const modularityQ = snapshots[Math.floor(currentEpochFloat)]?.modularity_q || 0
+  const modularityQ = snap?.modularity_q || 0
+  
+  // Dynamic active communities from snapshot
+  const activeCommunityIds = Array.from(new Set(snap?.node_predictions || [])).sort((a, b) => a - b)
 
   return (
     <div ref={containerRef} className="w-full h-full relative bg-slate-950 overflow-hidden">
@@ -215,26 +223,25 @@ export default function TaskTopology4() {
         maxZoom={MAX_ZOOM}
         onZoom={onZoom}
         linkColor={(link) => {
-          const snap = snapshots[Math.floor(currentEpochFloat)] || snapshots[0]
           if (!snap) return 'rgba(148,163,184,0.05)'
           const srcComm = snap.node_predictions?.[link.source.id]
           const tgtComm = snap.node_predictions?.[link.target.id]
+          if (srcComm == null || tgtComm == null) return 'rgba(148,163,184,0.05)'
           return srcComm === tgtComm
             ? `${COMMUNITY_COLORS[srcComm % COMMUNITY_COLORS.length]}33`
             : 'rgba(148, 163, 184, 0.05)'
         }}
         linkWidth={(link) => {
-          const snap = snapshots[Math.floor(currentEpochFloat)] || snapshots[0]
           if (!snap) return 0.5
           const srcComm = snap.node_predictions?.[link.source.id]
           const tgtComm = snap.node_predictions?.[link.target.id]
+          if (srcComm == null || tgtComm == null) return 0.5
           return srcComm === tgtComm ? 1.4 : 0.5
         }}
         cooldownTicks={100}
         backgroundColor="transparent"
         onNodeClick={(node) => {
-          const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-          const cid = snapshots[epochInt]?.node_predictions?.[node.id]
+          const cid = snap?.node_predictions?.[node.id]
           if (cid !== undefined) setSelectedCommunity(cid)
         }}
         onNodeHover={(node) => setHoveredNode(node?.id ?? null)}
@@ -258,7 +265,7 @@ export default function TaskTopology4() {
           </div>
         </div>
         <div className="bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-white/5 flex items-center gap-2 flex-wrap max-w-[220px] justify-end">
-          {COMMUNITY_COLORS.slice(0, 6).map((c, i) => (
+          {activeCommunityIds.map((i) => (
             <button
               key={i}
               onClick={() => setSelectedCommunity(selectedCommunityId === i ? null : i)}
@@ -266,7 +273,7 @@ export default function TaskTopology4() {
                 selectedCommunityId != null && selectedCommunityId !== i ? 'opacity-40 hover:opacity-100' : 'opacity-100'
               }`}
             >
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COMMUNITY_COLORS[i % COMMUNITY_COLORS.length] }} />
               <span className="text-slate-400">C{i}</span>
             </button>
           ))}
