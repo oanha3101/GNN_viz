@@ -11,12 +11,12 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 try:
-    import redis
+    import redis  # type: ignore
 except ImportError:
     redis = None
 
 try:
-    from pymongo import ASCENDING, MongoClient
+    from pymongo import ASCENDING, MongoClient  # type: ignore
 except ImportError:
     ASCENDING = 1
     MongoClient = None
@@ -132,10 +132,15 @@ else:
         logger.warning(f"⚠️ Warning: MongoDB connection failed, falling back to local files: {e}")
         mongo_available = False
 
-    mongo_db = mongo_client["gnn_insight"] if mongo_available else None
-    mongo_experiment_snapshots = mongo_db["experiment_snapshots"] if mongo_available else NullCollection()
-    mongo_experiment_metrics = mongo_db["experiment_metrics"] if mongo_available else NullCollection()
-    mongo_graph_payloads = mongo_db["graph_payloads"] if mongo_available else NullCollection()
+    mongo_db = mongo_client["gnn_insight"] if mongo_available and mongo_client else None
+    if mongo_available and mongo_db:
+        mongo_experiment_snapshots = mongo_db["experiment_snapshots"]
+        mongo_experiment_metrics = mongo_db["experiment_metrics"]
+        mongo_graph_payloads = mongo_db["graph_payloads"]
+    else:
+        mongo_experiment_snapshots = NullCollection()
+        mongo_experiment_metrics = NullCollection()
+        mongo_graph_payloads = NullCollection()
 
 
 def ensure_mongo_indexes():

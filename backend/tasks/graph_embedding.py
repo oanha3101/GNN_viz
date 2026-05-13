@@ -147,7 +147,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
 
     epoch_snapshots = []
     last_tsne = None
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     # Mini-batch mode for large graphs
     use_minibatch = num_nodes > 5000

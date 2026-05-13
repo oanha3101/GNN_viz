@@ -87,7 +87,7 @@ export default function App() {
         onSessionCreated={(sessionId) => console.log('[Agentation] session:', sessionId)}
       />
     )}
-    <Routes>
+    <Routes future={{ v7_relativeSplatPath: true }}>
       <Route element={<PublicOnlyGuard user={user} />}>
         <Route element={<PublicAuthLayout />}>
           <Route path="/login" element={<LazyRoute><AuthPage mode="login" /></LazyRoute>} />

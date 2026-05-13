@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react'
-import { Play, Square, Loader2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Play, Square, Loader2, Save } from 'lucide-react'
 import useGNNStore from '../store/useGNNStore'
 import usePlayerStore from '../store/playerStore'
 import useSessionStore from '../store/sessionStore'
@@ -92,20 +92,30 @@ export default function TrainingControlsV2() {
   const trainingDone = usePlayerStore((s) => s.trainingDone)
   const reportVersion = usePlayerStore((s) => s.reportVersion)
 
-  // Track whether we've already saved for the current run
-  const lastSavedVersion = useRef(0)
+  // Track the save state
+  const lastPreparedVersion = useRef(0)
+  const [saveState, setSaveState] = useState('idle')
 
-  // Auto-save when training completes
+  // Prepare for saving when training completes
   useEffect(() => {
     if (!trainingDone) return
-    if (reportVersion <= lastSavedVersion.current) return
+    if (reportVersion <= lastPreparedVersion.current) return
     const snaps = usePlayerStore.getState().snapshots
     if (snaps.length === 0) return
 
-    lastSavedVersion.current = reportVersion
+    lastPreparedVersion.current = reportVersion
+    setSaveState('ready')
+  }, [trainingDone, reportVersion])
 
+  const handleSaveExperiment = useCallback(async () => {
+    if (saveState === 'saving' || saveState === 'saved') return
+
+    const snaps = usePlayerStore.getState().snapshots
+    if (snaps.length === 0) return
+
+    setSaveState('saving')
     const gnnState = useGNNStore.getState()
-    saveExperiment(
+    const saved = await saveExperiment(
       gnnState.selectedTask,
       gnnState.selectedModel,
       gnnState.hyperparams,
@@ -122,7 +132,8 @@ export default function TrainingControlsV2() {
         uploaded_file_path: gnnState.uploadedFilePath,
       },
     )
-  }, [trainingDone, reportVersion])
+    setSaveState(saved ? 'saved' : 'ready')
+  }, [saveState])
 
   const handleStart = useCallback(async () => {
     if (isTraining) {
@@ -130,6 +141,7 @@ export default function TrainingControlsV2() {
     }
     resetForTraining()
     setReportOpen(false)
+    setSaveState('idle')
 
     if (mockMode) {
       setTraining(true, 0)
@@ -294,6 +306,21 @@ export default function TrainingControlsV2() {
             </>
           )}
         </button>
+
+        <button
+          onClick={handleSaveExperiment}
+          disabled={isTraining || !trainingDone || saveState === 'idle' || saveState === 'saving' || saveState === 'saved'}
+          className={`ml-2 rounded-xl border px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+            saveState === 'ready'
+              ? 'animate-pulse border-aurora-amber/40 bg-aurora-amber/15 text-aurora-amber shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+              : saveState === 'saved'
+                ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
+                : 'border-white/5 bg-white/5 text-twilight disabled:opacity-40 disabled:cursor-not-allowed'
+          }`}
+        >
+          <Save size={12} />
+          {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? 'Saved' : 'Save'}
+        </button>
       </div>
 
       <div className="flex items-center gap-2">
@@ -327,6 +354,18 @@ export default function TrainingControlsV2() {
           </div>
         )}
       </div>
+
+      {!isTraining && trainingDone ? (
+        <div className={`rounded-xl border px-3 py-2 text-[10px] font-semibold ${
+          saveState === 'saved'
+            ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
+            : 'border-aurora-amber/20 bg-aurora-amber/10 text-aurora-amber'
+        }`}>
+          {saveState === 'saved'
+            ? 'This run has been saved to Experiment Hub.'
+            : 'Training is complete. Save Experiment is now ready.'}
+        </div>
+      ) : null}
     </div>
   )
 }

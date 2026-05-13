@@ -25,13 +25,13 @@ from utils.ws_msg import SequenceCounter, send_json_zipped
 
 logger = logging.getLogger(__name__)
 
+import pickle
+
 HAS_TORCH = True
 try:
-    import pickle
     import torch
 except ImportError:
     HAS_TORCH = False
-    pickle = None
     torch = None
 
 

@@ -36,8 +36,23 @@ def align_labels(prev_labels, curr_labels, num_communities):
         p, c = int(prev[i]), int(curr[i])
         if 0 <= p < num_communities and 0 <= c < num_communities:
             cost[p, c] -= 1
-    row_ind, col_ind = linear_sum_assignment(cost)
-    mapping = {int(col_ind[r]): int(row_ind[r]) for r in range(len(row_ind))}
+    if HAS_SCIPY:
+        row_ind, col_ind = linear_sum_assignment(cost)
+        mapping = {int(col_ind[r]): int(row_ind[r]) for r in range(len(row_ind))}
+        return [mapping.get(int(c), int(c)) for c in curr]
+    # Fallback: greedy max-overlap without Hungarian
+    mapping = {}
+    used = set()
+    for c_id in range(num_communities):
+        best_p, best_count = c_id, -1
+        for p_id in range(num_communities):
+            if p_id in used:
+                continue
+            count = sum(1 for i in range(len(curr)) if int(curr[i]) == c_id and int(prev[i]) == p_id)
+            if count > best_count:
+                best_p, best_count = p_id, count
+        mapping[c_id] = best_p
+        used.add(best_p)
     return [mapping.get(int(c), int(c)) for c in curr]
 
 class CommunityGNN(torch.nn.Module):

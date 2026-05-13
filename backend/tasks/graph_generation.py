@@ -364,7 +364,7 @@ async def run_graph_generation(config, data, websocket, stop_flag, snapshot_hook
         nodes = sorted(gen_rng.sample(range(num_nodes), size))
         gen_node_sets.append(nodes)
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     epoch_snapshots = []
 
     for epoch in range(epochs):
