@@ -1,7 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
-import { Agentation } from 'agentation'
 import AdminLayout from './layouts/AdminLayout'
 import AppLayout from './layouts/AppLayout'
 import PublicAuthLayout from './layouts/PublicAuthLayout'
@@ -81,12 +80,6 @@ export default function App() {
 
   return (
     <>
-    {import.meta.env.DEV && (
-      <Agentation
-        endpoint="http://localhost:4747"
-        onSessionCreated={(sessionId) => console.log('[Agentation] session:', sessionId)}
-      />
-    )}
     <Routes future={{ v7_relativeSplatPath: true }}>
       <Route element={<PublicOnlyGuard user={user} />}>
         <Route element={<PublicAuthLayout />}>
