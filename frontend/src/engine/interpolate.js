@@ -89,72 +89,85 @@ export function interpolateSnapshots(snapA, snapB, t) {
   }
   if (snapA.latent_point_scores && snapB.latent_point_scores) {
     res.latent_point_scores = snapA.latent_point_scores.map((sA, i) =>
-      lerp(sA, snapB.latent_point_scores[i] || sA, eT)
+      lerp(sA, snapB.latent_point_scores[i] ?? sA, eT)
     )
   }
-  
+
   // Task specific metrics
   if (snapA.node_contributions && snapB.node_contributions) {
     res.node_contributions = snapA.node_contributions.map((arrA, i) => {
-      const arrB = snapB.node_contributions[i] || arrA
-      return arrA.map((valA, j) => lerp(valA, arrB[j] || valA, eT))
+      const arrB = snapB.node_contributions[i] ?? arrA
+      return arrA.map((valA, j) => lerp(valA, arrB[j] ?? valA, eT))
     })
   }
-  
+
   if (snapA.attention_weights && snapB.attention_weights) {
     res.attention_weights = snapA.attention_weights.map((wA, i) =>
-      lerp(wA, snapB.attention_weights[i] || wA, eT)
+      lerp(wA, snapB.attention_weights[i] ?? wA, eT)
     )
   }
-  
+
   if (snapA.edge_scores && snapB.edge_scores) {
     res.edge_scores = snapA.edge_scores.map((sA, i) =>
-      lerp(sA, snapB.edge_scores[i] || sA, eT)
+      lerp(sA, snapB.edge_scores[i] ?? sA, eT)
     )
   }
 
   if (snapA.auc != null && snapB.auc != null) res.auc = lerp(snapA.auc, snapB.auc, eT)
   if (snapA.ap != null && snapB.ap != null) res.ap = lerp(snapA.ap, snapB.ap, eT)
 
+  // Task 3: Link Prediction — model-specific signatures
+  if (snapA.dirichlet_energy != null && snapB.dirichlet_energy != null) res.dirichlet_energy = lerp(snapA.dirichlet_energy, snapB.dirichlet_energy, eT)
+  if (snapA.smoothness_separation != null && snapB.smoothness_separation != null) res.smoothness_separation = lerp(snapA.smoothness_separation, snapB.smoothness_separation, eT)
+  if (snapA.score_variance != null && snapB.score_variance != null) res.score_variance = lerp(snapA.score_variance, snapB.score_variance, eT)
+  if (snapA.edge_similarity && snapB.edge_similarity) {
+    res.edge_similarity = snapA.edge_similarity.map((sA, i) => lerp(sA, snapB.edge_similarity[i] ?? sA, eT))
+  }
+
   // Task 4: Community Detection
   if (snapA.bridge_strength && snapB.bridge_strength) {
     res.bridge_strength = snapA.bridge_strength.map((sA, i) =>
-      lerp(sA, snapB.bridge_strength[i] || sA, eT)
+      lerp(sA, snapB.bridge_strength[i] ?? sA, eT)
     )
   }
   if (snapA.silhouette_scores && snapB.silhouette_scores) {
     res.silhouette_scores = snapA.silhouette_scores.map((sA, i) =>
-      lerp(sA, snapB.silhouette_scores[i] || sA, eT)
+      lerp(sA, snapB.silhouette_scores[i] ?? sA, eT)
     )
   }
   if (snapA.cluster_confidence && snapB.cluster_confidence) {
     res.cluster_confidence = snapA.cluster_confidence.map((sA, i) =>
-      lerp(sA, snapB.cluster_confidence[i] || sA, eT)
+      lerp(sA, snapB.cluster_confidence[i] ?? sA, eT)
+    )
+  }
+  if (snapA.local_smoothness && snapB.local_smoothness) {
+    res.local_smoothness = snapA.local_smoothness.map((sA, i) =>
+      lerp(sA, snapB.local_smoothness[i] ?? sA, eT)
     )
   }
 
   // Task 5: Graph Embedding
   if (snapA.proximity_scores && snapB.proximity_scores) {
     res.proximity_scores = snapA.proximity_scores.map((pA, i) => {
-      const pB = snapB.proximity_scores[i] || pA
+      const pB = snapB.proximity_scores[i] ?? pA
       return { source: pA.source, target: pA.target, score: lerp(pA.score, pB.score, eT) }
     })
   }
   if (snapA.per_node_knn_preservation && snapB.per_node_knn_preservation) {
     res.per_node_knn_preservation = snapA.per_node_knn_preservation.map((kA, i) =>
-      lerp(kA, snapB.per_node_knn_preservation[i] || kA, eT)
+      lerp(kA, snapB.per_node_knn_preservation[i] ?? kA, eT)
     )
   }
 
   // Task 2: Graph Classification
   if (snapA.graph_confidences && snapB.graph_confidences) {
     res.graph_confidences = snapA.graph_confidences.map((cA, i) =>
-      lerp(cA, snapB.graph_confidences[i] || cA, eT)
+      lerp(cA, snapB.graph_confidences[i] ?? cA, eT)
     )
   }
   if (snapA.confidence_margins && snapB.confidence_margins) {
     res.confidence_margins = snapA.confidence_margins.map((mA, i) =>
-      lerp(mA, snapB.confidence_margins[i] || mA, eT)
+      lerp(mA, snapB.confidence_margins[i] ?? mA, eT)
     )
   }
 
@@ -164,12 +177,29 @@ export function interpolateSnapshots(snapA, snapB, t) {
   if (snapA.novelty_rate != null && snapB.novelty_rate != null) res.novelty_rate = lerp(snapA.novelty_rate, snapB.novelty_rate, eT)
   if (snapA.recon_loss != null && snapB.recon_loss != null) res.recon_loss = lerp(snapA.recon_loss, snapB.recon_loss, eT)
   if (snapA.kl_loss != null && snapB.kl_loss != null) res.kl_loss = lerp(snapA.kl_loss, snapB.kl_loss, eT)
+
+  // Scalar metrics that need smooth interpolation
+  if (snapA.dirichlet_energy != null && snapB.dirichlet_energy != null) res.dirichlet_energy = lerp(snapA.dirichlet_energy, snapB.dirichlet_energy, eT)
+  if (snapA.modularity_q != null && snapB.modularity_q != null) res.modularity_q = lerp(snapA.modularity_q, snapB.modularity_q, eT)
+  if (snapA.attention_boundary_ratio != null && snapB.attention_boundary_ratio != null) res.attention_boundary_ratio = lerp(snapA.attention_boundary_ratio, snapB.attention_boundary_ratio, eT)
+  if (snapA.sage_robustness != null && snapB.sage_robustness != null) res.sage_robustness = lerp(snapA.sage_robustness, snapB.sage_robustness, eT)
+  if (snapA.knn_preservation != null && snapB.knn_preservation != null) res.knn_preservation = lerp(snapA.knn_preservation, snapB.knn_preservation, eT)
+  if (snapA.link_recon_auc != null && snapB.link_recon_auc != null) res.link_recon_auc = lerp(snapA.link_recon_auc, snapB.link_recon_auc, eT)
+  if (snapA.isotropy_score != null && snapB.isotropy_score != null) res.isotropy_score = lerp(snapA.isotropy_score, snapB.isotropy_score, eT)
+  if (snapA.stress_score != null && snapB.stress_score != null) res.stress_score = lerp(snapA.stress_score, snapB.stress_score, eT)
   
   // For discrete data, we usually keep snapB as the target, but maybe show snapA if t < 0.5
   if (t > 0.5) {
     res.generated_graphs = snapB.generated_graphs
   } else {
     res.generated_graphs = snapA.generated_graphs
+  }
+
+  // Discrete: graph predictions (Task 2) — snap at midpoint
+  if (t > 0.5) {
+    res.graph_predictions = snapB.graph_predictions
+  } else {
+    res.graph_predictions = snapA.graph_predictions
   }
 
   return res

@@ -8,9 +8,9 @@ import { CLASS_COLORS } from '../../utils/colors'
 
 // Smooth color interpolation for edges - Tăng độ đậm và rõ màu
 function getLinkColor(score) {
-  if (score > 0.8) return `rgba(16, 185, 129, ${0.85 + (score - 0.8) * 0.7})`; 
-  if (score > 0.4) return `rgba(245, 158, 11, ${0.7 + (score - 0.4) * 0.5})`;
-  return `rgba(239, 68, 68, ${0.4 + score * 0.4})`;
+  if (score > 0.8) return `rgba(52, 211, 153, ${0.85 + (score - 0.8) * 0.7})`;
+  if (score > 0.4) return `rgba(168, 85, 247, ${0.7 + (score - 0.4) * 0.5})`;
+  return `rgba(236, 72, 153, ${0.4 + score * 0.4})`;
 }
 
 export default function TaskTopology3() {
@@ -28,6 +28,22 @@ export default function TaskTopology3() {
 
   const [showNodes, setShowNodes] = useState(true)
   const [showTriangles, setShowTriangles] = useState(true)
+  // Auto-derive overlay from selectedModel (selected in LeftSidebar)
+  const overlayMode = selectedModel === 'GAT' ? 'attention' : selectedModel === 'GCN' ? 'smoothness' : selectedModel === 'SAGE' ? 'stability' : 'none'
+
+  // Pre-compute testEdgeMap for O(1) lookup (replaces O(n) findIndex per frame)
+  const testEdgeMap = useMemo(() => {
+    const map = new Map()
+    const edges = taskData?.testEdges
+    if (edges) {
+      for (let i = 0; i < edges.length; i++) {
+        const te = edges[i]
+        const key = Math.min(te.source, te.target) + '-' + Math.max(te.source, te.target)
+        map.set(key, i)
+      }
+    }
+    return map
+  }, [taskData?.testEdges])
   const [hoveredLink, setHoveredLink] = useState(null)
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 })
   const [stableGraphData, setStableGraphData] = useState(null)
@@ -184,6 +200,20 @@ export default function TaskTopology3() {
     return new Set([...sNeighbors].filter(x => tNeighbors.has(x)))
   }, [mostInterestingLink, rawGraphData])
 
+  // Pre-compute attentionMap from snap.attention_edges (not interpolated — read from snapA directly)
+  const attentionMap = useMemo(() => {
+    if (overlayMode !== 'attention') return null
+    const epochInt = Math.max(0, Math.min(snapshots?.length - 1, Math.floor(currentEpochFloat)))
+    const edges = snapshots?.[epochInt]?.attention_edges
+    if (!edges) return null
+    const map = new Map()
+    for (const e of edges) {
+      const key = Math.min(e.source, e.target) + '-' + Math.max(e.source, e.target)
+      map.set(key, e.weight)
+    }
+    return map
+  }, [selectedModel, snapshots, currentEpochFloat])
+
   // 3. Hàm vẽ cạnh (Laser & Pulse)
   const linkCanvasObject = useCallback((link, ctx, globalScale) => {
     if (!snapshots?.length) return
@@ -193,9 +223,10 @@ export default function TaskTopology3() {
     const testEdges = taskData?.testEdges || []
 
     const sId = link.source.id, tId = link.target.id
-    const testIdx = testEdges.findIndex(te => (te.source === sId && te.target === tId) || (te.source === tId && te.target === sId))
+    const edgeKey = Math.min(sId, tId) + '-' + Math.max(sId, tId)
+    const testIdx = testEdgeMap.get(edgeKey) ?? -1
 
-    let color = 'rgba(148, 163, 184, 0.25)', width = 1.5, score = 0, isFuture = false
+    let color = 'rgba(91, 86, 137, 0.25)', width = 1.5, score = 0, isFuture = false
     const hasSelection = selectedNodeId !== null
     const isConnectedToSelected = sId === selectedNodeId || tId === selectedNodeId
     
@@ -211,6 +242,36 @@ export default function TaskTopology3() {
       color = getLinkColor(score)
       width = Math.min(5, 2.0 + score * 4)
       isFuture = !testEdges[testIdx].exists && score > 0.5
+    }
+
+    // Overlay modes — override color/width when active
+    if (overlayMode === 'attention' && attentionMap) {
+      const key = Math.min(sId, tId) + '-' + Math.max(sId, tId)
+      const w = attentionMap.get(key) ?? 0
+      if (w > 0.05) {
+        color = `rgba(251, 191, 36, ${0.3 + w * 0.7})`
+        width = 1 + w * 5
+      } else {
+        color = 'rgba(91, 86, 137, 0.1)'
+        width = 0.8
+      }
+    } else if (overlayMode === 'smoothness' && testIdx !== -1 && snapA?.edge_similarity) {
+      const simA = snapA.edge_similarity[testIdx] ?? 0.5
+      const simB = snapB?.edge_similarity?.[testIdx] ?? simA
+      const sim = lerp(simA, simB, t)
+      // High similarity (homophilic) → green, low → red
+      const r = Math.round(lerp(34, 239, 1 - sim))
+      const g = Math.round(lerp(197, 68, 1 - sim))
+      const b = Math.round(lerp(94, 68, 1 - sim))
+      color = `rgba(${r},${g},${b}, 0.6)`
+      width = 0.5 + sim * 3
+    } else if (overlayMode === 'stability') {
+      const vA = snapA?.score_variance ?? 0
+      const vB = snapB?.score_variance ?? vA
+      const v = lerp(vA, vB, t)
+      const alpha = Math.max(0.15, 1 - v * 5)
+      color = `rgba(34, 211, 238, ${alpha})`
+      width = 0.5 + (1 - Math.min(v * 5, 1)) * 3
     }
 
     ctx.save(); ctx.globalAlpha = finalAlpha; ctx.beginPath()
@@ -242,7 +303,7 @@ export default function TaskTopology3() {
       ctx.textBaseline = 'middle'
       
       // Viền đen dày để chữ nổi bật trên bất kỳ nền nào
-      ctx.strokeStyle = 'rgba(2, 6, 23, 0.9)'
+      ctx.strokeStyle = 'rgba(10, 5, 20, 0.9)'
       ctx.lineWidth = 4 / globalScale
       ctx.strokeText(label, mx, my - 10/globalScale)
       
@@ -252,7 +313,7 @@ export default function TaskTopology3() {
     }
 
     ctx.restore()
-  }, [snapshots, currentEpochFloat, taskData, selectedNodeId, mostInterestingLink])
+  }, [snapshots, currentEpochFloat, taskData, selectedNodeId, mostInterestingLink, testEdgeMap, selectedModel, attentionMap])
 
   // 4. Hàm vẽ node (Radar Glow)
   const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
@@ -301,12 +362,12 @@ export default function TaskTopology3() {
     ctx.restore()
   }, [groundTruth, selectedNodeId, commonNeighbors, showNodes, hoveredLink])
 
-  if (!activeGraphData) return <div className="w-full h-full bg-slate-950 flex items-center justify-center text-slate-500 text-[10px] uppercase font-black">Loading...</div>
+  if (!activeGraphData) return <div className="w-full h-full bg-[#0a0514] flex items-center justify-center text-[#5b5689] text-[10px] uppercase font-black">Loading...</div>
 
   const auc = snapshots[Math.floor(currentEpochFloat)]?.auc || 0.5
 
   return (
-    <div ref={containerRef} className="w-full h-full relative bg-slate-950 overflow-hidden">
+    <div ref={containerRef} className="w-full h-full relative bg-[#0a0514] overflow-hidden">
       <ForceGraph2D
         ref={fgRef}
         graphData={activeGraphData}
@@ -336,27 +397,27 @@ export default function TaskTopology3() {
       {/* DYNAMIC GAUGE */}
       <div className="absolute bottom-6 right-6 pointer-events-none flex flex-col items-center">
         <div className="relative w-28 h-14 overflow-hidden mb-2">
-            <svg viewBox="0 0 100 50" className="w-full h-full drop-shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+            <svg viewBox="0 0 100 50" className="w-full h-full drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">
                 <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" strokeLinecap="round" />
                 <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#aucGrad)" strokeWidth="10" strokeLinecap="round" strokeDasharray="125.6" strokeDashoffset={125.6 - (auc * 125.6)} className="transition-all duration-500" />
                 <g transform={`translate(50, 50) rotate(${auc * 180 - 90})`} className="transition-all duration-500">
-                    <path d="M -2,0 L 0,-38 L 2,0 Z" fill="#fff" /><circle cx="0" cy="0" r="4" fill="#0ea5e9" stroke="#fff" strokeWidth="1" />
+                    <path d="M -2,0 L 0,-38 L 2,0 Z" fill="#f1f0ff" /><circle cx="0" cy="0" r="4" fill="#a855f7" stroke="#f1f0ff" strokeWidth="1" />
                 </g>
-                <defs><linearGradient id="aucGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#ef4444" /><stop offset="50%" stopColor="#f59e0b" /><stop offset="100%" stopColor="#10b981" /></linearGradient></defs>
+                <defs><linearGradient id="aucGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#f43f5e" /><stop offset="50%" stopColor="#a855f7" /><stop offset="100%" stopColor="#34d399" /></linearGradient></defs>
             </svg>
         </div>
-        <div className="bg-slate-900/90 backdrop-blur-xl rounded-2xl px-4 py-2 border border-white/5 shadow-2xl flex flex-col items-center min-w-[100px]">
-          <span className="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-1">Model AUC</span>
-          <span className={`text-2xl font-black font-mono leading-none ${auc > 0.85 ? 'text-emerald-400' : auc > 0.7 ? 'text-amber-400' : 'text-red-400'}`}>{auc.toFixed(3)}</span>
+        <div className="bg-[#0f0a1e]/90 backdrop-blur-xl rounded-2xl px-4 py-2 border border-[rgba(168,85,247,0.1)] shadow-2xl flex flex-col items-center min-w-[100px]">
+          <span className="text-[8px] text-[#5b5689] uppercase font-black tracking-widest mb-1">Model AUC</span>
+          <span className={`text-2xl font-black font-mono leading-none ${auc > 0.85 ? 'text-[#34d399]' : auc > 0.7 ? 'text-[#fbbf24]' : 'text-[#f43f5e]'}`}>{auc.toFixed(3)}</span>
         </div>
       </div>
 
       <div className="absolute top-4 right-4 z-20 flex gap-2">
-        <button onClick={() => setShowNodes(!showNodes)} className={`px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border transition-all ${showNodes ? 'bg-slate-900/90 border-slate-700 text-slate-400 hover:text-white' : 'bg-indigo-600/30 border-indigo-500 text-indigo-300'}`}>Nodes</button>
+        <button onClick={() => setShowNodes(!showNodes)} className={`px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border transition-all ${showNodes ? 'bg-[#0f0a1e]/90 border-[#2a1f45] text-[#a5a0d0] hover:text-[#f1f0ff]' : 'bg-[rgba(99,102,241,0.15)] border-[#6366f1] text-[#a5a3ef]'}`}>Nodes</button>
         <button
           onClick={() => fitView(600, 60)}
           title="Fit to view (F)"
-          className="px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border bg-slate-900/80 border-slate-700 text-slate-400 hover:text-white hover:border-cyan-500/40 transition-all"
+          className="px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border bg-[#0f0a1e]/80 border-[#2a1f45] text-[#a5a0d0] hover:text-[#f1f0ff] hover:border-[rgba(168,85,247,0.3)] transition-all"
         >
           Fit
         </button>

@@ -9,10 +9,22 @@ export default function AdminOverviewPage() {
   const [error, setError] = useState(null)
   const [summary, setSummary] = useState(null)
 
+  const load = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const payload = await apiJson('/admin/summary')
+      setSummary(payload)
+    } catch (err) {
+      setError(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     let active = true
-
-    async function load() {
+    async function run() {
       setLoading(true)
       setError(null)
       try {
@@ -24,11 +36,8 @@ export default function AdminOverviewPage() {
         if (active) setLoading(false)
       }
     }
-
-    load()
-    return () => {
-      active = false
-    }
+    run()
+    return () => { active = false }
   }, [])
 
   if (loading) {
@@ -36,7 +45,7 @@ export default function AdminOverviewPage() {
   }
 
   if (error) {
-    return <ErrorState title="Could not load admin summary" error={error} onRetry={() => window.location.reload()} className="min-h-[480px]" />
+    return <ErrorState title="Could not load admin summary" error={error} onRetry={load} className="min-h-[480px]" />
   }
 
   return (
@@ -44,7 +53,7 @@ export default function AdminOverviewPage() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Users" value={summary?.users ?? 0} />
         <StatCard label="Projects" value={summary?.projects ?? 0} tone="emerald" />
-        <StatCard label="Experiments" value={summary?.experiments ?? 0} />
+        <StatCard label="Experiments" value={summary?.experiments ?? 0} tone="blue" />
         <StatCard label="Sessions" value={summary?.training_sessions ?? 0} tone="amber" />
       </div>
 
@@ -55,7 +64,7 @@ export default function AdminOverviewPage() {
       </div>
 
       <SectionCard title="Operational Summary" subtitle="A quick read before drilling into users, datasets, runs, or retention actions.">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <SummaryRow label="Datasets" value={summary?.datasets ?? 0} />
           <SummaryRow label="Dataset Versions" value={summary?.dataset_versions ?? 0} />
           <SummaryRow label="Experiments" value={summary?.experiments ?? 0} />
@@ -64,10 +73,10 @@ export default function AdminOverviewPage() {
       </SectionCard>
 
       <SectionCard title="Infrastructure Surface" subtitle="Quick visibility into the storage and cache services backing the current workspace.">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <SummaryRow label="Blob Provider" value={summary?.blob_provider || 'local'} />
-          <SummaryRow label="Mongo Ready" value={summary?.mongo_available ? 'online' : 'offline'} />
-          <SummaryRow label="Redis Ready" value={summary?.redis_available ? 'online' : 'offline'} />
+          <SummaryRow label="Mongo Ready" value={summary?.mongo_available ? 'online' : 'offline'} status={summary?.mongo_available} />
+          <SummaryRow label="Redis Ready" value={summary?.redis_available ? 'online' : 'offline'} status={summary?.redis_available} />
           <SummaryRow label="Audit 7 Days" value={summary?.recent_audit_events ?? 0} />
         </div>
       </SectionCard>
@@ -75,11 +84,16 @@ export default function AdminOverviewPage() {
   )
 }
 
-function SummaryRow({ label, value }) {
+function SummaryRow({ label, value, status }) {
   return (
-    <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">{label}</div>
-      <div className="mt-3 text-xl font-bold text-white">{value}</div>
+    <div className="glass-card p-4">
+      <div className="text-micro uppercase tracking-ultra text-text-shadow">{label}</div>
+      <div className="mt-2 flex items-center gap-2">
+        {status !== undefined ? (
+          <span className={`h-2 w-2 rounded-full ${status ? 'bg-aurora-green' : 'bg-aurora-rose'}`} />
+        ) : null}
+        <span className="text-xl font-bold text-white-star">{value}</span>
+      </div>
     </div>
   )
 }

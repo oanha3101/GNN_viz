@@ -278,10 +278,10 @@ export default function TrainingControlsV2() {
       <div className="flex items-center justify-between">
         <button
           onClick={isTraining ? handleStop : handleStart}
-          className={`flex-1 rounded-xl px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 ${
+          className={`flex-1 rounded-xl px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
             isTraining
-              ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
-              : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-cyan-500/20'
+              ? 'bg-aurora-rose/20 text-aurora-rose border border-aurora-rose/30 hover:bg-aurora-rose/30 shadow-[0_0_15px_rgba(225,29,72,0.15)]'
+              : 'bg-amethyst/20 text-amethyst border border-amethyst/30 hover:bg-amethyst/30 shadow-[0_0_20px_rgba(147,51,234,0.2)]'
           }`}
         >
           {isTraining ? (
@@ -299,30 +299,30 @@ export default function TrainingControlsV2() {
       <div className="flex items-center gap-2">
         {isTraining ? (
           <div className="flex-1 flex flex-col gap-1">
-             <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+             <div className="h-1.5 w-full rounded-full bg-black/40 border border-white/5 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 transition-[width] duration-150"
+                  className="h-full rounded-full bg-gradient-to-r from-amethyst via-indigo-500 to-aurora-blue transition-[width] duration-150"
                   style={{ width: `${trainingProgress * 100}%` }}
                 />
               </div>
               <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-tighter">
-                <span className="text-slate-500 flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Progress</span>
-                <span className="text-cyan-400 font-mono">{Math.round(trainingProgress * 100)}%</span>
+                <span className="text-twilight flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Progress</span>
+                <span className="text-amethyst font-mono">{Math.round(trainingProgress * 100)}%</span>
               </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-between px-3 py-1.5 rounded-lg border border-slate-800/60 bg-slate-900/30">
+          <div className="flex-1 flex items-center justify-between px-3 py-1.5 rounded-lg border border-white/5 bg-black/20 backdrop-blur-sm">
             <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-slate-500 font-bold">Epochs</span>
-              <span className="text-[10px] font-mono text-slate-300">{hyperparams.epochs}</span>
+              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">Epochs</span>
+              <span className="text-[10px] font-mono text-starlight">{hyperparams.epochs}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-slate-500 font-bold">LR</span>
-              <span className="text-[10px] font-mono text-slate-300">{hyperparams.lr}</span>
+              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">LR</span>
+              <span className="text-[10px] font-mono text-starlight">{hyperparams.lr}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-slate-500 font-bold">Hidden</span>
-              <span className="text-[10px] font-mono text-slate-300">{hyperparams.hidden}</span>
+              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">Hidden</span>
+              <span className="text-[10px] font-mono text-starlight">{hyperparams.hidden}</span>
             </div>
           </div>
         )}

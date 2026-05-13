@@ -1,17 +1,5 @@
-import React from 'react'
+import { motion } from 'framer-motion'
 
-/**
- * <EmptyState> — consistent zero-data presentation.
- *
- * Example:
- *   <EmptyState
- *     icon={<Network size={32} />}
- *     title="No snapshots yet"
- *     description="Start a training run to populate the timeline."
- *     actionLabel="Start training"
- *     onAction={startTraining}
- *   />
- */
 export function EmptyState({
   icon,
   title,
@@ -21,29 +9,37 @@ export function EmptyState({
   className = '',
 }) {
   return (
-    <div
-      role="status"
-      className={`w-full h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 ${className}`}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`w-full h-full min-h-[250px] flex flex-col items-center justify-center text-center p-8 rounded-2xl border border-white/5 bg-black/20 shadow-inner shadow-white/5 backdrop-blur-sm ${className}`}
     >
       {icon && (
-        <div className="mb-3 text-slate-600" aria-hidden="true">
-          {icon}
+        <div className="mb-5 inline-flex h-16 w-16 items-center justify-center rounded-full bg-white/5 border border-white/10 text-twilight shadow-[0_0_30px_rgba(255,255,255,0.05)] ring-1 ring-white/10" aria-hidden="true">
+          <motion.div
+            animate={{ scale: [1, 1.1, 1], opacity: [0.8, 1, 0.8] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            {icon}
+          </motion.div>
         </div>
       )}
-      <h4 className="text-sm font-semibold text-slate-300 mb-1">{title}</h4>
+      <h4 className="text-base font-bold text-white-star mb-2 tracking-wide">{title}</h4>
       {description && (
-        <p className="text-xs text-slate-500 max-w-xs">{description}</p>
+        <p className="text-sm text-starlight/80 max-w-sm leading-relaxed">{description}</p>
       )}
       {actionLabel && onAction && (
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           type="button"
           onClick={onAction}
-          className="mt-4 px-3 py-1.5 rounded-md text-xs font-semibold bg-slate-800 text-cyan-300 border border-slate-700 hover:border-cyan-500/40 transition-colors"
+          className="mt-6 rounded-xl border border-amethyst/30 bg-amethyst/20 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-amethyst shadow-[0_0_20px_rgba(147,51,234,0.15)] transition-all hover:bg-amethyst/30 hover:shadow-[0_0_25px_rgba(147,51,234,0.25)]"
         >
           {actionLabel}
-        </button>
+        </motion.button>
       )}
-    </div>
+    </motion.div>
   )
 }
 

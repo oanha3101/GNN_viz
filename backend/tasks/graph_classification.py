@@ -344,6 +344,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
 
         snapshot = {
             'epoch': epoch,
+            'model_type': config.get('model', 'GCN'),
             'graph_predictions': all_pred,
             'graph_probabilities': graph_probabilities,
             'graph_confidences': confidences,

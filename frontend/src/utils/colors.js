@@ -1,14 +1,32 @@
+// Galaxy Constellation — Graph node & class color palette
+// Each color is chosen to pop against the deep purple background
+// while maintaining the cosmic aesthetic.
+
 export const CLASS_COLORS = [
-  '#E53935', '#1E88E5', '#43A047', '#FB8C00',
-  '#8E24AA', '#E91E63', '#F9A825',
-  '#00ACC1', '#43A047', '#F4511E', '#3949AB',
-  '#8E24AA', '#00897B', '#C0CA33', '#FBC02D',
-  '#039BE5', '#546E7A', '#D81B60', '#5E35B1'
+  '#9333ea', // amethyst — primary
+  '#818cf8', // aurora-blue
+  '#f472b6', // aurora-pink
+  '#22d3ee', // aurora-cyan
+  '#34d399', // aurora-green
+  '#fbbf24', // aurora-amber
+  '#f43f5e', // aurora-rose
+  '#a78bfa', // moonlight
+  '#6d28d9', // cosmic
+  '#fb923c', // orange
+  '#3b82f6', // blue
+  '#2dd4bf', // teal
+  '#e879f9', // fuchsia
+  '#facc15', // yellow
+  '#fb7185', // rose-light
+  '#c084fc', // purple-light
+  '#38bdf8', // sky
+  '#4ade80', // green-light
+  '#94a3b8', // slate
 ]
 
 export function getClassColor(idx) {
-  if (idx == null || idx === undefined || isNaN(idx)) return '#94a3b8';
-  return CLASS_COLORS[idx % CLASS_COLORS.length];
+  if (idx == null || idx === undefined || isNaN(idx)) return '#7c6faa'
+  return CLASS_COLORS[idx % CLASS_COLORS.length]
 }
 
 export const CLASS_NAMES = [
@@ -17,7 +35,7 @@ export const CLASS_NAMES = [
 ]
 
 export const MODEL_COLORS = {
-  GCN: '#3b82f6',
-  GAT: '#22c55e',
-  SAGE: '#f97316',
+  GCN: '#9333ea',   // amethyst
+  GAT: '#818cf8',   // aurora-blue
+  SAGE: '#f472b6',  // aurora-pink
 }

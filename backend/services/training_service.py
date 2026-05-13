@@ -154,9 +154,6 @@ async def run_link_prediction_task(websocket, *, config, seq, session_id, stop_c
     if config.get("uploaded_file_path"):
         data, _ = auto_detect_graph(data)
 
-    graph_json = resolve_node_graph_json(config, data)
-    await send_node_graph_data(websocket, seq=seq, graph_json=graph_json, data=data)
-
     config["edge_split_ratio"] = config.get("edge_split_ratio", 0.15)
     epoch_snapshots = await run_link_prediction(
         config,
@@ -175,9 +172,6 @@ async def run_community_detection_task(websocket, *, config, seq, session_id, st
         data = data[0]
     if config.get("uploaded_file_path"):
         data, _ = auto_detect_graph(data)
-
-    graph_json = resolve_node_graph_json(config, data)
-    await send_node_graph_data(websocket, seq=seq, graph_json=graph_json, data=data)
 
     has_community_gt = config.get("has_community_gt", False)
     # Auto-detect: built-in datasets (Karate, Cora, CitSeer) have meaningful labels in data.y

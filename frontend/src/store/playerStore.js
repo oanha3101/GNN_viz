@@ -11,6 +11,7 @@ const usePlayerStore = create((set, get) => ({
   trainingDone: false,
   bestEpoch: 0,
   reportVersion: 0,
+  autoFollow: true, // When true, new snapshots auto-advance the view
 
   loadSnapshots: (snapshots) => {
     set({
@@ -41,39 +42,43 @@ const usePlayerStore = create((set, get) => ({
   addSnapshot: (snapshot) => {
     set((s) => {
       // Optimized check for duplicates (O(1) instead of O(N))
-      // Since snapshots arrive via WebSocket in sequential order, 
+      // Since snapshots arrive via WebSocket in sequential order,
       // we only need to compare with the most recent entry.
       const lastSnapshot = s.snapshots[s.snapshots.length - 1]
       if (lastSnapshot && lastSnapshot.epoch === snapshot.epoch) {
         return {}
       }
-      
-      return {
+
+      const newLen = s.snapshots.length + 1
+      const update = {
         snapshots: [...s.snapshots, snapshot],
-        currentEpoch: s.snapshots.length,
-        currentEpochFloat: s.snapshots.length,
-        totalEpochs: s.snapshots.length + 1,
+        totalEpochs: newLen,
       }
+      // Only auto-advance view if user hasn't manually scrubbed
+      if (s.autoFollow) {
+        update.currentEpoch = newLen - 1
+        update.currentEpochFloat = newLen - 1
+      }
+      return update
     })
   },
 
   setDone: (bestEpoch, isHistory = false) => {
-    set((s) => ({ 
-      trainingDone: true, 
-      bestEpoch, 
-      reportVersion: isHistory ? s.reportVersion : s.reportVersion + 1 
+    set((s) => ({
+      trainingDone: true,
+      bestEpoch,
+      autoFollow: false, // Stop auto-following after training completes
+      reportVersion: isHistory ? s.reportVersion : s.reportVersion + 1
     }))
-    const { snapshots } = get()
-    // Go back to the beginning after training is finished, so user can press play
-    if (snapshots.length > 0) {
-       get().seekTo(0)
-    }
+    // Stay at the current epoch — don't reset to 0
   },
 
   seekTo: (floatVal) => {
     const max = get().snapshots.length - 1
     const safeVal = Math.max(0, Math.min(max, floatVal))
-    set({ currentEpochFloat: safeVal, currentEpoch: Math.floor(safeVal) })
+    // If user scrubs to a position that isn't the latest, disable auto-follow
+    const isAtEnd = safeVal >= max - 0.5
+    set({ currentEpochFloat: safeVal, currentEpoch: Math.floor(safeVal), autoFollow: isAtEnd })
   },
 
   play: () => {
@@ -109,7 +114,7 @@ const usePlayerStore = create((set, get) => ({
         rafId: requestAnimationFrame(tick)
       })
     }
-    set({ isPlaying: true, rafId: requestAnimationFrame(tick) })
+    set({ isPlaying: true, autoFollow: true, rafId: requestAnimationFrame(tick) })
   },
 
   pause: () => {

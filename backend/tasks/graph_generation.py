@@ -456,6 +456,7 @@ async def run_graph_generation(config, data, websocket, stop_flag, snapshot_hook
 
                 snapshot = {
                     'epoch': epoch,
+                    'model_type': config.get('model', 'GCN'),
                     'generated_graphs': generated_graphs,
                     'source_graphs': source_graphs,
                     'latent_points': latent_points,

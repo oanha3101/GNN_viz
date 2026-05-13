@@ -1,9 +1,18 @@
+import { RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import EmptyState from '../../components/primitives/EmptyState'
 import ErrorState from '../../components/primitives/ErrorState'
 import LoadingState from '../../components/primitives/LoadingState'
 import { apiJson, normalizeCollectionPayload } from '../../utils/api'
 import { SectionCard } from '../shared/PageBlocks'
+
+const STATUS_COLORS = {
+  running: 'bg-amethyst',
+  completed: 'bg-aurora-green',
+  failed: 'bg-aurora-rose',
+  stopped: 'bg-aurora-amber',
+  queued: 'bg-aurora-blue',
+}
 
 export default function AdminSessionsPage() {
   const [loading, setLoading] = useState(true)
@@ -45,42 +54,61 @@ export default function AdminSessionsPage() {
   }
 
   return (
-    <SectionCard title="Session Monitor" subtitle="Stop or retry sessions without touching the database or the server console.">
+    <SectionCard
+      title="Session Monitor"
+      subtitle="Stop or retry sessions without touching the database or the server console."
+      actions={
+        <button
+          type="button"
+          onClick={load}
+          className="btn-ghost inline-flex items-center gap-2 text-xs"
+        >
+          <RefreshCw size={13} /> Refresh
+        </button>
+      }
+    >
       {items.length ? (
         <div className="space-y-3">
           {items.map((item) => (
-            <div key={item.id} className="rounded-3xl border border-slate-800/70 bg-slate-950/50 p-5">
+            <div key={item.id} className="glass-card p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-base font-semibold text-white">{item.id}</div>
-                  <div className="mt-1 text-sm text-slate-400">Task {item.task_type} • {item.model_type} • {item.dataset_name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${STATUS_COLORS[item.status] || 'bg-twilight'}`} />
+                    <span className="text-base font-semibold text-white-star font-mono text-sm">{item.id}</span>
+                  </div>
+                  <div className="mt-1 text-sm text-twilight">
+                    {item.task_type} • {item.model_type} • {item.dataset_name}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => handleAction(item.id, 'stop')}
-                    className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300"
+                    className="rounded-lg border border-aurora-rose/20 bg-aurora-rose/[0.08] px-3 py-2 text-xs font-semibold text-aurora-rose transition-all hover:bg-aurora-rose/[0.15]"
                   >
                     Stop
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAction(item.id, 'retry')}
-                    className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300"
+                    className="rounded-lg border border-aurora-green/20 bg-aurora-green/[0.08] px-3 py-2 text-xs font-semibold text-aurora-green transition-all hover:bg-aurora-green/[0.15]"
                   >
                     Retry
                   </button>
                 </div>
               </div>
-              <div className="mt-3 grid gap-2 text-xs text-slate-500 md:grid-cols-2 xl:grid-cols-4">
-                <span>Status: {item.status}</span>
-                <span>Epoch: {item.last_epoch}/{item.total_epochs}</span>
-                <span>Started: {item.started_at || 'n/a'}</span>
-                <span>{item.error_message ? `Error: ${item.error_message}` : 'No error'}</span>
+              <div className="mt-3 grid gap-2 text-xs text-text-shadow md:grid-cols-2 xl:grid-cols-4">
+                <span>Status: <span className="text-starlight">{item.status}</span></span>
+                <span>Epoch: <span className="text-starlight">{item.last_epoch}/{item.total_epochs}</span></span>
+                <span>Started: <span className="text-starlight">{item.started_at || 'n/a'}</span></span>
+                <span className={item.error_message ? 'text-aurora-rose' : ''}>
+                  {item.error_message ? `Error: ${item.error_message}` : 'No error'}
+                </span>
               </div>
             </div>
           ))}
-          {error ? <div className="text-sm text-red-300">{error.message}</div> : null}
+          {error ? <div className="text-sm text-aurora-rose">{error.message}</div> : null}
         </div>
       ) : (
         <EmptyState title="No sessions found" description="Live and historical training sessions will appear here once they exist." />

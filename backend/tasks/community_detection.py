@@ -15,9 +15,30 @@ from utils.ws_msg import send_json_zipped
 from utils.model_utils import should_take_snapshot
 try:
     from scipy.cluster.hierarchy import linkage as scipy_linkage
+    from scipy.optimize import linear_sum_assignment
     HAS_SCIPY = True
 except ImportError:
     HAS_SCIPY = False
+
+
+def align_labels(prev_labels, curr_labels, num_communities):
+    """Align curr cluster IDs to match prev using max overlap (Hungarian algorithm).
+
+    Prevents KMeans from randomly swapping community IDs between epochs.
+    """
+    if prev_labels is None:
+        return curr_labels.tolist() if hasattr(curr_labels, 'tolist') else list(curr_labels)
+    prev = np.array(prev_labels, dtype=int)
+    curr = np.array(curr_labels, dtype=int)
+    # Cost matrix: negative overlap (Hungarian minimizes)
+    cost = np.zeros((num_communities, num_communities), dtype=float)
+    for i in range(len(curr)):
+        p, c = int(prev[i]), int(curr[i])
+        if 0 <= p < num_communities and 0 <= c < num_communities:
+            cost[p, c] -= 1
+    row_ind, col_ind = linear_sum_assignment(cost)
+    mapping = {int(col_ind[r]): int(row_ind[r]) for r in range(len(row_ind))}
+    return [mapping.get(int(c), int(c)) for c in curr]
 
 class CommunityGNN(torch.nn.Module):
     def __init__(self, in_channels, hidden=64, out_channels=32, model_type='GCN', heads=4, dropout=0.2):
@@ -35,7 +56,34 @@ class CommunityGNN(torch.nn.Module):
             self.conv2 = GCNConv(hidden, out_channels)
 
     def forward(self, x, edge_index):
-        x = self.conv1(x, edge_index).relu()
+        self._attention_edges = None
+        if self.model_type == 'GAT':
+            x, (edge_index_att, alpha) = self.conv1(x, edge_index, return_attention_weights=True)
+            # Aggregate attention: filter self-loops, merge undirected
+            ei = edge_index_att.detach()
+            attn_mean = alpha.mean(dim=1).detach()
+            mask = ei[0] != ei[1]
+            ei_f = ei[:, mask]
+            attn_f = attn_mean[mask]
+            alpha_f = alpha[mask]
+            attn_map = {}
+            per_head_map = {}
+            num_heads = alpha.shape[1]
+            for idx in range(ei_f.shape[1]):
+                u, v = int(ei_f[0, idx]), int(ei_f[1, idx])
+                key = (min(u, v), max(u, v))
+                if key not in attn_map:
+                    attn_map[key] = []
+                    per_head_map[key] = [[] for _ in range(num_heads)]
+                attn_map[key].append(float(attn_f[idx]))
+                for h in range(num_heads):
+                    per_head_map[key][h].append(float(alpha_f[idx, h]))
+            self._attention_edges = [
+                {'source': u, 'target': v, 'weight': sum(ws) / len(ws)}
+                for (u, v), ws in attn_map.items()
+            ]
+        else:
+            x = self.conv1(x, edge_index).relu()
         x = F.dropout(x, p=self.dropout, training=self.training)
         z = self.conv2(x, edge_index)
         return z
@@ -98,7 +146,7 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
     })
 
     epoch_snapshots = []
-    # num_communities is now passed via parameter (default 4)
+    prev_aligned_labels = None  # For label alignment between epochs
 
     for epoch in range(epochs):
         if stop_flag(): break
@@ -156,8 +204,13 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                 
                 # Use KMeans to find community islands in embedding space
                 kmeans = KMeans(n_clusters=num_communities, n_init=10)
-                clusters = kmeans.fit_predict(z_np)
-                
+                clusters_raw = kmeans.fit_predict(z_np)
+
+                # ── Label alignment (prevent KMeans ID swapping) ───────────────
+                aligned = align_labels(prev_aligned_labels, clusters_raw, num_communities)
+                prev_aligned_labels = aligned
+                clusters = np.array(aligned, dtype=int)
+
                 community_map = {i: int(clusters[i]) for i in range(num_nodes)}
                 q_score = calculate_modularity(G, community_map)
                 
@@ -288,14 +341,67 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                 # 3. KMeans centers for visualization
                 cluster_centers = kmeans.cluster_centers_.tolist()
                 
-                # 4. Community stability (how many nodes changed from previous epoch)
+                # 4. Community stability (using aligned labels)
                 if epoch_snapshots:
-                    prev_preds = epoch_snapshots[-1]['node_predictions']
+                    prev_preds = epoch_snapshots[-1]['node_predictions_aligned']
                     curr_preds = clusters.tolist()
                     nodes_changed = sum(1 for p, c in zip(prev_preds, curr_preds) if p != c)
                     stability_score = 1.0 - (nodes_changed / num_nodes)
                 else:
                     stability_score = 1.0
+
+                # ── A3: GCN Smoothness / Dirichlet Energy ─────────────────────
+                row_z, col_z = data.edge_index
+                diff = z_fresh[row_z] - z_fresh[col_z]
+                dirichlet_energy = float((diff ** 2).sum(dim=1).mean().item())
+
+                # Local smoothness per node: mean distance to neighbors
+                local_smoothness = [0.0] * num_nodes
+                try:
+                    z_det = z_fresh.detach()
+                    for i in range(num_nodes):
+                        neigh_mask = (row_z == i) | (col_z == i)
+                        if neigh_mask.any():
+                            neigh_nodes = torch.cat([col_z[row_z == i], row_z[col_z == i]])
+                            dists = torch.norm(z_det[i] - z_det[neigh_nodes], dim=1)
+                            local_smoothness[i] = float(dists.mean().item())
+                except Exception:
+                    pass
+
+                # ── A4: SAGE Robustness Under Noise (lightweight) ─────────────
+                sage_robustness = None
+                if model_type == 'SAGE':
+                    try:
+                        noise = torch.randn_like(data.x) * 0.1
+                        with torch.no_grad():
+                            z_noisy = model(data.x + noise, data.edge_index)
+                            z_noisy_n = F.normalize(z_noisy, p=2, dim=1).cpu().numpy()
+                        # Use nearest-center consistency instead of full KMeans
+                        centers_np = kmeans.cluster_centers_
+                        noisy_labels = np.array([
+                            int(np.argmin([np.linalg.norm(z_noisy_n[i] - centers_np[c])
+                                           for c in range(num_communities)]))
+                            for i in range(num_nodes)
+                        ])
+                        sage_robustness = float(np.mean(clusters == noisy_labels))
+                    except Exception:
+                        sage_robustness = None
+
+                # ── A5: Inter-Community Attention Mass (GAT) ──────────────────
+                attention_boundary_ratio = None
+                attention_edges = None
+                if model_type == 'GAT' and hasattr(model, '_attention_edges') and model._attention_edges:
+                    attention_edges = model._attention_edges
+                    inter_attn = 0.0
+                    total_attn = 0.0
+                    for edge in attention_edges:
+                        w = edge['weight']
+                        total_attn += w
+                        s_cid = community_map.get(edge['source'], -1)
+                        t_cid = community_map.get(edge['target'], -1)
+                        if s_cid != t_cid:
+                            inter_attn += w
+                    attention_boundary_ratio = float(inter_attn / max(total_attn, 1e-8))
 
                 # Hierarchical linkage matrix (scipy) — computed every 10 epochs for performance
                 linkage_matrix = None
@@ -323,7 +429,9 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
 
             snapshot = {
                 'epoch': epoch,
+                'model_type': model_type,
                 'node_predictions': clusters.tolist(),
+                'node_predictions_aligned': clusters.tolist(),
                 'bridge_nodes': bridge_flags,
                 'bridge_strength': bridge_strengths,
                 'silhouette_scores': silhouette_scores,
@@ -336,15 +444,23 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                 'community_sizes': community_sizes,
                 'linkage_matrix': linkage_matrix,
                 'nmi_score': nmi_score,
+                # A3: GCN Smoothness
+                'dirichlet_energy': dirichlet_energy,
+                'local_smoothness': local_smoothness,
+                # A4: SAGE Robustness (None if not SAGE)
+                'sage_robustness': sage_robustness,
+                # A5: GAT Attention (None if not GAT)
+                'attention_edges': attention_edges,
+                'attention_boundary_ratio': attention_boundary_ratio,
                 'train_loss': float(loss.item()),
                 'val_loss': float(loss.item() * 1.08),
                 'train_acc': float(q_score),
                 'val_acc': q_score,
             }
             
-            # Community transitions (node migrations between consecutive epochs)
+            # Community transitions (node migrations between consecutive epochs — aligned)
             if epoch_snapshots:
-                prev_preds = epoch_snapshots[-1]['node_predictions']
+                prev_preds = epoch_snapshots[-1]['node_predictions_aligned']
                 curr_preds = clusters.tolist()
                 transitions = {}
                 for node_i in range(len(curr_preds)):

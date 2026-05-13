@@ -13,7 +13,7 @@ export function buildBridgeRanking(snap, k = 10) {
   if (!snap) return []
   const flags = snap.bridge_nodes || []
   const strengths = snap.bridge_strength || []
-  const preds = snap.node_predictions || []
+  const preds = snap.node_predictions_aligned ?? snap.node_predictions ?? []
 
   const items = []
   for (let i = 0; i < flags.length; i++) {
@@ -49,7 +49,8 @@ export function buildStabilityMatrix(snapshots = [], numCommunities) {
   if (C == null) {
     let max = 0
     for (const s of snapshots) {
-      for (const p of s?.node_predictions || []) if (p > max) max = p
+      const preds = s?.node_predictions_aligned ?? s?.node_predictions ?? []
+      for (const p of preds) if (p > max) max = p
     }
     C = max + 1
   }
@@ -59,8 +60,8 @@ export function buildStabilityMatrix(snapshots = [], numCommunities) {
   const epochAverages = new Array(E).fill(1)
 
   for (let e = 1; e < E; e++) {
-    const prev = snapshots[e - 1]?.node_predictions || []
-    const curr = snapshots[e]?.node_predictions || []
+    const prev = snapshots[e - 1]?.node_predictions_aligned ?? snapshots[e - 1]?.node_predictions ?? []
+    const curr = snapshots[e]?.node_predictions_aligned ?? snapshots[e]?.node_predictions ?? []
     const stayed = new Array(C).fill(0)
     const total = new Array(C).fill(0)
     const n = Math.min(prev.length, curr.length)

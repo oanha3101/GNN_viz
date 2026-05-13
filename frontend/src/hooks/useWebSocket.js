@@ -4,7 +4,7 @@ import usePlayerStore from '../store/playerStore'
 import useSessionStore from '../store/sessionStore'
 import { WS_URL } from '../utils/api'
 import { logger } from '../utils/logger'
-import { parseWSMessage, getPayload } from '../contracts/wsMessages'
+import { parseWSMessage, getPayload, validateSnapshot } from '../contracts/wsMessages'
 import { getErrorMessage } from '../contracts/errorCodes'
 
 export default function useWebSocket() {
@@ -137,6 +137,12 @@ export default function useWebSocket() {
         setTask5Meta(payload)
 
       } else if (msg.type === 'epoch_snapshot') {
+        // Validate snapshot contract before adding
+        const currentTask = useGNNStore.getState().selectedTask
+        const validation = validateSnapshot(currentTask, payload)
+        if (!validation.valid) {
+          console.warn('[Snapshot Validation]', `Task ${currentTask} missing fields:`, validation.missingFields)
+        }
         addSnapshot(payload)
         setTraining(true, msg.progress)
         if (typeof payload?.epoch === 'number') {

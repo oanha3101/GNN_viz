@@ -57,18 +57,28 @@ export default function AdminUsersPage() {
       {users.length ? (
         <div className="space-y-3">
           {users.map((item) => (
-            <div key={item.id} className="rounded-3xl border border-slate-800/70 bg-slate-950/50 p-5">
+            <div key={item.id} className="glass-card p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="text-base font-semibold text-white">{item.username} ({item.role})</div>
-                  <div className="mt-1 text-sm text-slate-400">{item.email}</div>
-                  <div className="mt-3 text-xs text-slate-500">ID: {item.id} • Created: {item.created_at || 'n/a'} • {item.is_active ? 'Active' : 'Disabled'}</div>
+                  <div className="text-base font-semibold text-white-star">
+                    {item.username}
+                    <span className="ml-2 badge-cosmic">{item.role}</span>
+                  </div>
+                  <div className="mt-1 text-sm text-twilight">{item.email}</div>
+                  <div className="mt-3 flex items-center gap-3 text-xs text-text-shadow">
+                    <span>ID: {item.id}</span>
+                    <span>Created: {item.created_at || 'n/a'}</span>
+                    <span className={`inline-flex items-center gap-1 ${item.is_active ? 'text-aurora-green' : 'text-aurora-rose'}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${item.is_active ? 'bg-aurora-green' : 'bg-aurora-rose'}`} />
+                      {item.is_active ? 'Active' : 'Disabled'}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <select
                     value={roleDrafts[item.id] || item.role}
                     onChange={(event) => setRoleDrafts((prev) => ({ ...prev, [item.id]: event.target.value }))}
-                    className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none"
+                    className="input-cosmic text-sm"
                   >
                     {ROLE_OPTIONS.map((role) => (
                       <option key={role} value={role}>{role}</option>
@@ -77,7 +87,7 @@ export default function AdminUsersPage() {
                   <button
                     type="button"
                     onClick={() => handleSave(item.id)}
-                    className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300"
+                    className="btn-galaxy text-xs"
                   >
                     Save role
                   </button>
@@ -85,7 +95,7 @@ export default function AdminUsersPage() {
               </div>
             </div>
           ))}
-          {error ? <div className="text-sm text-red-300">{error.message}</div> : null}
+          {error ? <div className="text-sm text-aurora-rose">{error.message}</div> : null}
         </div>
       ) : (
         <EmptyState title="No users found" description="User accounts will appear here once people start using the workspace." />
