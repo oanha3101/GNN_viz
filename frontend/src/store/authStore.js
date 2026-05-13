@@ -96,9 +96,13 @@ const useAuthStore = create((set, get) => ({
     const token = get().token;
     if (!token) return false;
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
       const res = await fetch(apiUrl('/auth/me'), {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       if (!res.ok) {
         get().logout();
         return false;
@@ -107,6 +111,7 @@ const useAuthStore = create((set, get) => ({
       set({ user, isAuthenticated: true });
       return true;
     } catch {
+      get().logout();
       return false;
     }
   },
