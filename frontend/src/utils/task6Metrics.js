@@ -128,6 +128,23 @@ export function countInvalidityReasons(graphs) {
   return out
 }
 
+export function computeGraphSignature(graph) {
+  if (!graph || !Array.isArray(graph.links) || graph.links.length === 0) return null
+  const edges = []
+  for (const link of graph.links) {
+    const source = typeof link.source === 'object' ? link.source?.id : link.source
+    const target = typeof link.target === 'object' ? link.target?.id : link.target
+    const s = Number(source)
+    const t = Number(target)
+    if (!Number.isInteger(s) || !Number.isInteger(t) || s === t) continue
+    edges.push([Math.min(s, t), Math.max(s, t)])
+  }
+  if (!edges.length) return null
+  edges.sort((a, b) => a[0] - b[0] || a[1] - b[1])
+  const nodeCount = Array.isArray(graph.nodes) ? graph.nodes.length : 'x'
+  return `n${nodeCount}:${edges.map(([s, t]) => `${s}-${t}`).join('.')}`
+}
+
 /**
  * groupBySignature — buckets graphs by `.signature`. Returns sorted array of
  * `{ signature, count, matchesSource, ids }` where `matchesSource` is true if
@@ -138,8 +155,9 @@ export function groupBySignature(graphs) {
   const map = new Map()
   if (!Array.isArray(graphs)) return []
   for (const g of graphs) {
-    if (!g || !g.signature) continue
-    const sig = g.signature
+    if (!g) continue
+    const sig = g.signature || g.signature_hash || computeGraphSignature(g)
+    if (!sig) continue
     if (!map.has(sig)) map.set(sig, { signature: sig, count: 0, matchesSource: false, ids: [] })
     const entry = map.get(sig)
     entry.count += 1

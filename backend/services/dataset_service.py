@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from models.sql_models import AuditAction, Dataset, DatasetLifecycle, DatasetVersion, User
@@ -74,6 +75,16 @@ def ensure_dataset_read_access(dataset: Dataset, user: Optional[User]) -> None:
         raise HTTPException(status_code=403, detail="Not allowed to access this dataset")
 
 
+def build_unique_dataset_slug(db: Session, name: str) -> str:
+    base_slug = slugify(name)
+    slug = base_slug
+    suffix = 2
+    while db.query(Dataset.id).filter(Dataset.slug == slug).first():
+        slug = f"{base_slug}-{suffix}"
+        suffix += 1
+    return slug
+
+
 def create_dataset(
     db: Session,
     *,
@@ -85,7 +96,7 @@ def create_dataset(
 
     dataset = Dataset(
         name=payload["name"],
-        slug=slugify(payload["name"]),
+        slug=build_unique_dataset_slug(db, payload["name"]),
         description=payload.get("description"),
         owner_id=user.id if user else None,
         is_public=bool(payload.get("is_public", False)),
@@ -116,7 +127,11 @@ def create_dataset(
         actor_user_id=user.id if user else None,
         details={"version_id": version.id},
     )
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Dataset creation conflicted with an existing record") from exc
     return {"dataset": serialize_dataset(dataset), "version": serialize_dataset_version(version)}
 
 

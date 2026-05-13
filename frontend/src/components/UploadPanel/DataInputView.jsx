@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx'
 import { Network, BarChart3, Link2, Users, Globe2, Dna, Upload, X, CheckCircle2, Sparkles, ArrowLeft, ArrowRight, Loader2, AlertCircle, Download, Eye } from 'lucide-react'
 import useGNNStore from '../../store/useGNNStore'
 import { API_BASE, getAuthHeaders } from '../../utils/api'
+import { logger } from '../../utils/logger'
 
 const API = API_BASE
 
@@ -130,7 +131,7 @@ export default function DataInputView({ onClose }) {
           const hasGraphs = sheetNames.includes('Graphs')
 
           if (hasNodes || hasEdges || hasGraphs) {
-             console.log("Detected GNN-Insight Multi-sheet format. Auto-loading all sheets...")
+             logger.info("Detected GNN-Insight Multi-sheet format. Auto-loading all sheets...")
              if (hasNodes) {
                const nodes = XLSX.utils.sheet_to_json(wb.Sheets['Nodes'])
                setNodesData(nodes)
@@ -223,6 +224,73 @@ export default function DataInputView({ onClose }) {
 
   const [loading, setLoading] = useState(false)
 
+  // Client-side validation for node IDs and edge references
+  const validateGraphData = useCallback(() => {
+    const errors = []
+    const warnings = []
+
+    if (nodesData.length === 0) {
+      errors.push("No nodes data loaded.")
+      return { valid: false, errors, warnings }
+    }
+
+    if (edgesData.length === 0) {
+      errors.push("No edges data loaded.")
+      return { valid: false, errors, warnings }
+    }
+
+    // Check node_id column is mapped
+    if (!mapping.node_id) {
+      errors.push("Node ID column must be mapped.")
+      return { valid: false, errors, warnings }
+    }
+
+    if (!mapping.edge_source || !mapping.edge_target) {
+      errors.push("Edge source and target columns must be mapped.")
+      return { valid: false, errors, warnings }
+    }
+
+    // Check duplicate node IDs
+    const nodeIds = new Set()
+    const duplicates = new Set()
+    for (const row of nodesData) {
+      const id = String(row[mapping.node_id])
+      if (id === '' || id === 'undefined' || id === 'null') {
+        duplicates.add('(empty)')
+      } else if (nodeIds.has(id)) {
+        duplicates.add(id)
+      } else {
+        nodeIds.add(id)
+      }
+    }
+    if (duplicates.size > 0) {
+      const sample = [...duplicates].slice(0, 5).join(', ')
+      errors.push(`Duplicate node IDs found: ${sample}${duplicates.size > 5 ? ` (+${duplicates.size - 5} more)` : ''}`)
+    }
+
+    // Check edge references (source/target must exist in node set)
+    if (nodeIds.size > 0) {
+      const missingSources = new Set()
+      const missingTargets = new Set()
+      for (const row of edgesData) {
+        const src = String(row[mapping.edge_source])
+        const tgt = String(row[mapping.edge_target])
+        if (!nodeIds.has(src)) missingSources.add(src)
+        if (!nodeIds.has(tgt)) missingTargets.add(tgt)
+      }
+      if (missingSources.size > 0) {
+        const sample = [...missingSources].slice(0, 5).join(', ')
+        warnings.push(`${missingSources.size} edge sources not found in nodes: ${sample}${missingSources.size > 5 ? '...' : ''}`)
+      }
+      if (missingTargets.size > 0) {
+        const sample = [...missingTargets].slice(0, 5).join(', ')
+        warnings.push(`${missingTargets.size} edge targets not found in nodes: ${sample}${missingTargets.size > 5 ? '...' : ''}`)
+      }
+    }
+
+    return { valid: errors.length === 0, errors, warnings }
+  }, [nodesData, edgesData, mapping.node_id, mapping.edge_source, mapping.edge_target])
+
   // Download sample template
   const downloadTemplate = async () => {
     try {
@@ -241,6 +309,14 @@ export default function DataInputView({ onClose }) {
   const runValidation = async () => {
     setLoading(true)
     try {
+      // Client-side validation first
+      const clientResult = validateGraphData()
+      if (!clientResult.valid) {
+        setValidationResult(clientResult)
+        setLoading(false)
+        return
+      }
+
       const payload = {
         nodes: nodesData.slice(0, 100), // Send sample for validation
         edges: edgesData.slice(0, 100),
@@ -253,6 +329,10 @@ export default function DataInputView({ onClose }) {
         body: JSON.stringify(payload)
       })
       const result = await res.json()
+      // Merge client warnings into backend result
+      if (clientResult.warnings.length > 0) {
+        result.warnings = [...(result.warnings || []), ...clientResult.warnings]
+      }
       setValidationResult(result)
     } catch (e) {
       setValidationResult({ valid: false, errors: [e.message], warnings: [] })
@@ -327,7 +407,7 @@ export default function DataInputView({ onClose }) {
         configRes = await res.json()
       }
 
-      console.log("Config Result:", configRes)
+      logger.info("Config Result:", configRes)
       
       // Update store
       setMockMode(false)
@@ -512,7 +592,7 @@ export default function DataInputView({ onClose }) {
                       
                       <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)]">
                         Browse Excel/CSV/JSON
-                        <input type="file" accept=".xlsx,.xls,.csv,.json" className="hidden" onChange={(e) => handleFileUpload(e, type)} />
+                        <input data-testid={`upload-${type}-file`} type="file" accept=".xlsx,.xls,.csv,.json" className="hidden" onChange={(e) => handleFileUpload(e, type)} />
                       </label>
                       
                       {data.length > 0 && (
@@ -913,6 +993,7 @@ export default function DataInputView({ onClose }) {
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-800 flex justify-between bg-slate-900/80">
           <button 
+            data-testid="data-input-back"
             className="px-5 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white"
             onClick={() => step > 1 ? setStep(s => s-1) : onClose()}
           >
@@ -920,6 +1001,7 @@ export default function DataInputView({ onClose }) {
           </button>
           
           <button 
+            data-testid={step === 4 ? 'data-input-confirm' : 'data-input-continue'}
             className={`px-8 py-2 rounded-lg text-sm font-bold shadow-lg transition-all ${
                (step === 1 && nodesData.length && edgesData.length) || step === 2 || step === 3 || (step === 4 && validationResult?.valid)
                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 hover:shadow-blue-500/40' 

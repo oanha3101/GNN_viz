@@ -10,8 +10,22 @@ export function topKOutliers(scores, k = 10) {
   const rows = []
   for (let i = 0; i < scores.length; i++) {
     const s = scores[i]
-    if (typeof s !== 'number' || !Number.isFinite(s)) continue
-    rows.push({ id: i, score: s })
+    if (typeof s === 'number') {
+      if (!Number.isFinite(s)) continue
+      rows.push({ id: i, score: s })
+      continue
+    }
+    if (!s || typeof s !== 'object') continue
+    const id = Number.isInteger(s.node_id) ? s.node_id : Number.isInteger(s.id) ? s.id : i
+    const score = Number.isFinite(s.score)
+      ? s.score
+      : Number.isFinite(s.outlier_score)
+        ? s.outlier_score
+        : Number.isFinite(s.avg_distance_to_neighbors)
+          ? s.avg_distance_to_neighbors
+          : null
+    if (score == null) continue
+    rows.push({ id, score, isOutlier: s.is_outlier === true })
   }
   rows.sort((a, b) => b.score - a.score)
   const safeK = Math.max(0, Math.min(rows.length, k))
@@ -97,12 +111,17 @@ export function computeIsotropy(embeddings) {
  * plotting points. Nodes missing either signal are skipped.
  */
 export function buildKnnScatter(degrees, knn) {
-  if (!Array.isArray(degrees) || !Array.isArray(knn)) return []
-  const n = Math.min(degrees.length, knn.length)
+  if (!Array.isArray(degrees)) return []
+  const getKnn = (id) => {
+    if (Array.isArray(knn)) return knn[id]
+    if (knn && typeof knn === 'object') return knn[id] ?? knn[String(id)]
+    return undefined
+  }
+  const n = degrees.length
   const out = []
   for (let i = 0; i < n; i++) {
     const d = degrees[i]
-    const k = knn[i]
+    const k = getKnn(i)
     if (typeof d !== 'number' || !Number.isFinite(d)) continue
     if (typeof k !== 'number' || !Number.isFinite(k)) continue
     out.push({ id: i, degree: d, knn: k })

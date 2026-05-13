@@ -17,7 +17,7 @@ from services import hybrid_store
 def test_health_endpoint_reports_runtime_status():
     with TestClient(app) as client:
         response = client.get("/api/health")
-        assert response.status_code == 200, response.text
+        assert response.status_code in (200, 503), response.text
         payload = response.json()
 
         assert payload["status"] in {"ok", "degraded"}

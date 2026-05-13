@@ -41,6 +41,7 @@ export default function ConfigPanel() {
                 <div className="text-[10px] text-cyan-500 font-bold uppercase tracking-widest mt-1">Model Configuration</div>
               </div>
               <button
+                data-testid="config-close"
                 onClick={() => setConfigOpen(false)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800/50 text-slate-400 hover:text-white transition-colors"
               >
@@ -58,6 +59,7 @@ export default function ConfigPanel() {
                   <span className="text-xs font-mono text-cyan-400 font-bold">{hyperparams.epochs}</span>
                 </div>
                 <input
+                  data-testid="config-epochs-range"
                   type="range" min="10" max="1000" step="10"
                   value={hyperparams.epochs}
                   onChange={(e) => setHyperparams({ epochs: Number(e.target.value) })}

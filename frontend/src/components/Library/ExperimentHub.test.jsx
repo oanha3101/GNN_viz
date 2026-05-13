@@ -209,7 +209,7 @@ describe('ExperimentHub', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/experiments/1',
+        '/api/experiments/1',
         expect.objectContaining({
           method: 'PATCH',
           body: JSON.stringify({

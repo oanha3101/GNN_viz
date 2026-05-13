@@ -43,7 +43,7 @@ LOCAL_MONGO_FALLBACK_DIR = os.path.join(BASE_DIR, "data", "mongo_fallback")
 LOCAL_BLOB_DIR = os.path.join(BASE_DIR, "data", "blob_store")
 os.makedirs(LOCAL_MONGO_FALLBACK_DIR, exist_ok=True)
 os.makedirs(LOCAL_BLOB_DIR, exist_ok=True)
-STRICT_RUNTIME_STACK = os.getenv("REQUIRE_RUNTIME_STACK", "0") == "1"
+STRICT_RUNTIME_STACK = os.getenv("REQUIRE_RUNTIME_STACK", "1") == "1"
 
 
 class PersistenceUnavailableError(RuntimeError):
@@ -581,6 +581,42 @@ class MongoRunRepository:
                 return snapshot
         return None
 
+    def _session_fallback_path(self, session_id: str, epoch: int) -> str:
+        path = os.path.join(LOCAL_MONGO_FALLBACK_DIR, "session_snapshots")
+        os.makedirs(path, exist_ok=True)
+        return os.path.join(path, f"{session_id}_epoch_{epoch}.json.gz")
+
+    def _write_session_fallback(self, session_id: str, epoch: int, payload: Dict[str, Any]) -> str:
+        filepath = self._session_fallback_path(session_id, epoch)
+        with gzip.open(filepath, "wt", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=True, default=str)
+        return filepath
+
+    def _read_session_fallback(self, session_id: str, from_epoch: int = 0) -> List[Dict[str, Any]]:
+        path = os.path.join(LOCAL_MONGO_FALLBACK_DIR, "session_snapshots")
+        if not os.path.exists(path):
+            return []
+        prefix = f"{session_id}_epoch_"
+        snapshots = []
+        for filename in sorted(os.listdir(path)):
+            if not filename.startswith(prefix) or not filename.endswith(".json.gz"):
+                continue
+            epoch_str = filename[len(prefix):-len(".json.gz")]
+            try:
+                epoch_num = int(epoch_str)
+            except ValueError:
+                continue
+            if epoch_num < from_epoch:
+                continue
+            filepath = os.path.join(path, filename)
+            try:
+                with gzip.open(filepath, "rt", encoding="utf-8") as handle:
+                    snapshots.append(json.load(handle))
+            except Exception:
+                continue
+        snapshots.sort(key=lambda s: s.get("epoch", 0))
+        return snapshots
+
     def save_session_snapshot(
         self,
         session_id: str,
@@ -590,7 +626,7 @@ class MongoRunRepository:
         model_type: str,
         epoch: int,
         snapshot: Dict[str, Any],
-    ) -> Optional[str]:
+    ) -> str:
         run_id = f"session:{session_id}"
         payload = {
             "run_id": run_id,
@@ -613,7 +649,7 @@ class MongoRunRepository:
             return f"{run_id}:{epoch}"
         if self.is_strict_mode():
             self._require_document_store("session snapshot persistence")
-        return None
+        return self._write_session_fallback(session_id, epoch, snapshot)
 
     def get_session_snapshots(self, session_id: str, from_epoch: int = 0) -> List[Dict[str, Any]]:
         run_id = f"session:{session_id}"
@@ -625,7 +661,7 @@ class MongoRunRepository:
             return [row["payload"] for row in rows]
         if self.is_strict_mode():
             self._require_document_store("session resume replay")
-        return []
+        return self._read_session_fallback(session_id, from_epoch)
 
     def save_metrics(
         self,

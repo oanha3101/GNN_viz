@@ -29,6 +29,8 @@ yarn-debug.log*
 yarn-error.log*
 logs/
 *.log
+playwright-report/
+frontend/test-results/
 out.txt
 Untitled-1.html
 
@@ -36,6 +38,19 @@ Untitled-1.html
 .cache/
 temp/
 /Users/nguyenthanhhuyen/.gemini/
+
+# Claude Code / Agents
+.claude/
+.agents/
+
+# Coverage & temp
+.coverage
+*.sqlite
+*.sqlite3
+check_users.py
+
+# Developer scratch scripts (contains hardcoded credentials)
+backend/scratch/
 
 # Large files
 *.db
@@ -45,3 +60,4 @@ backend/data/saved_experiments/
 backend/datasets/*.json
 backend/tests/.runtime/
 backend/datasets/snapshots/*.json.gz
+backend/data/blob_store/

@@ -1,13 +1,16 @@
 import sys
 import os
+import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 import pickle
 import tempfile
 import uuid
+
+logger = logging.getLogger(__name__)
 
 # Thêm đường dẫn gốc vào python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -48,9 +51,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="GNN-Insight API v3", lifespan=lifespan)
 
 # Middlewares
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+_cors_origins = [o.strip() for o in _cors_origins if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Mở rộng để deploy dễ dàng hơn, có thể siết lại sau
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -86,24 +92,19 @@ def get_health():
         for name in ("mysql", "mongo", "redis", "blob")
         if runtime[name]["fallback_active"] or not runtime[name]["available"]
     ]
-    return {
+    body = {
         "status": "degraded" if degraded else "ok",
         "runtime": runtime,
         "degraded_services": degraded,
     }
+    if degraded:
+        return JSONResponse(status_code=503, content=body)
+    return body
 
 @app.get("/api/datasets/catalog")
 def list_builtin_datasets():
     if not HAS_TORCH: return ["Mock Data"]
     return get_available_datasets()
-
-@app.post("/api/stop")
-def stop_training(payload: dict = None):
-    """Dừng một phiên training cụ thể hoặc toàn bộ (fallback)."""
-    raise HTTPException(
-        status_code=410,
-        detail="Deprecated route. Use POST /api/sessions/{session_id}/stop instead.",
-    )
 
 @app.post("/api/upload-graph")
 async def upload_graph(file: UploadFile = File(...)):
@@ -112,9 +113,11 @@ async def upload_graph(file: UploadFile = File(...)):
     upload_bytes = await file.read()
     runtime_key = f"datasets/runtime/{slugify(os.path.splitext(file.filename)[0])}/{uuid.uuid4().hex}{suffix}"
     blob_store.put_bytes(runtime_key, upload_bytes)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir=os.path.join(os.path.dirname(__file__), 'datasets')) as tmp:
+    datasets_dir = os.path.join(os.path.dirname(__file__), 'datasets')
+    fd, tmp_path = tempfile.mkstemp(suffix=suffix, dir=datasets_dir)
+    os.close(fd)
+    with open(tmp_path, "wb") as tmp:
         tmp.write(upload_bytes)
-        tmp_path = tmp.name
     try:
         data = load_custom_graph(tmp_path)
         data, metadata = auto_detect_graph(data)
@@ -127,7 +130,10 @@ async def upload_graph(file: UploadFile = File(...)):
         return {"error": str(e)}
     finally:
         if os.path.exists(tmp_path):
-            os.unlink(tmp_path)
+            try:
+                os.unlink(tmp_path)
+            except PermissionError:
+                logger.warning("Temporary upload artifact cleanup skipped for %s", tmp_path)
 
 @app.post("/api/upload")
 async def upload_csv(nodes: UploadFile = File(...), edges: UploadFile = File(...)):

@@ -1,10 +1,7 @@
 """
 Session Manager — RAM stop flags + DB persistence + Mongo-backed replay support.
 """
-import gzip
-import json
 import logging
-import os
 import uuid
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -14,9 +11,6 @@ from models.sql_models import Experiment, SessionSnapshot, SessionStatus, Traini
 from services.hybrid_store import PersistenceUnavailableError, mongo_runs
 
 logger = logging.getLogger(__name__)
-
-SNAPSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "datasets", "snapshots")
-os.makedirs(SNAPSHOT_DIR, exist_ok=True)
 
 
 class SessionManager:
@@ -122,36 +116,22 @@ class SessionManager:
             logger.warning("DB runtime context sync failed: %s", exc)
 
     def save_snapshot(self, session_id: str, epoch: int, data: dict) -> Optional[str]:
-        filepath = None
+        """Save a training snapshot. Delegates to MongoRunRepository which handles
+        Mongo-first persistence with local fallback internally."""
         try:
-            use_local_fallback = not mongo_runs.is_document_store_available()
-            if mongo_runs.is_strict_mode() and use_local_fallback:
-                raise PersistenceUnavailableError(
-                    f"Session snapshot persistence for {session_id} requires MongoDB in strict mode."
-                )
-
-            if use_local_fallback:
-                filename = f"{session_id}_epoch_{epoch}.json.gz"
-                filepath = os.path.join(SNAPSHOT_DIR, filename)
-                json_bytes = json.dumps(data).encode("utf-8")
-                with gzip.open(filepath, "wb") as handle:
-                    handle.write(json_bytes)
-
             db = SessionLocal()
             try:
                 session = db.query(TrainingSession).filter_by(id=session_id).first()
-                if session:
-                    mongo_runs.save_session_snapshot(
-                        session_id=session_id,
-                        experiment_id=session.experiment_id,
-                        project_id=session.project_id,
-                        task_type=session.task_type,
-                        model_type=session.model_type,
-                        epoch=epoch,
-                        snapshot=data,
-                    )
+                blob_ref = mongo_runs.save_session_snapshot(
+                    session_id=session_id,
+                    experiment_id=session.experiment_id if session else None,
+                    project_id=session.project_id if session else None,
+                    task_type=session.task_type if session else 0,
+                    model_type=session.model_type if session else "",
+                    epoch=epoch,
+                    snapshot=data,
+                )
                 existing = db.query(SessionSnapshot).filter_by(session_id=session_id, epoch=epoch).first()
-                blob_ref = filepath if use_local_fallback else f"mongo://session:{session_id}:{epoch}"
                 if existing:
                     existing.blob_ref = blob_ref
                     existing.experiment_id = session.experiment_id if session else None
@@ -167,12 +147,12 @@ class SessionManager:
                 db.commit()
             finally:
                 db.close()
-            return filepath
+            return blob_ref
         except PersistenceUnavailableError:
             raise
         except Exception as exc:
             logger.warning("Snapshot save failed: %s", exc)
-            return filepath
+            return None
 
     def get_session(self, session_id: str) -> Optional[dict]:
         try:
@@ -206,35 +186,9 @@ class SessionManager:
             return None
 
     def get_snapshots_from(self, session_id: str, from_epoch: int = 0) -> List[dict]:
-        mongo_snapshots = mongo_runs.get_session_snapshots(session_id, from_epoch)
-        if mongo_snapshots:
-            return mongo_snapshots
-        if mongo_runs.is_strict_mode():
-            raise PersistenceUnavailableError(
-                f"Session replay snapshots for {session_id} are unavailable in strict mode."
-            )
-
-        snapshots = []
-        try:
-            db = SessionLocal()
-            try:
-                records = (
-                    db.query(SessionSnapshot)
-                    .filter(
-                        SessionSnapshot.session_id == session_id,
-                        SessionSnapshot.epoch >= from_epoch,
-                    )
-                    .order_by(SessionSnapshot.epoch)
-                    .all()
-                )
-                for rec in records:
-                    if rec.blob_ref and os.path.exists(rec.blob_ref):
-                        with gzip.open(rec.blob_ref, "rb") as handle:
-                            snapshots.append(json.loads(handle.read()))
-            finally:
-                db.close()
-        except Exception as exc:
-            logger.warning("Snapshot load failed: %s", exc)
+        """Load training snapshots. Delegates to MongoRunRepository which handles
+        Mongo-first retrieval with local fallback internally."""
+        return mongo_runs.get_session_snapshots(session_id, from_epoch)
         return snapshots
 
     def stop_session(self, session_id: str):

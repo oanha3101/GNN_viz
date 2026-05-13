@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 from io import BytesIO
@@ -5,6 +6,8 @@ from io import BytesIO
 import torch
 from data.loaders import load_cora, load_citeseer, load_custom_graph, load_csv
 from services.hybrid_store import blob_store
+
+logger = logging.getLogger(__name__)
 
 def load_dataset(name):
     """Nạp tập dữ liệu theo tên."""
@@ -28,7 +31,7 @@ def _load_uploaded_artifact(uploaded_path):
             if hasattr(loaded, 'edge_index'):
                 return loaded
         except Exception as e:
-            print(f"Direct torch.load failed: {e}. Falling back to load_custom_graph.")
+            logger.warning("Direct torch.load failed: %s. Falling back to load_custom_graph.", e)
         return load_custom_graph(uploaded_path)
 
     if not blob_store.exists(uploaded_path):
@@ -42,7 +45,7 @@ def _load_uploaded_artifact(uploaded_path):
         if hasattr(loaded, 'edge_index'):
             return loaded
     except Exception as e:
-        print(f"Blob torch.load failed: {e}. Falling back to load_custom_graph.")
+        logger.warning("Blob torch.load failed: %s. Falling back to load_custom_graph.", e)
 
     suffix = os.path.splitext(uploaded_path)[1] or ".pt"
     tmp_path = None

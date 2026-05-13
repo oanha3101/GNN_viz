@@ -508,3 +508,20 @@ def delete_all_experiments(db: Session, *, user: Optional[User]) -> dict:
         db.delete(exp)
     db.commit()
     return {"status": "all deleted"}
+
+
+def bulk_delete_experiments(db: Session, *, experiment_ids: List[int], user: Optional[User]) -> dict:
+    if user and not (user.is_superuser or user.role == "admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    deleted = []
+    not_found = []
+    for exp_id in experiment_ids:
+        exp = db.query(Experiment).filter(Experiment.id == exp_id).first()
+        if not exp:
+            not_found.append(exp_id)
+            continue
+        mongo_runs.delete_experiment(exp)
+        db.delete(exp)
+        deleted.append(exp_id)
+    db.commit()
+    return {"status": "bulk_deleted", "deleted": deleted, "not_found": not_found}

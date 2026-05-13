@@ -29,6 +29,16 @@ describe('topKOutliers', () => {
     const out = topKOutliers(scores, 3)
     expect(out.map((r) => r.id)).toEqual([3, 4, 0])
   })
+
+  it('accepts backend object rows', () => {
+    const out = topKOutliers([
+      { node_id: 4, avg_distance_to_neighbors: 0.2, is_outlier: false },
+      { node_id: 7, avg_distance_to_neighbors: 0.9, is_outlier: true },
+    ])
+    expect(out.map((r) => r.id)).toEqual([7, 4])
+    expect(out[0].score).toBeCloseTo(0.9)
+    expect(out[0].isOutlier).toBe(true)
+  })
 })
 
 describe('buildNormHistogram', () => {
@@ -93,6 +103,14 @@ describe('buildKnnScatter', () => {
   it('skips nodes with missing scores', () => {
     const pts = buildKnnScatter([2, 5, 3], [0.4, undefined, 0.6])
     expect(pts.map((p) => p.id)).toEqual([0, 2])
+  })
+
+  it('accepts backend object maps keyed by node id', () => {
+    const pts = buildKnnScatter([2, 5, 3], { 0: 0.4, 2: 0.6 })
+    expect(pts).toEqual([
+      { id: 0, degree: 2, knn: 0.4 },
+      { id: 2, degree: 3, knn: 0.6 },
+    ])
   })
 
   it('returns [] on empty input', () => {

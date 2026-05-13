@@ -49,16 +49,21 @@ export default function AdminSessionsPage() {
       {items.length ? (
         <div className="space-y-3">
           {items.map((item) => (
-            <div key={item.id} className="rounded-3xl border border-slate-800/70 bg-slate-950/50 p-5">
+            <div
+              key={item.id}
+              data-testid={`admin-session-${item.id}`}
+              className="rounded-3xl border border-slate-800/70 bg-slate-950/50 p-5"
+            >
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-base font-semibold text-white">{item.id}</div>
-                  <div className="mt-1 text-sm text-slate-400">Task {item.task_type} • {item.model_type} • {item.dataset_name}</div>
+                  <div className="mt-1 text-sm text-slate-400">Task {item.task_type} â€¢ {item.model_type} â€¢ {item.dataset_name}</div>
                 </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => handleAction(item.id, 'stop')}
+                    data-testid={`admin-session-stop-${item.id}`}
                     className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300"
                   >
                     Stop
@@ -66,6 +71,7 @@ export default function AdminSessionsPage() {
                   <button
                     type="button"
                     onClick={() => handleAction(item.id, 'retry')}
+                    data-testid={`admin-session-retry-${item.id}`}
                     className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300"
                   >
                     Retry

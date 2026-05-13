@@ -4,10 +4,13 @@ Trains GCN/GAT/GraphSAGE on a node classification dataset.
 Streams epoch snapshots via WebSocket.
 """
 import asyncio
+import logging
 import numpy as np
 import torch
 import torch.nn.functional as F
 from sklearn.decomposition import PCA
+
+logger = logging.getLogger(__name__)
 from utils.ws_msg import send_json_zipped
 from utils.model_utils import should_take_snapshot
 
@@ -59,7 +62,7 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
                 diff = embedding_eval[row] - embedding_eval[col]
                 dirichlet_energy = float((diff ** 2).sum(dim=1).mean().item())
             except Exception as e:
-                print("Dirichlet Energy Error:", e)
+                logger.warning("Dirichlet Energy Error: %s", e)
                 dirichlet_energy = 0.0
 
             # ── Attention Weights (GAT only) ────────────────────────────────────
@@ -123,7 +126,7 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
                         'total_neighbors': len(neighbors[node_id])
                     })
             except Exception as e:
-                print(f"Neighbor context computation failed: {e}")
+                logger.warning("Neighbor context computation failed: %s", e)
                 neighbor_majority = [{'majority_class': -1, 'majority_ratio': 0.0, 'total_neighbors': 0}] * data.x.size(0)
 
             # ── Build Snapshot ──────────────────────────────────────────────────

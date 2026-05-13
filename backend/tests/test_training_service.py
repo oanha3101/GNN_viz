@@ -65,7 +65,8 @@ def test_resolve_session_id_reuses_existing_session():
                 "dataset": "cora",
                 "project_id": 12,
                 "dataset_version_id": 34,
-            }
+            },
+            user=None,
         )
         assert resolved == session_id
     finally:

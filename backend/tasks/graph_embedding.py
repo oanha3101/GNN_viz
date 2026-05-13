@@ -6,8 +6,11 @@ Each epoch streams: PCA/t-SNE projections, kNN preservation,
 link AUC, isotropy, reconstruction loss, per-edge proximity scores.
 """
 import asyncio
+import logging
 import math
 import numpy as np
+
+logger = logging.getLogger(__name__)
 import torch
 import torch.nn.functional as F
 from concurrent.futures import ThreadPoolExecutor
@@ -118,7 +121,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
     edge_index = data.edge_index
 
     # Build model (out_channels = hidden for embedding output)
-    from main import build_model
+    from utils.model_utils import build_model
     model = build_model(config, data=data, num_classes=hidden)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
 
@@ -291,7 +294,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                         per_node_scores[str(idx)] = float(score)
                     snapshot['per_node_knn_preservation'] = per_node_scores
             except Exception as e:
-                print(f"Per-node kNN preservation failed: {e}")
+                logger.warning("Per-node kNN preservation failed: %s", e)
             
             # Compute per-edge reconstruction error
             try:
@@ -324,7 +327,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                 
                 snapshot['per_edge_reconstruction_error'] = per_edge_errors
             except Exception as e:
-                print(f"Per-edge reconstruction error failed: {e}")
+                logger.warning("Per-edge reconstruction error failed: %s", e)
             
             # Compute outlier scores
             try:
@@ -350,7 +353,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                     
                     snapshot['outlier_scores'] = outlier_data[:200]  # Cap at 200
             except Exception as e:
-                print(f"Outlier scores failed: {e}")
+                logger.warning("Outlier scores failed: %s", e)
             epoch_snapshots.append(snapshot)
             if snapshot_hook:
                 await snapshot_hook(epoch, snapshot)

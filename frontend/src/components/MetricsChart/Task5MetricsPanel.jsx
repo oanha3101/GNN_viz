@@ -129,7 +129,7 @@ function OutliersTab({ snap, onOutlierClick, graphData }) {
   const scores = snap?.outlier_scores
   const rows = useMemo(() => topKOutliers(scores, 10), [scores])
 
-  if (!Array.isArray(scores) || !scores.length) {
+  if (!rows.length) {
     return (
       <div className="flex-1 flex items-center justify-center text-micro text-slate-500 px-4 text-center">
         Snapshot hiện tại chưa có `outlier_scores` — sẽ xuất hiện sau epoch 1.
@@ -183,7 +183,7 @@ function KnnTab({ snap, graphData }) {
 
   const points = useMemo(() => buildKnnScatter(degrees, perNode ?? []), [degrees, perNode])
 
-  if (!Array.isArray(perNode) || !perNode.length) {
+  if (!points.length) {
     return (
       <div className="flex-1 flex items-center justify-center text-micro text-slate-500 px-4 text-center">
         Snapshot hiện tại chưa có `per_node_knn_preservation`.

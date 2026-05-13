@@ -4,6 +4,7 @@ import {
   computeGraphStats,
   buildComparisonHistograms,
   countInvalidityReasons,
+  computeGraphSignature,
   groupBySignature,
   filterGraphsBy,
 } from './task6Metrics.js'
@@ -111,6 +112,35 @@ describe('groupBySignature', () => {
 
   it('ignores graphs without signature', () => {
     expect(groupBySignature([{ id: 0 }])).toEqual([])
+  })
+
+  it('falls back to graph topology when signature is missing', () => {
+    const graphs = [
+      {
+        id: 0,
+        nodes: [{ id: 0 }, { id: 1 }, { id: 2 }],
+        links: [{ source: 1, target: 0 }, { source: 2, target: 1 }],
+      },
+      {
+        id: 1,
+        nodes: [{ id: 0 }, { id: 1 }, { id: 2 }],
+        links: [{ source: 0, target: 1 }, { source: 1, target: 2 }],
+      },
+    ]
+    const out = groupBySignature(graphs)
+    expect(out).toHaveLength(1)
+    expect(out[0].count).toBe(2)
+    expect(out[0].signature).toBe('n3:0-1.1-2')
+  })
+})
+
+describe('computeGraphSignature', () => {
+  it('normalizes object endpoints and edge order', () => {
+    const sig = computeGraphSignature({
+      nodes: [{ id: 0 }, { id: 1 }],
+      links: [{ source: { id: 1 }, target: { id: 0 } }],
+    })
+    expect(sig).toBe('n2:0-1')
   })
 })
 

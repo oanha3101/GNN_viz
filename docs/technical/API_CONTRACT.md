@@ -345,12 +345,14 @@ Rule:
 
 - `POST /api/sessions` returns:
   - `{ "session_id": "uuid", "ws_url": "/ws/train", "status": "pending" }`
+- Live WebSocket training then sends one JSON config payload to `/ws/train`:
+  - must include `auth_token` when auth is enabled
+  - may include `session_id`, `project_id`, `dataset_version_id`, and `uploaded_file_path`
 - `PATCH /api/sessions/{session_id}` returns:
   - `{ "session_id": "uuid", "status": "running" }`
 - `POST /api/sessions/{session_id}/stop` returns:
   - `{ "session_id": "uuid", "status": "stopped" }`
-- `POST /api/stop` is deprecated and returns:
-  - `410 Gone` with a message pointing clients to the session-scoped stop route
+- Legacy `POST /api/stop` is no longer part of the product flow; current backend tests verify the old route returns `404` or `405` if called
 
 ### Experiment actions
 
@@ -368,6 +370,20 @@ Rule:
   - one report payload with `experiment`, `summary`, `config`, `metrics`, `dataset_version`, `replay`, `notes`, `next_action`
 - `DELETE /api/experiments/{id}` returns:
   - `{ "status": "deleted", "id": 101 }`
+- `POST /api/experiments/bulk-delete` requires an authenticated admin user when
+  auth is enabled and returns:
+  - `{ "status": "bulk_deleted", "deleted": [101], "not_found": [999] }`
+
+### Visualization snapshot fields
+
+- Task 2 graph classification snapshots include `model_type`; `SAGE`,
+  `GRAPHSAGE`, and `GRAPH_SAGE` select the GraphSAGE encoder.
+- Task 5 graph embedding snapshots may send:
+  - `per_node_knn_preservation` as `{ "0": 0.8, "1": 0.6 }`
+  - `outlier_scores` as rows like `{ "node_id": 7, "avg_distance_to_neighbors": 0.9, "is_outlier": true }`
+- Task 6 graph generation snapshots should keep a stable string `signature` on
+  each generated graph when possible. The frontend computes a fallback signature
+  from `nodes` and `links` for older payloads.
 
 ## Frontend Compatibility Note
 

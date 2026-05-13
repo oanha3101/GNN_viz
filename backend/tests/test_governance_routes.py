@@ -190,6 +190,33 @@ def test_private_dataset_is_hidden_from_other_researchers():
         assert detail_response.status_code == 403
 
 
+def test_duplicate_dataset_names_get_unique_slugs():
+    with TestClient(app) as client:
+        token = _register_and_token(client, "researcher", "duplicate_dataset")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        first_response = client.post(
+            "/api/datasets",
+            json={"name": "Nodes Dataset", "description": "first"},
+            headers=headers,
+        )
+        second_response = client.post(
+            "/api/datasets",
+            json={"name": "Nodes Dataset", "description": "second"},
+            headers=headers,
+        )
+
+        assert first_response.status_code == 200, first_response.text
+        assert second_response.status_code == 200, second_response.text
+
+        first_dataset = first_response.json()["dataset"]
+        second_dataset = second_response.json()["dataset"]
+
+        assert first_dataset["slug"] == "nodes-dataset"
+        assert second_dataset["slug"].startswith("nodes-dataset-")
+        assert second_dataset["slug"] != first_dataset["slug"]
+
+
 def test_admin_can_run_retention_dry_run():
     with TestClient(app) as client:
         admin_token = _register_and_token(client, "admin", "admin")

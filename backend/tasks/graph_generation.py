@@ -46,6 +46,13 @@ def _graph_signature(edges):
     return tuple(sorted((min(s, t), max(s, t)) for s, t in edges))
 
 
+def _graph_signature_label(edges):
+    signature = _graph_signature(edges)
+    if not signature:
+        return "empty"
+    return ".".join(f"{s}-{t}" for s, t in signature)
+
+
 def _graph_density(num_nodes, num_edges):
     denom = max(1, num_nodes * (num_nodes - 1) / 2)
     return num_edges / denom
@@ -152,7 +159,7 @@ def _generate_graph(seed, source_degrees, target_density, quality, source_densit
         'density': density,
         'avg_degree': avg_degree,
         'isolated_ratio': isolated / max(1, num_nodes),
-        'signature': _graph_signature(edges),
+        'signature': _graph_signature_label(edges),
         'invalidity_reason': invalidity_reason,
         'comparison_metrics': comparison_metrics,
         'matches_source': matches_source,
@@ -280,9 +287,6 @@ def _epoch_payload(epoch, epochs, data, source_graphs_cache=None):
     recon_loss = max(0.05, 1.8 * math.exp(-epoch / max(8, epochs / 4)) + (1.0 - validity_rate) * 0.3)
     kl_loss = max(0.01, 0.5 * math.exp(-epoch / max(10, epochs / 3)) + (1.0 - uniqueness_rate) * 0.15)
     quality = np.mean([g['score'] for g in generated_graphs]) if generated_graphs else 0.0
-
-    for graph in generated_graphs:
-        graph.pop('signature', None)
 
     return {
         'epoch': epoch,

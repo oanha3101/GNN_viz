@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 SECRET_KEY = os.getenv("JWT_SECRET", "gnn-insight-dev-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))  # 24h default
-DISABLE_AUTH = os.getenv("DISABLE_AUTH", "1") == "1"
+DISABLE_AUTH = os.getenv("DISABLE_AUTH", "0") == "1"
 
 # Try to import jose; if not available, use a simple fallback
 try:

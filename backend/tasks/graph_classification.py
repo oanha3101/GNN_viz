@@ -10,18 +10,28 @@ import torch.nn.functional as F
 import networkx as nx
 from sklearn.decomposition import PCA
 from torch_geometric.data import Data, Batch
-from torch_geometric.nn import GCNConv, global_add_pool
+from torch_geometric.nn import GATConv, GCNConv, SAGEConv, global_add_pool
 from utils.ws_msg import send_json_zipped
 
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Attention-based Graph Classification Model (Explainable)
 # ───────────────────────────────────────────────────────────────────────────────
+def _make_conv(model_type, in_channels, out_channels):
+    model_key = str(model_type or "GCN").upper()
+    if model_key in {"SAGE", "GRAPHSAGE", "GRAPH_SAGE"}:
+        return SAGEConv(in_channels, out_channels)
+    if model_key == "GAT":
+        return GATConv(in_channels, out_channels, heads=1, concat=False)
+    return GCNConv(in_channels, out_channels)
+
+
 class GraphClassifier(torch.nn.Module):
-    def __init__(self, in_channels=1, hidden=32, num_classes=2):
+    def __init__(self, in_channels=1, hidden=32, num_classes=2, model_type="GCN"):
         super().__init__()
-        self.conv1 = GCNConv(in_channels, hidden)
-        self.conv2 = GCNConv(hidden, hidden)
+        self.model_type = str(model_type or "GCN").upper()
+        self.conv1 = _make_conv(self.model_type, in_channels, hidden)
+        self.conv2 = _make_conv(self.model_type, hidden, hidden)
         
         # Attention layer for Readout
         self.att_gate = torch.nn.Linear(hidden, 1)
@@ -187,7 +197,13 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
     })
 
     # Build model + optimizer
-    model = GraphClassifier(in_channels=in_channels, hidden=32, num_classes=num_classes)
+    model_type = config.get('model') or config.get('model_type') or "GCN"
+    model = GraphClassifier(
+        in_channels=in_channels,
+        hidden=32,
+        num_classes=num_classes,
+        model_type=model_type,
+    )
     optimizer = torch.optim.Adam(model.parameters(), lr=config.get('lr', 0.01))
 
     # Prepare batched data (train: 80%, test: 20%)
@@ -333,6 +349,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             'graph_correct': graph_correct,
             'graph_embeddings_2d': emb_2d,
             'node_contributions': node_contributions,
+            'model_type': model.model_type,
             'train_loss': float(loss.item()),
             'val_loss': float(val_loss.item()),
             'train_acc': float(train_acc.item()),

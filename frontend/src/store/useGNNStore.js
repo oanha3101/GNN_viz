@@ -1,17 +1,48 @@
 import { create } from 'zustand'
 
+const WORKSPACE_CONTEXT_KEY = 'gnn_workspace_context'
+
+function readWorkspaceContext() {
+  if (typeof localStorage === 'undefined') {
+    return {}
+  }
+  try {
+    const raw = localStorage.getItem(WORKSPACE_CONTEXT_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeWorkspaceContext(partial) {
+  if (typeof localStorage === 'undefined') {
+    return
+  }
+  try {
+    const current = readWorkspaceContext()
+    localStorage.setItem(WORKSPACE_CONTEXT_KEY, JSON.stringify({
+      ...current,
+      ...partial,
+    }))
+  } catch {
+    // Ignore storage failures and keep runtime state usable.
+  }
+}
+
+const persistedWorkspace = readWorkspaceContext()
+
 const useGNNStore = create((set, get) => ({
   // ─── Config ──────────────────────────────────────────────────
-  selectedTask: 1,
-  selectedModel: 'GCN',
-  mockMode: true,
+  selectedTask: persistedWorkspace.selectedTask ?? 1,
+  selectedModel: persistedWorkspace.selectedModel ?? 'GCN',
+  mockMode: persistedWorkspace.mockMode ?? true,
   hyperparams: {
-    epochs: 100,
-    lr: 0.01,
-    hidden: 64,
-    dropout: 0.5,
-    heads: 4,
-    aggregator: 'mean',
+    epochs: persistedWorkspace.hyperparams?.epochs ?? 100,
+    lr: persistedWorkspace.hyperparams?.lr ?? 0.01,
+    hidden: persistedWorkspace.hyperparams?.hidden ?? 64,
+    dropout: persistedWorkspace.hyperparams?.dropout ?? 0.5,
+    heads: persistedWorkspace.hyperparams?.heads ?? 4,
+    aggregator: persistedWorkspace.hyperparams?.aggregator ?? 'mean',
   },
 
   // ─── Training state ──────────────────────────────────────────
@@ -45,27 +76,28 @@ const useGNNStore = create((set, get) => ({
   task6FilterMode: 'all',   // all | valid | invalid | novel — drives grid filter
 
   // ─── Uploaded file path (for custom datasets) ───────────────
-  uploadedFilePath: null,
-  datasetName: null,
-  activeProjectId: null,
-  activeProjectName: null,
-  activeDatasetId: null,
-  activeDatasetVersionId: null,
-  activeDatasetVersionName: null,
+  uploadedFilePath: persistedWorkspace.uploadedFilePath ?? null,
+  datasetName: persistedWorkspace.datasetName ?? null,
+  activeProjectId: persistedWorkspace.activeProjectId ?? null,
+  activeProjectName: persistedWorkspace.activeProjectName ?? null,
+  activeDatasetId: persistedWorkspace.activeDatasetId ?? null,
+  activeDatasetVersionId: persistedWorkspace.activeDatasetVersionId ?? null,
+  activeDatasetVersionName: persistedWorkspace.activeDatasetVersionName ?? null,
 
   // ─── Task-specific upload data ─────────────────────────────
   communityGroundTruth: null,  // T4: array of community labels
   numCommunities: null,        // T4: target cluster count
   referenceGraph: null,        // T6: reference graph structure
-  uploadMetadata: null,        // { schema_version, validation_warnings, ... }
-  taskConfig: null,            // { edge_split_ratio, num_communities, has_community_gt, ... }
+  uploadMetadata: persistedWorkspace.uploadMetadata ?? null,        // { schema_version, validation_warnings, ... }
+  taskConfig: persistedWorkspace.taskConfig ?? null,            // { edge_split_ratio, num_communities, has_community_gt, ... }
 
   // ─── Actions: Config ─────────────────────────────────────────
   setTask: (task) => {
     const prevState = get()
     const needsReset = task === 2 || task === 6 || prevState.selectedTask === 2 || prevState.selectedTask === 6
     const leavingTask5 = prevState.selectedTask === 5
-    
+
+    writeWorkspaceContext({ selectedTask: task })
     set({
       selectedTask: task,
       isTraining: false,
@@ -91,6 +123,7 @@ const useGNNStore = create((set, get) => ({
   },
   setSelectedTask: (task) => get().setTask(task),
   setModel: (model) => {
+    writeWorkspaceContext({ selectedModel: model })
     set({
       selectedModel: model,
       graphData: null,
@@ -106,8 +139,15 @@ const useGNNStore = create((set, get) => ({
       trainingProgress: 0,
     })
   },
-  setMockMode: (mode) => set({ mockMode: mode }),
-  setHyperparams: (params) => set((s) => ({ hyperparams: { ...s.hyperparams, ...params } })),
+  setMockMode: (mode) => {
+    writeWorkspaceContext({ mockMode: mode })
+    set({ mockMode: mode })
+  },
+  setHyperparams: (params) => set((s) => {
+    const nextHyperparams = { ...s.hyperparams, ...params }
+    writeWorkspaceContext({ hyperparams: nextHyperparams })
+    return { hyperparams: nextHyperparams }
+  }),
 
   // ─── Actions: Data ───────────────────────────────────────────
   setGraphData: (gd) => set({ graphData: gd }),
@@ -171,29 +211,69 @@ const useGNNStore = create((set, get) => ({
   // ─── Task 5 Actions ────────────────────────────────────────
   setTask5Meta: (meta) => set({ task5Meta: meta }),
   setTask5Exporting: (v) => set({ task5Exporting: v }),
-  setUploadedFilePath: (path) => set({ uploadedFilePath: path }),
+  setUploadedFilePath: (path) => {
+    writeWorkspaceContext({ uploadedFilePath: path })
+    set({ uploadedFilePath: path })
+  },
 
   // ─── Upload/Task-specific Actions ────────────────────────
   setCommunityGroundTruth: (gt) => set({ communityGroundTruth: gt }),
   setNumCommunities: (n) => set({ numCommunities: n }),
   setReferenceGraph: (g) => set({ referenceGraph: g }),
-  setUploadMetadata: (meta) => set({ uploadMetadata: meta }),
-  setTaskConfig: (cfg) => set({ taskConfig: cfg }),
-  setDatasetName: (name) => set({ datasetName: name }),
-  setActiveProjectId: (id) => set({ activeProjectId: id }),
-  setActiveProjectName: (name) => set({ activeProjectName: name }),
-  setActiveDatasetId: (id) => set({ activeDatasetId: id }),
-  setActiveDatasetVersionId: (id) => set({ activeDatasetVersionId: id }),
-  setActiveDatasetVersionName: (name) => set({ activeDatasetVersionName: name }),
-  setActiveProjectContext: (id, name = null) => set({
-    activeProjectId: id,
-    activeProjectName: name,
-  }),
-  setActiveDatasetContext: (datasetId, versionId, versionName = null) => set({
-    activeDatasetId: datasetId,
-    activeDatasetVersionId: versionId,
-    activeDatasetVersionName: versionName,
-  }),
+  setUploadMetadata: (meta) => {
+    writeWorkspaceContext({ uploadMetadata: meta })
+    set({ uploadMetadata: meta })
+  },
+  setTaskConfig: (cfg) => {
+    writeWorkspaceContext({ taskConfig: cfg })
+    set({ taskConfig: cfg })
+  },
+  setDatasetName: (name) => {
+    writeWorkspaceContext({ datasetName: name })
+    set({ datasetName: name })
+  },
+  setActiveProjectId: (id) => {
+    writeWorkspaceContext({ activeProjectId: id })
+    set({ activeProjectId: id })
+  },
+  setActiveProjectName: (name) => {
+    writeWorkspaceContext({ activeProjectName: name })
+    set({ activeProjectName: name })
+  },
+  setActiveDatasetId: (id) => {
+    writeWorkspaceContext({ activeDatasetId: id })
+    set({ activeDatasetId: id })
+  },
+  setActiveDatasetVersionId: (id) => {
+    writeWorkspaceContext({ activeDatasetVersionId: id })
+    set({ activeDatasetVersionId: id })
+  },
+  setActiveDatasetVersionName: (name) => {
+    writeWorkspaceContext({ activeDatasetVersionName: name })
+    set({ activeDatasetVersionName: name })
+  },
+  setActiveProjectContext: (id, name = null) => {
+    writeWorkspaceContext({
+      activeProjectId: id,
+      activeProjectName: name,
+    })
+    set({
+      activeProjectId: id,
+      activeProjectName: name,
+    })
+  },
+  setActiveDatasetContext: (datasetId, versionId, versionName = null) => {
+    writeWorkspaceContext({
+      activeDatasetId: datasetId,
+      activeDatasetVersionId: versionId,
+      activeDatasetVersionName: versionName,
+    })
+    set({
+      activeDatasetId: datasetId,
+      activeDatasetVersionId: versionId,
+      activeDatasetVersionName: versionName,
+    })
+  },
 }))
 
 export default useGNNStore

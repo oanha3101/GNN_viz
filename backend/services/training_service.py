@@ -6,9 +6,11 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 from fastapi import WebSocket, WebSocketDisconnect
 
+from api.routers.auth import DISABLE_AUTH, decode_token
 from core.session_manager import session_manager
 from data.loaders import auto_detect_graph
-from database import redis_client
+from database import SessionLocal, redis_client
+from models.sql_models import User
 from schemas.constants import ErrorCode
 from services.hybrid_store import blob_store
 from tasks.community_detection import run_community_detection
@@ -63,16 +65,53 @@ def build_graph_json_flexible(data):
     return {"nodes": nodes, "links": links}
 
 
-def resolve_session_id(config: Dict[str, Any]) -> str:
+def _strip_auth_fields(config: Dict[str, Any]) -> Dict[str, Any]:
+    sanitized = dict(config)
+    sanitized.pop("auth_token", None)
+    sanitized.pop("access_token", None)
+    sanitized.pop("token", None)
+    return sanitized
+
+
+def resolve_ws_user(config: Dict[str, Any]) -> Optional[User]:
+    if DISABLE_AUTH:
+        return None
+
+    token = config.get("auth_token") or config.get("access_token") or config.get("token")
+    if not token:
+        raise PermissionError("Not authenticated for live training")
+
+    payload = decode_token(token)
+    user_id = payload.get("sub") if payload else None
+    if not user_id:
+        raise PermissionError("Invalid auth token for live training")
+
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter_by(id=int(user_id), is_active=True).first()
+    finally:
+        db.close()
+
+    if not user:
+        raise PermissionError("User not found or inactive for live training")
+    if user.role == "viewer":
+        raise PermissionError("Viewer accounts cannot start live training")
+    return user
+
+
+def resolve_session_id(config: Dict[str, Any], *, user: Optional[User]) -> str:
     existing_session_id = config.get("session_id")
     session = session_manager.get_session(existing_session_id) if existing_session_id else None
     if session:
+        if user and session.get("user_id") not in (None, user.id):
+            raise PermissionError("Not allowed to resume this training session")
         return existing_session_id
     return session_manager.create_session(
         config=config,
         task_type=config.get("task", 1),
         model_type=config.get("model", "GCN"),
         dataset_name=config.get("dataset", "cora"),
+        user_id=user.id if user else None,
         project_id=config.get("project_id"),
         dataset_version_id=config.get("dataset_version_id"),
     )
@@ -82,7 +121,9 @@ async def accept_and_prepare(websocket: WebSocket) -> Tuple[Dict[str, Any], Sequ
     await websocket.accept()
     seq = SequenceCounter()
     config = await websocket.receive_json()
-    session_id = resolve_session_id(config)
+    user = resolve_ws_user(config)
+    config = _strip_auth_fields(config)
+    session_id = resolve_session_id(config, user=user)
     config["session_id"] = session_id
     session_manager.sync_runtime_context(session_id, config)
     session_manager.update_status(session_id, "running")

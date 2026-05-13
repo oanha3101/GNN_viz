@@ -24,6 +24,7 @@ os.environ["MYSQL_URL"] = f"sqlite:///{TEST_DB_PATH.resolve().as_posix()}"
 os.environ["MONGO_URI"] = "mongodb://127.0.0.1:1/"
 os.environ["REDIS_URL"] = "redis://127.0.0.1:1/0"
 os.environ.setdefault("DISABLE_AUTH", "0")
+os.environ.setdefault("REQUIRE_RUNTIME_STACK", "0")
 
 from database import Base, SessionLocal, engine  # noqa: E402
 from core import session_manager as session_manager_module  # noqa: E402

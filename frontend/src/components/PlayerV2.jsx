@@ -57,6 +57,7 @@ export default function PlayerV2() {
       {/* Interactive scrubber track */}
       <div
         ref={trackRef}
+        data-testid="player-track"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -80,34 +81,35 @@ export default function PlayerV2() {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <button onClick={() => seekTo(0)} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
+          <button data-testid="player-seek-start" onClick={() => seekTo(0)} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
             <SkipBack size={14} />
           </button>
-          <button onClick={stepBack} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
+          <button data-testid="player-step-back" onClick={stepBack} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
             <Rewind size={14} />
           </button>
           <button
+            data-testid="player-toggle-play"
             onClick={isPlaying ? pause : play}
             disabled={disabled}
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-30 transition-all shadow-lg shadow-cyan-500/10"
           >
             {isPlaying ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
           </button>
-          <button onClick={stepForward} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
+          <button data-testid="player-step-forward" onClick={stepForward} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
             <FastForward size={14} />
           </button>
-          <button onClick={() => seekTo(maxFloat)} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
+          <button data-testid="player-seek-end" onClick={() => seekTo(maxFloat)} disabled={disabled} className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30 transition-colors rounded-lg hover:bg-slate-800/50">
             <SkipForward size={14} />
           </button>
 
           <div className="ml-4 flex items-center gap-3">
             <div className="flex flex-col">
               <span className="text-[8px] uppercase text-slate-500 font-bold">Current</span>
-              <span className="text-[11px] font-mono text-cyan-400 font-bold">{currentEpochFloat.toFixed(1)}</span>
+              <span data-testid="player-current-epoch" className="text-[11px] font-mono text-cyan-400 font-bold">{currentEpochFloat.toFixed(1)}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[8px] uppercase text-slate-500 font-bold">Total</span>
-              <span className="text-[11px] font-mono text-slate-300">{snapshots.length}</span>
+              <span data-testid="player-total-epochs" className="text-[11px] font-mono text-slate-300">{snapshots.length}</span>
             </div>
           </div>
         </div>

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from api.routers.auth import get_optional_user
+from api.routers.auth import get_current_user, get_optional_user
 from database import get_db
 from models.sql_models import User
 from services import experiment_service
@@ -42,6 +42,10 @@ class ExperimentCreate(BaseModel):
 
 
 class CompareRunsRequest(BaseModel):
+    experiment_ids: List[int]
+
+
+class BulkDeleteRequest(BaseModel):
     experiment_ids: List[int]
 
 
@@ -197,7 +201,7 @@ def get_experiment_report(
 def run_retention(
     dry_run: bool = Query(default=True),
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_optional_user),
+    user: Optional[User] = Depends(get_current_user),
 ):
     return experiment_service.run_retention(db=db, user=user, dry_run=dry_run)
 
@@ -214,6 +218,17 @@ def delete_experiment(
 @router.delete("/experiments")
 def delete_all_experiments(
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_optional_user),
+    user: Optional[User] = Depends(get_current_user),
 ):
     return experiment_service.delete_all_experiments(db, user=user)
+
+
+@router.post("/experiments/bulk-delete")
+def bulk_delete_experiments(
+    payload: BulkDeleteRequest,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    return experiment_service.bulk_delete_experiments(
+        db, experiment_ids=payload.experiment_ids, user=user,
+    )

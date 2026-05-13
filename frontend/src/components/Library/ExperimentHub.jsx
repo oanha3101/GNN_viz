@@ -53,10 +53,11 @@ function FilterSelect({ label, value, onChange, options }) {
   )
 }
 
-function RunChip({ selected, onClick, children }) {
+function RunChip({ selected, onClick, children, testId }) {
   return (
     <button
       onClick={onClick}
+      data-testid={testId}
       className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all ${
         selected
           ? 'border-cyan-500/30 bg-cyan-500/12 text-cyan-300'
@@ -599,7 +600,7 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <RunChip selected={selectedCompareIds.includes(exp.id)} onClick={(event) => {
+                          <RunChip selected={selectedCompareIds.includes(exp.id)} testId={`experiment-compare-toggle-${exp.id}`} onClick={(event) => {
                             event.stopPropagation()
                             handleCompareToggle(exp.id)
                           }}

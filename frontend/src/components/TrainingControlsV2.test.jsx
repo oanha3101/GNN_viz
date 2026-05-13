@@ -11,6 +11,9 @@ const gnnState = {
   selectedModel: 'GCN',
   activeProjectId: 11,
   activeDatasetVersionId: 22,
+  uploadedFilePath: 'datasets/runtime/test-graph.pt',
+  taskConfig: null,
+  uploadMetadata: null,
   setTraining: vi.fn(),
   setGraphData: vi.fn(),
   setGroundTruth: vi.fn(),
@@ -34,6 +37,11 @@ const sessionState = {
   setStatus: vi.fn(),
 }
 
+const authState = {
+  user: { id: 1, role: 'researcher', username: 'researcher' },
+  token: 'token-123',
+}
+
 vi.mock('../store/useGNNStore', () => {
   const store = (selector) => selector(gnnState)
   store.getState = () => gnnState
@@ -53,14 +61,25 @@ vi.mock('../store/sessionStore', () => {
   return { default: store }
 })
 
+vi.mock('../store/authStore', () => {
+  const store = (selector) => selector(authState)
+  store.getState = () => authState
+  return { default: store }
+})
+
 describe('TrainingControlsV2', () => {
   beforeEach(() => {
     gnnState.isTraining = true
     gnnState.mockMode = false
     gnnState.trainingProgress = 0.5
+    gnnState.uploadedFilePath = 'datasets/runtime/test-graph.pt'
+    gnnState.taskConfig = null
     sessionState.sessionId = 'sess-123'
+    sessionState.createSession = vi.fn()
     sessionState.setStatus = vi.fn()
     gnnState.setTraining = vi.fn()
+    authState.user = { id: 1, role: 'researcher', username: 'researcher' }
+    authState.token = 'token-123'
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
@@ -76,7 +95,7 @@ describe('TrainingControlsV2', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/sessions/sess-123/stop',
+        '/api/sessions/sess-123/stop',
         expect.objectContaining({ method: 'POST' }),
       )
     })
@@ -96,5 +115,30 @@ describe('TrainingControlsV2', () => {
     })
     expect(sessionState.setStatus).toHaveBeenCalledWith('stopped')
     expect(gnnState.setTraining).toHaveBeenCalledWith(false, 0.5)
+  })
+
+  it('does not dispatch live training when session creation fails', async () => {
+    gnnState.isTraining = false
+    sessionState.createSession = vi.fn().mockRejectedValue(new Error('403'))
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+
+    render(<TrainingControlsV2 />)
+
+    fireEvent.click(screen.getByRole('button', { name: /run/i }))
+
+    await waitFor(() => {
+      expect(sessionState.createSession).toHaveBeenCalled()
+    })
+    expect(dispatchSpy).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'gnn:start-training' }))
+    expect(gnnState.setTraining).toHaveBeenCalledWith(false, 0)
+  })
+
+  it('disables the start button for viewer accounts', () => {
+    gnnState.isTraining = false
+    authState.user = { id: 2, role: 'viewer', username: 'viewer' }
+
+    render(<TrainingControlsV2 />)
+
+    expect(screen.getByRole('button', { name: /run/i })).toBeDisabled()
   })
 })

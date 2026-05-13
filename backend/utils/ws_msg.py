@@ -4,9 +4,12 @@ Wraps all outgoing messages in the v3 envelope with gzip compression.
 """
 import json
 import gzip
+import logging
 import time
 from fastapi import WebSocket
 from schemas.constants import SCHEMA_VERSION
+
+logger = logging.getLogger(__name__)
 
 
 class SequenceCounter:
@@ -66,7 +69,7 @@ async def send_json_zipped(websocket: WebSocket, data: dict, seq_counter: Sequen
         await websocket.send_bytes(compressed_data)
     except Exception as e:
         # Fallback to standard JSON if compression fails
-        print(f"WS Compression Error: {e}")
+        logger.warning("WS Compression Error: %s", e)
         try:
             await websocket.send_json(data)
         except Exception:

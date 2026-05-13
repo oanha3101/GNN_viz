@@ -84,6 +84,9 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
   const datasetName = useGNNStore((s) => s.datasetName)
   const setActiveProjectContext = useGNNStore((s) => s.setActiveProjectContext)
   const setActiveDatasetContext = useGNNStore((s) => s.setActiveDatasetContext)
+  const setUploadedFilePath = useGNNStore((s) => s.setUploadedFilePath)
+  const setUploadMetadata = useGNNStore((s) => s.setUploadMetadata)
+  const setDatasetName = useGNNStore((s) => s.setDatasetName)
 
   const [activeTab, setActiveTab] = useState(initialTab)
   const [loading, setLoading] = useState(false)
@@ -165,6 +168,16 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
   const currentDatasetDetail = selectedDataset ? datasetDetails[selectedDataset] : null
   const selectedProject = useMemo(() => projects.find((item) => item.id === activeProjectId) || null, [projects, activeProjectId])
   const selectedDatasetRow = useMemo(() => datasets.find((item) => item.id === activeDatasetId) || null, [datasets, activeDatasetId])
+  const applyDatasetVersionContext = useCallback((dataset, version) => {
+    setActiveDatasetContext(
+      dataset.id,
+      version.id,
+      `${dataset.name} • v${version.version} (${version.lifecycle})`
+    )
+    setDatasetName(dataset.name)
+    setUploadedFilePath(version.processed_blob_key || null)
+    setUploadMetadata(version.summary_json || null)
+  }, [setActiveDatasetContext, setDatasetName, setUploadMetadata, setUploadedFilePath])
 
   const handleCreateProject = useCallback(async () => {
     if (!projectForm.title.trim()) return

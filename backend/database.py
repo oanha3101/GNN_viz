@@ -1,11 +1,14 @@
+import logging
 import os
+
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
 
 try:
     import redis
@@ -22,14 +25,14 @@ except ImportError:
 Base = declarative_base()
 
 MYSQL_URL = os.getenv("MYSQL_URL", "mysql+pymysql://root:root@127.0.0.1:3344/gnn_db")
-STRICT_RUNTIME_STACK = os.getenv("REQUIRE_RUNTIME_STACK", "0") == "1"
+STRICT_RUNTIME_STACK = os.getenv("REQUIRE_RUNTIME_STACK", "1") == "1"
 mysql_fallback_active = False
 
 try:
     engine = create_engine(MYSQL_URL, pool_pre_ping=True)
     engine.connect().close()
 except Exception:
-    print("Warning: MySQL connection failed, falling back to SQLite.")
+    logger.warning("MySQL connection failed, falling back to SQLite.")
     engine = create_engine("sqlite:///./gnn_insight.db", connect_args={"check_same_thread": False})
     mysql_fallback_active = True
 
@@ -76,7 +79,7 @@ class NullRedisClient:
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:password@localhost:27017/")
 mongo_available = False
 if MongoClient is None:
-    print("Warning: PyMongo not installed. Mongo-backed replay will use local fallbacks.")
+    logger.warning("PyMongo not installed. Mongo-backed replay will use local fallbacks.")
     mongo_client = None
     mongo_experiment_snapshots = NullCollection()
     mongo_experiment_metrics = NullCollection()
@@ -87,7 +90,7 @@ else:
         mongo_client.server_info()
         mongo_available = True
     except Exception:
-        print("Warning: MongoDB connection failed. Mongo-backed replay will use local fallbacks.")
+        logger.warning("MongoDB connection failed. Mongo-backed replay will use local fallbacks.")
 
     mongo_db = mongo_client["gnn_insight"]
     mongo_experiment_snapshots = mongo_db["experiment_snapshots"]
@@ -126,7 +129,7 @@ def ensure_mongo_indexes():
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 redis_available = False
 if redis is None:
-    print("Warning: redis package not installed. Redis cache disabled.")
+    logger.warning("redis package not installed. Redis cache disabled.")
     redis_client = NullRedisClient()
 else:
     redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=False)
@@ -134,7 +137,7 @@ else:
         redis_client.ping()
         redis_available = True
     except Exception:
-        print("Warning: Redis connection failed.")
+        logger.warning("Redis connection failed. Cache disabled.")
         redis_client = NullRedisClient()
 
 
@@ -190,6 +193,50 @@ def validate_runtime_requirements(require_runtime_stack: bool | None = None) -> 
     return status
 
 
+def _validate_env_config() -> None:
+    """Warn about missing or insecure env config at startup."""
+    warnings = []
+
+    jwt_secret = os.getenv("JWT_SECRET", "")
+    if not jwt_secret or jwt_secret == "gnn-insight-dev-secret-key-change-in-production":
+        warnings.append("JWT_SECRET is using the default value - change it for production")
+
+    disable_auth = os.getenv("DISABLE_AUTH", "0")
+    if disable_auth == "1":
+        warnings.append("DISABLE_AUTH=1 - authentication is disabled")
+
+    cors_origins = os.getenv("CORS_ORIGINS", "")
+    if "*" in cors_origins:
+        warnings.append("CORS_ORIGINS contains wildcard '*' - restrict it for production")
+
+    blob_provider = os.getenv("BLOB_STORE_PROVIDER", "local")
+    if blob_provider == "local":
+        warnings.append("BLOB_STORE_PROVIDER=local - using local disk instead of MinIO/S3")
+
+    for warning in warnings:
+        logger.warning("[CONFIG] %s", warning)
+
+
+def _log_startup_status() -> None:
+    """Log a clear summary of runtime stack status at startup."""
+    degraded = []
+    if mysql_fallback_active:
+        degraded.append("MySQL (using SQLite fallback)")
+    if not mongo_available:
+        degraded.append("MongoDB (using local JSON fallback)")
+    if not redis_available:
+        degraded.append("Redis (cache disabled)")
+
+    if degraded:
+        logger.warning(
+            "[RUNTIME] Degraded mode - %s. "
+            "Set REQUIRE_RUNTIME_STACK=0 in .env to suppress strict-mode failures.",
+            ", ".join(degraded),
+        )
+    else:
+        logger.info("[RUNTIME] All services healthy (MySQL, MongoDB, Redis).")
+
+
 def init_db():
     from models.sql_models import (
         AuditLog,
@@ -204,7 +251,9 @@ def init_db():
 
     Base.metadata.create_all(bind=engine)
     ensure_mongo_indexes()
-    print("Relational Database initialized.")
+    logger.info("Relational Database initialized.")
+    _validate_env_config()
+    _log_startup_status()
 
 
 if __name__ == "__main__":

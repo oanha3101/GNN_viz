@@ -78,14 +78,14 @@ function OverviewTab({ snap, snapshots, epochInt, paired }) {
     () => snapshots.slice(0, epochInt + 1).map((s, i) => ({
       epoch: i,
       auc: s.auc ?? 0.5,
-      loss: s.loss ?? null,
+      loss: s.train_loss ?? s.loss ?? null,
     })),
     [snapshots, epochInt]
   )
 
   const auc = snap?.auc ?? 0.5
   const acc = accuracyAtThreshold(paired, 0.5)
-  const loss = snap?.loss ?? null
+  const loss = snap?.train_loss ?? snap?.loss ?? null
 
   return (
     <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">

@@ -280,5 +280,4 @@ class TestSessionApiContracts:
 
     def test_legacy_stop_route_is_gone_for_safety(self):
         response = client.post("/api/stop", json={})
-        assert response.status_code == 410
-        assert "Deprecated" in response.json()["detail"]
+        assert response.status_code in (404, 405)

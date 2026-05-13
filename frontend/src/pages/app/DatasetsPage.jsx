@@ -18,6 +18,9 @@ export default function DatasetsPage() {
   const uploadedFilePath = useGNNStore((s) => s.uploadedFilePath)
   const uploadMetadata = useGNNStore((s) => s.uploadMetadata)
   const setActiveDatasetContext = useGNNStore((s) => s.setActiveDatasetContext)
+  const setUploadedFilePath = useGNNStore((s) => s.setUploadedFilePath)
+  const setUploadMetadata = useGNNStore((s) => s.setUploadMetadata)
+  const setDatasetName = useGNNStore((s) => s.setDatasetName)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -60,6 +63,17 @@ export default function DatasetsPage() {
 
   const currentDetail = selectedDatasetId ? datasetDetails[selectedDatasetId] : null
 
+  const applyDatasetVersionContext = useCallback((dataset, version) => {
+    setActiveDatasetContext(
+      dataset.id,
+      version.id,
+      `${dataset.name} • v${version.version} (${version.lifecycle})`
+    )
+    setDatasetName(dataset.name)
+    setUploadedFilePath(version.processed_blob_key || null)
+    setUploadMetadata(version.summary_json || null)
+  }, [setActiveDatasetContext, setDatasetName, setUploadedFilePath, setUploadMetadata])
+
   const handleCreateDataset = useCallback(async () => {
     setSubmitting(true)
     setError(null)
@@ -76,11 +90,7 @@ export default function DatasetsPage() {
       })
       setForm({ name: '', description: '' })
       setSelectedDatasetId(payload.dataset.id)
-      setActiveDatasetContext(
-        payload.dataset.id,
-        payload.version.id,
-        `${payload.dataset.name} • v${payload.version.version} (${payload.version.lifecycle})`
-      )
+      applyDatasetVersionContext(payload.dataset, payload.version)
       await loadDatasets()
       await loadDatasetDetail(payload.dataset.id)
     } catch (err) {
@@ -88,7 +98,7 @@ export default function DatasetsPage() {
     } finally {
       setSubmitting(false)
     }
-  }, [datasetName, form.description, form.name, loadDatasetDetail, loadDatasets, setActiveDatasetContext, uploadMetadata, uploadedFilePath])
+  }, [applyDatasetVersionContext, datasetName, form.description, form.name, loadDatasetDetail, loadDatasets, uploadMetadata, uploadedFilePath])
 
   const handlePublishVersion = useCallback(async (datasetId, versionId) => {
     try {
@@ -234,15 +244,15 @@ export default function DatasetsPage() {
                         </div>
                         <SelectionButton
                           active={isActive}
-                          onClick={() =>
-                            canSelect &&
-                            setActiveDatasetContext(
-                              currentDetail.dataset.id,
-                              version.id,
-                              `${currentDetail.dataset.name} • v${version.version} (${version.lifecycle})`
-                            )
-                          }
+                          onClick={() => canSelect && applyDatasetVersionContext(currentDetail.dataset, version)}
                         />
+                      </div>
+                      <div className="mt-3 text-xs text-slate-400">
+                        {version.processed_blob_key ? (
+                          <span>Artifact ready: <span className="font-mono text-cyan-300">{version.processed_blob_key}</span></span>
+                        ) : (
+                          <span className="text-amber-300">No processed artifact linked yet. Live training will need a synced upload first.</span>
+                        )}
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
                         {version.lifecycle !== 'published' ? (

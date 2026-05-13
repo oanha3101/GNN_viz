@@ -11,6 +11,12 @@ services:
       - "3344:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   mongodb:
     image: mongo:6.0
@@ -22,6 +28,12 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
@@ -30,9 +42,15 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:2024-01-16T16-07-38Z
     restart: always
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -43,12 +61,19 @@ services:
       - "9001:9001"
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   phpmyadmin:
     image: phpmyadmin:latest
     restart: always
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     environment:
       PMA_HOST: mysql
       PMA_PORT: 3306

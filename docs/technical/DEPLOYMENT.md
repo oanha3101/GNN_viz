@@ -10,6 +10,13 @@
 - MinIO
 - phpMyAdmin
 
+Start the stack from the repository root:
+
+```powershell
+docker-compose up -d
+docker-compose ps
+```
+
 Default MinIO console:
 
 - API: `http://localhost:9000`
@@ -63,6 +70,14 @@ Quick runtime verification:
 .\scripts\check_runtime.ps1
 ```
 
+Install and run the backend locally:
+
+```powershell
+cd backend
+python -m pip install -r requirements.txt
+python main.py
+```
+
 Runtime strictness:
 
 - `REQUIRE_RUNTIME_STACK=0`
@@ -82,6 +97,14 @@ Example:
 VITE_API_BASE_URL=http://localhost:8000/api
 VITE_WS_URL=ws://localhost:8000/ws/train
 VITE_EXPERIMENT_HUB_V1=1
+```
+
+Install and run the frontend locally:
+
+```powershell
+cd frontend
+npm install
+npm run dev
 ```
 
 ## Deployment Guidance
@@ -120,6 +143,12 @@ foreign keys or indexes, run this cleanup once after schema sync:
 
 ```powershell
 Get-Content backend/sql/mysql_schema_cleanup_legacy_constraints.sql -Raw | mysql -h 127.0.0.1 -P 3344 -u root -proot gnn_db
+```
+
+For direct database inspection, use phpMyAdmin at `http://127.0.0.1:8080` or:
+
+```powershell
+mysql -h 127.0.0.1 -P 3344 -u root -proot gnn_db
 ```
 
 ## Smoke Checks After Boot
