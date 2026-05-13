@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, BarChart, Bar, Legend,
+  Tooltip, ResponsiveContainer, BarChart, Bar, Legend, ReferenceLine, Cell,
 } from 'recharts'
 import usePlayerStore from '../../store/playerStore'
 import useGNNStore from '../../store/useGNNStore'
@@ -19,11 +19,13 @@ const TABS = [
   { id: 'curves', label: 'Curves' },
   { id: 'hard', label: 'Hard Edges' },
   { id: 'diagnostics', label: 'Diagnostics' },
+  { id: 'signature', label: 'Signature' },
 ]
 
 export default function Task3MetricsPanel() {
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const taskData = useGNNStore((s) => s.taskData)
+  const selectedModel = useGNNStore((s) => s.selectedModel)
   const setFocusedEdge = useGNNStore((s) => s.setFocusedEdge)
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -68,6 +70,7 @@ export default function Task3MetricsPanel() {
       {activeTab === 'curves' && <CurvesTab paired={paired} />}
       {activeTab === 'hard' && <HardEdgesTab paired={paired} onFocus={setFocusedEdge} />}
       {activeTab === 'diagnostics' && <DiagnosticsTab paired={paired} />}
+      {activeTab === 'signature' && <SignatureTab snapshots={snapshots} epochInt={epochInt} selectedModel={selectedModel} />}
     </div>
   )
 }
@@ -110,6 +113,7 @@ function OverviewTab({ snap, snapshots, epochInt, paired }) {
               />
               <Line yAxisId="auc" type="monotone" dataKey="auc" stroke="#22d3ee" strokeWidth={2} dot={false} />
               <Line yAxisId="loss" type="monotone" dataKey="loss" stroke="#f59e0b" strokeWidth={2} dot={false} />
+              <ReferenceLine x={epochInt} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="4 3" yAxisId="auc" />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -310,6 +314,155 @@ function Panel({ title, tone = 'slate', children }) {
         <div className="text-nano uppercase tracking-ultra text-slate-400 font-bold">{title}</div>
       </div>
       <div>{children}</div>
+    </div>
+  )
+}
+
+// ── Signature ─────────────────────────────────────────────────────
+function SignatureTab({ snapshots, epochInt, selectedModel }) {
+  const model = selectedModel || 'GCN'
+
+  // Build time-series data for model-specific metrics
+  const history = useMemo(() => {
+    return snapshots.slice(0, epochInt + 1).map((s, i) => ({
+      epoch: i,
+      dirichlet_energy: s.dirichlet_energy ?? null,
+      smoothness_separation: s.smoothness_separation ?? null,
+      score_variance: s.score_variance ?? null,
+    }))
+  }, [snapshots, epochInt])
+
+  const snap = snapshots[epochInt]
+
+  // GAT: attention weight histogram
+  const attnHistogram = useMemo(() => {
+    if (model !== 'GAT' || !snap?.attention_edges) return null
+    const bins = Array.from({ length: 10 }, (_, i) => ({
+      label: (i / 10).toFixed(1),
+      count: 0,
+    }))
+    for (const e of snap.attention_edges) {
+      const bin = Math.min(9, Math.floor(e.weight * 10))
+      bins[bin].count++
+    }
+    return bins
+  }, [model, snap?.attention_edges])
+
+  const attnStats = useMemo(() => {
+    if (model !== 'GAT' || !snap?.attention_edges) return null
+    const weights = snap.attention_edges.map(e => e.weight)
+    if (!weights.length) return null
+    const avg = weights.reduce((a, b) => a + b, 0) / weights.length
+    const max = Math.max(...weights)
+    const min = Math.min(...weights)
+    return { avg, max, min, count: weights.length }
+  }, [model, snap?.attention_edges])
+
+  return (
+    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="text-[9px] uppercase font-black tracking-widest text-slate-400">Model:</div>
+        <div className="text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded" style={{
+          color: model === 'GAT' ? '#fbbf24' : model === 'SAGE' ? '#22d3ee' : '#34d399',
+          backgroundColor: (model === 'GAT' ? '#fbbf24' : model === 'SAGE' ? '#22d3ee' : '#34d399') + '15',
+          border: `1px solid ${(model === 'GAT' ? '#fbbf24' : model === 'SAGE' ? '#22d3ee' : '#34d399')}30`,
+        }}>{model}</div>
+      </div>
+
+      {model === 'GAT' && (
+        <>
+          {attnStats && (
+            <div className="grid grid-cols-4 gap-2">
+              <Metric label="Edges" value={attnStats.count} tone="amber" />
+              <Metric label="Avg W" value={attnStats.avg.toFixed(3)} tone="amber" />
+              <Metric label="Max W" value={attnStats.max.toFixed(3)} tone="emerald" />
+              <Metric label="Min W" value={attnStats.min.toFixed(3)} tone="slate" />
+            </div>
+          )}
+          {attnHistogram && (
+            <Panel title="Attention Weight Distribution">
+              <div className="h-40 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={attnHistogram} margin={{ top: 6, right: 10, bottom: 14, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} label={{ value: 'Weight', position: 'insideBottom', offset: -2, fill: '#94a3b8', fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} itemStyle={{ color: '#e2e8f0' }} />
+                    <Bar dataKey="count" name="Edges">
+                      {attnHistogram.map((_, i) => (
+                        <Cell key={i} fill={`rgba(251, 191, 36, ${0.3 + (i / 9) * 0.7})`} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Panel>
+          )}
+          {!attnStats && (
+            <div className="text-center text-micro text-slate-500 py-8">No attention data available for this epoch.</div>
+          )}
+        </>
+      )}
+
+      {model === 'GCN' && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Metric label="Dirichlet E" value={snap?.dirichlet_energy?.toFixed(3) ?? '—'} tone="emerald" />
+            <Metric label="Separation" value={snap?.smoothness_separation?.toFixed(3) ?? '—'} tone="cyan" />
+          </div>
+          <Panel title="Dirichlet Energy / Epoch">
+            <div className="h-36 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} itemStyle={{ color: '#e2e8f0' }} />
+                  <Line type="monotone" dataKey="dirichlet_energy" stroke="#34d399" strokeWidth={2} dot={false} connectNulls />
+                  <ReferenceLine x={epochInt} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="4 3" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
+          <Panel title="Smoothness Separation / Epoch">
+            <div className="h-36 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} itemStyle={{ color: '#e2e8f0' }} />
+                  <Line type="monotone" dataKey="smoothness_separation" stroke="#22d3ee" strokeWidth={2} dot={false} connectNulls />
+                  <ReferenceLine x={epochInt} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="4 3" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
+        </>
+      )}
+
+      {model === 'SAGE' && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Metric label="Score Variance" value={snap?.score_variance?.toFixed(4) ?? '—'} tone="cyan" />
+            <Metric label="Stability" value={snap?.score_variance != null ? (snap.score_variance < 0.01 ? 'High' : snap.score_variance < 0.05 ? 'Medium' : 'Low') : '—'} tone={snap?.score_variance != null ? (snap.score_variance < 0.01 ? 'emerald' : snap.score_variance < 0.05 ? 'amber' : 'red') : 'slate'} />
+          </div>
+          <Panel title="Score Variance / Epoch">
+            <div className="h-40 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} itemStyle={{ color: '#e2e8f0' }} />
+                  <Line type="monotone" dataKey="score_variance" stroke="#22d3ee" strokeWidth={2} dot={false} connectNulls />
+                  <ReferenceLine x={epochInt} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="4 3" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
+        </>
+      )}
     </div>
   )
 }

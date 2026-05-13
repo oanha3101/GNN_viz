@@ -110,6 +110,19 @@ export function buildComparisonHistograms(sourceGraphs, generatedGraphs, numBins
 }
 
 /**
+ * Normalize BE invalidity reason strings (e.g. "3 isolated node(s)") into
+ * stable keywords matching the mock format ("isolated", "disconnected", "too_sparse").
+ */
+function normalizeReason(raw) {
+  if (!raw) return 'unknown'
+  const s = String(raw).toLowerCase()
+  if (s.includes('isolat')) return 'isolated'
+  if (s.includes('disconnect') || s.includes('component')) return 'disconnected'
+  if (s.includes('sparse') || s.includes('density')) return 'too_sparse'
+  return s
+}
+
+/**
  * countInvalidityReasons — aggregates `{ reason, count }` rows for all graphs
  * where `valid === false`. Graphs without a reason land under `"unknown"`.
  * Sorted descending by count so the Invalidity tab table reads top-first.
@@ -119,7 +132,7 @@ export function countInvalidityReasons(graphs) {
   if (!Array.isArray(graphs)) return []
   for (const g of graphs) {
     if (!g || g.valid !== false) continue
-    const reason = (g.invalidity_reason || 'unknown').toString()
+    const reason = normalizeReason(g.invalidity_reason)
     tally.set(reason, (tally.get(reason) || 0) + 1)
   }
   const out = []

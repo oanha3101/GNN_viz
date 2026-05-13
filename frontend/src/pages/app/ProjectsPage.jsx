@@ -73,7 +73,7 @@ export default function ProjectsPage() {
           <button
             type="button"
             onClick={loadProjects}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200"
+            className="btn-ghost inline-flex items-center gap-2 text-xs"
           >
             <RefreshCw size={13} /> Refresh
           </button>
@@ -84,24 +84,24 @@ export default function ProjectsPage() {
             value={form.title}
             onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
             placeholder="Project title"
-            className="rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none focus:border-cyan-500/30"
+            className="input-cosmic"
           />
           <input
             value={form.description}
             onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
             placeholder="Short description"
-            className="rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none focus:border-cyan-500/30"
+            className="input-cosmic"
           />
           <button
             type="button"
             disabled={submitting || !form.title.trim()}
             onClick={handleCreateProject}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-300 disabled:opacity-50"
+            className="btn-galaxy inline-flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <Plus size={14} /> {submitting ? 'Creating...' : 'Create'}
           </button>
         </div>
-        {error ? <div className="mt-3 text-sm text-red-300">{error.message}</div> : null}
+        {error ? <div className="mt-3 text-sm text-aurora-rose">{error.message}</div> : null}
       </SectionCard>
 
       <SectionCard title="Project Library" subtitle="Select the active project that should own upcoming runs.">
@@ -110,18 +110,21 @@ export default function ProjectsPage() {
             {projects.map((project) => (
               <div
                 key={project.id}
-                className={`rounded-3xl border p-5 ${
+                className={`glass-card p-5 transition-all ${
                   activeProjectId === project.id
-                    ? 'border-cyan-500/25 bg-cyan-500/8'
-                    : 'border-slate-800/70 bg-slate-950/50'
+                    ? 'border-amethyst/25 glow-violet-sm'
+                    : ''
                 }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <div className="text-base font-semibold text-white">{project.title}</div>
-                    <div className="mt-1 text-sm text-slate-400">{project.description || 'No description yet.'}</div>
-                    <div className="mt-3 text-xs text-slate-500">
-                      owner={project.owner_id || 'system'} • {project.is_public ? 'public' : 'private'}
+                    <div className="text-base font-semibold text-white-star">{project.title}</div>
+                    <div className="mt-1 text-sm text-twilight">{project.description || 'No description yet.'}</div>
+                    <div className="mt-3 flex items-center gap-3 text-xs text-text-shadow">
+                      <span>owner: {project.owner_id || 'system'}</span>
+                      <span className={`badge-cosmic ${project.is_public ? 'badge-aurora' : ''}`}>
+                        {project.is_public ? 'public' : 'private'}
+                      </span>
                     </div>
                   </div>
                   <SelectionButton

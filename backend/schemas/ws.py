@@ -93,7 +93,8 @@ class SnapshotTask1(BaseModel):
     node_predictions: List[int]
     node_probabilities: List[List[float]]
     node_confidence: List[float]
-    node_correctness: List[int]
+    node_correctness: List[Any]  # bool[] from Python, checked with === false/=== 0 in FE
+    majority_ratio: List[float] = Field(default_factory=list)
     neighbor_majority: List[NeighborMajority]
     embeddings_2d: List[List[float]]
     attention_weights: Optional[List[Any]] = None
@@ -155,6 +156,12 @@ class SnapshotTask3(BaseModel):
     auc: float
     val_acc: float
     top_k_links: List[TopKLink] = Field(default_factory=list)
+    # Model-specific signatures
+    attention_edges: Optional[List[dict]] = None
+    dirichlet_energy: Optional[float] = None
+    smoothness_separation: Optional[float] = None
+    edge_similarity: Optional[List[float]] = None
+    score_variance: Optional[float] = None
 
 
 class PerCommunityMetric(BaseModel):
@@ -170,6 +177,7 @@ class SnapshotTask4(BaseModel):
     """Task 4: Community Detection epoch snapshot."""
     epoch: int
     node_predictions: List[int]
+    node_predictions_aligned: Optional[List[int]] = None
     bridge_nodes: List[bool]
     bridge_strength: List[float]
     silhouette_scores: List[float]
@@ -183,6 +191,14 @@ class SnapshotTask4(BaseModel):
     linkage_matrix: Optional[List[List[float]]] = None
     nmi_score: Optional[float] = None
     community_transitions: Dict[str, int] = Field(default_factory=dict)
+    # A3: GCN Smoothness
+    dirichlet_energy: Optional[float] = None
+    local_smoothness: Optional[List[float]] = None
+    # A4: SAGE Robustness
+    sage_robustness: Optional[float] = None
+    # A5: GAT Attention
+    attention_edges: Optional[List[dict]] = None
+    attention_boundary_ratio: Optional[float] = None
     train_loss: float
     val_acc: float
 
@@ -221,6 +237,11 @@ class SnapshotTask5(BaseModel):
     per_edge_reconstruction_error: List[PerEdgeReconError] = Field(default_factory=list)
     embedding_norms: List[float] = Field(default_factory=list)
     outlier_scores: List[OutlierScore] = Field(default_factory=list)
+    # Model-specific signatures
+    attention_edges: Optional[List[dict]] = None
+    dirichlet_energy: Optional[float] = None
+    local_smoothness: Optional[List[float]] = None
+    sage_robustness: Optional[float] = None
     # Compatibility fields
     train_loss: float
     val_loss: float

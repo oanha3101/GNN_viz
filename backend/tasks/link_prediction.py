@@ -36,8 +36,29 @@ class LinkPredModel(torch.nn.Module):
             self.conv2 = GCNConv(hidden, hidden)
 
     def encode(self, x, edge_index):
-        x = self.conv1(x, edge_index)
-        x = F.elu(x) if self.model_type == 'GAT' else x.relu()
+        self._attention_edges = None
+        if self.model_type == 'GAT':
+            x, (edge_index_att, alpha) = self.conv1(x, edge_index, return_attention_weights=True)
+            # Filter self-loops, aggregate undirected
+            ei = edge_index_att.detach()
+            mask = ei[0] != ei[1]
+            ei_f = ei[:, mask]
+            alpha_f = alpha[mask]
+            attn_mean = alpha_f.mean(dim=1).detach()
+            attn_map = {}
+            for idx in range(ei_f.shape[1]):
+                u, v = int(ei_f[0, idx]), int(ei_f[1, idx])
+                key = (min(u, v), max(u, v))
+                attn_map.setdefault(key, []).append(float(attn_mean[idx]))
+            self._attention_edges = [
+                {'source': u, 'target': v, 'weight': sum(ws) / len(ws)}
+                for (u, v), ws in attn_map.items()
+            ]
+            x = F.elu(x)
+        elif self.model_type == 'SAGE':
+            x = F.relu(self.conv1(x, edge_index))
+        else:
+            x = self.conv1(x, edge_index).relu()
         x = F.dropout(x, p=self.dropout, training=self.training)
         z = self.conv2(x, edge_index)
         return z
@@ -200,7 +221,7 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag, sn
             
             try:
                 auc = float(roc_auc_score(all_labels, all_scores))
-            except:
+            except Exception:
                 auc = 0.5
 
             # PCA
@@ -336,8 +357,51 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag, sn
             except Exception:
                 pass
 
+            # ── Model-Specific Signatures ───────────────────────────────────
+
+            # GAT: attention edges (already captured in model._attention_edges)
+            attention_edges = None
+            if model_type == 'GAT' and hasattr(model, '_attention_edges') and model._attention_edges:
+                attention_edges = model._attention_edges
+
+            # GCN: dirichlet energy + edge_similarity (BE precompute for FE)
+            dirichlet_energy = None
+            edge_similarity = None
+            smoothness_separation = None
+            if model_type == 'GCN':
+                row_z, col_z = train_edges
+                diff = z[row_z] - z[col_z]
+                dirichlet_energy = float((diff ** 2).sum(dim=1).mean().item())
+                # Edge similarity on FIXED test sets (same index as edge_scores)
+                with torch.no_grad():
+                    z_det = z.detach()
+                    pos_sim = F.cosine_similarity(z_det[test_edges[0, :n_pos]], z_det[test_edges[1, :n_pos]]).cpu().tolist()
+                    neg_sim = F.cosine_similarity(z_det[neg_test[0, :n_neg]], z_det[neg_test[1, :n_neg]]).cpu().tolist()
+                edge_similarity = pos_sim + neg_sim
+                smoothness_separation = float(np.mean(pos_sim) - np.mean(neg_sim))
+
+            # SAGE: score variance under edge dropout (subset for performance)
+            score_variance = None
+            if model_type == 'SAGE':
+                try:
+                    n_eval = min(300, test_edges.size(1))
+                    eval_idx = torch.randperm(test_edges.size(1))[:n_eval]
+                    eval_edges = test_edges[:, eval_idx]
+                    score_samples = []
+                    for _ in range(3):
+                        drop_mask = torch.rand(train_edges.size(1)) > 0.1
+                        sub_edge = train_edges[:, drop_mask]
+                        with torch.no_grad():
+                            z_sub = model.encode(data.x, sub_edge)
+                            scores = torch.sigmoid(model.decode(z_sub, eval_edges)).cpu().numpy()
+                        score_samples.append(scores)
+                    score_variance = float(np.var(score_samples, axis=0).mean())
+                except Exception:
+                    score_variance = None
+
             snapshot = {
                 'epoch': epoch,
+                'model_type': model_type,
                 'edge_scores': edge_scores,
                 'edge_classifications': edge_classifications,
                 'test_edge_common_neighbors': test_edge_common_neighbors,
@@ -345,9 +409,16 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag, sn
                 'knn_preservation': knn_pres,
                 'train_loss': float(loss.item()),
                 'val_loss': float(val_loss.item()),
+                'train_acc': auc,  # Use AUC as train_acc for link prediction
                 'auc': auc,
                 'val_acc': auc,
                 'top_k_links': top_k_links,
+                # Model-specific signatures
+                'attention_edges': attention_edges,
+                'dirichlet_energy': dirichlet_energy,
+                'smoothness_separation': smoothness_separation,
+                'edge_similarity': edge_similarity,
+                'score_variance': score_variance,
             }
             epoch_snapshots.append(snapshot)
             if snapshot_hook:

@@ -98,7 +98,7 @@ class Project(Base):
 
     owner = relationship("User", back_populates="projects")
     experiments = relationship("Experiment", back_populates="project", cascade="all, delete-orphan")
-    training_sessions = relationship("TrainingSession", back_populates="project")
+    training_sessions = relationship("TrainingSession", back_populates="project", cascade="all, delete-orphan")
 
 
 class Dataset(Base):
@@ -170,7 +170,7 @@ class Experiment(Base):
     accuracy = Column(Float)
     loss = Column(Float)
     best_epoch = Column(Integer, default=0)
-    status = Column(String(20), default=SessionStatus.COMPLETED.value, index=True)
+    status = Column(String(20), default=SessionStatus.PENDING.value, index=True)
     mongo_run_id = Column(String(100), index=True)
     mongo_graph_payload_id = Column(String(100), index=True)
     mongo_metrics_id = Column(String(100), index=True)

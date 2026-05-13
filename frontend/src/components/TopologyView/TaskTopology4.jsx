@@ -5,11 +5,9 @@ import usePlayerStore from '../../store/playerStore'
 import NodeHoverCard from './NodeHoverCard'
 import { polygonHull } from 'd3-polygon'
 import { normalizeCommunityCenters } from '../../utils/task4Metrics'
+import { interpolateSnapshots, lerp } from '../../engine/interpolate'
 
-const COMMUNITY_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#eab308', '#a855f7', '#06b6d4', '#ec4899']
-// Reference anchors on a 600-unit world. They are re-scaled to the live
-// container every time dimensions change so the force-graph never over-zooms
-// on small viewports or near-square containers.
+const COMMUNITY_COLORS = ['#a855f7', '#6366f1', '#ec4899', '#34d399', '#fbbf24', '#818cf8', '#f43f5e']
 const ANCHOR_REFERENCE = [
   { x: -220, y: -150 }, { x: 220, y: -150 },
   { x: -220, y: 150 }, { x: 220, y: 150 },
@@ -18,8 +16,6 @@ const ANCHOR_REFERENCE = [
 ]
 const MIN_ZOOM = 0.3
 const MAX_ZOOM = 1.4
-// Keep nodes readable without letting hubs overwhelm the canvas. Bridge pulse
-// is small (+2px) so it doesn't overflow into neighbouring clusters.
 const NODE_SIZE_CAP = 11
 const NODE_SIZE_MIN = 5
 
@@ -28,14 +24,15 @@ export default function TaskTopology4() {
   const selectedCommunityId = useGNNStore(s => s.selectedCommunityId)
   const setSelectedCommunity = useGNNStore(s => s.setSelectedCommunity)
   const setHoveredNode = useGNNStore(s => s.setHoveredNode)
+  const selectedModel = useGNNStore(s => s.selectedModel)
   const { snapshots, currentEpochFloat } = usePlayerStore()
 
   const containerRef = useRef()
   const fgRef = useRef()
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 })
+  // Auto-derive overlay from selectedModel (selected in LeftSidebar)
+  const overlayMode = selectedModel === 'GAT' ? 'attention' : selectedModel === 'GCN' ? 'smoothness' : selectedModel === 'SAGE' ? 'migration' : 'none'
 
-  // Stable graph data shape — nodes & links are re-created in a new reference
-  // only when `rawGraphData` identity changes, not on every render.
   const graphData = useMemo(() => {
     if (!rawGraphData) return null
     return {
@@ -44,34 +41,77 @@ export default function TaskTopology4() {
     }
   }, [rawGraphData])
 
-  // Normalised community anchor centres — rescale whenever the container is
-  // resized so we never depend on a fixed ±220 world that stops fitting.
   const centers = useMemo(
     () => normalizeCommunityCenters(ANCHOR_REFERENCE, dimensions.width, dimensions.height, 600),
     [dimensions.width, dimensions.height]
   )
 
-  // Island force — pull each node toward its predicted community center.
+  const epochInt = useMemo(() => Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat))), [currentEpochFloat, snapshots.length])
+  const frac = currentEpochFloat - epochInt
+  const snapA = snapshots[epochInt] || snapshots[0]
+  const snapB = snapshots[Math.min(epochInt + 1, snapshots.length - 1)]
+  const snap = frac > 0 && snapB ? interpolateSnapshots(snapA, snapB, frac) : snapA
+
+  // Use aligned predictions as primary source (prevents KMeans label swapping)
+  const discretePreds = snapA?.node_predictions_aligned ?? snapA?.node_predictions ?? []
+  const discretePredsB = snapB ? (snapB.node_predictions_aligned ?? snapB.node_predictions ?? []) : discretePreds
+
+  // Pre-compute attention map for GAT overlay (read from snapA directly, no interpolation)
+  const attentionMap = useMemo(() => {
+    if (overlayMode !== 'attention' || !snapA?.attention_edges) return null
+    const map = new Map()
+    for (const e of snapA.attention_edges) {
+      map.set(`${Math.min(e.source, e.target)}-${Math.max(e.source, e.target)}`, e.weight)
+    }
+    return map
+  }, [selectedModel, snapA?.attention_edges])
+
+  // Migration info: which nodes are changing community
+  const migratingNodes = useMemo(() => {
+    if (!snapA || !snapB) return new Set()
+    const s = new Set()
+    const predsA = discretePreds
+    const predsB = discretePredsB
+    for (let i = 0; i < predsA.length; i++) {
+      if (predsA[i] !== predsB[i]) s.add(i)
+    }
+    return s
+  }, [discretePreds, discretePredsB, snapA, snapB])
+
+  const migrationRate = migratingNodes.size / Math.max(1, discretePreds.length)
+
+  // ── Force layout: pull nodes toward community centers with migration lerp ──
   useEffect(() => {
     if (!(fgRef.current && snapshots.length > 0 && graphData)) return
-    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-    const preds = snapshots[epochInt]?.node_predictions || []
     const fg = fgRef.current
 
     fg.d3Force('community', (alpha) => {
       graphData.nodes.forEach((node) => {
-        const cid = preds[node.id] ?? 0
-        const center = centers[cid % centers.length]
-        node.vx += (center.x - node.x) * alpha * 0.08
-        node.vy += (center.y - node.y) * alpha * 0.08
+        const cidA = discretePreds[node.id] ?? 0
+        const cidB = discretePredsB[node.id] ?? cidA
+
+        let targetX, targetY
+        if (cidA !== cidB && frac > 0) {
+          // Node is migrating — lerp between old and new community centers
+          const centerA = centers[cidA % centers.length]
+          const centerB = centers[cidB % centers.length]
+          targetX = centerA.x + (centerB.x - centerA.x) * frac
+          targetY = centerA.y + (centerB.y - centerA.y) * frac
+        } else {
+          const center = centers[cidA % centers.length]
+          targetX = center.x
+          targetY = center.y
+        }
+
+        node.vx += (targetX - node.x) * alpha * 0.08
+        node.vy += (targetY - node.y) * alpha * 0.08
       })
     })
     const charge = fg.d3Force('charge')
     if (charge) charge.strength(-120)
     fg.d3ReheatSimulation()
-  }, [currentEpochFloat, snapshots, graphData, centers])
+  }, [epochInt, snapshots, graphData, centers, discretePreds, discretePredsB, frac])
 
-  // Resize handler — re-attach whenever the container remounts.
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -83,28 +123,20 @@ export default function TaskTopology4() {
     return () => ro.disconnect()
   }, [graphData])
 
-  // Re-fit with generous padding + bound zoom so the view never crushes the
-  // nodes up against the viewport edges (the over-zoom complaint).
   useEffect(() => {
     if (!fgRef.current) return
     const id = requestAnimationFrame(() => {
-      try {
-        fgRef.current && fgRef.current.zoomToFit(600, 80)
-      } catch {
-        /* settle */
-      }
+      try { fgRef.current && fgRef.current.zoomToFit(600, 80) } catch { /* settle */ }
     })
     return () => cancelAnimationFrame(id)
   }, [dimensions.width, dimensions.height])
 
-  // Clamp zoom so manual wheel / pinch cannot explode the canvas.
   const onZoom = useCallback((t) => {
     if (!fgRef.current || !t) return
     if (t.k < MIN_ZOOM) fgRef.current.zoom(MIN_ZOOM, 0)
     else if (t.k > MAX_ZOOM) fgRef.current.zoom(MAX_ZOOM, 0)
   }, [])
 
-  // Fit shortcut — matches the per-task "F" accelerator in the upgrade plan.
   useEffect(() => {
     const handler = (ev) => {
       const t = ev.target
@@ -118,14 +150,12 @@ export default function TaskTopology4() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  // ── Community hulls ────────────────────────────────────────────────────────
   const communityHulls = useMemo(() => {
     if (snapshots.length === 0 || !graphData) return []
-    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-    const preds = snapshots[epochInt]?.node_predictions || []
-
     const communities = {}
     graphData.nodes.forEach((node) => {
-      const cid = preds[node.id] ?? 0
+      const cid = discretePreds[node.id] ?? 0
       if (!communities[cid]) communities[cid] = []
       communities[cid].push([node.x, node.y])
     })
@@ -134,29 +164,52 @@ export default function TaskTopology4() {
       const hull = polygonHull(points)
       return hull ? { cid: parseInt(cid, 10), path: hull } : null
     }).filter(Boolean)
-  }, [currentEpochFloat, snapshots, graphData])
+  }, [currentEpochFloat, snapshots, graphData, discretePreds])
 
+  // ── Node canvas object ─────────────────────────────────────────────────────
   const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
     if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
 
-    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-    const snap = snapshots[epochInt] || snapshots[0]
-    const communityId = snap?.node_predictions?.[node.id] ?? 0
+    const communityId = discretePreds[node.id] ?? 0
     const isBridge = snap?.bridge_nodes?.[node.id] || false
+    const isMigrating = migratingNodes.has(node.id)
     const isSelectedComm = selectedCommunityId != null && communityId === selectedCommunityId
     const isDimmed = selectedCommunityId != null && !isSelectedComm
 
-    const color = COMMUNITY_COLORS[communityId % COMMUNITY_COLORS.length]
+    // Base color: community or smoothness-tinted
+    let color = COMMUNITY_COLORS[communityId % COMMUNITY_COLORS.length]
+    if (overlayMode === 'smoothness' && snap?.local_smoothness) {
+      const sm = snap.local_smoothness[node.id] ?? 0
+      // Normalize: lower smoothness = more oversmoothed = grayish
+      const maxSm = Math.max(...snap.local_smoothness.filter(v => v > 0), 1)
+      const norm = Math.min(1, sm / maxSm)
+      // Blend from gray (#94a3b8) to community color based on smoothness
+      const r = Math.round(lerp(0x94, parseInt(color.slice(1, 3), 16), norm))
+      const g = Math.round(lerp(0xa3, parseInt(color.slice(3, 5), 16), norm))
+      const b = Math.round(lerp(0xb8, parseInt(color.slice(5, 7), 16), norm))
+      color = `rgb(${r},${g},${b})`
+    }
+
     const size = Math.max(NODE_SIZE_MIN, Math.min(NODE_SIZE_CAP, Math.sqrt(node.degree || 1) * 1.6 + 4))
 
     ctx.globalAlpha = isDimmed ? 0.18 : 1
 
-    if (isBridge) {
+    // Bridge pulse (only in default mode)
+    if (isBridge && overlayMode === 'none') {
       const pulse = (Math.sin(Date.now() / 300) + 1) * 1
       ctx.beginPath()
       ctx.arc(node.x, node.y, size + 2 + pulse, 0, 2 * Math.PI)
       ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 + pulse / 10})`
       ctx.lineWidth = 1 / globalScale
+      ctx.stroke()
+    }
+
+    // Migration yellow border
+    if (isMigrating && overlayMode === 'migration') {
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, size + 3, 0, 2 * Math.PI)
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)'
+      ctx.lineWidth = 2 / globalScale
       ctx.stroke()
     }
 
@@ -169,7 +222,9 @@ export default function TaskTopology4() {
     ctx.fillStyle = grad
     ctx.fill()
 
-    if (globalScale > 2) {
+    // Node ID: only show when zoomed deep OR node is migrating/bridge/hovered
+    const showId = globalScale > 0.9 || (isMigrating && overlayMode === 'migration') || (isBridge && overlayMode === 'none')
+    if (showId) {
       ctx.font = `bold ${10 / globalScale}px Inter, sans-serif`
       ctx.textAlign = 'center'
       ctx.fillStyle = 'white'
@@ -177,9 +232,11 @@ export default function TaskTopology4() {
     }
 
     ctx.globalAlpha = 1
-  }, [snapshots, currentEpochFloat, selectedCommunityId])
+  }, [snap, selectedCommunityId, discretePreds, migratingNodes, overlayMode])
 
+  // ── Draw before (hulls + migration trails) ─────────────────────────────────
   const drawBefore = useCallback((ctx) => {
+    // Hulls — thin stroke (6px, not 28px)
     communityHulls.forEach((hull) => {
       const color = COMMUNITY_COLORS[hull.cid % COMMUNITY_COLORS.length]
       const dim = selectedCommunityId != null && hull.cid !== selectedCommunityId
@@ -189,17 +246,58 @@ export default function TaskTopology4() {
       ctx.closePath()
       ctx.lineJoin = 'round'
       ctx.lineCap = 'round'
-      ctx.strokeStyle = dim ? `${color}18` : `${color}44`
-      ctx.lineWidth = 28
+      ctx.strokeStyle = dim ? `${color}18` : `${color}22`
+      ctx.lineWidth = 6
       ctx.stroke()
       ctx.fillStyle = dim ? `${color}08` : `${color}11`
       ctx.fill()
     })
-  }, [communityHulls, selectedCommunityId])
+
+    // Migration trails (only in migration overlay mode)
+    if (overlayMode === 'migration' && snapB && graphData) {
+      for (const nodeId of migratingNodes) {
+        const node = graphData.nodes[nodeId]
+        if (!node) continue
+        const cidA = discretePreds[nodeId] ?? 0
+        const cidB = discretePredsB[nodeId] ?? cidA
+        const fromCenter = centers[cidA % centers.length]
+        const toCenter = centers[cidB % centers.length]
+
+        ctx.beginPath()
+        ctx.moveTo(node.x, node.y)
+        const trailX = fromCenter.x + (toCenter.x - fromCenter.x) * frac
+        const trailY = fromCenter.y + (toCenter.y - fromCenter.y) * frac
+        ctx.lineTo(trailX, trailY)
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)'
+        ctx.lineWidth = 2
+        ctx.setLineDash([3, 3])
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+    }
+  }, [communityHulls, selectedCommunityId, overlayMode, snapB, graphData, migratingNodes, discretePreds, discretePredsB, centers, frac])
 
   if (!graphData) return null
 
-  const modularityQ = snapshots[Math.floor(currentEpochFloat)]?.modularity_q || 0
+  const modularityQ = snap?.modularity_q ?? 0
+  const activeCommunityIds = Array.from(new Set(discretePreds)).sort((a, b) => a - b)
+
+  // Overlay-specific metric
+  const overlayMetric = overlayMode === 'attention'
+    ? snap?.attention_boundary_ratio
+    : overlayMode === 'smoothness'
+      ? snap?.dirichlet_energy
+      : overlayMode === 'migration'
+        ? migrationRate
+        : null
+
+  const overlayMetricLabel = overlayMode === 'attention'
+    ? 'Boundary'
+    : overlayMode === 'smoothness'
+      ? 'Dirichlet'
+      : overlayMode === 'migration'
+        ? 'Migration'
+        : ''
 
   return (
     <div ref={containerRef} className="w-full h-full relative bg-slate-950 overflow-hidden">
@@ -215,26 +313,47 @@ export default function TaskTopology4() {
         maxZoom={MAX_ZOOM}
         onZoom={onZoom}
         linkColor={(link) => {
-          const snap = snapshots[Math.floor(currentEpochFloat)] || snapshots[0]
           if (!snap) return 'rgba(148,163,184,0.05)'
-          const srcComm = snap.node_predictions?.[link.source.id]
-          const tgtComm = snap.node_predictions?.[link.target.id]
+          const srcId = link.source.id ?? link.source
+          const tgtId = link.target.id ?? link.target
+          const srcComm = discretePreds[srcId]
+          const tgtComm = discretePreds[tgtId]
+          if (srcComm == null || tgtComm == null) return 'rgba(148,163,184,0.05)'
+
+          // Attention overlay: highlight cross-community edges with high attention
+          if (overlayMode === 'attention' && attentionMap && srcComm !== tgtComm) {
+            const key = `${Math.min(srcId, tgtId)}-${Math.max(srcId, tgtId)}`
+            const w = attentionMap.get(key) ?? 0
+            if (w > 0.1) {
+              const alpha = 0.3 + w * 0.7
+              return `rgba(251, 191, 36, ${alpha})`
+            }
+          }
+
           return srcComm === tgtComm
             ? `${COMMUNITY_COLORS[srcComm % COMMUNITY_COLORS.length]}33`
             : 'rgba(148, 163, 184, 0.05)'
         }}
         linkWidth={(link) => {
-          const snap = snapshots[Math.floor(currentEpochFloat)] || snapshots[0]
           if (!snap) return 0.5
-          const srcComm = snap.node_predictions?.[link.source.id]
-          const tgtComm = snap.node_predictions?.[link.target.id]
+          const srcId = link.source.id ?? link.source
+          const tgtId = link.target.id ?? link.target
+          const srcComm = discretePreds[srcId]
+          const tgtComm = discretePreds[tgtId]
+          if (srcComm == null || tgtComm == null) return 0.5
+
+          if (overlayMode === 'attention' && attentionMap && srcComm !== tgtComm) {
+            const key = `${Math.min(srcId, tgtId)}-${Math.max(srcId, tgtId)}`
+            const w = attentionMap.get(key) ?? 0
+            if (w > 0.1) return 0.5 + w * 3
+          }
+
           return srcComm === tgtComm ? 1.4 : 0.5
         }}
         cooldownTicks={100}
         backgroundColor="transparent"
         onNodeClick={(node) => {
-          const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-          const cid = snapshots[epochInt]?.node_predictions?.[node.id]
+          const cid = discretePreds[node.id]
           if (cid !== undefined) setSelectedCommunity(cid)
         }}
         onNodeHover={(node) => setHoveredNode(node?.id ?? null)}
@@ -243,8 +362,9 @@ export default function TaskTopology4() {
 
       <NodeHoverCard />
 
-      {/* Q HUD + Legend — top-right to avoid the dark lower-left band */}
+      {/* ── HUD — top-right ──────────────────────────────────────────────────── */}
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 items-end">
+        {/* Q score */}
         <div className="bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-2 border border-white/5 flex items-center gap-2">
           <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra">Q</span>
           <span className={`text-sm font-black font-mono leading-none ${modularityQ > 0.4 ? 'text-green-400' : 'text-amber-400'}`}>
@@ -257,8 +377,22 @@ export default function TaskTopology4() {
             />
           </div>
         </div>
+
+        {/* Overlay metric (auto-shown when model has data) */}
+        {overlayMode !== 'none' && overlayMetric != null && (
+          <div className="bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-white/5 flex items-center gap-2">
+            <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra">{overlayMetricLabel}</span>
+            <span className="text-sm font-black font-mono leading-none text-cyan-400">
+              {overlayMode === 'migration'
+                ? `${(overlayMetric * 100).toFixed(1)}%`
+                : overlayMetric.toFixed(4)}
+            </span>
+          </div>
+        )}
+
+        {/* Community legend */}
         <div className="bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-white/5 flex items-center gap-2 flex-wrap max-w-[220px] justify-end">
-          {COMMUNITY_COLORS.slice(0, 6).map((c, i) => (
+          {activeCommunityIds.map((i) => (
             <button
               key={i}
               onClick={() => setSelectedCommunity(selectedCommunityId === i ? null : i)}
@@ -266,18 +400,26 @@ export default function TaskTopology4() {
                 selectedCommunityId != null && selectedCommunityId !== i ? 'opacity-40 hover:opacity-100' : 'opacity-100'
               }`}
             >
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COMMUNITY_COLORS[i % COMMUNITY_COLORS.length] }} />
               <span className="text-slate-400">C{i}</span>
             </button>
           ))}
-          <div className="flex items-center gap-1 pl-2 border-l border-slate-700/50">
-            <div className="w-2.5 h-2.5 rounded-full border border-white/60 bg-white/10" />
-            <span className="text-nano text-slate-400 font-bold">Bridge</span>
-          </div>
+          {overlayMode === 'none' && (
+            <div className="flex items-center gap-1 pl-2 border-l border-slate-700/50">
+              <div className="w-2.5 h-2.5 rounded-full border border-white/60 bg-white/10" />
+              <span className="text-nano text-slate-400 font-bold">Bridge</span>
+            </div>
+          )}
+          {overlayMode === 'migration' && migratingNodes.size > 0 && (
+            <div className="flex items-center gap-1 pl-2 border-l border-slate-700/50">
+              <div className="w-2.5 h-2.5 rounded-full border-2 border-amber-400 bg-amber-400/20" />
+              <span className="text-nano text-slate-400 font-bold">Migrating</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Fit to view — bottom-right, always reachable */}
+      {/* Fit to view */}
       <button
         onClick={() => { try { fgRef.current && fgRef.current.zoomToFit(400, 80) } catch { /* ignore */ } }}
         className="absolute bottom-3 right-3 z-10 bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-white/5 text-nano font-bold text-slate-300 hover:text-white hover:border-cyan-500/40 transition-colors uppercase tracking-ultra"

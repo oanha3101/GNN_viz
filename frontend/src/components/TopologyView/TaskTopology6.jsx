@@ -12,11 +12,11 @@ import {
 } from '../../utils/task6Structure.js'
 
 const ROLE_COLOR = {
-  isolated: '#ef4444',
-  leaf: '#64748b',
-  bridge: '#f59e0b',
-  hub: '#22d3ee',
-  regular: '#94a3b8',
+  isolated: '#f43f5e',
+  leaf: '#5b5689',
+  bridge: '#fbbf24',
+  hub: '#a855f7',
+  regular: '#a5a0d0',
 }
 
 const SHAPE_TONE = {

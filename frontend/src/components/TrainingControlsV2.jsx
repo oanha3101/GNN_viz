@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Loader2, Play, Save, Square } from 'lucide-react'
-import useAuthStore from '../store/authStore'
+import { useCallback, useEffect, useRef } from 'react'
+import { Play, Square, Loader2 } from 'lucide-react'
 import useGNNStore from '../store/useGNNStore'
 import usePlayerStore from '../store/playerStore'
 import useSessionStore from '../store/sessionStore'
@@ -13,25 +12,27 @@ import {
   generateTask6Mock,
 } from '../mock/generateMockSnapshots'
 import { apiUrl, getAuthHeaders } from '../utils/api'
-import { logger } from '../utils/logger'
 
 const TASK_NAMES = {
-  1: 'Node Classification',
-  2: 'Graph Classification',
-  3: 'Link Prediction',
-  4: 'Community Detection',
-  5: 'Graph Embedding',
-  6: 'Graph Generation',
+  1: 'Phân loại nút',
+  2: 'Phân loại đồ thị',
+  3: 'Dự đoán liên kết',
+  4: 'Phát hiện cộng đồng',
+  5: 'Biểu diễn đồ thị',
+  6: 'Sinh đồ thị',
 }
 
+/**
+ * Save the completed training run to backend database.
+ */
 async function saveExperiment(taskType, modelType, hyperparams, snapshots, graphData, groundTruth, taskData, isMock, extra = {}) {
   try {
     const lastSnap = snapshots[snapshots.length - 1] || {}
     const payload = {
-      title: `Task ${taskType} - ${modelType}`,
+      title: `Task ${taskType} – ${modelType}`,
       task_type: taskType,
       model_type: modelType,
-      dataset_name: extra.dataset_name || hyperparams.dataset || 'cora',
+      dataset_name: hyperparams.dataset || 'cora',
       epoch_count: snapshots.length,
       learning_rate: hyperparams.lr || 0.01,
       hidden_dim: hyperparams.hidden || 64,
@@ -53,20 +54,20 @@ async function saveExperiment(taskType, modelType, hyperparams, snapshots, graph
       body: JSON.stringify(payload),
     })
 
-    if (!res.ok) {
-      logger.error('Failed to save experiment', { status: res.status, body: await res.text() })
-      return null
+    if (res.ok) {
+      const data = await res.json()
+      useSessionStore.getState().setSavedExperiment(data)
+      console.log('Experiment saved:', data)
+      // Notify Library to refresh
+      window.dispatchEvent(new Event('gnn:experiment-saved'))
+      return data
+    } else {
+      console.error('Failed to save experiment:', await res.text())
     }
-
-    const data = await res.json()
-    useSessionStore.getState().setSavedExperiment(data)
-    logger.info('Experiment saved:', data)
-    window.dispatchEvent(new Event('gnn:experiment-saved'))
-    return data
-  } catch (error) {
-    logger.error('Error saving experiment', error)
-    return null
+  } catch (e) {
+    console.error('Error saving experiment:', e)
   }
+  return null
 }
 
 export default function TrainingControlsV2() {
@@ -83,45 +84,32 @@ export default function TrainingControlsV2() {
   const setReportOpen = useGNNStore((s) => s.setReportOpen)
   const createSession = useSessionStore((s) => s.createSession)
   const setSessionStatus = useSessionStore((s) => s.setStatus)
-  const user = useAuthStore((s) => s.user)
 
+  const playerSnapshots = usePlayerStore((s) => s.snapshots)
   const loadSnapshots = usePlayerStore((s) => s.loadSnapshots)
   const setDone = usePlayerStore((s) => s.setDone)
   const resetForTraining = usePlayerStore((s) => s.resetForTraining)
   const trainingDone = usePlayerStore((s) => s.trainingDone)
   const reportVersion = usePlayerStore((s) => s.reportVersion)
-  const isViewer = user?.role === 'viewer'
 
-  const lastPreparedVersion = useRef(0)
-  const [saveState, setSaveState] = useState('idle')
+  // Track whether we've already saved for the current run
+  const lastSavedVersion = useRef(0)
 
+  // Auto-save when training completes
   useEffect(() => {
     if (!trainingDone) return
-    if (reportVersion <= lastPreparedVersion.current) return
-    const snapshots = usePlayerStore.getState().snapshots
-    if (snapshots.length === 0) return
+    if (reportVersion <= lastSavedVersion.current) return
+    const snaps = usePlayerStore.getState().snapshots
+    if (snaps.length === 0) return
 
-    lastPreparedVersion.current = reportVersion
-    setSaveState('ready')
-  }, [trainingDone, reportVersion])
+    lastSavedVersion.current = reportVersion
 
-  const handleSaveExperiment = useCallback(async () => {
-    if (saveState === 'saving' || saveState === 'saved') {
-      return
-    }
-
-    const snapshots = usePlayerStore.getState().snapshots
-    if (snapshots.length === 0) {
-      return
-    }
-
-    setSaveState('saving')
     const gnnState = useGNNStore.getState()
-    const saved = await saveExperiment(
+    saveExperiment(
       gnnState.selectedTask,
       gnnState.selectedModel,
       gnnState.hyperparams,
-      snapshots,
+      snaps,
       gnnState.graphData,
       gnnState.groundTruth,
       gnnState.taskData,
@@ -132,25 +120,16 @@ export default function TrainingControlsV2() {
         session_id: useSessionStore.getState().sessionId,
         upload_metadata: gnnState.uploadMetadata,
         uploaded_file_path: gnnState.uploadedFilePath,
-        dataset_name: gnnState.datasetName,
       },
     )
-
-    setSaveState(saved ? 'saved' : 'ready')
-  }, [saveState])
+  }, [trainingDone, reportVersion])
 
   const handleStart = useCallback(async () => {
     if (isTraining) {
       return
     }
-    if (isViewer) {
-      logger.warn('Viewer attempted to start training')
-      return
-    }
-
     resetForTraining()
     setReportOpen(false)
-    setSaveState('idle')
 
     if (mockMode) {
       setTraining(true, 0)
@@ -200,89 +179,66 @@ export default function TrainingControlsV2() {
             setTrainMask(result.trainMask)
             loadSnapshots(result.snapshots)
         }
-
         setDone(result.snapshots.length - 1)
         setTraining(false, 1)
       }, 280)
-      return
-    }
-
-    const gnnState = useGNNStore.getState()
-    if (!gnnState.activeProjectId || !gnnState.activeDatasetVersionId) {
-      alert('Please select a project and dataset version before starting live training.')
-      return
-    }
-
-    const uploadedPath = gnnState.uploadedFilePath
-    if (!uploadedPath) {
-      alert('The selected dataset version has no processed training artifact yet. Upload or sync the dataset in Lab first.')
-      return
-    }
-
-    let sessionId = useSessionStore.getState().sessionId
-    try {
-      const session = await createSession({
-        project_id: gnnState.activeProjectId,
-        dataset_version_id: gnnState.activeDatasetVersionId,
-        task: selectedTask,
-        model: gnnState.selectedModel,
-        dataset: gnnState.datasetName || hyperparams.dataset || 'cora',
-        epochs: hyperparams.epochs,
-        lr: hyperparams.lr,
-        hidden: hyperparams.hidden,
-        config: {
+    } else {
+      // Upload file path if available
+      const uploadedPath = useGNNStore.getState().uploadedFilePath
+      if (!uploadedPath) {
+        alert("⚠️ CHƯA CÓ DỮ LIỆU UPLOAD!\n\nVui lòng nhấn nút 'Upload Data' ở bảng điều khiển bên phải để tải dữ liệu của bạn lên trước khi chạy mô hình thực tế.")
+        return
+      }
+      const gnnState = useGNNStore.getState()
+      if (!gnnState.activeProjectId || !gnnState.activeDatasetVersionId) {
+        alert("â ï¸ THIáº¾U PROJECT / DATASET VERSION!\n\nHÃ£y vá» Workspace Ä‘á»ƒ chá»n project vĂ  dataset version trÆ°á»›c khi cháº¡y huáº¥n luyá»‡n live.")
+        return
+      }
+      let sessionId = useSessionStore.getState().sessionId
+      try {
+        const session = await createSession({
+          project_id: gnnState.activeProjectId,
+          dataset_version_id: gnnState.activeDatasetVersionId,
+          task: selectedTask,
+          model: gnnState.selectedModel,
+          dataset: hyperparams.dataset || 'cora',
+          epochs: hyperparams.epochs,
+          lr: hyperparams.lr,
+          hidden: hyperparams.hidden,
+          config: {
+            dropout: hyperparams.dropout,
+            heads: hyperparams.heads,
+            aggregator: hyperparams.aggregator,
+          },
+        })
+        sessionId = session.session_id
+        setSessionStatus('pending')
+      } catch (e) {
+        console.error('Failed to create session before training:', e)
+      }
+      const taskConfig = useGNNStore.getState().taskConfig || {}
+      window.dispatchEvent(new CustomEvent('gnn:start-training', {
+        detail: {
+          task: selectedTask,
+          model: gnnState.selectedModel,
+          dataset: hyperparams.dataset || 'cora',
+          epochs: hyperparams.epochs,
+          lr: hyperparams.lr,
+          hidden: hyperparams.hidden,
           dropout: hyperparams.dropout,
           heads: hyperparams.heads,
           aggregator: hyperparams.aggregator,
+          project_id: gnnState.activeProjectId,
+          dataset_version_id: gnnState.activeDatasetVersionId,
+          session_id: sessionId,
+          ...(uploadedPath ? { uploaded_file_path: uploadedPath } : {}),
+          // Task-specific config from upload
+          ...taskConfig,
         },
-      })
-      sessionId = session.session_id
-      setSessionStatus('pending')
-    } catch (error) {
-      logger.error('Failed to create session before training', error)
-      setTraining(false, 0)
-      return
+      }))
+      setTraining(true, 0)
     }
-
-    const taskConfig = gnnState.taskConfig || {}
-    window.dispatchEvent(new CustomEvent('gnn:start-training', {
-      detail: {
-        task: selectedTask,
-        model: gnnState.selectedModel,
-        dataset: gnnState.datasetName || hyperparams.dataset || 'cora',
-        epochs: hyperparams.epochs,
-        lr: hyperparams.lr,
-        hidden: hyperparams.hidden,
-        dropout: hyperparams.dropout,
-        heads: hyperparams.heads,
-        aggregator: hyperparams.aggregator,
-        project_id: gnnState.activeProjectId,
-        dataset_version_id: gnnState.activeDatasetVersionId,
-        session_id: sessionId,
-        auth_token: useAuthStore.getState().token,
-        uploaded_file_path: uploadedPath,
-        ...taskConfig,
-      },
-    }))
-    setTraining(true, 0)
-  }, [
-    createSession,
-    hyperparams,
-    isTraining,
-    isViewer,
-    loadSnapshots,
-    mockMode,
-    resetForTraining,
-    selectedTask,
-    setDone,
-    setGraphData,
-    setGroundTruth,
-    setReportOpen,
-    setSessionStatus,
-    setTaskData,
-    setTraining,
-    setTrainMask,
-  ])
+  }, [hyperparams, isTraining, mockMode, selectedTask, setTraining, setGraphData, setGroundTruth, setTrainMask, setTaskData, loadSnapshots, setDone, resetForTraining, setReportOpen])
 
   useEffect(() => {
     const handler = () => {
@@ -301,7 +257,7 @@ export default function TrainingControlsV2() {
 
     const sessionId = useSessionStore.getState().sessionId
     if (!sessionId) {
-      logger.error('Cannot stop live training without a session id')
+      console.error('Cannot stop live training without a session id')
       return
     }
 
@@ -310,8 +266,8 @@ export default function TrainingControlsV2() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       })
-    } catch (error) {
-      logger.error('Failed to notify backend to stop', error)
+    } catch (e) {
+      console.error('Failed to notify backend to stop:', e)
     }
     setSessionStatus('stopped')
     setTraining(false, trainingProgress)
@@ -322,11 +278,10 @@ export default function TrainingControlsV2() {
       <div className="flex items-center justify-between">
         <button
           onClick={isTraining ? handleStop : handleStart}
-          disabled={!isTraining && isViewer}
-          className={`flex-1 rounded-xl px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 ${
+          className={`flex-1 rounded-xl px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
             isTraining
-              ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
-              : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50'
+              ? 'bg-aurora-rose/20 text-aurora-rose border border-aurora-rose/30 hover:bg-aurora-rose/30 shadow-[0_0_15px_rgba(225,29,72,0.15)]'
+              : 'bg-amethyst/20 text-amethyst border border-amethyst/30 hover:bg-amethyst/30 shadow-[0_0_20px_rgba(147,51,234,0.2)]'
           }`}
         >
           {isTraining ? (
@@ -339,66 +294,39 @@ export default function TrainingControlsV2() {
             </>
           )}
         </button>
-        <button
-          type="button"
-          onClick={() => void handleSaveExperiment()}
-          disabled={isTraining || !trainingDone || saveState === 'idle' || saveState === 'saving' || saveState === 'saved'}
-          className={`ml-2 rounded-xl border px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 ${
-            saveState === 'ready'
-              ? 'animate-pulse border-amber-400/40 bg-amber-400/15 text-amber-200 shadow-amber-500/20'
-              : saveState === 'saved'
-                ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
-                : 'border-slate-800 bg-slate-900/60 text-slate-500 disabled:cursor-not-allowed disabled:opacity-60'
-          }`}
-        >
-          <Save size={12} />
-          {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? 'Saved' : 'Save Experiment'}
-        </button>
       </div>
 
       <div className="flex items-center gap-2">
         {isTraining ? (
           <div className="flex-1 flex flex-col gap-1">
-            <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 transition-[width] duration-150"
-                style={{ width: `${trainingProgress * 100}%` }}
-              />
-            </div>
-            <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-tighter">
-              <span className="text-slate-500 flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Progress</span>
-              <span className="text-cyan-400 font-mono">{Math.round(trainingProgress * 100)}%</span>
-            </div>
+             <div className="h-1.5 w-full rounded-full bg-black/40 border border-white/5 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-amethyst via-indigo-500 to-aurora-blue transition-[width] duration-150"
+                  style={{ width: `${trainingProgress * 100}%` }}
+                />
+              </div>
+              <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-tighter">
+                <span className="text-twilight flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Progress</span>
+                <span className="text-amethyst font-mono">{Math.round(trainingProgress * 100)}%</span>
+              </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-between px-3 py-1.5 rounded-lg border border-slate-800/60 bg-slate-900/30">
+          <div className="flex-1 flex items-center justify-between px-3 py-1.5 rounded-lg border border-white/5 bg-black/20 backdrop-blur-sm">
             <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-slate-500 font-bold">Epochs</span>
-              <span className="text-[10px] font-mono text-slate-300">{hyperparams.epochs}</span>
+              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">Epochs</span>
+              <span className="text-[10px] font-mono text-starlight">{hyperparams.epochs}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-slate-500 font-bold">LR</span>
-              <span className="text-[10px] font-mono text-slate-300">{hyperparams.lr}</span>
+              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">LR</span>
+              <span className="text-[10px] font-mono text-starlight">{hyperparams.lr}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-slate-500 font-bold">Hidden</span>
-              <span className="text-[10px] font-mono text-slate-300">{hyperparams.hidden}</span>
+              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">Hidden</span>
+              <span className="text-[10px] font-mono text-starlight">{hyperparams.hidden}</span>
             </div>
           </div>
         )}
       </div>
-
-      {!isTraining && trainingDone ? (
-        <div className={`rounded-xl border px-3 py-2 text-[10px] font-semibold ${
-          saveState === 'saved'
-            ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
-            : 'border-amber-500/20 bg-amber-500/10 text-amber-200'
-        }`}>
-          {saveState === 'saved'
-            ? 'This run has been saved to Experiment Hub.'
-            : 'Training is complete. Save Experiment is now ready.'}
-        </div>
-      ) : null}
     </div>
   )
 }

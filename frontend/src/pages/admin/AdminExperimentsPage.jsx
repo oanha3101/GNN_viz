@@ -5,6 +5,13 @@ import LoadingState from '../../components/primitives/LoadingState'
 import { apiJson, normalizeCollectionPayload } from '../../utils/api'
 import { SectionCard } from '../shared/PageBlocks'
 
+const STATUS_COLORS = {
+  completed: 'bg-aurora-green',
+  running: 'bg-amethyst',
+  failed: 'bg-aurora-rose',
+  queued: 'bg-aurora-amber',
+}
+
 export default function AdminExperimentsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -40,14 +47,28 @@ export default function AdminExperimentsPage() {
       {items.length ? (
         <div className="space-y-3">
           {items.map((item) => (
-            <div key={item.id} className="rounded-3xl border border-slate-800/70 bg-slate-950/50 p-5">
-              <div className="text-base font-semibold text-white">{item.title}</div>
-              <div className="mt-1 text-sm text-slate-400">Task {item.task_type} • {item.model_type} • {item.dataset_name}</div>
-              <div className="mt-3 grid gap-2 text-xs text-slate-500 md:grid-cols-2 xl:grid-cols-4">
-                <span>Epochs: {item.epoch_count}</span>
-                <span>Best epoch: {item.best_epoch}</span>
-                <span>Status: {item.status}</span>
-                <span>Retention: {item.retention_state}</span>
+            <div key={item.id} className="glass-card p-5">
+              <div className="text-base font-semibold text-white-star">{item.title}</div>
+              <div className="mt-1 text-sm text-twilight">
+                {item.task_type} • {item.model_type} • {item.dataset_name}
+              </div>
+              <div className="mt-3 grid gap-2 text-xs text-text-shadow md:grid-cols-2 xl:grid-cols-4">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-moonlight" />
+                  Epochs: {item.epoch_count}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-aurora-cyan" />
+                  Best: {item.best_epoch}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[item.status] || 'bg-twilight'}`} />
+                  Status: {item.status}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-aurora-amber" />
+                  Retention: {item.retention_state}
+                </span>
               </div>
             </div>
           ))}

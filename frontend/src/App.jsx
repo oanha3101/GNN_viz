@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { Agentation } from 'agentation'
 import AdminLayout from './layouts/AdminLayout'
 import AppLayout from './layouts/AppLayout'
 import PublicAuthLayout from './layouts/PublicAuthLayout'
@@ -23,9 +24,9 @@ const AdminAuditPage = lazy(() => import('./pages/admin/AdminAuditPage'))
 
 function FullscreenLoader() {
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 flex items-center justify-center">
-      <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950/70 px-5 py-4 text-sm text-slate-300">
-        <Loader2 size={16} className="animate-spin text-cyan-300" />
+    <div className="min-h-screen bg-[#0a0514] text-[#f1f0ff] flex items-center justify-center">
+      <div className="inline-flex items-center gap-3 rounded-2xl border border-[rgba(168,85,247,0.15)] bg-[#0f0a1e]/70 px-5 py-4 text-sm text-[#a5a0d0]">
+        <Loader2 size={16} className="animate-spin text-[#a855f7]" />
         Dang khoi tao shell san pham...
       </div>
     </div>
@@ -35,8 +36,8 @@ function FullscreenLoader() {
 function RouteLoader() {
   return (
     <div className="min-h-[320px] flex items-center justify-center">
-      <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950/70 px-5 py-4 text-sm text-slate-300">
-        <Loader2 size={16} className="animate-spin text-cyan-300" />
+      <div className="inline-flex items-center gap-3 rounded-2xl border border-[rgba(168,85,247,0.15)] bg-[#0f0a1e]/70 px-5 py-4 text-sm text-[#a5a0d0]">
+        <Loader2 size={16} className="animate-spin text-[#a855f7]" />
         Dang tai route...
       </div>
     </div>
@@ -79,6 +80,13 @@ export default function App() {
   }
 
   return (
+    <>
+    {import.meta.env.DEV && (
+      <Agentation
+        endpoint="http://localhost:4747"
+        onSessionCreated={(sessionId) => console.log('[Agentation] session:', sessionId)}
+      />
+    )}
     <Routes>
       <Route element={<PublicOnlyGuard user={user} />}>
         <Route element={<PublicAuthLayout />}>
@@ -116,6 +124,7 @@ export default function App() {
       <Route path="/" element={<Navigate to={getDefaultPathForUser(user)} replace />} />
       <Route path="*" element={<Navigate to={getDefaultPathForUser(user)} replace />} />
     </Routes>
+    </>
   )
 }
 

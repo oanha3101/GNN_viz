@@ -67,6 +67,8 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
 
             # ── Attention Weights (GAT only) ────────────────────────────────────
             attn_data = None
+            attention_edges = None
+            attention_per_head = None
             if len(eval_outputs) > 2 and eval_outputs[2] is not None:
                 attn_raw = eval_outputs[2].cpu().numpy()
                 # Normalize to [0, 1] per-edge
@@ -75,6 +77,17 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
                     attn_data = ((attn_raw - attn_min) / (attn_max - attn_min)).tolist()
                 else:
                     attn_data = attn_raw.tolist()
+
+                # Attention edges: aggregated undirected, no self-loops
+                if hasattr(model, '_attention_edges') and model._attention_edges:
+                    attention_edges = [{'source': u, 'target': v, 'weight': w} for u, v, w in model._attention_edges]
+
+                # Per-head attention for head selector
+                if hasattr(model, '_per_head_attn') and model._per_head_attn:
+                    attention_per_head = {}
+                    for (u, v), heads in model._per_head_attn.items():
+                        key = f"{min(u,v)}-{max(u,v)}"
+                        attention_per_head[key] = heads
 
             # ── Explainability Data ─────────────────────────────────────────────
             
@@ -132,6 +145,7 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
             # ── Build Snapshot ──────────────────────────────────────────────────
             snapshot = {
                 'epoch': epoch,
+                'model_type': config.get('model', 'GCN'),
                 'node_predictions': pred.cpu().tolist(),
                 'node_probabilities': node_probabilities,
                 'node_confidence': node_confidence,
@@ -140,6 +154,8 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
                 'neighbor_majority': neighbor_majority,
                 'embeddings_2d': emb_2d,
                 'attention_weights': attn_data,
+                'attention_edges': attention_edges,
+                'attention_per_head': attention_per_head,
                 'train_loss': float(loss.item()),
                 'val_loss': float(val_loss.item()),
                 'train_acc': float(train_acc.item()),

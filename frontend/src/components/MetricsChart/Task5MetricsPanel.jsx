@@ -16,12 +16,16 @@ const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'outliers', label: 'Outliers' },
   { id: 'knn', label: 'KNN' },
+  { id: 'stress', label: 'Stress' },
+  { id: 'importance', label: 'Importance' },
   { id: 'diagnostics', label: 'Diagnostics' },
+  { id: 'signature', label: 'Signature' },
 ]
 
 export default function Task5MetricsPanel() {
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const graphData = useGNNStore((s) => s.graphData)
+  const selectedModel = useGNNStore((s) => s.selectedModel)
   const setOutlierPulse = useGNNStore((s) => s.setOutlierPulse)
   const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
   const [activeTab, setActiveTab] = useState('overview')
@@ -64,7 +68,10 @@ export default function Task5MetricsPanel() {
       {activeTab === 'overview' && <OverviewTab snap={snap} snapshots={snapshots} epochInt={epochInt} />}
       {activeTab === 'outliers' && <OutliersTab snap={snap} onOutlierClick={handleOutlierClick} graphData={graphData} />}
       {activeTab === 'knn' && <KnnTab snap={snap} graphData={graphData} />}
+      {activeTab === 'stress' && <StressTab snap={snap} snapshots={snapshots} epochInt={epochInt} />}
+      {activeTab === 'importance' && <ImportanceTab snap={snap} graphData={graphData} onNodeClick={handleOutlierClick} />}
       {activeTab === 'diagnostics' && <DiagnosticsTab snap={snap} />}
+      {activeTab === 'signature' && <SignatureTab snapshots={snapshots} epochInt={epochInt} selectedModel={selectedModel} />}
     </div>
   )
 }
@@ -112,6 +119,7 @@ function OverviewTab({ snap, snapshots, epochInt }) {
               <Line yAxisId="pct" type="monotone" dataKey="knn" stroke="#22d3ee" strokeWidth={2} dot={false} name="kNN %" />
               <Line yAxisId="pct" type="monotone" dataKey="auc" stroke="#a855f7" strokeWidth={2} dot={false} name="AUC %" />
               <Line yAxisId="loss" type="monotone" dataKey="loss" stroke="#f59e0b" strokeWidth={2} dot={false} name="Loss" />
+              <ReferenceLine x={epochInt} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="4 3" yAxisId="pct" />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -232,6 +240,151 @@ function KnnTab({ snap, graphData }) {
   )
 }
 
+// ── Stress / Distortion ─────────────────────────────────────────────
+function StressTab({ snap, snapshots, epochInt }) {
+  const history = useMemo(
+    () => snapshots.slice(0, epochInt + 1).map((s, i) => ({
+      epoch: i,
+      stress: (s.stress_score ?? 0) * 100,
+      loss: s.reconstruction_loss ?? s.train_loss ?? 0,
+    })),
+    [snapshots, epochInt],
+  )
+
+  const stressVal = snap?.stress_score ?? 0
+
+  return (
+    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+      <div className="grid grid-cols-2 gap-2">
+        <Metric label="Stress" value={`${(stressVal * 100).toFixed(1)}%`} tone={stressVal < 0.3 ? 'emerald' : stressVal < 0.6 ? 'amber' : 'red'} />
+        <Metric label="Loss" value={(snap?.reconstruction_loss ?? snap?.train_loss ?? 0).toFixed(4)} tone="slate" />
+      </div>
+
+      <Panel title="Kruskal Stress / Epoch">
+        <div className="h-44 w-full p-1">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+              <Tooltip
+                contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }}
+                itemStyle={{ color: '#e2e8f0' }}
+                labelStyle={{ color: '#94a3b8' }}
+              />
+              <ReferenceLine y={30} stroke="#22d3ee" strokeDasharray="4 3" label={{ value: 'good', position: 'right', fill: '#22d3ee', fontSize: 9 }} />
+              <Line type="monotone" dataKey="stress" stroke="#f59e0b" strokeWidth={2} dot={false} name="Stress %" />
+              <ReferenceLine x={epochInt} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="4 3" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Panel>
+      <p className="text-nano text-slate-500 px-1">
+        Stress đo sự biến dạng giữa khoảng cách đồ thị gốc và khoảng cách embedding.
+        Dưới 30% = tốt (embedding bảo toàn cấu trúc). Trên 60% = embedding bị méo nhiều.
+      </p>
+    </div>
+  )
+}
+
+// ── Node Importance Ranking ─────────────────────────────────────────
+function ImportanceTab({ snap, graphData, onNodeClick }) {
+  const [sortBy, setSortBy] = useState('norm')
+  const [sortDir, setSortDir] = useState(-1) // -1 = desc
+
+  const norms = snap?.embedding_norms ?? []
+  const knnPres = snap?.per_node_knn_preservation ?? []
+  const outliers = snap?.outlier_scores ?? []
+
+  const outlierMap = useMemo(() => {
+    const m = new Map()
+    for (const o of outliers) m.set(o.node_id, o)
+    return m
+  }, [outliers])
+
+  const rows = useMemo(() => {
+    if (!graphData?.nodes?.length) return []
+    const out = graphData.nodes.map((n) => {
+      const norm = norms[n.id] ?? 0
+      const knn = knnPres[n.id] ?? 0
+      const outlier = outlierMap.get(n.id)
+      const outlierScore = outlier?.avg_distance_to_neighbors ?? 0
+      const isOutlier = outlier?.is_outlier ?? false
+      // Composite importance: higher norm + lower knn + higher outlier = more "influential"
+      const importance = norm * 0.4 + (1 - knn) * 0.3 + outlierScore * 0.3
+      return {
+        id: n.id,
+        degree: n.degree ?? 0,
+        norm,
+        knn,
+        outlierScore,
+        isOutlier,
+        importance,
+      }
+    })
+    return out
+  }, [graphData, norms, knnPres, outlierMap])
+
+  const sorted = useMemo(() => {
+    const key = sortBy === 'norm' ? 'norm' : sortBy === 'knn' ? 'knn' : sortBy === 'outlier' ? 'outlierScore' : 'importance'
+    return [...rows].sort((a, b) => (a[key] - b[key]) * sortDir)
+  }, [rows, sortBy, sortDir])
+
+  const handleSort = (col) => {
+    if (sortBy === col) setSortDir((d) => -d)
+    else { setSortBy(col); setSortDir(-1) }
+  }
+
+  const SortHeader = ({ col, label }) => (
+    <button
+      onClick={() => handleSort(col)}
+      className={`text-left text-nano font-bold uppercase tracking-ultra ${sortBy === col ? 'text-cyan-400' : 'text-slate-500'} hover:text-slate-300 transition-colors`}
+    >
+      {label} {sortBy === col ? (sortDir > 0 ? '↑' : '↓') : ''}
+    </button>
+  )
+
+  return (
+    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+      <Panel title={`Node Importance (${sorted.length} nodes)`}>
+        <div className="divide-y divide-slate-800/80 max-h-64 overflow-y-auto">
+          <div className="flex items-center gap-2 px-2 py-1 bg-slate-900/60">
+            <div className="w-10"><SortHeader col="id" label="ID" /></div>
+            <div className="w-12"><SortHeader col="degree" label="Deg" /></div>
+            <div className="flex-1"><SortHeader col="norm" label="Norm" /></div>
+            <div className="flex-1"><SortHeader col="knn" label="kNN" /></div>
+            <div className="flex-1"><SortHeader col="outlier" label="Outlier" /></div>
+            <div className="flex-1"><SortHeader col="importance" label="Score" /></div>
+          </div>
+          {sorted.slice(0, 50).map((r) => (
+            <button
+              key={r.id}
+              onClick={() => onNodeClick(r.id)}
+              className="w-full flex items-center gap-2 px-2 py-1 hover:bg-slate-800/50 transition-colors text-left"
+            >
+              <div className="w-10 font-mono text-micro text-slate-400">#{r.id}</div>
+              <div className="w-12 font-mono text-micro text-slate-300">{r.degree}</div>
+              <div className="flex-1 font-mono text-micro text-cyan-300">{r.norm.toFixed(2)}</div>
+              <div className="flex-1 font-mono text-micro text-indigo-300">{r.knn.toFixed(3)}</div>
+              <div className="flex-1 font-mono text-micro text-red-300">{r.outlierScore.toFixed(3)}</div>
+              <div className="flex-1">
+                <span className={`font-mono text-micro font-bold ${r.importance > 0.5 ? 'text-amber-400' : 'text-slate-400'}`}>
+                  {r.importance.toFixed(3)}
+                </span>
+                {r.isOutlier && <span className="ml-1 text-nano text-red-400">OUT</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+      </Panel>
+      <p className="text-nano text-slate-500 px-1">
+        Click một hàng để pulse node trên canvas. Score = 0.4×norm + 0.3×(1-kNN) + 0.3×outlier.
+        Node có score cao = ảnh hưởng lớn đến cấu trúc embedding.
+      </p>
+    </div>
+  )
+}
+
 // ── Diagnostics ─────────────────────────────────────────────────────
 function DiagnosticsTab({ snap }) {
   const norms = snap?.embedding_norms ?? []
@@ -333,6 +486,151 @@ function Panel({ title, children }) {
         <div className="text-nano uppercase tracking-ultra text-slate-400 font-bold">{title}</div>
       </div>
       <div>{children}</div>
+    </div>
+  )
+}
+
+// ── Signature ─────────────────────────────────────────────────────
+function SignatureTab({ snapshots, epochInt, selectedModel }) {
+  const model = selectedModel || 'GCN'
+
+  const history = useMemo(() => {
+    return snapshots.slice(0, epochInt + 1).map((s, i) => ({
+      epoch: i,
+      dirichlet_energy: s.dirichlet_energy ?? null,
+      local_smoothness_avg: Array.isArray(s.local_smoothness)
+        ? s.local_smoothness.filter(v => v > 0).reduce((a, b) => a + b, 0) / Math.max(1, s.local_smoothness.filter(v => v > 0).length)
+        : null,
+      sage_robustness: s.sage_robustness ?? null,
+    }))
+  }, [snapshots, epochInt])
+
+  const snap = snapshots[epochInt]
+
+  // GAT: attention weight histogram
+  const attnHistogram = useMemo(() => {
+    if (model !== 'GAT' || !snap?.attention_edges) return null
+    const bins = Array.from({ length: 10 }, (_, i) => ({ label: (i / 10).toFixed(1), count: 0 }))
+    for (const e of snap.attention_edges) {
+      const bin = Math.min(9, Math.floor(e.weight * 10))
+      bins[bin].count++
+    }
+    return bins
+  }, [model, snap?.attention_edges])
+
+  const attnStats = useMemo(() => {
+    if (model !== 'GAT' || !snap?.attention_edges) return null
+    const weights = snap.attention_edges.map(e => e.weight)
+    if (!weights.length) return null
+    return {
+      avg: weights.reduce((a, b) => a + b, 0) / weights.length,
+      max: Math.max(...weights),
+      min: Math.min(...weights),
+      count: weights.length,
+    }
+  }, [model, snap?.attention_edges])
+
+  return (
+    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="text-[9px] uppercase font-black tracking-widest text-slate-400">Model:</div>
+        <div className="text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded" style={{
+          color: model === 'GAT' ? '#fbbf24' : model === 'SAGE' ? '#22d3ee' : '#34d399',
+          backgroundColor: (model === 'GAT' ? '#fbbf24' : model === 'SAGE' ? '#22d3ee' : '#34d399') + '15',
+          border: `1px solid ${(model === 'GAT' ? '#fbbf24' : model === 'SAGE' ? '#22d3ee' : '#34d399')}30`,
+        }}>{model}</div>
+      </div>
+
+      {model === 'GAT' && (
+        <>
+          {attnStats && (
+            <div className="grid grid-cols-4 gap-2">
+              <Metric label="Edges" value={attnStats.count} tone="amber" />
+              <Metric label="Avg W" value={attnStats.avg.toFixed(3)} tone="amber" />
+              <Metric label="Max W" value={attnStats.max.toFixed(3)} tone="emerald" />
+              <Metric label="Min W" value={attnStats.min.toFixed(3)} tone="slate" />
+            </div>
+          )}
+          {attnHistogram && (
+            <Panel title="Attention Weight Distribution">
+              <div className="h-40 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={attnHistogram} margin={{ top: 6, right: 10, bottom: 14, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} label={{ value: 'Weight', position: 'insideBottom', offset: -2, fill: '#94a3b8', fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} itemStyle={{ color: '#e2e8f0' }} />
+                    <Bar dataKey="count" name="Edges" fill="#fbbf24" fillOpacity={0.7} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Panel>
+          )}
+          {!attnStats && <div className="text-center text-micro text-slate-500 py-8">No attention data for this epoch.</div>}
+        </>
+      )}
+
+      {model === 'GCN' && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Metric label="Dirichlet E" value={snap?.dirichlet_energy?.toFixed(3) ?? '—'} tone="emerald" />
+            <Metric label="Avg Smooth" value={
+              snap?.local_smoothness ? (snap.local_smoothness.filter(v => v > 0).reduce((a, b) => a + b, 0) / Math.max(1, snap.local_smoothness.filter(v => v > 0).length)).toFixed(3) : '—'
+            } tone="cyan" />
+          </div>
+          <Panel title="Dirichlet Energy / Epoch">
+            <div className="h-36 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} itemStyle={{ color: '#e2e8f0' }} />
+                  <Line type="monotone" dataKey="dirichlet_energy" stroke="#34d399" strokeWidth={2} dot={false} connectNulls />
+                  <ReferenceLine x={epochInt} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="4 3" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
+          <Panel title="Avg Local Smoothness / Epoch">
+            <div className="h-36 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} itemStyle={{ color: '#e2e8f0' }} />
+                  <Line type="monotone" dataKey="local_smoothness_avg" stroke="#22d3ee" strokeWidth={2} dot={false} connectNulls />
+                  <ReferenceLine x={epochInt} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="4 3" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
+        </>
+      )}
+
+      {model === 'SAGE' && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Metric label="Robustness" value={snap?.sage_robustness?.toFixed(3) ?? '—'} tone={snap?.sage_robustness != null ? (snap.sage_robustness > 0.8 ? 'emerald' : snap.sage_robustness > 0.5 ? 'amber' : 'red') : 'slate'} />
+            <Metric label="Quality" value={snap?.sage_robustness != null ? (snap.sage_robustness > 0.8 ? 'High' : snap.sage_robustness > 0.5 ? 'Medium' : 'Low') : '—'} tone={snap?.sage_robustness != null ? (snap.sage_robustness > 0.8 ? 'emerald' : snap.sage_robustness > 0.5 ? 'amber' : 'red') : 'slate'} />
+          </div>
+          <Panel title="SAGE Robustness / Epoch">
+            <div className="h-40 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }} itemStyle={{ color: '#e2e8f0' }} />
+                  <Line type="monotone" dataKey="sage_robustness" stroke="#22d3ee" strokeWidth={2} dot={false} connectNulls />
+                  <ReferenceLine x={epochInt} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="4 3" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
+        </>
+      )}
     </div>
   )
 }

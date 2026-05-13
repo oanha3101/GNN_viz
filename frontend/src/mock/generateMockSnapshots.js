@@ -638,9 +638,93 @@ export function generateTask4Mock(numCommunities = 4, nodesPerComm = 12, numEpoc
       return hasInterComm
     })
 
+    // Bridge strength: 1 - (max fraction of neighbors in one community)
+    const bridgeStrengths = Array.from({ length: numNodes }, (_, i) => {
+      if (!bridgeNodes[i]) return 0
+      const myComm = predictions[i]
+      const neighborComms = {}
+      let total = 0
+      links.forEach(l => {
+        const s = typeof l.source === 'object' ? l.source.id : l.source
+        const t = typeof l.target === 'object' ? l.target.id : l.target
+        if (s === i && predictions[t] !== myComm) { neighborComms[predictions[t]] = (neighborComms[predictions[t]] || 0) + 1; total++ }
+        if (t === i && predictions[s] !== myComm) { neighborComms[predictions[s]] = (neighborComms[predictions[s]] || 0) + 1; total++ }
+      })
+      if (total === 0) return 0
+      const maxFrac = Math.max(...Object.values(neighborComms)) / total
+      return Math.max(0, Math.min(1, 1 - maxFrac))
+    })
+
+    // Silhouette-like score per node (distance to own centroid vs nearest other)
+    const communityCentroids = Array.from({ length: numCommunities }, (_, c) => {
+      const members = predictions.map((p, i) => p === c ? i : -1).filter(i => i >= 0)
+      if (members.length === 0) return [0, 0]
+      // Use seed-based positions
+      const cx = members.reduce((s, i) => s + (seededRand(i * 41) - 0.5) * 8, 0) / members.length
+      const cy = members.reduce((s, i) => s + (seededRand(i * 73) - 0.5) * 8, 0) / members.length
+      return [cx, cy]
+    })
+    const silhouetteScores = Array.from({ length: numNodes }, (_, i) => {
+      const myComm = predictions[i]
+      const px = (seededRand(i * 41) - 0.5) * 8
+      const py = (seededRand(i * 73) - 0.5) * 8
+      const [cx, cy] = communityCentroids[myComm]
+      const a = Math.sqrt((px - cx) ** 2 + (py - cy) ** 2)
+      let b = Infinity
+      for (let c = 0; c < numCommunities; c++) {
+        if (c === myComm) continue
+        const [ox, oy] = communityCentroids[c]
+        const dist = Math.sqrt((px - ox) ** 2 + (py - oy) ** 2)
+        b = Math.min(b, dist)
+      }
+      if (!Number.isFinite(b)) b = 0
+      const maxAB = Math.max(a, b)
+      return maxAB > 0 ? (b - a) / maxAB : 0
+    })
+
+    // Cluster assignment confidence (distance to assigned center vs nearest other)
+    const clusterConfidence = Array.from({ length: numNodes }, (_, i) => {
+      const myComm = predictions[i]
+      const px = (seededRand(i * 41) - 0.5) * 8
+      const py = (seededRand(i * 73) - 0.5) * 8
+      const [cx, cy] = communityCentroids[myComm]
+      const distAssigned = Math.sqrt((px - cx) ** 2 + (py - cy) ** 2)
+      let distNearest = Infinity
+      for (let c = 0; c < numCommunities; c++) {
+        if (c === myComm) continue
+        const [ox, oy] = communityCentroids[c]
+        distNearest = Math.min(distNearest, Math.sqrt((px - ox) ** 2 + (py - oy) ** 2))
+      }
+      if (!Number.isFinite(distNearest)) distNearest = distAssigned
+      const sum = distAssigned + distNearest
+      return sum > 0 ? (distNearest - distAssigned) / sum : 0
+    })
+
+    // NMI score: improves as predictions converge
+    const nmiScore = Math.min(1, 0.2 + 0.7 * sigmoid(6 * (progress - 0.25)) + (seededRand(epoch * 61) - 0.5) * 0.02)
+
+    // Community transitions: count changes from previous epoch
+    const communityTransitions = {}
+    if (epoch > 0) {
+      const prevPredictions = snapshots[epoch - 1].node_predictions
+      for (let i = 0; i < numNodes; i++) {
+        const src = prevPredictions[i]
+        const dst = predictions[i]
+        if (src !== dst) {
+          const key = `${src}->${dst}`
+          communityTransitions[key] = (communityTransitions[key] || 0) + 1
+        }
+      }
+    }
+
     snapshots.push({
       epoch, node_predictions: predictions,
       bridge_nodes: bridgeNodes,
+      bridge_strength: bridgeStrengths,
+      silhouette_scores: silhouetteScores,
+      cluster_confidence: clusterConfidence,
+      nmi_score: nmiScore,
+      community_transitions: communityTransitions,
       modularity_q: modQ,
       conductance,
       community_sizes: commSizes,

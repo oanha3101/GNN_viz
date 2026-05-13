@@ -6,14 +6,12 @@ Each epoch streams: PCA/t-SNE projections, kNN preservation,
 link AUC, isotropy, reconstruction loss, per-edge proximity scores.
 """
 import asyncio
-import logging
 import math
 import numpy as np
-
-logger = logging.getLogger(__name__)
 import torch
 import torch.nn.functional as F
 from concurrent.futures import ThreadPoolExecutor
+from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics import roc_auc_score
@@ -23,6 +21,15 @@ from utils.ws_msg import send_json_zipped
 from utils.model_utils import should_take_snapshot
 
 executor = ThreadPoolExecutor(max_workers=2)
+
+
+def edge_index_to_scipy_sparse(edge_index_np, num_nodes):
+    """Convert edge_index numpy array to scipy sparse adjacency matrix."""
+    from scipy.sparse import csr_matrix
+    row = np.concatenate([edge_index_np[0], edge_index_np[1]])
+    col = np.concatenate([edge_index_np[1], edge_index_np[0]])
+    data = np.ones(len(row))
+    return csr_matrix((data, (row, col)), shape=(num_nodes, num_nodes))
 
 
 # ── CPU-bound metric computation ──────────────────────────────────────────────
@@ -166,7 +173,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
             for batch in train_loader:
                 optimizer.zero_grad()
                 outputs = model(batch.x, batch.edge_index)
-                z = outputs[0] if isinstance(outputs, tuple) else outputs
+                z = outputs[1] if isinstance(outputs, tuple) else outputs
 
                 pos_edge = batch.edge_index
                 neg_edge = negative_sampling(pos_edge, batch.x.size(0), pos_edge.size(1))
@@ -188,7 +195,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
         else:
             optimizer.zero_grad()
             outputs = model(data.x, edge_index)
-            z = outputs[0] if isinstance(outputs, tuple) else outputs
+            z = outputs[1] if isinstance(outputs, tuple) else outputs
 
             neg_edge_index = negative_sampling(edge_index, num_nodes, edge_index.size(1))
             pos_logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=1)
@@ -209,7 +216,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
             model.eval()
             with torch.no_grad():
                 outputs_eval = model(data.x, edge_index)
-                z_eval = outputs_eval[0] if isinstance(outputs_eval, tuple) else outputs_eval
+                z_eval = outputs_eval[1] if isinstance(outputs_eval, tuple) else outputs_eval
                 z_np = z_eval.cpu().numpy()
 
                 # Decide whether to compute t-SNE this epoch
@@ -245,8 +252,17 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                 except Exception:
                     auc = 0.5
 
+            # KMeans cluster labels for node coloring (replaces all-zeros placeholder)
+            try:
+                n_clusters = max(2, min(8, num_nodes // 5))
+                kmeans = KMeans(n_clusters=n_clusters, n_init=5, random_state=42)
+                cluster_labels = kmeans.fit_predict(z_np).tolist()
+            except Exception:
+                cluster_labels = [0] * num_nodes
+
             snapshot = {
                 'epoch': epoch,
+                'model_type': model_type,
                 'embeddings_2d': pca_2d,
                 'tsne_2d': tsne_2d,
                 'knn_preservation': knn_pres,
@@ -254,26 +270,30 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                 'isotropy_score': isotropy,
                 'reconstruction_loss': float(avg_loss),
                 'proximity_scores': proximity_scores[:500],  # cap for WS payload
-                
+
                 # ── Explainability Data ─────────────────────────────────────────
-                
-                # 1. Per-node kNN preservation score (sampled nodes only)
-                'per_node_knn_preservation': {},  # {node_id: preservation_score}
-                
+
+                # 1. Per-node kNN preservation score (array indexed by node id)
+                'per_node_knn_preservation': [0.0] * num_nodes,
+
                 # 2. Per-edge reconstruction error
                 'per_edge_reconstruction_error': [],  # [{source, target, error, correct}]
-                
+
                 # 3. Embedding norms per node (influence indicator)
                 'embedding_norms': [float(np.linalg.norm(z_np[i])) for i in range(num_nodes)],
-                
+
                 # 4. Outlier scores (distance to k-nearest embedding neighbors)
                 'outlier_scores': [],  # [{node_id, avg_distance_to_neighbors, is_outlier}]
-                
+
+                # 5. Stress score (embedding distortion vs graph distance)
+                'stress_score': 0.0,
+
                 # Compatibility fields for shared MetricsChart
                 'train_loss': float(avg_loss),
                 'val_loss': float(avg_loss * 1.1),
+                'train_acc': float(knn_pres),
                 'val_acc': auc,
-                'node_predictions': [0] * num_nodes,  # placeholder for cluster coloring
+                'node_predictions': cluster_labels,
             }
             
             # Compute per-node kNN preservation
@@ -282,19 +302,19 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                 if k_actual > 0:
                     knn = NearestNeighbors(n_neighbors=k_actual + 1).fit(z_np)
                     _, indices = knn.kneighbors(z_np[sample_indices])
-                    per_node_scores = {}
+                    per_node_scores = [0.0] * num_nodes
                     for i, idx in enumerate(sample_indices):
                         graph_neighbors = adj_sets[idx]
                         if not graph_neighbors:
-                            per_node_scores[str(idx)] = 0.0
+                            per_node_scores[idx] = 0.0
                             continue
                         emb_neighbors = set(indices[i, 1:])
                         intersection = graph_neighbors.intersection(emb_neighbors)
                         score = len(intersection) / min(k_actual, len(graph_neighbors))
-                        per_node_scores[str(idx)] = float(score)
+                        per_node_scores[idx] = float(score)
                     snapshot['per_node_knn_preservation'] = per_node_scores
             except Exception as e:
-                logger.warning("Per-node kNN preservation failed: %s", e)
+                print(f"Per-node kNN preservation failed: {e}")
             
             # Compute per-edge reconstruction error
             try:
@@ -327,7 +347,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                 
                 snapshot['per_edge_reconstruction_error'] = per_edge_errors
             except Exception as e:
-                logger.warning("Per-edge reconstruction error failed: %s", e)
+                print(f"Per-edge reconstruction error failed: {e}")
             
             # Compute outlier scores
             try:
@@ -353,7 +373,85 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                     
                     snapshot['outlier_scores'] = outlier_data[:200]  # Cap at 200
             except Exception as e:
-                logger.warning("Outlier scores failed: %s", e)
+                print(f"Outlier scores failed: {e}")
+
+            # Compute stress score (Kruskal stress: sqrt(sum((d_emb - d_graph)^2) / sum(d_emb^2)))
+            try:
+                from scipy.spatial.distance import pdist, squareform
+                from scipy.sparse.csgraph import shortest_path
+                # Sample up to 100 nodes for speed
+                stress_sample = min(100, num_nodes)
+                stress_idx = np.random.choice(num_nodes, stress_sample, replace=False) if num_nodes > 100 else np.arange(num_nodes)
+                z_sample = z_np[stress_idx]
+                # Embedding distances
+                emb_dist = squareform(pdist(z_sample, 'euclidean'))
+                # Graph shortest-path distances (on full graph, then subset)
+                sp_full = shortest_path(edge_index_to_scipy_sparse(edge_index_np, num_nodes), directed=False)
+                sp_sub = sp_full[np.ix_(stress_idx, stress_idx)]
+                # Kruskal stress
+                mask = np.triu(np.ones_like(emb_dist, dtype=bool), k=1)
+                d_emb = emb_dist[mask]
+                d_graph = sp_sub[mask]
+                # Filter inf (disconnected)
+                finite = np.isfinite(d_graph)
+                if finite.sum() > 10:
+                    d_emb_f = d_emb[finite]
+                    d_graph_f = d_graph[finite]
+                    # Normalize both to [0, 1]
+                    d_emb_n = d_emb_f / (d_emb_f.max() + 1e-8)
+                    d_graph_n = d_graph_f / (d_graph_f.max() + 1e-8)
+                    stress = float(np.sqrt(np.sum((d_emb_n - d_graph_n)**2) / (np.sum(d_emb_n**2) + 1e-8)))
+                    snapshot['stress_score'] = max(0.0, min(1.0, stress))
+            except Exception as e:
+                print(f"Stress computation failed: {e}")
+
+            # ── Model-Specific Signatures ───────────────────────────────────
+
+            # GAT: attention edges (convert tuple→dict)
+            attention_edges = None
+            if model_type == 'GAT' and hasattr(model, '_attention_edges') and model._attention_edges:
+                raw = model._attention_edges
+                if raw and isinstance(raw[0], tuple):
+                    attention_edges = [{'source': u, 'target': v, 'weight': w} for u, v, w in raw]
+                else:
+                    attention_edges = raw
+
+            # GCN: dirichlet energy + local smoothness (sampled)
+            dirichlet_energy = None
+            local_smoothness = None
+            if model_type == 'GCN':
+                row, col = edge_index
+                diff = z_eval[row] - z_eval[col]
+                dirichlet_energy = float((diff ** 2).sum(dim=1).mean().item())
+                # Local smoothness on sampled nodes only
+                local_smoothness = [0.0] * num_nodes
+                try:
+                    for idx in sample_indices:
+                        neigh_mask = (row == idx) | (col == idx)
+                        if neigh_mask.any():
+                            neigh_nodes = torch.cat([col[row == idx], row[col == idx]])
+                            local_smoothness[idx] = float(torch.norm(z_eval[idx] - z_eval[neigh_nodes], dim=1).mean().item())
+                except Exception:
+                    pass
+
+            # SAGE: robustness under noise perturbation
+            sage_robustness = None
+            if model_type == 'SAGE':
+                try:
+                    noise = torch.randn_like(data.x) * 0.1
+                    with torch.no_grad():
+                        outputs_noisy = model(data.x + noise, edge_index)
+                        z_noisy = outputs_noisy[1] if isinstance(outputs_noisy, tuple) else outputs_noisy
+                    cos_sim = F.cosine_similarity(z_eval, z_noisy, dim=1)
+                    sage_robustness = float(cos_sim.mean().item())
+                except Exception:
+                    pass
+
+            snapshot['attention_edges'] = attention_edges
+            snapshot['dirichlet_energy'] = dirichlet_energy
+            snapshot['local_smoothness'] = local_smoothness
+            snapshot['sage_robustness'] = sage_robustness
+
             epoch_snapshots.append(snapshot)
             if snapshot_hook:
                 await snapshot_hook(epoch, snapshot)
@@ -370,6 +468,6 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
     model.eval()
     with torch.no_grad():
         outputs_final = model(data.x, edge_index)
-        z_final = outputs_final[0] if isinstance(outputs_final, tuple) else outputs_final
+        z_final = outputs_final[1] if isinstance(outputs_final, tuple) else outputs_final
 
     return epoch_snapshots, z_final.cpu().numpy()

@@ -21,6 +21,13 @@ def load_citeseer():
     return dataset[0]
 
 
+def load_karate():
+    """Load Karate Club dataset."""
+    from torch_geometric.datasets import KarateClub
+    dataset = KarateClub()
+    return dataset[0]
+
+
 def load_csv(nodes_path: str, edges_path: str):
     """Load custom dataset from CSV files (legacy 2-file format).
 
@@ -178,17 +185,26 @@ def _parse_json_graph(raw: dict):
     x = None
     y = None
     if 'nodes' in raw and isinstance(raw['nodes'], list):
+        # Create a lookup map for node objects by their ID
+        node_lookup = { n.get('id'): n for n in raw['nodes'] if n.get('id') is not None }
+        
         first_node = raw['nodes'][0] if raw['nodes'] else {}
         feat_keys = [k for k in first_node.keys() if k not in ('id', 'label', 'class', 'name')]
+        
         if feat_keys:
             features = []
-            for n in raw['nodes']:
+            # We must iterate according to unique_nodes (which matches node_map indices)
+            for old_id in unique_nodes:
+                n = node_lookup.get(old_id, {})
                 features.append([float(n.get(k, 0)) for k in feat_keys])
             x = torch.tensor(features, dtype=torch.float)
         
         if 'label' in first_node or 'class' in first_node:
             label_key = 'label' if 'label' in first_node else 'class'
-            labels = [int(n.get(label_key, 0)) for n in raw['nodes']]
+            labels = []
+            for old_id in unique_nodes:
+                n = node_lookup.get(old_id, {})
+                labels.append(int(n.get(label_key, 0)))
             y = torch.tensor(labels, dtype=torch.long)
 
     data = Data(edge_index=edge_index, num_nodes=num_nodes)
@@ -223,28 +239,34 @@ def auto_detect_graph(data: Data):
     if has_labels:
         num_classes = int(data.y.max().item()) + 1
 
-    # Generate features if missing: use degree as feature
+    # Generate features if missing
     if not has_features:
-        degrees = torch.zeros(num_nodes, dtype=torch.float)
-        edge_index = data.edge_index
-        for i in range(edge_index.size(1)):
-            degrees[edge_index[0, i]] += 1
-        # Normalize + add identity-like features
-        max_deg = degrees.max().clamp(min=1)
-        norm_degrees = degrees / max_deg
-        # Feature = [normalized_degree, log_degree, one_hot_bucket(5)]
-        log_deg = torch.log1p(degrees)
-        log_deg = log_deg / log_deg.max().clamp(min=1)
-        buckets = torch.zeros(num_nodes, 5)
-        for i in range(num_nodes):
-            d = int(degrees[i].item())
-            bucket = min(4, d // max(1, int(max_deg.item()) // 5 + 1))
-            buckets[i, bucket] = 1.0
-        data.x = torch.cat([norm_degrees.unsqueeze(1), log_deg.unsqueeze(1), buckets], dim=1)
+        if num_nodes < 256:
+            # For small graphs like Karate Club, use Identity Matrix (One-hot) 
+            # This is much more expressive for learning structural embeddings
+            data.x = torch.eye(num_nodes)
+            feature_source = 'identity'
+        else:
+            # For large graphs, use degree-based features to save memory
+            degrees = torch.zeros(num_nodes, dtype=torch.float)
+            edge_index = data.edge_index
+            for i in range(edge_index.size(1)):
+                degrees[edge_index[0, i]] += 1
+            max_deg = degrees.max().clamp(min=1)
+            norm_degrees = degrees / max_deg
+            log_deg = torch.log1p(degrees)
+            log_deg = log_deg / log_deg.max().clamp(min=1)
+            buckets = torch.zeros(num_nodes, 5)
+            for i in range(num_nodes):
+                d = int(degrees[i].item())
+                bucket = min(4, d // max(1, int(max_deg.item()) // 5 + 1))
+                buckets[i, bucket] = 1.0
+            data.x = torch.cat([norm_degrees.unsqueeze(1), log_deg.unsqueeze(1), buckets], dim=1)
+            feature_source = 'degree'
         feature_dim = data.x.size(1)
-        feature_source = 'degree'
     else:
         feature_source = 'original'
+        feature_dim = data.x.size(1)
 
     # Generate dummy labels if missing (for visualization only, not loss)
     if not has_labels:
@@ -271,4 +293,4 @@ def auto_detect_graph(data: Data):
 
 def get_available_datasets():
     """Return list of built-in datasets."""
-    return ['cora', 'citeseer']
+    return ['cora', 'citeseer', 'karate']

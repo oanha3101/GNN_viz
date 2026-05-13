@@ -68,34 +68,34 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Projects" value={projects.length} />
         <StatCard label="Datasets" value={datasets.length} tone="emerald" />
-        <StatCard label="Active Project" value={activeProjectId || '—'} tone="amber" />
-        <StatCard label="Active Version" value={activeDatasetVersionId || '—'} />
+        <StatCard label="Active Project" value={activeProjectId ? selectedProject?.title || '...' : '—'} tone="amber" />
+        <StatCard label="Active Version" value={activeDatasetVersionName || '—'} tone="blue" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <SectionCard
           title="Training Context"
-          subtitle="This is the project and dataset context that will travel with your next training session."
+          subtitle="Project and dataset context that will travel with your next training session."
           actions={
             <button
               type="button"
               onClick={() => navigate('/app/lab')}
-              className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300"
+              className="btn-galaxy inline-flex items-center gap-2 text-xs"
             >
               Open lab <ArrowRight size={13} />
             </button>
           }
         >
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Project</div>
-              <div className="mt-3 text-base font-semibold text-white">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="glass-card p-4">
+              <div className="text-micro uppercase tracking-ultra text-text-shadow">Project</div>
+              <div className="mt-2 text-base font-semibold text-white-star">
                 {activeProjectName || selectedProject?.title || 'No project selected'}
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Dataset version</div>
-              <div className="mt-3 text-base font-semibold text-white">
+            <div className="glass-card p-4">
+              <div className="text-micro uppercase tracking-ultra text-text-shadow">Dataset version</div>
+              <div className="mt-2 text-base font-semibold text-white-star">
                 {activeDatasetVersionName || (activeDatasetVersionId ? `Version #${activeDatasetVersionId}` : 'No dataset version selected')}
               </div>
             </div>
@@ -104,26 +104,26 @@ export default function DashboardPage() {
 
         <SectionCard
           title="Current Upload"
-          subtitle="Raw upload metadata stays visible here so the user does not have to remember what was imported."
+          subtitle="Raw upload metadata stays visible here for traceability."
           actions={
             <button
               type="button"
               onClick={() => navigate('/app/datasets')}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200"
+              className="btn-nebula inline-flex items-center gap-2 text-xs"
             >
               Review datasets <Database size={13} />
             </button>
           }
         >
           {uploadedFilePath ? (
-            <div className="space-y-3 text-sm text-slate-300">
+            <div className="space-y-3 text-sm text-starlight">
               <div>
-                Dataset name: <span className="font-semibold text-white">{datasetName || 'Custom dataset'}</span>
+                Dataset name: <span className="font-semibold text-white-star">{datasetName || 'Custom dataset'}</span>
               </div>
               <div>
-                Processed path: <span className="font-mono text-cyan-300">{uploadedFilePath}</span>
+                Processed path: <span className="font-mono text-aurora-cyan text-xs">{uploadedFilePath}</span>
               </div>
-              <div className="text-slate-400">
+              <div className="text-twilight">
                 Nodes: {uploadMetadata?.num_nodes ?? '?'} • Edges: {uploadMetadata?.num_edges ?? '?'} • Features: {uploadMetadata?.num_features ?? '?'}
               </div>
             </div>
@@ -163,11 +163,12 @@ export default function DashboardPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="What changed" subtitle="Phase 2 is turning the old modal workspace into product pages.">
-          <div className="space-y-3 text-sm text-slate-300">
-            <InfoRow icon={<FolderKanban size={15} />} label="Projects are now managed from a dedicated page route." />
-            <InfoRow icon={<Database size={15} />} label="Datasets and versions keep their own lifecycle surface." />
-            <InfoRow icon={<Upload size={15} />} label="Lab remains focused on training, replay, and upload actions." />
+        <SectionCard title="Quick Actions" subtitle="Navigate to key areas of the workspace.">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <QuickAction icon={<FolderKanban size={18} />} label="Manage Projects" desc="Create and select project containers" onClick={() => navigate('/app/projects')} />
+            <QuickAction icon={<Database size={18} />} label="Dataset Library" desc="Publish and manage dataset versions" onClick={() => navigate('/app/datasets')} />
+            <QuickAction icon={<Upload size={18} />} label="Upload Data" desc="Import graph datasets for training" onClick={() => navigate('/app/lab')} />
+            <QuickAction icon={<ArrowRight size={18} />} label="View Experiments" desc="Compare and replay training runs" onClick={() => navigate('/app/experiments')} />
           </div>
         </SectionCard>
       </div>
@@ -177,15 +178,15 @@ export default function DashboardPage() {
 
 function ChecklistItem({ done, label, action, actionLabel }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+    <div className="flex items-center justify-between gap-4 glass-card p-4">
       <div className="flex items-center gap-3">
-        <span className={`h-2.5 w-2.5 rounded-full ${done ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-        <span className={done ? 'text-slate-200' : 'text-slate-300'}>{label}</span>
+        <span className={`h-2 w-2 rounded-full ${done ? 'bg-aurora-green' : 'bg-aurora-amber'}`} />
+        <span className={`text-sm ${done ? 'text-starlight' : 'text-twilight'}`}>{label}</span>
       </div>
       <button
         type="button"
         onClick={action}
-        className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200"
+        className="btn-ghost text-xs"
       >
         {actionLabel}
       </button>
@@ -193,11 +194,18 @@ function ChecklistItem({ done, label, action, actionLabel }) {
   )
 }
 
-function InfoRow({ icon, label }) {
+function QuickAction({ icon, label, desc, onClick }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-slate-800/70 bg-slate-950/50 px-4 py-3">
-      <div className="text-cyan-300">{icon}</div>
-      <div>{label}</div>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className="glass-card flex items-start gap-3 p-4 text-left transition-all hover:border-line-active hover:glow-violet-sm"
+    >
+      <div className="mt-0.5 text-moonlight">{icon}</div>
+      <div>
+        <div className="text-sm font-semibold text-white-star">{label}</div>
+        <div className="mt-1 text-xs text-twilight">{desc}</div>
+      </div>
+    </button>
   )
 }

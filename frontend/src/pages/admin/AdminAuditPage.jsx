@@ -40,12 +40,19 @@ export default function AdminAuditPage() {
       {items.length ? (
         <div className="space-y-3">
           {items.map((item) => (
-            <div key={item.id} className="rounded-3xl border border-slate-800/70 bg-slate-950/50 p-5">
-              <div className="text-base font-semibold text-white">{item.action} • {item.target_type}</div>
-              <div className="mt-1 text-sm text-slate-400">target={item.target_id || 'n/a'} • actor={item.actor_user_id || 'system'}</div>
-              <div className="mt-2 text-xs text-slate-500">{item.created_at || 'n/a'}</div>
+            <div key={item.id} className="glass-card p-5">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-amethyst" />
+                <span className="text-base font-semibold text-white-star">{item.action}</span>
+                <span className="badge-cosmic">{item.target_type}</span>
+              </div>
+              <div className="mt-2 flex items-center gap-3 text-xs text-text-shadow">
+                <span>target: <span className="text-starlight">{item.target_id || 'n/a'}</span></span>
+                <span>actor: <span className="text-starlight">{item.actor_user_id || 'system'}</span></span>
+                <span className="text-twilight">{item.created_at || 'n/a'}</span>
+              </div>
               {item.details_json ? (
-                <pre className="mt-3 overflow-auto rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 text-[11px] text-slate-300">
+                <pre className="mt-3 overflow-auto rounded-lg border border-line-subtle bg-deep p-4 text-xs text-starlight font-mono max-h-48">
                   {JSON.stringify(item.details_json, null, 2)}
                 </pre>
               ) : null}

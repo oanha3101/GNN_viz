@@ -127,6 +127,15 @@ def save_experiment(db: Session, *, payload: Dict[str, Any], user: Optional[User
         if session and session.status in {SessionStatus.FAILED.value, SessionStatus.STOPPED.value}:
             final_status = session.status
 
+    # Compute accuracy/loss from snapshots if frontend sent defaults (0.0)
+    snapshots_for_compute = payload.get("snapshots_json") or []
+    if snapshots_for_compute and (not payload.get("accuracy") or payload["accuracy"] == 0.0):
+        last_snap = snapshots_for_compute[-1]
+        payload["accuracy"] = float(last_snap.get("val_acc") or last_snap.get("train_acc") or 0.0)
+    if snapshots_for_compute and (not payload.get("loss") or payload["loss"] == 0.0):
+        last_snap = snapshots_for_compute[-1]
+        payload["loss"] = float(last_snap.get("val_loss") or last_snap.get("train_loss") or 0.0)
+
     exp = Experiment(
         title=payload.get("title") or f"Task {payload['task_type']} - {payload['model_type']}",
         project_id=project.id if project else None,

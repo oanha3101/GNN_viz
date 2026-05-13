@@ -10,22 +10,13 @@ export function topKOutliers(scores, k = 10) {
   const rows = []
   for (let i = 0; i < scores.length; i++) {
     const s = scores[i]
-    if (typeof s === 'number') {
-      if (!Number.isFinite(s)) continue
-      rows.push({ id: i, score: s })
-      continue
-    }
-    if (!s || typeof s !== 'object') continue
-    const id = Number.isInteger(s.node_id) ? s.node_id : Number.isInteger(s.id) ? s.id : i
-    const score = Number.isFinite(s.score)
-      ? s.score
-      : Number.isFinite(s.outlier_score)
-        ? s.outlier_score
-        : Number.isFinite(s.avg_distance_to_neighbors)
-          ? s.avg_distance_to_neighbors
-          : null
-    if (score == null) continue
-    rows.push({ id, score, isOutlier: s.is_outlier === true })
+    // Handle both plain number[] (mock) and [{node_id, avg_distance_to_neighbors, is_outlier}] (real backend)
+    const score = typeof s === 'number' ? s
+      : (s && typeof s === 'object') ? (s.score ?? s.avg_distance_to_neighbors ?? s.is_outlier ?? null)
+      : null
+    if (score == null || !Number.isFinite(score)) continue
+    const nodeId = (s && typeof s === 'object' && s.node_id != null) ? s.node_id : i
+    rows.push({ id: nodeId, score })
   }
   rows.sort((a, b) => b.score - a.score)
   const safeK = Math.max(0, Math.min(rows.length, k))
@@ -112,18 +103,17 @@ export function computeIsotropy(embeddings) {
  */
 export function buildKnnScatter(degrees, knn) {
   if (!Array.isArray(degrees)) return []
-  const getKnn = (id) => {
-    if (Array.isArray(knn)) return knn[id]
-    if (knn && typeof knn === 'object') return knn[id] ?? knn[String(id)]
-    return undefined
-  }
+  // knn can be number[] (mock) or Dict<string, number> (real backend)
+  const knnIsArray = Array.isArray(knn)
+  const knnIsDict = knn && typeof knn === 'object' && !knnIsArray
+  if (!knnIsArray && !knnIsDict) return []
   const n = degrees.length
   const out = []
   for (let i = 0; i < n; i++) {
     const d = degrees[i]
-    const k = getKnn(i)
     if (typeof d !== 'number' || !Number.isFinite(d)) continue
-    if (typeof k !== 'number' || !Number.isFinite(k)) continue
+    const k = knnIsArray ? knn[i] : (knn[String(i)] ?? knn[i] ?? null)
+    if (k == null || !Number.isFinite(k)) continue
     out.push({ id: i, degree: d, knn: k })
   }
   return out

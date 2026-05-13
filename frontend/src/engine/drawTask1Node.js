@@ -19,7 +19,7 @@ export function drawTask1Node(node, ctx, globalScale, config) {
   // 1. SAGE Jitter & Inductive Discovery Effect
   if (selectedModel === 'SAGE') {
      const epochProgress = currentEpochFloat / (totalEpochs || 100)
-     const jitterScale = node.isInductive ? 8 : Math.max(0, 5 * (1 - epochProgress))
+     const jitterScale = node.isInductive ? 4 : Math.max(0, 5 * (1 - epochProgress))
      
      // Special analyzing ring for new nodes
      if (node.isInductive) {

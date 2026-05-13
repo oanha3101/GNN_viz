@@ -10,46 +10,49 @@ import torch.nn.functional as F
 import networkx as nx
 from sklearn.decomposition import PCA
 from torch_geometric.data import Data, Batch
-from torch_geometric.nn import GATConv, GCNConv, SAGEConv, global_add_pool
+from torch_geometric.nn import GCNConv, GATConv, SAGEConv, global_add_pool
 from utils.ws_msg import send_json_zipped
 
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Attention-based Graph Classification Model (Explainable)
 # ───────────────────────────────────────────────────────────────────────────────
-def _make_conv(model_type, in_channels, out_channels):
-    model_key = str(model_type or "GCN").upper()
-    if model_key in {"SAGE", "GRAPHSAGE", "GRAPH_SAGE"}:
-        return SAGEConv(in_channels, out_channels)
-    if model_key == "GAT":
-        return GATConv(in_channels, out_channels, heads=1, concat=False)
-    return GCNConv(in_channels, out_channels)
-
-
 class GraphClassifier(torch.nn.Module):
-    def __init__(self, in_channels=1, hidden=32, num_classes=2, model_type="GCN"):
+    def __init__(self, in_channels=1, hidden=32, num_classes=2, model_type='GCN', heads=4, dropout=0.5):
         super().__init__()
-        self.model_type = str(model_type or "GCN").upper()
-        self.conv1 = _make_conv(self.model_type, in_channels, hidden)
-        self.conv2 = _make_conv(self.model_type, hidden, hidden)
-        
+        self.model_type = model_type
+        self.dropout = dropout
+
+        if model_type == 'GAT':
+            self.conv1 = GATConv(in_channels, hidden, heads=heads, dropout=dropout)
+            self.conv2 = GATConv(hidden * heads, hidden, heads=1, concat=False, dropout=dropout)
+        elif model_type == 'SAGE':
+            self.conv1 = SAGEConv(in_channels, hidden)
+            self.conv2 = SAGEConv(hidden, hidden)
+        else:
+            self.conv1 = GCNConv(in_channels, hidden)
+            self.conv2 = GCNConv(hidden, hidden)
+
         # Attention layer for Readout
         self.att_gate = torch.nn.Linear(hidden, 1)
-        
+
         self.lin = torch.nn.Linear(hidden, num_classes)
 
     def forward(self, x, edge_index, batch):
-        x = self.conv1(x, edge_index).relu()
-        x = self.conv2(x, edge_index).relu()
+        x = self.conv1(x, edge_index)
+        x = F.elu(x) if self.model_type == 'GAT' else F.relu(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.conv2(x, edge_index)
+        x = F.elu(x) if self.model_type == 'GAT' else F.relu(x)
         node_embeddings = x
-        
+
         # Compute attention weights alpha
         alpha = torch.sigmoid(self.att_gate(x)) # Weight per node [num_nodes, 1]
-        
+
         # Apply attention to nodes and pool
         x_g = alpha * x
         graph_embeddings = global_add_pool(x_g, batch)
-        
+
         out = self.lin(graph_embeddings)
         return out, graph_embeddings, alpha.squeeze()
 
@@ -197,12 +200,13 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
     })
 
     # Build model + optimizer
-    model_type = config.get('model') or config.get('model_type') or "GCN"
     model = GraphClassifier(
         in_channels=in_channels,
-        hidden=32,
+        hidden=config.get('hidden', 32),
         num_classes=num_classes,
-        model_type=model_type,
+        model_type=config.get('model', 'GCN'),
+        heads=config.get('heads', 4),
+        dropout=config.get('dropout', 0.5),
     )
     optimizer = torch.optim.Adam(model.parameters(), lr=config.get('lr', 0.01))
 
@@ -340,6 +344,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
 
         snapshot = {
             'epoch': epoch,
+            'model_type': config.get('model', 'GCN'),
             'graph_predictions': all_pred,
             'graph_probabilities': graph_probabilities,
             'graph_confidences': confidences,
@@ -349,7 +354,6 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             'graph_correct': graph_correct,
             'graph_embeddings_2d': emb_2d,
             'node_contributions': node_contributions,
-            'model_type': model.model_type,
             'train_loss': float(loss.item()),
             'val_loss': float(val_loss.item()),
             'train_acc': float(train_acc.item()),

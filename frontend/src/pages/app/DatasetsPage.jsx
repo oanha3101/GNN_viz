@@ -18,9 +18,6 @@ export default function DatasetsPage() {
   const uploadedFilePath = useGNNStore((s) => s.uploadedFilePath)
   const uploadMetadata = useGNNStore((s) => s.uploadMetadata)
   const setActiveDatasetContext = useGNNStore((s) => s.setActiveDatasetContext)
-  const setUploadedFilePath = useGNNStore((s) => s.setUploadedFilePath)
-  const setUploadMetadata = useGNNStore((s) => s.setUploadMetadata)
-  const setDatasetName = useGNNStore((s) => s.setDatasetName)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -63,17 +60,6 @@ export default function DatasetsPage() {
 
   const currentDetail = selectedDatasetId ? datasetDetails[selectedDatasetId] : null
 
-  const applyDatasetVersionContext = useCallback((dataset, version) => {
-    setActiveDatasetContext(
-      dataset.id,
-      version.id,
-      `${dataset.name} • v${version.version} (${version.lifecycle})`
-    )
-    setDatasetName(dataset.name)
-    setUploadedFilePath(version.processed_blob_key || null)
-    setUploadMetadata(version.summary_json || null)
-  }, [setActiveDatasetContext, setDatasetName, setUploadedFilePath, setUploadMetadata])
-
   const handleCreateDataset = useCallback(async () => {
     setSubmitting(true)
     setError(null)
@@ -90,7 +76,11 @@ export default function DatasetsPage() {
       })
       setForm({ name: '', description: '' })
       setSelectedDatasetId(payload.dataset.id)
-      applyDatasetVersionContext(payload.dataset, payload.version)
+      setActiveDatasetContext(
+        payload.dataset.id,
+        payload.version.id,
+        `${payload.dataset.name} • v${payload.version.version} (${payload.version.lifecycle})`
+      )
       await loadDatasets()
       await loadDatasetDetail(payload.dataset.id)
     } catch (err) {
@@ -98,7 +88,7 @@ export default function DatasetsPage() {
     } finally {
       setSubmitting(false)
     }
-  }, [applyDatasetVersionContext, datasetName, form.description, form.name, loadDatasetDetail, loadDatasets, uploadMetadata, uploadedFilePath])
+  }, [datasetName, form.description, form.name, loadDatasetDetail, loadDatasets, setActiveDatasetContext, uploadMetadata, uploadedFilePath])
 
   const handlePublishVersion = useCallback(async (datasetId, versionId) => {
     try {
@@ -140,7 +130,7 @@ export default function DatasetsPage() {
           <button
             type="button"
             onClick={() => navigate('/app/lab')}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200"
+            className="btn-ghost inline-flex items-center gap-2 text-xs"
           >
             <Upload size={13} /> Open lab uploader
           </button>
@@ -151,24 +141,24 @@ export default function DatasetsPage() {
             value={form.name}
             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
             placeholder={datasetName || 'Dataset name'}
-            className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none focus:border-cyan-500/30"
+            className="input-cosmic w-full"
           />
           <textarea
             value={form.description}
             onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
             placeholder="Dataset description"
-            rows={5}
-            className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none focus:border-cyan-500/30"
+            rows={4}
+            className="input-cosmic w-full resize-none"
           />
-          <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4 text-sm text-slate-300">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Upload summary</div>
+          <div className="glass-card p-4">
+            <div className="text-micro uppercase tracking-ultra text-text-shadow">Upload summary</div>
             {uploadedFilePath ? (
-              <div className="mt-3 space-y-1">
-                <div>Source: <span className="font-mono text-cyan-300">{uploadedFilePath}</span></div>
-                <div>Nodes: {uploadMetadata?.num_nodes ?? '?'} • Edges: {uploadMetadata?.num_edges ?? '?'} • Features: {uploadMetadata?.num_features ?? '?'}</div>
+              <div className="mt-3 space-y-1 text-sm text-starlight">
+                <div>Source: <span className="font-mono text-aurora-cyan text-xs">{uploadedFilePath}</span></div>
+                <div className="text-twilight">Nodes: {uploadMetadata?.num_nodes ?? '?'} • Edges: {uploadMetadata?.num_edges ?? '?'} • Features: {uploadMetadata?.num_features ?? '?'}</div>
               </div>
             ) : (
-              <div className="mt-3 text-slate-500">No current upload metadata. You can still create a metadata-only dataset record.</div>
+              <div className="mt-3 text-xs text-text-shadow">No current upload metadata. You can still create a metadata-only dataset record.</div>
             )}
           </div>
           <div className="flex gap-2">
@@ -176,23 +166,23 @@ export default function DatasetsPage() {
               type="button"
               disabled={submitting}
               onClick={handleCreateDataset}
-              className="inline-flex items-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-300 disabled:opacity-50"
+              className="btn-galaxy inline-flex items-center gap-2 disabled:opacity-50"
             >
               <Plus size={14} /> {submitting ? 'Creating...' : 'Create dataset'}
             </button>
             <button
               type="button"
               onClick={loadDatasets}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-200"
+              className="btn-nebula inline-flex items-center gap-2"
             >
               <RefreshCw size={14} /> Refresh
             </button>
           </div>
-          {error ? <div className="text-sm text-red-300">{error.message}</div> : null}
+          {error ? <div className="text-sm text-aurora-rose">{error.message}</div> : null}
         </div>
       </SectionCard>
 
-      <SectionCard title="Dataset Library" subtitle="Pick a dataset on the left, then select the version that should be trainable.">
+      <SectionCard title="Dataset Library" subtitle="Pick a dataset, then select the version that should be trainable.">
         {datasets.length ? (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -201,10 +191,10 @@ export default function DatasetsPage() {
                   key={dataset.id}
                   type="button"
                   onClick={() => setSelectedDatasetId(dataset.id)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
                     selectedDatasetId === dataset.id
-                      ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
-                      : 'border-slate-700 bg-slate-900 text-slate-300'
+                      ? 'border-amethyst/30 bg-amethyst/[0.12] text-moonlight'
+                      : 'border-line-default bg-deep text-twilight hover:border-line-active'
                   }`}
                 >
                   {dataset.name}
@@ -214,9 +204,9 @@ export default function DatasetsPage() {
 
             {currentDetail ? (
               <div className="space-y-3">
-                <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
-                  <div className="text-base font-semibold text-white">{selectedDatasetRow?.name}</div>
-                  <div className="mt-1 text-sm text-slate-400">{selectedDatasetRow?.description || currentDetail.dataset.description || 'No description yet.'}</div>
+                <div className="glass-card p-4">
+                  <div className="text-base font-semibold text-white-star">{selectedDatasetRow?.name}</div>
+                  <div className="mt-1 text-sm text-twilight">{selectedDatasetRow?.description || currentDetail.dataset.description || 'No description yet.'}</div>
                 </div>
                 {currentDetail.versions.map((version) => {
                   const canSelect =
@@ -228,38 +218,40 @@ export default function DatasetsPage() {
                   return (
                     <div
                       key={version.id}
-                      className={`rounded-3xl border p-5 ${
-                        isActive ? 'border-cyan-500/25 bg-cyan-500/8' : 'border-slate-800/70 bg-slate-950/50'
+                      className={`glass-card p-5 transition-all ${
+                        isActive ? 'border-amethyst/25 glow-violet-sm' : ''
                       }`}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <div className="text-base font-semibold text-white">
+                          <div className="text-base font-semibold text-white-star">
                             v{version.version} • {version.lifecycle}
                           </div>
-                          <div className="mt-1 text-sm text-slate-400">Schema {version.schema_version}</div>
-                          <div className="mt-3 text-xs text-slate-500">
-                            created={version.created_at || 'n/a'}{version.published_at ? ` • published=${version.published_at}` : ''}
+                          <div className="mt-1 text-sm text-twilight">Schema {version.schema_version}</div>
+                          <div className="mt-3 flex items-center gap-3 text-xs text-text-shadow">
+                            <span>created: {version.created_at || 'n/a'}</span>
+                            {version.published_at ? <span>published: {version.published_at}</span> : null}
                           </div>
                         </div>
                         <SelectionButton
                           active={isActive}
-                          onClick={() => canSelect && applyDatasetVersionContext(currentDetail.dataset, version)}
+                          disabled={!canSelect}
+                          onClick={() =>
+                            canSelect &&
+                            setActiveDatasetContext(
+                              currentDetail.dataset.id,
+                              version.id,
+                              `${currentDetail.dataset.name} • v${version.version} (${version.lifecycle})`
+                            )
+                          }
                         />
-                      </div>
-                      <div className="mt-3 text-xs text-slate-400">
-                        {version.processed_blob_key ? (
-                          <span>Artifact ready: <span className="font-mono text-cyan-300">{version.processed_blob_key}</span></span>
-                        ) : (
-                          <span className="text-amber-300">No processed artifact linked yet. Live training will need a synced upload first.</span>
-                        )}
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
                         {version.lifecycle !== 'published' ? (
                           <button
                             type="button"
                             onClick={() => handlePublishVersion(currentDetail.dataset.id, version.id)}
-                            className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300"
+                            className="rounded-lg border border-aurora-green/20 bg-aurora-green/[0.08] px-3 py-2 text-xs font-semibold text-aurora-green transition-all hover:bg-aurora-green/[0.15]"
                           >
                             Publish
                           </button>
@@ -268,7 +260,7 @@ export default function DatasetsPage() {
                           <button
                             type="button"
                             onClick={() => handleDeprecateVersion(currentDetail.dataset.id, version.id)}
-                            className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-300"
+                            className="rounded-lg border border-aurora-amber/20 bg-aurora-amber/[0.08] px-3 py-2 text-xs font-semibold text-aurora-amber transition-all hover:bg-aurora-amber/[0.15]"
                           >
                             Deprecate
                           </button>

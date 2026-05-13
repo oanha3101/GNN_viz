@@ -36,10 +36,10 @@ export default function MetricsChart() {
 
             return {
                 epoch: s.epoch,
-                train_loss: +s.train_loss.toFixed(4),
-                val_loss: +s.val_loss.toFixed(4),
-                train_acc: +s.train_acc.toFixed(4),
-                val_acc: +s.val_acc.toFixed(4),
+                train_loss: s.train_loss != null ? +s.train_loss.toFixed(4) : null,
+                val_loss: s.val_loss != null ? +s.val_loss.toFixed(4) : null,
+                train_acc: s.train_acc != null ? +s.train_acc.toFixed(4) : null,
+                val_acc: s.val_acc != null ? +s.val_acc.toFixed(4) : null,
                 sage_val_acc,
             }
         })
@@ -57,10 +57,10 @@ export default function MetricsChart() {
 
             tipData = {
                 epoch: currentEpochFloat,
-                train_loss: lerp(sA.train_loss, sB.train_loss, t),
-                val_loss: lerp(sA.val_loss, sB.val_loss, t),
-                train_acc: lerp(sA.train_acc, sB.train_acc, t),
-                val_acc: lerp(sA.val_acc, sB.val_acc, t),
+                train_loss: sA.train_loss != null && sB.train_loss != null ? lerp(sA.train_loss, sB.train_loss, t) : null,
+                val_loss: sA.val_loss != null && sB.val_loss != null ? lerp(sA.val_loss, sB.val_loss, t) : null,
+                train_acc: sA.train_acc != null && sB.train_acc != null ? lerp(sA.train_acc, sB.train_acc, t) : null,
+                val_acc: sA.val_acc != null && sB.val_acc != null ? lerp(sA.val_acc, sB.val_acc, t) : null,
                 sage_val_acc: selectedModel === 'SAGE' ? lerp(sA_sage, sB_sage, t) : null
             }
         } else if (snapshots[epochInt]) {

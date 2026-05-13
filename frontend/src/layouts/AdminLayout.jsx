@@ -1,4 +1,4 @@
-import { Activity, ArrowRight, Database, FileClock, FolderKanban, LogOut, Shield, Users } from 'lucide-react'
+import { Activity, ArrowRight, Database, FileClock, FolderKanban, LogOut, Shield, Sparkles, Users } from 'lucide-react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 
@@ -56,14 +56,10 @@ function AdminNavLink({ item }) {
     <NavLink
       to={item.to}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm transition-colors ${
-          isActive
-            ? 'border-amber-500/20 bg-amber-500/10 text-amber-300'
-            : 'border-transparent text-slate-400 hover:border-slate-800 hover:bg-slate-900/70 hover:text-slate-100'
-        }`
+        `admin-nav-link ${isActive ? 'admin-nav-link-active' : ''}`
       }
     >
-      <Icon size={16} />
+      <Icon size={15} />
       <span className="font-medium">{item.label}</span>
     </NavLink>
   )
@@ -77,59 +73,188 @@ export default function AdminLayout() {
   const titleMeta = TITLES[location.pathname] || TITLES['/admin/overview']
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
-      <div className="grid min-h-screen lg:grid-cols-[292px_1fr]">
-        <aside className="border-b border-slate-800/80 bg-[linear-gradient(180deg,rgba(14,10,6,0.96),rgba(2,6,23,1))] px-6 py-8 lg:border-b-0 lg:border-r">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-950/40">
-              <Shield size={20} className="text-white" />
-            </div>
-            <div>
-              <div className="text-xs font-bold uppercase tracking-[0.24em] text-amber-300">Admin Shell</div>
-              <div className="mt-1 text-sm text-slate-400">Operational control</div>
-            </div>
+    <div className="min-h-screen bg-abyss text-starlight">
+      <div className="grid min-h-screen lg:grid-cols-[240px_1fr]">
+        {/* ── Sidebar ── */}
+        <aside className="app-sidebar admin-sidebar">
+          {/* Amber-tinted particles */}
+          <div className="sidebar-cosmos">
+            {Array.from({ length: 14 }).map((_, i) => (
+              <div
+                key={i}
+                className="sidebar-particle admin-particle"
+                style={{
+                  '--px': `${10 + Math.random() * 80}%`,
+                  '--py': `${Math.random() * 100}%`,
+                  '--ps': `${Math.random() * 2.5 + 0.8}px`,
+                  '--pdur': `${Math.random() * 8 + 5}s`,
+                  '--pdel': `${Math.random() * -8}s`,
+                }}
+              />
+            ))}
+            {/* Subtle constellation lines */}
+            <svg className="absolute inset-0 w-full h-full opacity-30" preserveAspectRatio="none">
+              <line x1="20%" y1="15%" x2="70%" y2="30%" stroke="rgba(251,191,36,0.12)" strokeWidth="0.5" />
+              <line x1="70%" y1="30%" x2="40%" y2="55%" stroke="rgba(251,191,36,0.1)" strokeWidth="0.5" />
+              <line x1="40%" y1="55%" x2="80%" y2="75%" stroke="rgba(251,191,36,0.08)" strokeWidth="0.5" />
+            </svg>
           </div>
 
-          <nav className="mt-8 space-y-2">
-            {ADMIN_NAV_ITEMS.map((item) => (
-              <AdminNavLink key={item.to} item={item} />
-            ))}
-          </nav>
-
-          <div className="mt-8 space-y-4 rounded-3xl border border-slate-800/80 bg-slate-950/70 p-4">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Operator</div>
-            <div className="mt-3 text-sm font-semibold text-white">{user?.username || 'Admin user'}</div>
-            <div className="mt-1 text-xs text-slate-400">{user?.email || 'No email available'}</div>
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-amber-300">
-              <Shield size={12} /> {user?.role || 'admin'}
+          <div className="relative z-10 flex flex-col h-full px-4 py-5">
+            {/* Logo */}
+            <div className="flex items-center gap-2.5">
+              <div className="app-logo-icon admin-logo-icon">
+                <Shield size={16} className="text-white" />
+              </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-aurora-amber">Admin Shell</div>
+                <div className="text-[9px] text-text-shadow">Operational control</div>
+              </div>
             </div>
-            <button
-              onClick={() => navigate('/app/dashboard')}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-300"
-            >
-              <ArrowRight size={15} /> Back to research shell
-            </button>
-            <button
-              onClick={() => {
-                logout()
-                navigate('/login', { replace: true })
-              }}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-sm font-semibold text-slate-200"
-            >
-              <LogOut size={15} /> Log out
-            </button>
+
+            {/* Nav */}
+            <nav className="mt-6 space-y-1">
+              {ADMIN_NAV_ITEMS.map((item) => (
+                <AdminNavLink key={item.to} item={item} />
+              ))}
+            </nav>
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* User + Actions */}
+            <div className="space-y-2">
+              <div className="app-user-badge admin-user-badge">
+                <div className="app-user-avatar admin-user-avatar">
+                  <span className="text-sm font-bold text-white">
+                    {(user?.username || 'A')[0].toUpperCase()}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-semibold text-white-star truncate">{user?.username || 'Admin'}</div>
+                  <div className="text-[10px] text-text-shadow truncate">{user?.email || 'No email'}</div>
+                </div>
+                <span className="app-role-tag admin-role-tag">
+                  {user?.role || 'admin'}
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <button
+                  onClick={() => navigate('/app/dashboard')}
+                  className="app-action-btn admin-action-btn"
+                >
+                  <ArrowRight size={13} /> Research Shell
+                </button>
+                <button
+                  onClick={() => {
+                    logout()
+                    navigate('/login', { replace: true })
+                  }}
+                  className="app-action-btn app-action-btn-logout"
+                >
+                  <LogOut size={13} /> Log out
+                </button>
+              </div>
+            </div>
           </div>
         </aside>
 
-        <div className="flex min-h-screen flex-col">
-          <header className="border-b border-slate-800/70 bg-slate-950/60 px-6 py-6 backdrop-blur">
-            <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-300">{titleMeta.eyebrow}</div>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-white">{titleMeta.title}</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{titleMeta.description}</p>
+        {/* ── Main Area ── */}
+        <div className="flex min-h-screen flex-col relative">
+          {/* Electric constellation background — amber tint */}
+          <div className="app-content-cosmos">
+            <svg className="app-content-lines" viewBox="0 0 1200 800" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="admin-line-1" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="rgba(251,191,36,0)" />
+                  <stop offset="50%" stopColor="rgba(251,191,36,0.3)" />
+                  <stop offset="100%" stopColor="rgba(251,191,36,0)" />
+                </linearGradient>
+                <linearGradient id="admin-line-2" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="rgba(234,88,12,0)" />
+                  <stop offset="50%" stopColor="rgba(234,88,12,0.25)" />
+                  <stop offset="100%" stopColor="rgba(251,191,36,0)" />
+                </linearGradient>
+                <filter id="admin-edge-glow">
+                  <feGaussianBlur stdDeviation="2" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+
+              {/* Cluster 1 */}
+              <line x1="80" y1="120" x2="250" y2="200" stroke="url(#admin-line-1)" strokeWidth="1" filter="url(#admin-edge-glow)" className="app-bg-line" />
+              <line x1="250" y1="200" x2="180" y2="350" stroke="url(#admin-line-1)" strokeWidth="1" filter="url(#admin-edge-glow)" className="app-bg-line" style={{ animationDelay: '-2s' }} />
+              <line x1="250" y1="200" x2="420" y2="150" stroke="url(#admin-line-2)" strokeWidth="0.8" filter="url(#admin-edge-glow)" className="app-bg-line" style={{ animationDelay: '-1s' }} />
+              <line x1="420" y1="150" x2="380" y2="320" stroke="url(#admin-line-2)" strokeWidth="0.8" filter="url(#admin-edge-glow)" className="app-bg-line" style={{ animationDelay: '-4s' }} />
+
+              {/* Cluster 2 */}
+              <line x1="850" y1="150" x2="1000" y2="250" stroke="url(#admin-line-1)" strokeWidth="1" filter="url(#admin-edge-glow)" className="app-bg-line" style={{ animationDelay: '-5s' }} />
+              <line x1="1000" y1="250" x2="1100" y2="180" stroke="url(#admin-line-1)" strokeWidth="0.8" filter="url(#admin-edge-glow)" className="app-bg-line" style={{ animationDelay: '-7s' }} />
+              <line x1="1000" y1="250" x2="1050" y2="420" stroke="url(#admin-line-2)" strokeWidth="0.8" filter="url(#admin-edge-glow)" className="app-bg-line" style={{ animationDelay: '-8s' }} />
+
+              {/* Cluster 3 */}
+              <line x1="200" y1="550" x2="400" y2="620" stroke="url(#admin-line-2)" strokeWidth="0.8" filter="url(#admin-edge-glow)" className="app-bg-line" style={{ animationDelay: '-3s' }} />
+              <line x1="400" y1="620" x2="600" y2="560" stroke="url(#admin-line-2)" strokeWidth="0.8" filter="url(#admin-edge-glow)" className="app-bg-line" style={{ animationDelay: '-6s' }} />
+
+              {/* Bridges */}
+              <line x1="420" y1="150" x2="700" y2="280" stroke="url(#admin-line-1)" strokeWidth="0.4" filter="url(#admin-edge-glow)" className="app-bg-line" style={{ animationDelay: '-9s' }} />
+              <line x1="700" y1="280" x2="850" y2="150" stroke="url(#admin-line-1)" strokeWidth="0.4" filter="url(#admin-edge-glow)" className="app-bg-line" style={{ animationDelay: '-10s' }} />
+            </svg>
+
+            {[
+              { x: 80, y: 120, s: 4 }, { x: 250, y: 200, s: 5 }, { x: 180, y: 350, s: 3 },
+              { x: 420, y: 150, s: 4 }, { x: 380, y: 320, s: 3 },
+              { x: 850, y: 150, s: 4 }, { x: 1000, y: 250, s: 5 }, { x: 1100, y: 180, s: 3 },
+              { x: 1050, y: 420, s: 3 },
+              { x: 200, y: 550, s: 3 }, { x: 400, y: 620, s: 4 }, { x: 600, y: 560, s: 3 },
+              { x: 700, y: 280, s: 2 }, { x: 1100, y: 600, s: 2 },
+            ].map((n, i) => (
+              <div
+                key={i}
+                className="app-bg-node admin-bg-node"
+                style={{
+                  left: `${(n.x / 1200) * 100}%`,
+                  top: `${(n.y / 800) * 100}%`,
+                  width: `${n.s}px`,
+                  height: `${n.s}px`,
+                  animationDelay: `${i * -1.5}s`,
+                  animationDuration: `${5 + (i % 3) * 2}s`,
+                }}
+              />
+            ))}
+
+            {/* Electric sparks */}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={`admin-spark-${i}`}
+                className="app-bg-electric-spark admin-bg-node"
+                style={{
+                  '--ex': `${10 + Math.random() * 80}%`,
+                  '--ey': `${Math.random() * 100}%`,
+                  '--edur': `${Math.random() * 15 + 10}s`,
+                  '--edel': `${Math.random() * -10}s`,
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Header */}
+          <header className="app-header admin-header">
+            <div className="flex items-center gap-2">
+              <Sparkles size={12} className="text-aurora-amber" />
+              <span className="text-micro font-semibold uppercase tracking-ultra text-aurora-amber">{titleMeta.eyebrow}</span>
+            </div>
+            <h1 className="mt-1.5 text-xl font-black text-white-star">{titleMeta.title}</h1>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-twilight">{titleMeta.description}</p>
           </header>
 
-          <main className="flex-1 p-6">
-            <div className="min-h-[calc(100vh-11rem)]">
+          {/* Content */}
+          <main className="relative z-10 flex-1 p-6">
+            <div className="min-h-[calc(100vh-9rem)]">
               <Outlet />
             </div>
           </main>

@@ -32,84 +32,6 @@ export default function CommunityEvolution() {
     return { areaData: traces, numCommunities: nC }
   }, [snapshots])
 
-  // Accumulate transition flows (sum over recent epochs around current)
-  const { flowSankey } = useMemo(() => {
-    if (snapshots.length < 2 || numCommunities === 0) return { flowSankey: null }
-
-    const windowStart = Math.max(1, epochInt - 5)
-    const windowEnd = Math.min(snapshots.length - 1, epochInt + 5)
-    const flowMap = {}
-    for (let i = windowStart; i <= windowEnd; i++) {
-      const t = snapshots[i]?.community_transitions || {}
-      Object.entries(t).forEach(([key, count]) => {
-        flowMap[key] = (flowMap[key] || 0) + count
-      })
-    }
-
-    if (Object.keys(flowMap).length === 0) return { flowSankey: null }
-
-    const nodeLabels = []
-    const sources = []
-    const targets = []
-    const values = []
-    const colors = []
-    const srcIds = {}
-    const dstIds = {}
-
-    Object.entries(flowMap).forEach(([key, count]) => {
-      const [fromStr, toStr] = key.split('->')
-      const from = parseInt(fromStr)
-      const to = parseInt(toStr)
-      if (from === to || count < 1) return
-
-      const srcLabel = `C${from} (từ)`
-      const dstLabel = `C${to} (đến)`
-
-      if (!(srcLabel in srcIds)) {
-        srcIds[srcLabel] = nodeLabels.length
-        nodeLabels.push(srcLabel)
-      }
-      if (!(dstLabel in dstIds)) {
-        dstIds[dstLabel] = nodeLabels.length
-        nodeLabels.push(dstLabel)
-      }
-
-      sources.push(srcIds[srcLabel])
-      targets.push(dstIds[dstLabel])
-      values.push(count)
-      colors.push(COMMUNITY_COLORS[from % COMMUNITY_COLORS.length] + 'AA')
-    })
-
-    if (sources.length === 0) return { flowSankey: null }
-
-    const nodeColors = nodeLabels.map((label) => {
-      const cid = parseInt(label.replace(/[^0-9]/g, '')) || 0
-      return COMMUNITY_COLORS[cid % COMMUNITY_COLORS.length]
-    })
-
-    return {
-      flowSankey: [{
-        type: 'sankey',
-        orientation: 'h',
-        node: {
-          pad: 12,
-          thickness: 18,
-          line: { color: 'rgba(0,0,0,0.3)', width: 0.5 },
-          label: nodeLabels,
-          color: nodeColors,
-          hovertemplate: '%{label}<br>%{value} nodes<extra></extra>'
-        },
-        link: {
-          source: sources,
-          target: targets,
-          value: values,
-          color: colors,
-          hovertemplate: '%{source.label} → %{target.label}<br>%{value} nodes<extra></extra>'
-        }
-      }]
-    }
-  }, [snapshots, epochInt, numCommunities])
-
   const currentSizes = snapshots[epochInt]?.community_sizes || []
   const totalNodes = currentSizes.reduce((a, b) => a + b, 0)
 
@@ -145,7 +67,7 @@ export default function CommunityEvolution() {
 
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {/* Stacked area chart (Takes full height if no Sankey) */}
-        <div className={`${flowSankey ? 'h-[50%] border-b border-slate-800/40' : 'flex-1'} shrink-0 relative flex flex-col transition-all duration-300`}>
+        <div className="flex-1 shrink-0 relative flex flex-col transition-all duration-300">
           <div className="text-[8px] text-slate-600 uppercase tracking-widest font-bold px-3 pt-1 pb-0 shrink-0">
             Kích thước cộng đồng theo Epoch
           </div>
@@ -178,27 +100,6 @@ export default function CommunityEvolution() {
           </div>
         </div>
 
-        {/* Node migration Sankey (ONLY rendered if there is data) */}
-        {flowSankey && (
-          <div className="flex-1 min-h-0 flex flex-col relative fade-in">
-            <div className="text-[8px] text-slate-600 uppercase tracking-widest font-bold px-3 pt-1.5 pb-0 shrink-0">
-              Node Migration Flow (±5 epochs từ Epoch {epochInt})
-            </div>
-            <div className="flex-1 min-h-0">
-              <LazyPlot
-                data={flowSankey}
-                layout={{
-                  paper_bgcolor: 'transparent',
-                  plot_bgcolor: 'transparent',
-                  margin: { l: 5, r: 5, t: 5, b: 5 },
-                  font: { color: '#94a3b8', size: 9 }
-                }}
-                config={{ displayModeBar: false, responsive: true }}
-                style={{ width: '100%', height: '100%' }}
-              />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

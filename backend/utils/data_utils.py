@@ -15,6 +15,9 @@ def load_dataset(name):
         return load_cora()
     elif name == 'citeseer':
         return load_citeseer()
+    elif name == 'karate':
+        from data.loaders import load_karate
+        return load_karate()
     else:
         return load_cora()
 
