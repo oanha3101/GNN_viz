@@ -601,7 +601,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         optimizer.zero_grad()
         train_edge_index = drop_edge_index(effective_train_batch.edge_index, edge_dropout, training=True)
         out, train_graph_embs, train_alpha = model(effective_train_batch.x, train_edge_index, effective_train_batch.batch)
-        loss = compute_graph_classification_loss(
+        ce_loss = compute_graph_classification_loss(
             out,
             effective_train_y,
             class_weights=class_weights,
@@ -610,7 +610,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         )
         entropy_loss = compute_attention_entropy_regularizer(train_alpha, effective_train_batch.batch)
         contrastive_loss = compute_density_aware_contrastive_loss(train_graph_embs, effective_train_y, effective_train_density)
-        loss = loss + (readout_entropy_weight * entropy_loss) + (contrastive_weight * contrastive_loss)
+        loss = ce_loss + (readout_entropy_weight * entropy_loss) + (contrastive_weight * contrastive_loss)
         loss.backward()
         optimizer.step()
 
@@ -787,7 +787,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             'balanced_accuracy': float(classification_summary['balanced_accuracy']),
             'median_margin': float(np.median(confidence_margins)) if confidence_margins else 0.0,
             'calibration_temperature': float(calibration_temperature),
-            'train_loss': float(loss.item()),
+            'train_loss': float(ce_loss.item()),
             'val_loss': float(val_loss.item()),
             'train_acc': float(train_acc.item()),
             'val_acc': float(val_acc.item()),
