@@ -630,25 +630,26 @@ export function buildTask2ResearchSignals({ snapshot, graphs = [], classNames = 
   const densityBias = reliability?.metrics?.densityBias || 0
   const sizeBias = reliability?.metrics?.sizeBias || 0
   const edgeBias = reliability?.metrics?.edgeBias || 0
+  const shortcutRiskScore = reliability?.metrics?.shortcutRiskScore ?? Math.max(Math.abs(densityBias), Math.abs(sizeBias), Math.abs(edgeBias))
   const shortcut = {
     id: 'shortcut',
     title: 'Shortcut bias',
     status: 'ok',
     summary: 'No strong structural shortcut is dominating confidence on this slice.',
-    evidence: `Conf vs density ${densityBias.toFixed(2)}, size ${sizeBias.toFixed(2)}, edges ${edgeBias.toFixed(2)}.`,
+    evidence: `Conf vs density ${densityBias.toFixed(2)}, size ${sizeBias.toFixed(2)}, edges ${edgeBias.toFixed(2)}, shortcut risk ${shortcutRiskScore.toFixed(2)}.`,
     recommendation: 'Use Structure for motif reading, not just for shortcut checking.',
   }
 
-  if (Math.abs(densityBias) >= 0.5 || Math.abs(sizeBias) >= 0.5) {
+  if (shortcutRiskScore >= 0.5 || Math.abs(densityBias) >= 0.5 || Math.abs(sizeBias) >= 0.5) {
     const stronger = Math.abs(densityBias) >= Math.abs(sizeBias) ? 'density' : 'graph size'
     shortcut.status = 'danger'
     shortcut.summary = `Confidence is strongly correlated with ${stronger}, so the model may be using a structural shortcut.`
-    shortcut.evidence = `The strongest correlation is ${stronger === 'density' ? densityBias.toFixed(2) : sizeBias.toFixed(2)} and should be treated as a bias signal, not a motif explanation.`
+    shortcut.evidence = `Shortcut risk is ${shortcutRiskScore.toFixed(2)}; the strongest visible correlation is ${stronger === 'density' ? densityBias.toFixed(2) : sizeBias.toFixed(2)} and should be treated as a bias signal, not a motif explanation.`
     shortcut.recommendation = 'Use Structure to inspect whether hard cases cluster by topology before trusting motif-level language.'
-  } else if (Math.abs(densityBias) >= 0.3 || Math.abs(sizeBias) >= 0.3 || Math.abs(edgeBias) >= 0.3) {
+  } else if (shortcutRiskScore >= 0.3 || Math.abs(densityBias) >= 0.3 || Math.abs(sizeBias) >= 0.3 || Math.abs(edgeBias) >= 0.3) {
     shortcut.status = 'warn'
     shortcut.summary = 'There is a mild structural shortcut signal in the confidence pattern.'
-    shortcut.evidence = `Conf vs density ${densityBias.toFixed(2)}, size ${sizeBias.toFixed(2)}, edges ${edgeBias.toFixed(2)}.`
+    shortcut.evidence = `Conf vs density ${densityBias.toFixed(2)}, size ${sizeBias.toFixed(2)}, edges ${edgeBias.toFixed(2)}, shortcut risk ${shortcutRiskScore.toFixed(2)}.`
     shortcut.recommendation = 'Cross-check topology slices with misclassified graphs to confirm the model is reading motifs, not just size cues.'
   }
 
@@ -759,6 +760,8 @@ export function assessTask2Reliability({ snapshot, graphs = [], classNames = [] 
   const entropies = snapshot?.attention_entropy
     || (snapshot?.node_contributions || []).map((arr) => computeEntropy(arr))
   const calibration = pickCalibration(snapshot)
+  const trustProfile = snapshot?.trust_profile || {}
+  const readoutQuality = snapshot?.readout_quality || {}
   const structuralBias = snapshot?.structural_bias_signals || {}
   const perClassRows = snapshot?.graph_per_class_metrics || confusion.support.map((support, classId) => ({
     class_id: classId,
@@ -819,6 +822,11 @@ export function assessTask2Reliability({ snapshot, graphs = [], classNames = [] 
     warnings.push('Confidence calibration is weak. High-probability predictions are not aligning well with actual correctness.')
   }
 
+  if (Number.isFinite(trustProfile.high_conf_wrong_rate) && trustProfile.high_conf_wrong_rate > 0.15) {
+    status = status === 'danger' ? status : 'warn'
+    warnings.push('A noticeable share of graphs are wrong with high confidence. Treat explanations on those cases as hypotheses, not proof.')
+  }
+
   if (margins.length >= 5 && median(margins) < 0.12) {
     status = status === 'danger' ? status : 'warn'
     warnings.push('Many graphs have thin top-1 vs top-2 margins. The class boundary is still fragile.')
@@ -831,7 +839,8 @@ export function assessTask2Reliability({ snapshot, graphs = [], classNames = [] 
 
   const densityBias = Math.abs(structuralBias?.confidence_vs_density || 0)
   const sizeBias = Math.abs(structuralBias?.confidence_vs_num_nodes || 0)
-  if (densityBias > 0.35 || sizeBias > 0.35) {
+  const shortcutRiskScore = Number(trustProfile.shortcut_risk_score ?? structuralBias?.shortcut_risk_score ?? Math.max(densityBias, sizeBias))
+  if (densityBias > 0.35 || sizeBias > 0.35 || shortcutRiskScore > 0.35) {
     status = status === 'danger' ? status : 'warn'
     warnings.push('Confidence is correlating with graph size or density. Inspect whether the model is leaning on structural shortcuts.')
   }
@@ -849,6 +858,12 @@ export function assessTask2Reliability({ snapshot, graphs = [], classNames = [] 
       meanEntropy: average(entropies),
       wrongMeanConfidence: average(wrongConfidences),
       calibrationEce: calibration?.ece ?? null,
+      brier: trustProfile.brier ?? calibration?.brier ?? null,
+      highConfWrongRate: trustProfile.high_conf_wrong_rate ?? calibration?.high_conf_wrong_rate ?? 0,
+      shortcutRiskScore,
+      readoutDiffuseShare: trustProfile.readout_diffuse_share ?? readoutQuality.diffuse_share ?? 0,
+      readoutConcentratedShare: readoutQuality.concentrated_share ?? 0,
+      calibrationTemperature: trustProfile.calibration_temperature ?? snapshot?.calibration_temperature ?? null,
       densityBias: structuralBias?.confidence_vs_density ?? 0,
       sizeBias: structuralBias?.confidence_vs_num_nodes ?? 0,
       edgeBias: structuralBias?.confidence_vs_num_edges ?? 0,

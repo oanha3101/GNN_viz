@@ -198,9 +198,18 @@ describe('task 2 collection helpers', () => {
         { class_id: 2, support: 1, precision: 1, recall: 1, f1: 1, mean_confidence: 0.67 },
       ],
       graph_calibration: { ece: 0.14, bins: [] },
+      readout_quality: { mean_entropy: 0.56, diffuse_share: 0.5, concentrated_share: 0.25 },
+      trust_profile: {
+        brier: 0.23,
+        high_conf_wrong_rate: 0.25,
+        shortcut_risk_score: 0.42,
+        readout_diffuse_share: 0.5,
+        calibration_temperature: 1.3,
+      },
       structural_bias_signals: {
         confidence_vs_density: 0.42,
         confidence_vs_num_nodes: 0.31,
+        shortcut_risk_score: 0.42,
       },
     }
 
@@ -218,6 +227,10 @@ describe('task 2 collection helpers', () => {
       expect(reliability.metrics.macroF1).toBeGreaterThanOrEqual(0)
       expect(reliability.metrics.balancedAccuracy).toBeGreaterThanOrEqual(0)
       expect(reliability.metrics.calibrationEce).toBe(0.14)
+      expect(reliability.metrics.brier).toBe(0.23)
+      expect(reliability.metrics.highConfWrongRate).toBe(0.25)
+      expect(reliability.metrics.shortcutRiskScore).toBe(0.42)
+      expect(reliability.metrics.readoutDiffuseShare).toBe(0.5)
       expect(reliability.metrics.perClass).toHaveLength(3)
       expect(reliability.metrics.weakClass).toEqual(expect.objectContaining({ classId: expect.any(Number) }))
     })
