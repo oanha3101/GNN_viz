@@ -134,11 +134,11 @@ function OverviewTab({ snap, snapshots, epochInt, currentEpochFloat }) {
                 <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 9 }} />
             <YAxis domain={[-0.1, 1]} tick={{ fill: '#94a3b8', fontSize: 9 }} />
             <Tooltip
-              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+              contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
               itemStyle={{ color: '#e2e8f0' }}
               labelStyle={{ color: '#94a3b8' }}
             />
@@ -231,11 +231,11 @@ function StabilityTab({ snapshots, epochInt, currentEpochFloat }) {
         <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra block mb-1">Overall stability per epoch</span>
         <ResponsiveContainer width="100%" height={90}>
           <LineChart data={lineData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 8 }} />
             <YAxis domain={[0, 1]} tick={{ fill: '#94a3b8', fontSize: 8 }} />
             <Tooltip
-              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+              contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
               itemStyle={{ color: '#e2e8f0' }}
               labelStyle={{ color: '#94a3b8' }}
             />

@@ -132,6 +132,11 @@ export default {
           500: 'var(--c-primary)',
           600: 'var(--c-primary-hover)',
         },
+        // NOTE: slate palette intentionally NOT overridden — it is used both
+        // as TEXT colors (slate-300/400/500 must stay neutral gray for
+        // readability on every theme) and as legacy DARK SURFACES
+        // (bg-slate-800/900/950). Only the dark-surface usages are flipped
+        // in light mode via the @layer utilities block in index.css.
       },
 
       fontSize: {

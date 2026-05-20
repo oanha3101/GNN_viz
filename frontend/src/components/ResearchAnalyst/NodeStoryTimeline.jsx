@@ -191,11 +191,11 @@ export default function NodeStoryTimeline({ experimentId, nodeId, graphData, onC
                     <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
                 <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 9 }} />
                 <YAxis domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 9 }} />
                 <Tooltip
-                  contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+                  contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
                   formatter={(value) => [`${value.toFixed(1)}%`, 'Confidence']}
                 />
                 <Area type="monotone" dataKey="confidence" stroke="#a855f7" fill="url(#confGrad)" strokeWidth={2} />
@@ -214,11 +214,11 @@ export default function NodeStoryTimeline({ experimentId, nodeId, graphData, onC
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={classProbData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
                 <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 9 }} />
                 <YAxis domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 9 }} />
                 <Tooltip
-                  contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+                  contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
                   formatter={(value) => [`${value?.toFixed(1) || 0}%`]}
                 />
                 {Object.keys(classProbData[0])

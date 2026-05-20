@@ -372,7 +372,7 @@ function DiagnosticsTab({ data }) {
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={radarData}>
-              <PolarGrid stroke="#1e293b" />
+              <PolarGrid stroke="var(--c-border)" />
               <PolarAngleAxis dataKey="metric" tick={{ fill: '#94a3b8', fontSize: 9 }} />
               <PolarRadiusAxis domain={[0, 1]} tick={false} axisLine={false} />
               {modelNames.map((model) => (
@@ -388,7 +388,7 @@ function DiagnosticsTab({ data }) {
               ))}
               <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
               <Tooltip
-                contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+                contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
               />
             </RadarChart>
           </ResponsiveContainer>
@@ -709,11 +709,11 @@ function DatasetTab({ data }) {
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={classData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
                 <XAxis dataKey="class" tick={{ fill: '#94a3b8', fontSize: 10 }} />
                 <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+                  contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
                 />
                 <Bar dataKey="count" name="Nodes" radius={[4, 4, 0, 0]}>
                   {classData.map((_, i) => (

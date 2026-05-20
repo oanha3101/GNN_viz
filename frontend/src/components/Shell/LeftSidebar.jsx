@@ -58,7 +58,7 @@ export default function LeftSidebar({
   const selectedNodeId = useGNNStore((s) => s.selectedNodeId)
 
   return (
-    <div className="h-full flex flex-col bg-black/40 backdrop-blur-md border-r border-white/5 shadow-2xl overflow-hidden pt-2">
+    <div className="h-full flex flex-col bg-deep border-r border-line-default shadow-sm overflow-hidden pt-2">
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar py-4 px-2 space-y-6">
         <SidebarSection title="Nhiệm vụ" collapsed={collapsed}>
@@ -79,7 +79,7 @@ export default function LeftSidebar({
         </SidebarSection>
 
         <SidebarSection title="Mô hình" collapsed={collapsed}>
-          <div className={`flex ${collapsed ? 'flex-col items-center' : 'flex-row'} gap-1 p-1 bg-white/5 rounded-xl border border-white/5`}>
+          <div className={`flex ${collapsed ? 'flex-col items-center' : 'flex-row'} gap-1 p-1 bg-nebula rounded-xl border border-line-subtle`}>
             {MODELS.map((model) => {
               const isSelected = selectedModel === model.id;
               return (
@@ -87,7 +87,7 @@ export default function LeftSidebar({
                 key={model.id}
                 onClick={() => setModel(model.id)}
                 className={`relative flex-1 rounded-lg py-2 text-[10px] font-black transition-all duration-300 uppercase tracking-wide transform hover:scale-[1.03] active:scale-95 ${
-                  isSelected ? 'text-white' : 'text-starlight/60 hover:text-white hover:bg-white/10'
+                  isSelected ? 'text-white' : 'text-moonlight hover:text-starlight hover:bg-line-default/30'
                 } ${collapsed ? 'w-full px-0' : 'px-2'}`}
               >
                 {isSelected && (
@@ -151,7 +151,7 @@ export default function LeftSidebar({
         </SidebarSection>
       </div>
 
-      <div className="p-4 border-t border-white/5 space-y-3 bg-black/20">
+      <div className="p-4 border-t border-line-subtle space-y-3 bg-nebula/60">
         {!collapsed ? (
           <div className="grid grid-cols-2 gap-2">
             <ShortcutHint keys={['[', ']']} label="Epoch" />
@@ -160,7 +160,7 @@ export default function LeftSidebar({
         ) : null}
         <button
           onClick={onToggle}
-          className="w-full flex items-center justify-center py-2.5 rounded-xl border border-white/5 bg-white/5 text-starlight hover:text-white hover:bg-white/10 hover:border-white/10 transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-sm group"
+          className="w-full flex items-center justify-center py-2.5 rounded-xl border border-line-subtle bg-deep text-moonlight hover:text-amethyst hover:bg-amethyst/5 hover:border-amethyst/30 transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-sm group"
         >
           {collapsed ? <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" /> : <div className="flex items-center gap-2"><ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" /><span className="text-[10px] font-bold uppercase tracking-[0.2em]">Thu gọn</span></div>}
         </button>
@@ -184,10 +184,10 @@ function SidebarSection({ title, children, collapsed }) {
 
 function ShortcutHint({ keys, label }) {
   return (
-    <div className="flex flex-col gap-1 p-2 rounded-xl bg-black/30 border border-white/5 shadow-inner">
+    <div className="flex flex-col gap-1 p-2 rounded-xl bg-nebula/70 border border-line-subtle shadow-inner">
       <div className="flex gap-1">
         {keys.map((key) => (
-          <kbd key={key} className="px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-mono text-starlight shadow-sm">
+          <kbd key={key} className="px-1.5 py-0.5 rounded border border-line-subtle bg-deep text-[9px] font-mono text-moonlight shadow-sm">
             {key}
           </kbd>
         ))}

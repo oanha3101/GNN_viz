@@ -127,7 +127,7 @@ export default function LatentSpaceVisualization({ snapshot, graphData, selected
       <div className="h-[300px] w-full rounded-xl border border-slate-800/70 bg-slate-950/45 p-3">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis
               type="number"
               dataKey="x"
@@ -143,7 +143,7 @@ export default function LatentSpaceVisualization({ snapshot, graphData, selected
               tickLine={false}
             />
             <Tooltip
-              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+              contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
               content={({ payload }) => {
                 if (!payload?.length) return null
                 const d = payload[0].payload

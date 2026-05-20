@@ -116,7 +116,7 @@ export default function LinkMetricsPanel() {
                 <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis dataKey="epoch" tick={{ fill: '#475569', fontSize: 7 }} />
             <YAxis domain={[0.4, 1]} tick={{ fill: '#475569', fontSize: 7 }} />
             <ReferenceLine y={0.5} stroke="#ef4444" strokeDasharray="3 3" strokeOpacity={0.4} />
@@ -131,11 +131,11 @@ export default function LinkMetricsPanel() {
           <div className="text-[9px] text-slate-500 uppercase tracking-wider font-bold mb-1">Score Distribution</div>
           <ResponsiveContainer width="100%" height={70}>
             <AreaChart data={distribution} stackOffset="none">
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
               <XAxis dataKey="range" tick={{ fill: '#475569', fontSize: 7 }} />
               <YAxis tick={{ fill: '#475569', fontSize: 7 }} />
               <Tooltip
-                contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 9 }}
+                contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 9 }}
               />
               <Area type="monotone" dataKey="positive" stackId="1" stroke="#3b82f6" fill="#3b82f680" />
               <Area type="monotone" dataKey="negative" stackId="1" stroke="#ef4444" fill="#ef444480" />

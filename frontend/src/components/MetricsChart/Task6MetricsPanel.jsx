@@ -61,7 +61,7 @@ export default function Task6MetricsPanel() {
         <span className="ml-auto text-nano font-mono text-slate-500">Epoch {epochInt}</span>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar p-3">
         {tab === 'overview' && <OverviewTab snapshots={snapshots} snap={snap} />}
         {tab === 'comparison' && <ComparisonTab snap={snap} />}
         {tab === 'invalidity' && <InvalidityTab snap={snap} />}
@@ -112,11 +112,11 @@ function OverviewTab({ snapshots, snap }) {
       <div className="flex-1 min-h-[220px]">
         <ResponsiveContainer width="100%" height={240}>
           <LineChart data={lossHistory} margin={{ top: 10, right: 10, bottom: 0, left: -10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 10 }} />
             <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
             <Tooltip
-              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 6, fontSize: 11 }}
+              contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 6, fontSize: 11 }}
               labelStyle={{ color: '#94a3b8' }}
             />
             <Legend wrapperStyle={{ fontSize: 10, color: '#94a3b8' }} />
@@ -172,7 +172,7 @@ function HistBlock({ title, metric }) {
           <XAxis dataKey="bin" tick={{ fill: '#94a3b8', fontSize: 9 }} />
           <YAxis tick={{ fill: '#94a3b8', fontSize: 9 }} />
           <Tooltip
-            contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 6, fontSize: 10 }}
+            contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 6, fontSize: 10 }}
             labelStyle={{ color: '#94a3b8' }}
           />
           <Bar dataKey="source" fill="#64748b" name="Source" />

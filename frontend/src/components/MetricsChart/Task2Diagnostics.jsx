@@ -128,8 +128,8 @@ export default function Task2Diagnostics({
           </p>
           <div className="relative rounded-md border border-slate-800/60 bg-slate-950/40 p-2">
             <svg viewBox={`-8 -4 ${scatterW + 12} ${scatterH + 16}`} className="w-full h-40" role="img" aria-label="entropy vs density scatter">
-              <line x1="0" y1={scatterH} x2={scatterW} y2={scatterH} stroke="#1e293b" strokeWidth="0.4" />
-              <line x1="0" y1="0" x2="0" y2={scatterH} stroke="#1e293b" strokeWidth="0.4" />
+              <line x1="0" y1={scatterH} x2={scatterW} y2={scatterH} stroke="var(--c-border)" strokeWidth="0.4" />
+              <line x1="0" y1="0" x2="0" y2={scatterH} stroke="var(--c-border)" strokeWidth="0.4" />
               <text x={scatterW / 2} y={scatterH + 10} textAnchor="middle" fill="#64748b" fontSize="4">entropy →</text>
               <text x={-6} y={scatterH / 2} transform={`rotate(-90 -6 ${scatterH / 2})`} textAnchor="middle" fill="#64748b" fontSize="4">density →</text>
               {points.map((point) => {

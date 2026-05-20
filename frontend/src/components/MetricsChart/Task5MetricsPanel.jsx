@@ -121,7 +121,7 @@ function OverviewTab({ snap, snapshots, epochInt }) {
         <div className="h-44 w-full p-1">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" vertical={false} />
               <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="pct" domain={[0, 100]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="loss" orientation="right" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
@@ -273,7 +273,7 @@ function NeighborhoodTab({ snap, graphData, onNodeClick }) {
             <div className="h-56 w-full p-1">
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart margin={{ top: 10, right: 10, bottom: 18, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
                   <XAxis
                     dataKey="degree"
                     type="number"
@@ -355,7 +355,7 @@ function DiagnosticsTab({ snap, snapshots, epochInt, selectedModel }) {
             <div className="h-40 w-full p-1">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={histogram} margin={{ top: 6, right: 10, bottom: 14, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} />
@@ -412,7 +412,7 @@ function StressSection({ snap, snapshots, epochInt }) {
         <div className="h-40 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" vertical={false} />
               <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} />
@@ -484,7 +484,7 @@ function SignatureSection({ snapshots, epochInt, selectedModel }) {
               <div className="h-36 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={attnHistogram} margin={{ top: 6, right: 10, bottom: 14, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" vertical={false} />
                     <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} />
@@ -502,7 +502,7 @@ function SignatureSection({ snapshots, epochInt, selectedModel }) {
               <div className="h-32 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" vertical={false} />
                     <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} />
@@ -516,7 +516,7 @@ function SignatureSection({ snapshots, epochInt, selectedModel }) {
               <div className="h-32 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" vertical={false} />
                     <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} />
@@ -571,7 +571,7 @@ function SignatureSection({ snapshots, epochInt, selectedModel }) {
             <div className="h-36 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={history} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" vertical={false} />
                   <XAxis dataKey="epoch" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                   <YAxis domain={[0, 1]} tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} />
@@ -657,6 +657,6 @@ function averagePositive(values) {
   return filtered.reduce((sum, value) => sum + value, 0) / Math.max(1, filtered.length)
 }
 
-const tooltipStyle = { background: '#0f172a', border: '1px solid #1e293b', fontSize: 10 }
+const tooltipStyle = { background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', fontSize: 10 }
 const tooltipItemStyle = { color: '#e2e8f0' }
 const tooltipLabelStyle = { color: '#94a3b8' }

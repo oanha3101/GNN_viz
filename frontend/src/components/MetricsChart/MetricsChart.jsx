@@ -104,7 +104,7 @@ export default function MetricsChart() {
         <div className="w-full h-full pt-5 pr-2 pb-2 pl-2">
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
                     <XAxis
                         dataKey="epoch"
                         stroke="#475569"

@@ -127,9 +127,7 @@ export default function AppLayout() {
               ))}
             </nav>
 
-            <div className="flex-1" />
-
-            <div className="space-y-3 border-t border-line-subtle pt-5">
+            <div className="mt-4 space-y-3 border-t border-line-subtle pt-4">
               <UserBadge user={user} navigate={navigate} />
 
               <div className="flex flex-col gap-2">

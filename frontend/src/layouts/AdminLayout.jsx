@@ -132,7 +132,7 @@ export default function AdminLayout() {
             </div>
 
             {/* Nav */}
-            <nav className="admin-scrollbar mt-6 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+            <nav className="admin-scrollbar mt-6 space-y-1 overflow-y-auto pr-1">
               {ADMIN_NAV_ITEMS.map((item) => (
                 <AdminNavLink key={item.to} item={item} />
               ))}
