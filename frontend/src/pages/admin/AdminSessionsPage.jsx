@@ -122,7 +122,7 @@ export default function AdminSessionsPage() {
       {items.length ? (
         <div className="space-y-3">
           {items.map((item) => (
-            <div key={item.id} className="glass-card p-5">
+            <div key={item.id} data-testid={`admin-session-${item.id}`} className="glass-card p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
@@ -136,6 +136,7 @@ export default function AdminSessionsPage() {
                 <div className="flex gap-2">
                   <button
                     type="button"
+                    data-testid={`admin-session-stop-${item.id}`}
                     onClick={() => handleAction(item.id, 'stop')}
                     disabled={pendingSessionId === item.id}
                     className="rounded-lg border border-aurora-rose/20 bg-aurora-rose/[0.08] px-3 py-2 text-xs font-semibold text-aurora-rose transition-all hover:bg-aurora-rose/[0.15] disabled:cursor-not-allowed disabled:opacity-60"
@@ -144,6 +145,7 @@ export default function AdminSessionsPage() {
                   </button>
                   <button
                     type="button"
+                    data-testid={`admin-session-retry-${item.id}`}
                     onClick={() => handleAction(item.id, 'retry')}
                     disabled={pendingSessionId === item.id}
                     className="rounded-lg border border-aurora-green/20 bg-aurora-green/[0.08] px-3 py-2 text-xs font-semibold text-aurora-green transition-all hover:bg-aurora-green/[0.15] disabled:cursor-not-allowed disabled:opacity-60"

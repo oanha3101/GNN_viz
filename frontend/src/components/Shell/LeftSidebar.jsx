@@ -142,8 +142,8 @@ export default function LeftSidebar({
               <SidebarButton icon={Layers} label="Workspace" collapsed={collapsed} indicatorId="tool-indicator" onClick={onOpenWorkspace} />
             ) : null}
             <SidebarButton icon={BookOpen} label={libraryLabel} collapsed={collapsed} indicatorId="tool-indicator" onClick={onOpenLibrary} />
-            <SidebarButton icon={FolderUp} label="Tải dữ liệu" collapsed={collapsed} indicatorId="tool-indicator" onClick={onOpenDataInput} />
-            <SidebarButton icon={Settings} label="Cấu hình" collapsed={collapsed} indicatorId="tool-indicator" onClick={onOpenConfig} />
+            <SidebarButton icon={FolderUp} label="Tải dữ liệu" collapsed={collapsed} indicatorId="tool-indicator" onClick={onOpenDataInput} data-testid="sidebar-data-load" />
+            <SidebarButton icon={Settings} label="Cấu hình" collapsed={collapsed} indicatorId="tool-indicator" onClick={onOpenConfig} data-testid="sidebar-config" />
             {showAdminButton ? (
               <SidebarButton icon={Monitor} label="Admin Console" collapsed={collapsed} indicatorId="tool-indicator" onClick={onOpenAdmin} />
             ) : null}

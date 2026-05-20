@@ -12,7 +12,7 @@ async function registerViaUi(page, { email, username, password, fullName }) {
   await page.getByLabel('Full name').fill(fullName)
   await page.getByLabel('Username').fill(username)
   await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: /tao tai khoan|create/i }).click()
+  await page.locator('.auth-submit').click()
   await page.waitForURL(/\/app\/dashboard$/, { timeout: 15000 })
 }
 
@@ -150,14 +150,15 @@ test.describe('Live training recovery and replay seek flows', () => {
     await expect(page).toHaveURL(/\/app\/dashboard$/)
 
     await page.goto('/app/projects')
+    await page.getByRole('button', { name: /create project/i }).first().click()
     await page.getByPlaceholder('Project title').fill(projectTitle)
     await page.getByPlaceholder('Short description').fill('Live training recoverability project')
-    await page.getByRole('button', { name: /^Create$/ }).click()
+    await page.getByRole('button', { name: /create project/i }).click()
     await expect(page.getByText(projectTitle)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Active' })).toBeVisible()
 
     await page.goto('/app/lab')
-    await page.getByRole('button', { name: /cau hinh/i }).click()
+    await page.getByTestId('sidebar-config').click()
     await page.getByTestId('config-epochs-range').evaluate((element) => {
       element.value = '10'
       element.dispatchEvent(new Event('input', { bubbles: true }))
@@ -165,7 +166,7 @@ test.describe('Live training recovery and replay seek flows', () => {
     })
     await page.getByTestId('config-close').click()
 
-    await page.getByRole('button', { name: /tai du lieu/i }).click()
+    await page.getByTestId('sidebar-data-load').click()
     await expect(page.getByText(/custom dataset configuration/i)).toBeVisible()
 
     await page.getByTestId('upload-nodes-file').setInputFiles(buildNodeFile())
@@ -241,7 +242,7 @@ test.describe('Live training recovery and replay seek flows', () => {
 
     await page.goto('/app/experiments')
     await page.getByText(experimentTitle, { exact: true }).click()
-    await page.getByRole('button', { name: /load replay/i }).click()
+    await page.getByTestId('detail-load-replay').click()
     await expect(page).toHaveURL(/\/app\/lab$/)
 
     await expect(page.getByTestId('player-total-epochs')).toHaveText('4')
