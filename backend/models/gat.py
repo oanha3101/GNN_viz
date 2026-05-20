@@ -55,7 +55,7 @@ class GATModel(nn.Module):
                 attn_map = {}
                 per_head_map = {}
                 num_heads = alpha.shape[1]
-                alpha_filtered = alpha[mask]  # [num_filtered_edges, num_heads]
+                alpha_filtered = alpha[mask].detach()  # [num_filtered_edges, num_heads]
                 for idx in range(ei_filtered.shape[1]):
                     u, v = int(ei_filtered[0, idx]), int(ei_filtered[1, idx])
                     key = (min(u, v), max(u, v))

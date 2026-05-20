@@ -10,10 +10,12 @@ export default function SidebarButton({
   badge = null,
   onClick,
   indicatorId = null,
+  'data-testid': testId,
 }) {
   return (
     <div className="tooltip-container relative">
       <button
+        data-testid={testId}
         onClick={onClick}
         className={`
           relative flex items-center gap-3 w-full rounded-xl transition-all duration-300 group hover:scale-[1.02] active:scale-95

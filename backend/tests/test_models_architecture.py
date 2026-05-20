@@ -42,7 +42,7 @@ def test_gat_deep_architecture():
     logits, embedding, att = model(x, edge_index)
     
     assert logits.shape == (10, out_channels)
-    assert embedding.shape == (10, hidden_channels * heads) # GAT concat heads in hidden layers
+    assert embedding.shape == (10, hidden_channels)  # embedding_proj maps to hidden_channels
     assert att is not None
 
 def test_graphsage_deep_architecture():

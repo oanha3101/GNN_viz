@@ -70,7 +70,15 @@ def create_project(
     return serialize_project(project)
 
 
-def list_projects(db: Session, user: Optional[User]) -> dict:
+def list_projects(
+    db: Session,
+    user: Optional[User],
+    *,
+    search: Optional[str] = None,
+    visibility: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 12,
+) -> dict:
     query = db.query(Project)
     if user and not (user.is_superuser or user.role == "admin"):
         query = query.filter(
@@ -78,8 +86,31 @@ def list_projects(db: Session, user: Optional[User]) -> dict:
             | (Project.is_public.is_(True))
             | (Project.owner_id.is_(None))
         )
-    rows = query.order_by(Project.created_at.desc()).all()
-    return build_list_response([serialize_project(row) for row in rows])
+    if search:
+        like = f"%{search.strip()}%"
+        query = query.filter(
+            (Project.title.ilike(like)) | (Project.description.ilike(like))
+        )
+    if visibility == "public":
+        query = query.filter(Project.is_public.is_(True))
+    elif visibility == "private":
+        query = query.filter(Project.is_public.is_(False))
+
+    total = query.count()
+    page = max(1, int(page or 1))
+    page_size = max(1, min(100, int(page_size or 12)))
+    rows = (
+        query.order_by(Project.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    return build_list_response(
+        [serialize_project(row) for row in rows],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 def get_project_by_id(db: Session, project_id: int) -> Project:
@@ -103,3 +134,12 @@ def update_project(db: Session, project_id: int, updates: dict, user: Optional[U
     db.commit()
     db.refresh(project)
     return serialize_project(project)
+
+
+def delete_project(db: Session, project_id: int, user: Optional[User]) -> dict:
+    project = get_project_by_id(db, project_id)
+    ensure_project_write_access(project, user)
+    project_summary = serialize_project(project)
+    db.delete(project)
+    db.commit()
+    return {"deleted": True, "project": project_summary}

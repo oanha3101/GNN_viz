@@ -54,7 +54,7 @@ const TASK_REQUIREMENTS = {
   ],
 }
 
-export default function DataInputView({ onClose }) {
+export default function DataInputView({ onClose, variant = 'modal' }) {
   const selectedTaskFromWorkspace = useGNNStore(s => s.selectedTask)
   const [step, setStep] = useState(1)
   const [task, setTask] = useState(selectedTaskFromWorkspace || 1)
@@ -552,50 +552,59 @@ export default function DataInputView({ onClose }) {
     }
   }
 
+  const isInline = variant === 'inline'
+  const Wrapper = isInline ? 'div' : 'div'
+  const wrapperClassName = isInline
+    ? 'uploader-inline'
+    : 'fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-8 text-slate-200 font-sans'
+  const cardClassName = isInline
+    ? 'uploader-card'
+    : 'w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col h-[85vh]'
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-8 text-slate-200 font-sans">
-      <div className="w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col h-[85vh]">
+    <Wrapper className={wrapperClassName}>
+      <div className={cardClassName}>
         {/* Header */}
-         <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+         <div className="uploader-header">
           <div>
-            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent flex items-center gap-2">
-              <Upload size={20} /> Custom Dataset Configuration
+            <h2 className="uploader-title">
+              <Upload size={18} /> Custom Dataset Configuration
             </h2>
-            <p className="text-sm text-slate-400">Upload a reusable dataset version, then choose an initial task profile for the first validation pass.</p>
+            <p className="uploader-sub">Upload a reusable dataset version, then choose an initial task profile for the first validation pass.</p>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
-            <X size={16} />
-          </button>
+          {onClose ? (
+            <button onClick={onClose} className="modal-close" aria-label="Close uploader">
+              <X size={14} />
+            </button>
+          ) : null}
         </div>
 
         {/* Stepper — 4 steps now */}
-        <div className="flex border-b border-slate-800 bg-slate-900/50">
+        <div className="uploader-steps">
           {[1, 2, 3, 4].map(s => (
-            <div key={s} className={`flex-1 py-3 text-center border-b-2 text-sm font-semibold transition-colors
-              ${step === s ? 'border-blue-500 text-blue-400' : 
-                step > s ? 'border-green-500/50 text-green-500' : 'border-transparent text-slate-600'}`
-            }>
-              Step {s}: {s===1 ? 'Upload' : s===2 ? 'Profile' : s===3 ? 'Mapping' : 'Validate'}
+            <div key={s} className={`uploader-step ${step === s ? 'uploader-step-active' : step > s ? 'uploader-step-done' : ''}`}>
+              <span className="uploader-step-num">{s}</span>
+              <span>{s===1 ? 'Upload' : s===2 ? 'Profile' : s===3 ? 'Mapping' : 'Validate'}</span>
             </div>
           ))}
         </div>
 
         {/* Dataset Name Input (Persistent) */}
         {(step === 1 || step === 3) && (
-          <div className="px-6 py-3 bg-slate-900 border-b border-slate-800 flex items-center gap-4">
-             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest shrink-0">Dataset Name</label>
-             <input 
-               type="text" 
+          <div className="uploader-name">
+             <label className="modal-field-label shrink-0">Dataset Name</label>
+             <input
+               type="text"
                placeholder="Enter a friendly name for this dataset..."
                value={datasetName}
                onChange={e => setDatasetNameLocal(e.target.value)}
-               className="flex-1 bg-slate-950/50 border border-slate-700/50 rounded-lg px-3 py-1.5 text-sm text-cyan-400 focus:border-blue-500 transition-colors"
+               className="modal-input flex-1"
              />
           </div>
         )}
 
         {/* Body */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="uploader-body">
           {/* ═══════════════ STEP 1: Upload Files ═══════════════ */}
           {step === 1 && (
             <div className="space-y-6">
@@ -603,16 +612,16 @@ export default function DataInputView({ onClose }) {
                 {['nodes', 'edges', 'graphs'].map(type => {
                   const data = type==='nodes' ? nodesData : type==='edges' ? edgesData : graphsData
                   return (
-                    <div key={type} className="border border-slate-700 bg-slate-800/30 rounded-lg p-5 flex flex-col items-center justify-center text-center relative overflow-hidden group">
-                      <h3 className="text-lg font-bold capitalize text-slate-300 mb-2">{type} File</h3>
-                      <p className="text-xs text-slate-500 mb-4 h-8">
+                    <div key={type} className="uploader-drop">
+                      <h3 className="uploader-drop-title">{type} File</h3>
+                      <p className="uploader-drop-sub">
                         {type==='nodes' && 'Needs: node_id, features'}
                         {type==='edges' && 'Needs: source, target'}
                         {type==='graphs' && '(Optional) Needs: graph_id, label'}
                       </p>
-                      
-                      <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)]">
-                        Browse Excel/CSV/JSON
+
+                      <label className="uploader-browse cursor-pointer">
+                        <Upload size={13} /> Browse Excel/CSV/JSON
                         <input data-testid={`upload-${type}-file`} type="file" accept=".xlsx,.xls,.csv,.json" className="hidden" onChange={(e) => handleFileUpload(e, type)} />
                       </label>
                       
@@ -689,18 +698,14 @@ export default function DataInputView({ onClose }) {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {TASKS.map(t => (
-                  <button 
+                  <button
                     key={t.id}
                     onClick={() => setTask(t.id)}
-                    className={`text-left p-4 rounded-xl border-2 transition-all ${
-                      task === t.id 
-                        ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.15)]' 
-                        : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'
-                    }`}
+                    className={`uploader-task ${task === t.id ? 'uploader-task-active' : ''}`}
                   >
-                    <t.Icon size={28} className={`mb-2 ${task === t.id ? 'text-blue-400' : 'text-slate-500'}`} />
-                    <h3 className="font-bold text-slate-200">{t.name}</h3>
-                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">{t.desc}</p>
+                    <t.Icon size={22} className={`uploader-task-icon ${task === t.id ? 'is-active' : ''}`} />
+                    <h3 className="uploader-task-name">{t.name}</h3>
+                    <p className="uploader-task-desc">{t.desc}</p>
                   </button>
                 ))}
               </div>
@@ -1018,21 +1023,21 @@ export default function DataInputView({ onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-800 flex justify-between bg-slate-900/80">
-          <button 
+        <div className="uploader-footer">
+          <button
             data-testid="data-input-back"
-            className="px-5 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white"
-            onClick={() => step > 1 ? setStep(s => s-1) : onClose()}
+            className="modal-btn-ghost inline-flex items-center gap-1"
+            onClick={() => step > 1 ? setStep(s => s-1) : onClose && onClose()}
           >
             {step > 1 ? <><ArrowLeft size={12} /> Back</> : 'Cancel'}
           </button>
-          
-          <button 
+
+          <button
             data-testid={step === 4 ? 'data-input-confirm' : 'data-input-continue'}
-            className={`px-8 py-2 rounded-lg text-sm font-bold shadow-lg transition-all ${
+            className={`uploader-primary inline-flex items-center gap-1 ${
                (step === 1 && nodesData.length && edgesData.length) || step === 2 || step === 3 || (step === 4 && validationResult?.valid)
-                 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 hover:shadow-blue-500/40' 
-                 : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                 ? ''
+                 : 'uploader-primary-disabled'
             }`}
             onClick={() => {
               if (step === 1 && (!nodesData.length || !edgesData.length)) return alert("Nodes and Edges files are required!")
@@ -1041,15 +1046,15 @@ export default function DataInputView({ onClose }) {
             }}
             disabled={loading || (step === 4 && !validationResult?.valid)}
           >
-            {loading 
-              ? <><Loader2 size={12} className="animate-spin" /> Processing...</> 
-              : step === 4 
-                ? '🚀 Confirm & Load Data' 
+            {loading
+              ? <><Loader2 size={12} className="animate-spin" /> Processing...</>
+              : step === 4
+                ? <>Confirm & Load Data</>
                 : <>Continue <ArrowRight size={12} /></>
             }
           </button>
         </div>
       </div>
-    </div>
+    </Wrapper>
   )
 }
