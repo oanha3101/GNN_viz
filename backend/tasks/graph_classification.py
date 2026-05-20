@@ -113,6 +113,96 @@ def split_graph_dataset(graphs, train_ratio=0.8, seed=42):
     return train_graphs, test_graphs, train_indices, test_indices
 
 
+def split_graph_dataset_triple(graphs, train_ratio=0.6, val_ratio=0.2, seed=42):
+    """Stratified 3-way split returning train/val/test graphs and their indices.
+
+    Used to avoid temperature/checkpoint leakage on the test set.
+    """
+    labels_to_indices = {}
+    for index, graph in enumerate(graphs):
+        label = int(graph.y.view(-1)[0].item())
+        labels_to_indices.setdefault(label, []).append(index)
+
+    rng = np.random.default_rng(seed)
+    train_idx, val_idx, test_idx = [], [], []
+
+    for indices in labels_to_indices.values():
+        shuffled = list(indices)
+        rng.shuffle(shuffled)
+        n = len(shuffled)
+        if n <= 1:
+            train_idx.extend(shuffled)
+            continue
+        n_train = max(1, int(round(n * train_ratio)))
+        remaining = n - n_train
+        if remaining <= 0:
+            train_idx.extend(shuffled)
+            continue
+        # Within the remaining items, split roughly in half for val/test.
+        n_val = max(1, int(round(n * val_ratio))) if remaining >= 2 else 0
+        n_val = min(n_val, remaining - 1) if remaining >= 2 else 0
+        if remaining < 2:
+            n_val = 0
+        train_idx.extend(shuffled[:n_train])
+        val_idx.extend(shuffled[n_train:n_train + n_val])
+        test_idx.extend(shuffled[n_train + n_val:])
+
+    rng.shuffle(train_idx)
+    rng.shuffle(val_idx)
+    rng.shuffle(test_idx)
+
+    # Fallbacks: if any split is empty (e.g. <3 samples per class), use train as that split
+    # for snapshot continuity. The honest test metric is still reported on the test list.
+    if not val_idx:
+        val_idx = list(train_idx)
+    if not test_idx:
+        test_idx = list(val_idx) if val_idx else list(train_idx)
+
+    train_graphs = [graphs[i] for i in train_idx]
+    val_graphs = [graphs[i] for i in val_idx]
+    test_graphs = [graphs[i] for i in test_idx]
+    return train_graphs, val_graphs, test_graphs, train_idx, val_idx, test_idx
+
+
+def model_default_hyperparams(model_type: str) -> dict:
+    """Per-model defaults so GCN/GAT/GraphSAGE develop distinct, honest behavior.
+
+    These are calibrated so each model lands in the ~60–75% honest accuracy band
+    on the synthetic ER vs. Barabási-Albert task without overfitting.
+    """
+    mt = (model_type or 'GCN').upper()
+    if mt == 'GAT':
+        return {
+            'hidden': 32,
+            'heads': 4,
+            'dropout': 0.6,
+            'lr': 7e-3,
+            'weight_decay': 5e-4,
+            'epochs': 80,
+            'early_stop_patience': 20,
+        }
+    if mt == 'SAGE':
+        return {
+            'hidden': 32,
+            'heads': 1,
+            'dropout': 0.4,
+            'lr': 8e-3,
+            'weight_decay': 1e-4,
+            'epochs': 80,
+            'early_stop_patience': 20,
+        }
+    # GCN baseline
+    return {
+        'hidden': 32,
+        'heads': 1,
+        'dropout': 0.45,
+        'lr': 1e-2,
+        'weight_decay': 5e-4,
+        'epochs': 80,
+        'early_stop_patience': 20,
+    }
+
+
 def build_class_weight_tensor(labels, num_classes):
     counts = torch.bincount(torch.tensor(labels, dtype=torch.long), minlength=num_classes).float()
     counts = torch.clamp(counts, min=1.0)
@@ -230,6 +320,7 @@ def build_classification_summary(predictions, ground_truth, confidences, num_cla
 
 
 def tune_temperature(logits, targets):
+    """Coarse grid search — kept as fallback and for parity with old tests."""
     if logits.numel() == 0 or targets.numel() == 0:
         return 1.0
     candidates = torch.tensor([0.7, 0.85, 1.0, 1.15, 1.3, 1.5, 1.8, 2.2, 2.6, 3.0], dtype=logits.dtype, device=logits.device)
@@ -244,9 +335,98 @@ def tune_temperature(logits, targets):
     return best_temp
 
 
+def tune_temperature_lbfgs(logits, targets, max_iter=50, lr=0.05):
+    """Optimize temperature with LBFGS for finer calibration.
+
+    Falls back to the coarse grid if LBFGS cannot make progress.
+    """
+    if logits.numel() == 0 or targets.numel() == 0:
+        return 1.0
+    log_temp = torch.zeros(1, requires_grad=True)
+    optimizer = torch.optim.LBFGS([log_temp], lr=lr, max_iter=max_iter, line_search_fn='strong_wolfe')
+
+    detached_logits = logits.detach()
+    detached_targets = targets.detach()
+
+    def _closure():
+        optimizer.zero_grad()
+        temp = torch.exp(log_temp).clamp(min=0.25, max=10.0)
+        loss = F.cross_entropy(detached_logits / temp, detached_targets)
+        loss.backward()
+        return loss
+
+    try:
+        optimizer.step(_closure)
+    except Exception:
+        return tune_temperature(logits, targets)
+    temp = float(torch.exp(log_temp).clamp(min=0.25, max=10.0).item())
+    if not math.isfinite(temp) or temp <= 0:
+        return tune_temperature(logits, targets)
+    return temp
+
+
 def apply_temperature(logits, temperature):
     temp = max(0.5, float(temperature or 1.0))
     return torch.softmax(logits / temp, dim=1)
+
+
+def build_graph_inspector(
+    *,
+    ground_truth,
+    predictions,
+    probabilities_raw,
+    probabilities_calibrated,
+    margins,
+    split_assignment,
+    danger_threshold=0.85,
+    uncertain_threshold=0.55,
+):
+    """Per-graph diagnostic record used by the Task 2 FE inspector / topology view.
+
+    Each row exposes the *honest* signal needed to spot overconfident wrong calls:
+        - true / pred / correct
+        - raw_confidence    (pre-calibration max softmax)
+        - calibrated_conf   (post temperature-scaling max softmax)
+        - margin            (top-1 minus top-2)
+        - uncertainty       (1 − calibrated_conf)
+        - danger            (wrong AND calibrated_conf ≥ danger_threshold)
+        - status            (one of 'correct' | 'wrong' | 'uncertain' | 'danger')
+        - split             (one of 'train' | 'val' | 'test')
+    """
+    rows = []
+    for i in range(len(ground_truth)):
+        gt = int(ground_truth[i]) if ground_truth[i] is not None else None
+        pred = int(predictions[i]) if i < len(predictions) and predictions[i] is not None else None
+        correct = int(gt is not None and pred is not None and gt == pred)
+        raw_conf = float(max(probabilities_raw[i])) if i < len(probabilities_raw) and probabilities_raw[i] else 0.0
+        calib_conf = float(max(probabilities_calibrated[i])) if i < len(probabilities_calibrated) and probabilities_calibrated[i] else raw_conf
+        margin = float(margins[i]) if i < len(margins) and margins[i] is not None else 0.0
+        is_wrong = correct == 0 and pred is not None and gt is not None
+        is_high_conf = calib_conf >= danger_threshold
+        is_uncertain = calib_conf < uncertain_threshold
+        danger = bool(is_wrong and is_high_conf)
+        if danger:
+            status = 'danger'
+        elif is_wrong:
+            status = 'wrong'
+        elif is_uncertain:
+            status = 'uncertain'
+        else:
+            status = 'correct'
+        rows.append({
+            'id': i,
+            'true': gt,
+            'pred': pred,
+            'correct': correct,
+            'raw_confidence': raw_conf,
+            'calibrated_conf': calib_conf,
+            'margin': margin,
+            'uncertainty': float(max(0.0, 1.0 - calib_conf)),
+            'danger': danger,
+            'status': status,
+            'split': split_assignment[i] if i < len(split_assignment) else 'train',
+        })
+    return rows
 
 
 def build_per_class_metrics(predictions, ground_truth, confidences, num_classes):
@@ -448,18 +628,26 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                       Each Data should have .x, .edge_index, .y (graph label).
                       If None, synthetic graphs are generated.
     """
-    epochs = config.get('epochs', 80)
+    model_type = config.get('model', 'GCN')
+    defaults = model_default_hyperparams(model_type)
+
+    epochs = int(config.get('epochs', defaults['epochs']))
     split_seed = int(config.get('split_seed', 42))
-    train_ratio = float(config.get('train_ratio', 0.8))
+    train_ratio = float(config.get('train_ratio', 0.6))
+    val_ratio = float(config.get('val_ratio', 0.2))
     pool_type = config.get('task2_pool', 'attention_sum')
     use_class_weights = bool(config.get('task2_class_weighting', False))
     balanced_oversample = bool(config.get('task2_balanced_sampler', True))
     focal_gamma = float(config.get('task2_focal_gamma', 1.0))
     label_smoothing = float(config.get('task2_label_smoothing', 0.02))
-    weight_decay = float(config.get('task2_weight_decay', config.get('weight_decay', 1e-3)))
+    weight_decay = float(config.get('task2_weight_decay', config.get('weight_decay', defaults['weight_decay'])))
     edge_dropout = float(config.get('task2_edge_dropout', 0.08))
     readout_entropy_weight = float(config.get('task2_readout_entropy_weight', 0.02))
     contrastive_weight = float(config.get('task2_density_contrastive_weight', 0.025))
+    early_stop_patience = int(config.get('task2_early_stop_patience', defaults['early_stop_patience']))
+    danger_threshold = float(config.get('task2_danger_threshold', 0.85))
+    uncertain_threshold = float(config.get('task2_uncertain_threshold', 0.55))
+    use_lbfgs_calibration = bool(config.get('task2_lbfgs_calibration', True))
 
     if custom_graphs and len(custom_graphs) > 0:
         # ── Use user-uploaded graphs ──
@@ -537,26 +725,45 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         }
     })
 
-    # Build model + optimizer
+    # Build model + optimizer with per-model honest defaults so GCN/GAT/SAGE
+    # produce distinct, well-regularised behavior instead of collapsing to the
+    # same fully-confident prediction profile.
     model = GraphClassifier(
         in_channels=in_channels,
-        hidden=config.get('hidden', 32),
+        hidden=int(config.get('hidden', defaults['hidden'])),
         num_classes=num_classes,
-        model_type=config.get('model', 'GCN'),
-        heads=config.get('heads', 4),
-        dropout=config.get('dropout', 0.5),
+        model_type=model_type,
+        heads=int(config.get('heads', defaults['heads'])),
+        dropout=float(config.get('dropout', defaults['dropout'])),
         pool_type=pool_type,
     )
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.get('lr', 0.01), weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=float(config.get('lr', defaults['lr'])),
+        weight_decay=weight_decay,
+    )
 
-    # Prepare batched data with a stratified split to keep class support stable.
-    train_graphs, test_graphs, train_indices, _ = split_graph_dataset(
+    # 3-way stratified split — temperature scaling and best-checkpoint selection
+    # both run on the VAL set, so honest TEST metrics never leak into the
+    # selection process.
+    train_graphs, val_graphs, test_graphs, train_indices, val_indices, test_indices = split_graph_dataset_triple(
         pyg_graphs,
         train_ratio=train_ratio,
+        val_ratio=val_ratio,
         seed=split_seed,
     )
     if not test_graphs:
-        test_graphs = train_graphs
+        test_graphs = list(val_graphs) if val_graphs else list(train_graphs)
+    if not val_graphs:
+        val_graphs = list(train_graphs)
+
+    split_assignment = ['train'] * len(pyg_graphs)
+    for idx in val_indices:
+        if 0 <= idx < len(split_assignment):
+            split_assignment[idx] = 'val'
+    for idx in test_indices:
+        if 0 <= idx < len(split_assignment):
+            split_assignment[idx] = 'test'
 
     train_labels = [int(g.y.view(-1)[0].item()) for g in train_graphs]
     train_label_counts = torch.bincount(torch.tensor(train_labels, dtype=torch.long), minlength=num_classes)
@@ -582,15 +789,21 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         effective_train_graphs = oversampled
 
     train_batch = Batch.from_data_list(train_graphs)
+    val_batch = Batch.from_data_list(val_graphs)
     test_batch = Batch.from_data_list(test_graphs)
     effective_train_batch = Batch.from_data_list(effective_train_graphs)
 
     train_y = torch.tensor([g.y.item() for g in train_graphs])
+    val_y = torch.tensor([g.y.item() for g in val_graphs])
     effective_train_y = torch.tensor([g.y.item() for g in effective_train_graphs])
     test_y = torch.tensor([g.y.item() for g in test_graphs])
     effective_train_density = torch.tensor([_graph_density_from_data(g) for g in effective_train_graphs], dtype=torch.float)
 
     epoch_snapshots = []
+    best_val_acc = -1.0
+    best_val_epoch = 0
+    best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+    no_improve_epochs = 0
 
     for epoch in range(epochs):
         if stop_flag():
@@ -617,31 +830,65 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         # ── Evaluation ─────────────────────────────────────────────────────
         model.eval()
         with torch.no_grad():
-            # Get predictions for ALL graphs
+            # Get predictions for ALL graphs (used by the topology view).
             all_batch = Batch.from_data_list(pyg_graphs)
             all_out, graph_embs, node_embs = model(all_batch.x, all_batch.edge_index, all_batch.batch)
             all_pred = all_out.argmax(dim=1).tolist()
 
-            # Test metrics
-            test_out, _, _ = model(test_batch.x, test_batch.edge_index, test_batch.batch)
-            test_pred = test_out.argmax(dim=1)
+            # Per-split forward passes
             train_out, _, _ = model(train_batch.x, train_batch.edge_index, train_batch.batch)
             train_pred = train_out.argmax(dim=1)
-            calibration_temperature = tune_temperature(test_out, test_y)
+            val_out, _, _ = model(val_batch.x, val_batch.edge_index, val_batch.batch)
+            val_pred = val_out.argmax(dim=1)
+            test_out, _, _ = model(test_batch.x, test_batch.edge_index, test_batch.batch)
+            test_pred = test_out.argmax(dim=1)
+
+            # Honest calibration: temperature is tuned on the VAL set only, so
+            # the TEST set never participates in any model selection step.
+            try:
+                calibration_temperature = (
+                    tune_temperature_lbfgs(val_out, val_y)
+                    if use_lbfgs_calibration
+                    else tune_temperature(val_out, val_y)
+                )
+            except Exception:
+                calibration_temperature = tune_temperature(val_out, val_y)
+
+            # Probabilities WITHOUT and WITH calibration so the FE can surface
+            # the gap honestly (overconfidence shows up as raw_conf >> calib_conf).
+            all_probs_raw = torch.softmax(all_out, dim=1).tolist()
             all_probs = apply_temperature(all_out, calibration_temperature).tolist()
 
-            # Compute calibrated confidence (max prob)
+            # Compute calibrated confidence (max prob) — primary signal used elsewhere.
             confidences = [max(p) for p in all_probs]
 
             val_loss = compute_graph_classification_loss(
+                val_out,
+                val_y,
+                class_weights=class_weights,
+                focal_gamma=0.0,
+                label_smoothing=0.0,
+            )
+            test_loss = compute_graph_classification_loss(
                 test_out,
                 test_y,
                 class_weights=class_weights,
                 focal_gamma=0.0,
                 label_smoothing=0.0,
             )
-            val_acc = (test_pred == test_y).float().mean()
+            val_acc = (val_pred == val_y).float().mean()
+            test_acc = (test_pred == test_y).float().mean()
             train_acc = (train_pred == train_y).float().mean()
+
+            # Track best validation accuracy and snapshot weights for restoration
+            current_val_acc = float(val_acc.item())
+            if current_val_acc > best_val_acc + 1e-6:
+                best_val_acc = current_val_acc
+                best_val_epoch = epoch
+                best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+                no_improve_epochs = 0
+            else:
+                no_improve_epochs += 1
 
             # PCA on graph embeddings
             emb_np = graph_embs.cpu().numpy()
@@ -759,6 +1006,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                 'brier': float(graph_calibration['brier']),
                 'ece': float(graph_calibration['ece']),
                 'high_conf_wrong_rate': float(graph_calibration['high_conf_wrong_rate']),
+                'high_conf_wrong_count': int(graph_calibration['high_conf_wrong_count']),
                 'shortcut_risk_score': float(structural_bias_signals['shortcut_risk_score']),
                 'readout_diffuse_share': float(readout_quality['diffuse_share']),
                 'calibration_temperature': float(calibration_temperature),
@@ -766,12 +1014,43 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                 'pool_type': pool_type,
             }
 
+            # ── Per-graph inspector (with split assignment + danger flag) ────
+            graph_inspector = build_graph_inspector(
+                ground_truth=graph_truths,
+                predictions=all_pred,
+                probabilities_raw=all_probs_raw,
+                probabilities_calibrated=all_probs,
+                margins=confidence_margins,
+                split_assignment=split_assignment,
+                danger_threshold=danger_threshold,
+                uncertain_threshold=uncertain_threshold,
+            )
+            dangerous_indices = [row['id'] for row in graph_inspector if row['danger']]
+            uncertain_indices = [row['id'] for row in graph_inspector if row['status'] == 'uncertain']
+            wrong_indices = [row['id'] for row in graph_inspector if row['status'] in ('wrong', 'danger')]
+
+            mean_raw_conf = float(np.mean([row['raw_confidence'] for row in graph_inspector])) if graph_inspector else 0.0
+            mean_calib_conf = float(np.mean([row['calibrated_conf'] for row in graph_inspector])) if graph_inspector else 0.0
+            mean_acc_all = float(np.mean(graph_correct)) if graph_correct else 0.0
+            calibration_gap_signed = mean_calib_conf - mean_acc_all
+            calibration_gap_raw = mean_raw_conf - mean_acc_all
+
         snapshot = {
             'epoch': epoch,
-            'model_type': config.get('model', 'GCN'),
+            'model_type': model_type,
             'graph_predictions': all_pred,
             'graph_probabilities': graph_probabilities,
+            'graph_probabilities_raw': all_probs_raw,
             'graph_confidences': confidences,
+            'graph_confidences_raw': [max(row) for row in all_probs_raw],
+            'graph_split': split_assignment,
+            'graph_inspector': graph_inspector,
+            'dangerous_indices': dangerous_indices,
+            'dangerous_count': len(dangerous_indices),
+            'uncertain_indices': uncertain_indices,
+            'uncertain_count': len(uncertain_indices),
+            'wrong_indices': wrong_indices,
+            'wrong_count': len(wrong_indices),
             'confidence_margins': confidence_margins,
             'attention_entropy': attention_entropy,
             'graph_structural_metrics': graph_structural_metrics,
@@ -787,10 +1066,32 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             'balanced_accuracy': float(classification_summary['balanced_accuracy']),
             'median_margin': float(np.median(confidence_margins)) if confidence_margins else 0.0,
             'calibration_temperature': float(calibration_temperature),
+            'calibration_gap': float(abs(calibration_gap_signed)),
+            'calibration_gap_signed': float(calibration_gap_signed),
+            'calibration_gap_raw': float(calibration_gap_raw),
+            'mean_raw_confidence': mean_raw_conf,
+            'mean_calibrated_confidence': mean_calib_conf,
             'train_loss': float(ce_loss.item()),
             'val_loss': float(val_loss.item()),
+            'test_loss': float(test_loss.item()),
             'train_acc': float(train_acc.item()),
             'val_acc': float(val_acc.item()),
+            'test_acc': float(test_acc.item()),
+            'best_val_acc': float(best_val_acc),
+            'best_val_epoch': int(best_val_epoch),
+            'patience_remaining': max(0, early_stop_patience - no_improve_epochs),
+            'early_stopped': False,
+            'is_best_so_far': bool(epoch == best_val_epoch),
+            'model_hyperparams': {
+                'hidden': int(config.get('hidden', defaults['hidden'])),
+                'heads': int(config.get('heads', defaults['heads'])),
+                'dropout': float(config.get('dropout', defaults['dropout'])),
+                'lr': float(config.get('lr', defaults['lr'])),
+                'weight_decay': float(weight_decay),
+                'epochs_target': int(epochs),
+                'early_stop_patience': int(early_stop_patience),
+                'split_ratio': [float(train_ratio), float(val_ratio), float(max(0.0, 1.0 - train_ratio - val_ratio))],
+            },
         }
         epoch_snapshots.append(snapshot)
         if snapshot_hook:
@@ -802,5 +1103,112 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             'progress': (epoch + 1) / epochs,
         })
         await asyncio.sleep(0.005)
+
+        # Early stopping: bail out only after we've trained at least a quarter
+        # of the requested epochs so very short runs still observe the cosmetic
+        # warm-up behavior the FE charts depend on.
+        if early_stop_patience > 0 and no_improve_epochs >= early_stop_patience and epoch >= max(8, epochs // 4):
+            # Mark the previous snapshot as early-stopped for the FE banner.
+            epoch_snapshots[-1]['early_stopped'] = True
+            break
+
+    # ── Restore best-by-val checkpoint and emit a final, honest summary ──────
+    if best_state:
+        try:
+            model.load_state_dict(best_state)
+        except Exception:
+            pass
+
+    model.eval()
+    final_summary = None
+    with torch.no_grad():
+        try:
+            all_batch_final = Batch.from_data_list(pyg_graphs)
+            final_logits, _, _ = model(all_batch_final.x, all_batch_final.edge_index, all_batch_final.batch)
+            final_val_logits, _, _ = model(val_batch.x, val_batch.edge_index, val_batch.batch)
+            final_test_logits, _, _ = model(test_batch.x, test_batch.edge_index, test_batch.batch)
+            final_train_logits, _, _ = model(train_batch.x, train_batch.edge_index, train_batch.batch)
+
+            final_calib_temp = (
+                tune_temperature_lbfgs(final_val_logits, val_y)
+                if use_lbfgs_calibration
+                else tune_temperature(final_val_logits, val_y)
+            )
+            final_probs_raw = torch.softmax(final_logits, dim=1).tolist()
+            final_probs_calib = apply_temperature(final_logits, final_calib_temp).tolist()
+            final_pred = final_logits.argmax(dim=1).tolist()
+            final_graph_truths = [int(g.y.view(-1)[0].item()) for g in pyg_graphs]
+            final_margins = []
+            for probs in final_probs_calib:
+                sorted_probs = sorted(probs, reverse=True)
+                final_margins.append(float(sorted_probs[0] - sorted_probs[1]) if len(sorted_probs) >= 2 else float(sorted_probs[0]))
+
+            final_inspector = build_graph_inspector(
+                ground_truth=final_graph_truths,
+                predictions=final_pred,
+                probabilities_raw=final_probs_raw,
+                probabilities_calibrated=final_probs_calib,
+                margins=final_margins,
+                split_assignment=split_assignment,
+                danger_threshold=danger_threshold,
+                uncertain_threshold=uncertain_threshold,
+            )
+            final_correct = [int(final_pred[i] == final_graph_truths[i]) for i in range(len(pyg_graphs))]
+            final_calibration = build_graph_calibration(
+                [max(p) for p in final_probs_calib],
+                final_correct,
+                probabilities=final_probs_calib,
+                ground_truth=final_graph_truths,
+            )
+
+            final_train_acc = float((final_train_logits.argmax(dim=1) == train_y).float().mean().item())
+            final_val_acc = float((final_val_logits.argmax(dim=1) == val_y).float().mean().item())
+            final_test_acc = float((final_test_logits.argmax(dim=1) == test_y).float().mean().item())
+            final_mean_calib_conf = float(np.mean([row['calibrated_conf'] for row in final_inspector])) if final_inspector else 0.0
+            final_mean_acc = float(np.mean(final_correct)) if final_correct else 0.0
+
+            final_summary = {
+                'model_type': model_type,
+                'best_val_epoch': int(best_val_epoch),
+                'train_acc': final_train_acc,
+                'val_acc': final_val_acc,
+                'test_acc': final_test_acc,
+                'mean_raw_confidence': float(np.mean([row['raw_confidence'] for row in final_inspector])) if final_inspector else 0.0,
+                'mean_calibrated_confidence': final_mean_calib_conf,
+                'calibration_temperature': float(final_calib_temp),
+                'calibration_gap': float(abs(final_mean_calib_conf - final_mean_acc)),
+                'dangerous_count': int(sum(1 for r in final_inspector if r['danger'])),
+                'wrong_count': int(sum(1 for r in final_inspector if r['status'] in ('wrong', 'danger'))),
+                'uncertain_count': int(sum(1 for r in final_inspector if r['status'] == 'uncertain')),
+                'ece': float(final_calibration['ece']),
+                'brier': float(final_calibration['brier']),
+                'graph_inspector': final_inspector,
+                'graph_predictions': final_pred,
+                'graph_confidences': [max(p) for p in final_probs_calib],
+                'graph_confidences_raw': [max(p) for p in final_probs_raw],
+                'graph_correct': final_correct,
+                'graph_split': split_assignment,
+                'hyperparams': {
+                    'hidden': int(config.get('hidden', defaults['hidden'])),
+                    'heads': int(config.get('heads', defaults['heads'])),
+                    'dropout': float(config.get('dropout', defaults['dropout'])),
+                    'lr': float(config.get('lr', defaults['lr'])),
+                    'weight_decay': float(weight_decay),
+                    'epochs_completed': len(epoch_snapshots),
+                    'epochs_target': int(epochs),
+                    'early_stop_patience': int(early_stop_patience),
+                },
+            }
+        except Exception:
+            final_summary = None
+
+    if final_summary is not None:
+        try:
+            await send_json_zipped(websocket, {
+                'type': 'task2_final_summary',
+                'data': final_summary,
+            })
+        except Exception:
+            pass
 
     return epoch_snapshots

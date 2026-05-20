@@ -107,9 +107,9 @@ export default function AppLayout() {
   const titleMeta = TITLES[location.pathname]
 
   return (
-    <div className="user-shell min-h-screen bg-abyss text-starlight selection:bg-accent-amethyst/30">
-      <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
-        <aside className="app-sidebar">
+    <div className="user-shell min-h-screen bg-abyss text-starlight selection:bg-accent-amethyst/30 print:bg-white print:text-slate-900">
+      <div className="grid min-h-screen lg:grid-cols-[280px_1fr] print:block print:min-h-0">
+        <aside className="app-sidebar print:hidden">
           <div className="relative z-10 flex h-full flex-col px-5 py-6">
             <div className="mb-8 flex items-center gap-3">
               <div className="app-logo-icon">
@@ -157,11 +157,11 @@ export default function AppLayout() {
           </div>
         </aside>
 
-        <div className="relative flex min-h-screen flex-col overflow-hidden">
-          <div className="user-shell-backdrop pointer-events-none absolute inset-0" />
+        <div className="relative flex min-h-screen flex-col overflow-hidden print:min-h-0 print:overflow-visible">
+          <div className="user-shell-backdrop pointer-events-none absolute inset-0 print:hidden" />
 
           {titleMeta ? (
-            <header className="app-header flex items-start justify-between gap-4">
+            <header className="app-header flex items-start justify-between gap-4 print:hidden">
               <div>
                 <div className="flex items-center gap-2">
                   <Sparkles size={12} className="text-amethyst" />

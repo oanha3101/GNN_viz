@@ -3161,3 +3161,21 @@ html.dark .project-vis-pill.is-public {
   width: 8px;
   border-radius: 999px;
 }
+
+/* ── Print rules: keep the PDF Book editorial layout clean ─────────── */
+@media print {
+  @page { size: A4; margin: 14mm; }
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+  .app-sidebar,
+  .app-header,
+  .user-shell-backdrop,
+  .admin-sidebar,
+  .admin-header {
+    display: none !important;
+  }
+  .print\:bg-white { background-color: #ffffff !important; }
+  .print\:text-slate-900 { color: #0f172a !important; }
+}

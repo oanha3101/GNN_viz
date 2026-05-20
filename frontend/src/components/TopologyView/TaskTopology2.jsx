@@ -461,9 +461,30 @@ export default function TaskTopology2({
             const predictionLabel = descriptor.predicted != null
               ? labelForClass(descriptor.predicted)
               : 'Pending'
-            const quickTone = descriptor.correct === 1
-              ? 'border-emerald-500/30 hover:border-emerald-500/60'
-              : 'border-red-500/30 hover:border-red-500/60'
+            const isWrong = descriptor.correct !== 1
+            const isDanger = isWrong && confidence >= 0.85
+            const isUncertain = !isWrong && confidence < 0.55
+            const statusLabel = isDanger
+              ? 'Danger'
+              : isWrong
+                ? 'Wrong'
+                : isUncertain
+                  ? 'Uncertain'
+                  : 'Correct'
+            const quickTone = isDanger
+              ? 'border-rose-500/70 hover:border-rose-400 shadow-[0_0_18px_-6px_rgba(244,63,94,0.55)]'
+              : isWrong
+                ? 'border-amber-500/40 hover:border-amber-400/70'
+                : isUncertain
+                  ? 'border-slate-500/30 hover:border-slate-400/60'
+                  : 'border-emerald-500/30 hover:border-emerald-500/60'
+            const statusBadgeTone = isDanger
+              ? 'bg-rose-500/15 text-rose-300 border border-rose-500/40'
+              : isWrong
+                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                : isUncertain
+                  ? 'bg-slate-500/15 text-slate-300 border border-slate-500/30'
+                  : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
 
             return (
               <button
@@ -475,6 +496,7 @@ export default function TaskTopology2({
                     ? 'ring-2 ring-cyan-500/35 bg-slate-900/70'
                     : `bg-slate-900/40 ${quickTone}`
                 } ${matched ? 'opacity-100' : 'opacity-45'}`}
+                title={`G#${descriptor.originalGraphId} \u2014 ${statusLabel} (conf ${(confidence * 100).toFixed(0)}%)`}
               >
                 <div className="h-28 p-3 relative">
                   <MiniGraphSVG
@@ -520,7 +542,9 @@ export default function TaskTopology2({
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-slate-500">Status</span>
-                      <span>{descriptor.correct === 1 ? 'Correct' : 'Wrong'}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${statusBadgeTone}`}>
+                        {statusLabel}
+                      </span>
                     </div>
                   </div>
 

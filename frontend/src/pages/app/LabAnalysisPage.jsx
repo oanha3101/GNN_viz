@@ -236,15 +236,15 @@ function ReportSection({ page, index }) {
   return (
     <section
       key={page.id}
-      className="rounded-[28px] border border-line-subtle bg-deep p-4 shadow-[0_22px_60px_rgba(4,0,12,0.4)] print:min-h-screen print:break-after-page print:rounded-none print:border-0 print:bg-white print:p-0 print:shadow-none"
+      className="rounded-xl border border-line-subtle/35 bg-deep/45 p-3 print:min-h-screen print:break-after-page print:rounded-none print:border-0 print:bg-white print:p-0 print:shadow-none"
     >
-      <div className="mb-4 flex items-center gap-2 border-b border-line-default pb-3 print:border-slate-200">
-        <ViewIcon size={16} className="text-amethyst print:text-slate-700" />
+      <div className="mb-3 flex items-center gap-2 border-b border-line-subtle/45 pb-2 print:border-slate-200">
+        <ViewIcon size={15} className="text-amethyst print:text-slate-700" />
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-twilight print:text-slate-500">
             Page {index + 1}
           </div>
-          <div className="text-lg font-bold text-white print:text-slate-900">{page.label}</div>
+          <div className="text-base font-bold text-white print:text-slate-900">{page.label}</div>
         </div>
       </div>
       <ErrorBoundary>
@@ -275,10 +275,10 @@ const VIEW_CONFIG = {
     icon: Network,
     render: () => (
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-        <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
+        <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
           <TopologyRouter />
         </div>
-        <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
+        <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
           <InfoRouter />
         </div>
       </div>
@@ -493,10 +493,10 @@ export default function LabAnalysisPage() {
         icon: Network,
         render: () => (
           <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
+            <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
               <TopologyRouter forcedFocus="weak_class" forcedSelectedCell={reportCell} hideGalleryControls showFullCollection />
             </div>
-            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
+            <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
               <InfoRouter forcedFocus="weak_class" forcedSelectedCell={reportCell} />
             </div>
           </div>
@@ -508,10 +508,10 @@ export default function LabAnalysisPage() {
         icon: Network,
         render: () => (
           <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
+            <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
               <TopologyRouter forcedFocus="outlier" hideGalleryControls showFullCollection />
             </div>
-            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
+            <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
               <InfoRouter forcedFocus="outlier" />
             </div>
           </div>
@@ -536,22 +536,35 @@ export default function LabAnalysisPage() {
   const resolvedConfig = panel === 'report' ? reportConfig : config
   const ResolvedIcon = resolvedConfig.icon
 
+  // We always also render the PDF Book content in a print-only container so
+  // that triggering window.print() from any capture tab produces the same
+  // editorial PDF layout — keeps "Print / Save PDF" consistent with "PDF Book".
+  const printOnlyBook = panel !== 'report' && (
+    <div className="hidden print:block">
+      <ErrorBoundary>
+        <Suspense fallback={null}>
+          {reportConfig.render()}
+        </Suspense>
+      </ErrorBoundary>
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-abyss text-starlight">
-      <div className="mx-auto flex max-w-[1800px] flex-col gap-5 px-6 py-6">
-        <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-line-default bg-deep/88 px-5 py-4 shadow-[0_18px_48px_rgba(4,0,12,0.35)] backdrop-blur-xl print:hidden">
-          <div>
+      <div className="mx-auto flex max-w-[1800px] flex-col gap-3 px-6 py-4 print:gap-0 print:px-0 print:py-0">
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-line-subtle/55 bg-deep/55 px-4 py-3 backdrop-blur-md print:hidden">
+          <div className="min-w-0">
             <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-twilight">
               {TASK_LABELS[selectedTask]} - {datasetName}
             </div>
-            <div className="mt-2 flex items-center gap-2">
-              <ResolvedIcon size={18} className="text-amethyst" />
-              <h1 className="text-2xl font-black tracking-tight text-white">{resolvedConfig.title}</h1>
+            <div className="mt-1 flex items-center gap-2">
+              <ResolvedIcon size={16} className="text-amethyst" />
+              <h1 className="text-lg font-black tracking-tight text-white">{resolvedConfig.title}</h1>
             </div>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-moonlight">
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-moonlight">
               {resolvedConfig.description}
             </p>
-            <div className="mt-4 inline-flex flex-wrap items-center gap-2 rounded-2xl border border-line-default bg-deep/85 p-1.5">
+            <div className="mt-3 inline-flex flex-wrap items-center gap-1 rounded-xl border border-line-subtle/60 bg-deep/55 p-1">
               {[
                 ['latent', 'Latent', Globe2],
                 ['structure', 'Structure', Network],
@@ -564,13 +577,13 @@ export default function LabAnalysisPage() {
                     key={viewId}
                     type="button"
                     onClick={() => navigate(`/app/lab/analysis/${viewId}`)}
-                    className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+                    className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
                       active
-                        ? 'bg-nebula text-white shadow-[0_8px_20px_rgba(9,6,20,0.25)]'
-                        : 'text-moonlight hover:bg-nebula hover:text-starlight'
+                        ? 'bg-nebula text-white'
+                        : 'text-moonlight hover:bg-nebula/70 hover:text-starlight'
                     }`}
                   >
-                    <ViewIcon size={14} className={active ? 'text-amethyst' : 'text-twilight'} />
+                    <ViewIcon size={13} className={active ? 'text-amethyst' : 'text-twilight'} />
                     {label}
                   </button>
                 )
@@ -582,34 +595,44 @@ export default function LabAnalysisPage() {
             <button
               type="button"
               onClick={() => navigate('/app/lab')}
-              className="inline-flex items-center gap-2 rounded-xl border border-line-default bg-nebula px-4 py-2 text-xs font-semibold text-starlight transition-colors hover:border-line-active hover:text-white"
+              className="inline-flex items-center gap-2 rounded-lg border border-line-subtle/60 bg-nebula/70 px-3 py-1.5 text-[11px] font-semibold text-starlight transition-colors hover:border-line-active hover:text-white"
             >
-              <ArrowLeft size={14} />
+              <ArrowLeft size={13} />
               Back to lab
             </button>
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-xl border border-line-default bg-nebula px-4 py-2 text-xs font-semibold text-starlight transition-colors hover:border-line-active"
+              className="inline-flex items-center gap-2 rounded-lg border border-line-subtle/60 bg-nebula/70 px-3 py-1.5 text-[11px] font-semibold text-starlight transition-colors hover:border-line-active"
+              title="Prints the same editorial layout as PDF Book."
             >
-              <Printer size={14} />
+              <Printer size={13} />
               Print / Save PDF
             </button>
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-xl border border-line-default bg-nebula px-4 py-2 text-xs font-semibold text-starlight transition-colors hover:border-line-active"
+              className="inline-flex items-center gap-2 rounded-lg border border-line-subtle/60 bg-nebula/70 px-3 py-1.5 text-[11px] font-semibold text-starlight transition-colors hover:border-line-active"
             >
-              <Download size={14} />
+              <Download size={13} />
               {panel === 'report' ? 'Export detailed PDF' : 'Export capture'}
             </button>
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-line-subtle bg-deep p-4 shadow-[0_22px_60px_rgba(4,0,12,0.4)] print:border-0 print:bg-white print:p-0 print:shadow-none">
+        <div className="rounded-2xl border border-line-subtle/35 bg-transparent p-0 print:border-0 print:bg-white">
           <ErrorBoundary>
             <Suspense fallback={<PanelLoader label="Dang tai capture view..." />}>
-              {resolvedConfig.render()}
+              {panel === 'report' ? (
+                resolvedConfig.render()
+              ) : (
+                <>
+                  <div className="print:hidden">
+                    {resolvedConfig.render()}
+                  </div>
+                  {printOnlyBook}
+                </>
+              )}
             </Suspense>
           </ErrorBoundary>
         </div>

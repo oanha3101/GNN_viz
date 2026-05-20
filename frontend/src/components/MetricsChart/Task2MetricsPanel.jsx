@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import usePlayerStore from '../../store/playerStore'
 import useGNNStore from '../../store/useGNNStore'
 import MetricsChart from './MetricsChart'
@@ -205,12 +205,24 @@ export default function Task2MetricsPanel({
     }
   }, [forcedTab])
 
+  // We only auto-select a featured graph ONCE per metrics-panel mount/snapshot
+  // batch. Without this guard the effect would fight the “Back to Gallery”
+  // button: user clears selectedNodeId → effect immediately re-selects the
+  // featured graph → the gallery view is never shown.
+  const didAutoSelectRef = useRef(false)
+  useEffect(() => {
+    didAutoSelectRef.current = false
+  }, [snapshots.length])
+
   useEffect(() => {
     if (disableAutoSelection) return
     if (!featuredDescriptor) return
+    if (didAutoSelectRef.current) return
     const explicit = focusedDescriptors.find((descriptor) => descriptor.originalGraphId === selectedNodeId)
     if (explicit) return
     if (selectedNodeId === featuredDescriptor.originalGraphId) return
+    if (selectedNodeId !== null && selectedNodeId !== undefined) return
+    didAutoSelectRef.current = true
     setSelectedNode(featuredDescriptor.originalGraphId)
   }, [disableAutoSelection, featuredDescriptor, focusedDescriptors, selectedNodeId, setSelectedNode])
 
@@ -233,7 +245,7 @@ export default function Task2MetricsPanel({
       title="Task 2 Lens"
       subtitle={`Graph classification diagnostics for ${datasetName || 'the active collection'} across reliability, failures, structure, and readout behavior.`}
       padding="none"
-      className="border-slate-800/70 bg-slate-950/55 shadow-[0_12px_32px_rgba(15,23,42,0.35)]"
+      className="border-line-subtle/35 bg-deep/45 shadow-none"
       actions={(
         <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 text-[11px] font-semibold text-cyan-300">
