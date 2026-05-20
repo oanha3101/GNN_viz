@@ -825,15 +825,14 @@ def retry_session(db: Session, *, session_id: str, admin: Optional[User]) -> dic
     return payload
 
 
-def delete_session(db: Session, *, session_id: str, admin: Optional[User]) -> dict:
-    session = get_session_or_404(db, session_id)
+ACTIVE_SESSION_STATUSES = {
+    SessionStatus.PENDING.value,
+    SessionStatus.RUNNING.value,
+    "queued",
+}
 
-    if session.status in (SessionStatus.PENDING.value, SessionStatus.RUNNING.value):
-        raise HTTPException(
-            status_code=409,
-            detail="Session is still active. Stop it before deleting.",
-        )
 
+def _delete_session_artifacts(session: TrainingSession) -> dict:
     snapshot_blob_refs = [
         row.blob_ref
         for row in session.snapshots
@@ -850,13 +849,25 @@ def delete_session(db: Session, *, session_id: str, admin: Optional[User]) -> di
     deleted_snapshot_docs = mongo_runs.delete_session_snapshots(session.id)
     session_manager.cleanup_session(session.id)
 
-    details = {
+    return {
         "status": session.status,
         "experiment_id": session.experiment_id,
         "project_id": session.project_id,
         "deleted_snapshot_docs": deleted_snapshot_docs,
         "deleted_blob_refs": deleted_blob_refs,
     }
+
+
+def delete_session(db: Session, *, session_id: str, admin: Optional[User]) -> dict:
+    session = get_session_or_404(db, session_id)
+
+    if session.status in ACTIVE_SESSION_STATUSES:
+        raise HTTPException(
+            status_code=409,
+            detail="Session is still active. Stop it before deleting.",
+        )
+
+    details = _delete_session_artifacts(session)
     record_audit_log(
         db,
         "session_deleted",
@@ -868,6 +879,48 @@ def delete_session(db: Session, *, session_id: str, admin: Optional[User]) -> di
     db.delete(session)
     db.commit()
     return {"status": "deleted", "id": session_id}
+
+
+def delete_all_terminal_sessions(db: Session, *, admin: Optional[User]) -> dict:
+    active_rows = (
+        db.query(TrainingSession.id)
+        .filter(TrainingSession.status.in_(ACTIVE_SESSION_STATUSES))
+        .all()
+    )
+    skipped_active = [row[0] for row in active_rows]
+    terminal_sessions = (
+        db.query(TrainingSession)
+        .filter(~TrainingSession.status.in_(ACTIVE_SESSION_STATUSES))
+        .all()
+    )
+
+    deleted = []
+    deleted_details = []
+    for session in terminal_sessions:
+        deleted.append(session.id)
+        deleted_details.append({"id": session.id, **_delete_session_artifacts(session)})
+        db.delete(session)
+
+    record_audit_log(
+        db,
+        "sessions_bulk_deleted",
+        "training_session",
+        "all",
+        actor_user_id=admin.id if admin else None,
+        details={
+            "deleted_count": len(deleted),
+            "skipped_active_count": len(skipped_active),
+            "deleted": deleted,
+            "skipped_active": skipped_active,
+            "deleted_details": deleted_details,
+        },
+    )
+    db.commit()
+    return {
+        "status": "bulk_deleted",
+        "deleted": deleted,
+        "skipped_active": skipped_active,
+    }
 
 
 def list_audit_logs(

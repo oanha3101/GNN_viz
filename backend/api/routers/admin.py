@@ -305,6 +305,14 @@ def retry_admin_session(
     return admin_service.retry_session(db, session_id=session_id, admin=admin)
 
 
+@router.delete("/sessions")
+def delete_all_admin_sessions(
+    db: Session = Depends(get_db),
+    admin: Optional[User] = Depends(require_admin_user),
+):
+    return admin_service.delete_all_terminal_sessions(db, admin=admin)
+
+
 @router.delete("/sessions/{session_id}")
 def delete_admin_session(
     session_id: str,

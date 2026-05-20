@@ -45,6 +45,7 @@ export default function AdminSessionsPage() {
   const [error, setError] = useState(null)
   const [items, setItems] = useState([])
   const [pendingSessionId, setPendingSessionId] = useState(null)
+  const [bulkBusy, setBulkBusy] = useState(false)
   const [filters, setFilters] = useState({
     q: '',
     status: '',
@@ -106,6 +107,23 @@ export default function AdminSessionsPage() {
     }
   }, [load])
 
+  const handleDeleteAll = useCallback(async () => {
+    const confirmed = window.confirm(
+      'Delete all non-active sessions? Running and pending sessions will be kept.'
+    )
+    if (!confirmed) return
+    setBulkBusy(true)
+    setError(null)
+    try {
+      await apiJson('/admin/sessions', { method: 'DELETE' })
+      await load()
+    } catch (err) {
+      setError(err)
+    } finally {
+      setBulkBusy(false)
+    }
+  }, [load])
+
   const running = items.filter((s) => (s.status || '').toLowerCase() === 'running').length
 
   return (
@@ -123,6 +141,14 @@ export default function AdminSessionsPage() {
           </div>
           <div className="flex items-center gap-2">
             <button type="button" onClick={load} className="admin-btn-secondary"><RefreshCw size={13} /><span className="hidden sm:inline">Refresh</span></button>
+            <button
+              type="button"
+              onClick={handleDeleteAll}
+              disabled={!meta.total || bulkBusy}
+              className="admin-btn-secondary admin-icon-btn-danger disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trash2 size={13} /> Delete all
+            </button>
           </div>
         </div>
         <div className="admin-filter-strip">
