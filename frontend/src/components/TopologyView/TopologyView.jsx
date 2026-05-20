@@ -441,7 +441,7 @@ export default function TopologyView() {
 
   if (!activeGraphData) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-[#2a1f45] bg-[#0a0514]">
+      <div className="w-full h-full flex items-center justify-center text-[#2a1f45] bg-abyss">
         <div className="text-center animate-pulse">
           <Network size={40} className="mx-auto mb-4 opacity-40" />
           <p className="text-[10px] font-mono tracking-widest uppercase italic">Dang chuan bi do thi...</p>
@@ -453,7 +453,7 @@ export default function TopologyView() {
   return (
     <div 
       ref={containerRef} 
-      className="w-full h-full relative bg-[#0a0514] overflow-visible cursor-crosshair"
+      className="w-full h-full relative bg-abyss overflow-visible cursor-crosshair"
       onClick={handleCloseContextMenu}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -613,16 +613,16 @@ export default function TopologyView() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="fixed z-[100] w-48 rounded-xl border border-[#2a1f45]/50 bg-[#071120]/95 backdrop-blur-xl shadow-2xl overflow-hidden p-1"
+            className="fixed z-[100] w-48 rounded-xl border border-line-default/50 bg-deep/95 backdrop-blur-xl shadow-2xl overflow-hidden p-1"
             style={{ left: contextMenu.x, top: contextMenu.y }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-3 py-2 border-b border-[rgba(168,85,247,0.08)]/60 mb-1">
-              <div className="text-[9px] uppercase font-bold text-[#5b5689] tracking-widest">Node Actions</div>
+            <div className="px-3 py-2 border-b border-line-subtle/60 mb-1">
+              <div className="text-[9px] uppercase font-bold text-twilight tracking-widest">Node Actions</div>
             </div>
             <button
               onClick={() => handleFocusNode(contextMenu.nodeId)}
-              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-[#a5a0d0] hover:text-white hover:bg-[#a855f7]/20 rounded-lg transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-moonlight hover:text-white hover:bg-amethyst/20 rounded-lg transition-colors"
             >
               <span>🎯</span> Focus & Center
             </button>
@@ -631,20 +631,20 @@ export default function TopologyView() {
                 setSelectedNode(contextMenu.nodeId)
                 handleCloseContextMenu()
               }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-[#a5a0d0] hover:text-white hover:bg-[#6366f1]/20 rounded-lg transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-moonlight hover:text-white hover:bg-[#6366f1]/20 rounded-lg transition-colors"
             >
               <Info size={14} /> View Details
             </button>
             <button
               onClick={handleToggleKHop}
-              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-[#a5a0d0] hover:text-white hover:bg-[#a855f7]/20 rounded-lg transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-moonlight hover:text-white hover:bg-amethyst/20 rounded-lg transition-colors"
             >
               <Share2 size={14} /> {kHopEnabled ? 'Disable' : 'Enable'} K-Hop
             </button>
-            <div className="h-px bg-[#2a1f45]/60 my-1" />
+            <div className="h-px bg-line-default/60 my-1" />
             <button
               onClick={handleCloseContextMenu}
-              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-[#5b5689] hover:text-[#f43f5e] hover:bg-[#f43f5e]/10 rounded-lg transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2 text-[11px] font-medium text-twilight hover:text-[#f43f5e] hover:bg-[#f43f5e]/10 rounded-lg transition-colors"
             >
               <X size={14} /> Close Menu
             </button>
@@ -662,7 +662,7 @@ export default function TopologyView() {
               className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all border
                 ${viewMode === mode
                   ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(79,70,229,0.5)]'
-                  : 'bg-[#0f0a1e] border-[rgba(168,85,247,0.08)] text-[#5b5689] hover:text-[#a5a0d0]'
+                  : 'bg-deep border-line-subtle text-twilight hover:text-moonlight'
                 }`}
             >
               {mode}
@@ -676,7 +676,7 @@ export default function TopologyView() {
           className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all border flex items-center gap-1.5
             ${showErrorsOnly
               ? 'bg-[#f43f5e]/20 border-[#f43f5e]/40 text-[#fda4af] shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-              : 'bg-[#0f0a1e] border-[rgba(168,85,247,0.08)] text-[#5b5689] hover:text-[#a5a0d0]'
+              : 'bg-deep border-line-subtle text-twilight hover:text-moonlight'
             }`}
           title={showErrorsOnly
             ? 'Hide misclassification highlight'
@@ -696,15 +696,15 @@ export default function TopologyView() {
 
         {/* K-Hop Neighborhood Toggle */}
         {selectedNodeId !== null && (
-          <div className="bg-[#0f0a1e]/90 backdrop-blur-md rounded-lg p-1.5 border border-[#2a1f45]/50">
-            <div className="text-[8px] text-[#5b5689] uppercase tracking-wider mb-1 text-center">K-Hop</div>
+          <div className="bg-deep/90 backdrop-blur-md rounded-lg p-1.5 border border-line-default/50">
+            <div className="text-[8px] text-twilight uppercase tracking-wider mb-1 text-center">K-Hop</div>
             <div className="flex gap-1">
               <button
                 onClick={() => setKHopEnabled(!kHopEnabled)}
                 className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all
                   ${kHopEnabled
-                    ? 'bg-[#a855f7]/30 text-[#c084fc] border border-[#a855f7]/40'
-                    : 'text-[#5b5689] hover:text-[#a5a0d0] border border-[#2a1f45]'}`}
+                    ? 'bg-amethyst/30 text-[#c084fc] border border-[#a855f7]/40'
+                    : 'text-twilight hover:text-moonlight border border-line-default'}`}
               >
                 {kHopEnabled ? 'ON' : 'OFF'}
               </button>
@@ -714,8 +714,8 @@ export default function TopologyView() {
                   onClick={() => setKHopMaxHops(k)}
                   className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all
                     ${kHopMaxHops === k
-                      ? 'bg-[#a855f7]/30 text-purple-300 border border-purple-500/40'
-                      : 'text-[#5b5689] hover:text-[#a5a0d0] border border-[#2a1f45]'}`}
+                      ? 'bg-amethyst/30 text-purple-300 border border-purple-500/40'
+                      : 'text-twilight hover:text-moonlight border border-line-default'}`}
                 >
                   {k}H
                 </button>
@@ -726,15 +726,15 @@ export default function TopologyView() {
 
         {/* GAT Attention Head Selector */}
         {selectedModel === 'GAT' && (
-          <div className="flex gap-1 bg-[#0f0a1e]/90 backdrop-blur-md rounded-lg p-1 border border-[#2a1f45]/50">
+          <div className="flex gap-1 bg-deep/90 backdrop-blur-md rounded-lg p-1 border border-line-default/50">
             {['avg', '0', '1', '2', '3'].map((h) => (
               <button
                 key={h}
                 onClick={() => setAttentionHead(h)}
                 className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all
                   ${attentionHead === h
-                    ? 'bg-[#a855f7]/30 text-[#c084fc] border border-[#a855f7]/40'
-                    : 'text-[#5b5689] hover:text-[#a5a0d0]'}`}
+                    ? 'bg-amethyst/30 text-[#c084fc] border border-[#a855f7]/40'
+                    : 'text-twilight hover:text-moonlight'}`}
               >
                 {h === 'avg' ? 'AVG' : `H${h}`}
               </button>
@@ -744,10 +744,10 @@ export default function TopologyView() {
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-3 left-3 bg-[#0a0514]/80 backdrop-blur-md rounded-lg px-3 py-2
-                      border border-[rgba(168,85,247,0.08)]/50 z-10 pointer-events-none">
-        <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-[rgba(168,85,247,0.08)]/50 pb-2">
-          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[8px] uppercase tracking-[0.18em] text-[#a5a0d0]">
+      <div className="absolute bottom-3 left-3 bg-abyss/80 backdrop-blur-md rounded-lg px-3 py-2
+                      border border-line-subtle/50 z-10 pointer-events-none">
+        <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-line-subtle/50 pb-2">
+          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[8px] uppercase tracking-[0.18em] text-moonlight">
             {selectedModel}
           </span>
           <span className="text-[9px] text-[#8f88c8]">
@@ -760,25 +760,25 @@ export default function TopologyView() {
           {legendEntries.map((entry) => (
             <div key={entry.label} className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
-              <span className="text-[9px] text-[#5b5689] font-bold font-mono">{entry.name}</span>
+              <span className="text-[9px] text-twilight font-bold font-mono">{entry.name}</span>
             </div>
           ))}
         </div>
         {selectedNodeId !== null && kHopEnabled && (
-          <div className="mt-2 pt-2 border-t border-[rgba(168,85,247,0.08)]/50">
+          <div className="mt-2 pt-2 border-t border-line-subtle/50">
             <div className="text-[8px] text-[#3d3766] uppercase tracking-wider mb-1">K-Hop Legend</div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#a855f7' }} />
-                <span className="text-[8px] text-[#5b5689] font-bold">1-Hop</span>
+                <span className="text-[8px] text-twilight font-bold">1-Hop</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#6366f1' }} />
-                <span className="text-[8px] text-[#5b5689] font-bold">2-Hop</span>
+                <span className="text-[8px] text-twilight font-bold">2-Hop</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ec4899' }} />
-                <span className="text-[8px] text-[#5b5689] font-bold">3-Hop</span>
+                <span className="text-[8px] text-twilight font-bold">3-Hop</span>
               </div>
             </div>
           </div>

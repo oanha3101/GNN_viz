@@ -28,7 +28,7 @@ export default function TrainingReport() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/78 p-6 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-[28px] border border-slate-700/40 bg-[#07101f] shadow-2xl">
+      <div className="w-full max-w-3xl rounded-[28px] border border-slate-700/40 bg-deep shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-800/70 px-6 py-5">
           <div>
             <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">

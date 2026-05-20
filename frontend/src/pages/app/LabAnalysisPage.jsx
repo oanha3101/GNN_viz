@@ -23,7 +23,7 @@ import {
 
 function PanelLoader({ label }) {
   return (
-    <div className="flex h-full min-h-[360px] items-center justify-center text-[11px] font-bold uppercase tracking-[0.18em] text-[#5b5689]">
+    <div className="flex h-full min-h-[360px] items-center justify-center text-[11px] font-bold uppercase tracking-[0.18em] text-twilight">
       {label}
     </div>
   )
@@ -236,12 +236,12 @@ function ReportSection({ page, index }) {
   return (
     <section
       key={page.id}
-      className="rounded-[28px] border border-[rgba(168,85,247,0.1)] bg-[#0f0a1e] p-4 shadow-[0_22px_60px_rgba(4,0,12,0.4)] print:min-h-screen print:break-after-page print:rounded-none print:border-0 print:bg-white print:p-0 print:shadow-none"
+      className="rounded-[28px] border border-line-subtle bg-deep p-4 shadow-[0_22px_60px_rgba(4,0,12,0.4)] print:min-h-screen print:break-after-page print:rounded-none print:border-0 print:bg-white print:p-0 print:shadow-none"
     >
-      <div className="mb-4 flex items-center gap-2 border-b border-[rgba(168,85,247,0.12)] pb-3 print:border-slate-200">
-        <ViewIcon size={16} className="text-[#a855f7] print:text-slate-700" />
+      <div className="mb-4 flex items-center gap-2 border-b border-line-default pb-3 print:border-slate-200">
+        <ViewIcon size={16} className="text-amethyst print:text-slate-700" />
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8f88bc] print:text-slate-500">
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-twilight print:text-slate-500">
             Page {index + 1}
           </div>
           <div className="text-lg font-bold text-white print:text-slate-900">{page.label}</div>
@@ -275,10 +275,10 @@ const VIEW_CONFIG = {
     icon: Network,
     render: () => (
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-        <div className="min-h-[620px] overflow-hidden rounded-2xl border border-[rgba(168,85,247,0.12)] bg-[#120b24]">
+        <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
           <TopologyRouter />
         </div>
-        <div className="min-h-[620px] overflow-hidden rounded-2xl border border-[rgba(168,85,247,0.12)] bg-[#120b24]">
+        <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
           <InfoRouter />
         </div>
       </div>
@@ -493,10 +493,10 @@ export default function LabAnalysisPage() {
         icon: Network,
         render: () => (
           <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-[rgba(168,85,247,0.12)] bg-[#120b24]">
+            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
               <TopologyRouter forcedFocus="weak_class" forcedSelectedCell={reportCell} hideGalleryControls showFullCollection />
             </div>
-            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-[rgba(168,85,247,0.12)] bg-[#120b24]">
+            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
               <InfoRouter forcedFocus="weak_class" forcedSelectedCell={reportCell} />
             </div>
           </div>
@@ -508,10 +508,10 @@ export default function LabAnalysisPage() {
         icon: Network,
         render: () => (
           <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-[rgba(168,85,247,0.12)] bg-[#120b24]">
+            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
               <TopologyRouter forcedFocus="outlier" hideGalleryControls showFullCollection />
             </div>
-            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-[rgba(168,85,247,0.12)] bg-[#120b24]">
+            <div className="min-h-[620px] overflow-hidden rounded-2xl border border-line-default bg-deep">
               <InfoRouter forcedFocus="outlier" />
             </div>
           </div>
@@ -537,21 +537,21 @@ export default function LabAnalysisPage() {
   const ResolvedIcon = resolvedConfig.icon
 
   return (
-    <div className="min-h-screen bg-[#0a0514] text-[#e7e4ff]">
+    <div className="min-h-screen bg-abyss text-starlight">
       <div className="mx-auto flex max-w-[1800px] flex-col gap-5 px-6 py-6">
-        <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-[rgba(168,85,247,0.12)] bg-[#120b24]/88 px-5 py-4 shadow-[0_18px_48px_rgba(4,0,12,0.35)] backdrop-blur-xl print:hidden">
+        <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-line-default bg-deep/88 px-5 py-4 shadow-[0_18px_48px_rgba(4,0,12,0.35)] backdrop-blur-xl print:hidden">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8f88bc]">
+            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-twilight">
               {TASK_LABELS[selectedTask]} - {datasetName}
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <ResolvedIcon size={18} className="text-[#a855f7]" />
+              <ResolvedIcon size={18} className="text-amethyst" />
               <h1 className="text-2xl font-black tracking-tight text-white">{resolvedConfig.title}</h1>
             </div>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#a9a3d0]">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-moonlight">
               {resolvedConfig.description}
             </p>
-            <div className="mt-4 inline-flex flex-wrap items-center gap-2 rounded-2xl border border-[rgba(168,85,247,0.14)] bg-[#0d0920]/85 p-1.5">
+            <div className="mt-4 inline-flex flex-wrap items-center gap-2 rounded-2xl border border-line-default bg-deep/85 p-1.5">
               {[
                 ['latent', 'Latent', Globe2],
                 ['structure', 'Structure', Network],
@@ -566,11 +566,11 @@ export default function LabAnalysisPage() {
                     onClick={() => navigate(`/app/lab/analysis/${viewId}`)}
                     className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
                       active
-                        ? 'bg-[#201338] text-white shadow-[0_8px_20px_rgba(9,6,20,0.25)]'
-                        : 'text-[#9088bd] hover:bg-[#171129] hover:text-[#efeaff]'
+                        ? 'bg-nebula text-white shadow-[0_8px_20px_rgba(9,6,20,0.25)]'
+                        : 'text-moonlight hover:bg-nebula hover:text-starlight'
                     }`}
                   >
-                    <ViewIcon size={14} className={active ? 'text-[#a855f7]' : 'text-[#6f679d]'} />
+                    <ViewIcon size={14} className={active ? 'text-amethyst' : 'text-twilight'} />
                     {label}
                   </button>
                 )
@@ -582,7 +582,7 @@ export default function LabAnalysisPage() {
             <button
               type="button"
               onClick={() => navigate('/app/lab')}
-              className="inline-flex items-center gap-2 rounded-xl border border-[rgba(168,85,247,0.16)] bg-[#1a1231] px-4 py-2 text-xs font-semibold text-[#ddd9ff] transition-colors hover:border-[rgba(168,85,247,0.28)] hover:text-white"
+              className="inline-flex items-center gap-2 rounded-xl border border-line-default bg-nebula px-4 py-2 text-xs font-semibold text-starlight transition-colors hover:border-line-active hover:text-white"
             >
               <ArrowLeft size={14} />
               Back to lab
@@ -590,7 +590,7 @@ export default function LabAnalysisPage() {
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-xl border border-[rgba(34,211,238,0.18)] bg-[#0f2130] px-4 py-2 text-xs font-semibold text-[#c8f8ff] transition-colors hover:border-[rgba(34,211,238,0.32)]"
+              className="inline-flex items-center gap-2 rounded-xl border border-line-default bg-nebula px-4 py-2 text-xs font-semibold text-starlight transition-colors hover:border-line-active"
             >
               <Printer size={14} />
               Print / Save PDF
@@ -598,7 +598,7 @@ export default function LabAnalysisPage() {
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-xl border border-[rgba(251,191,36,0.16)] bg-[#261d0a] px-4 py-2 text-xs font-semibold text-[#ffe6a8] transition-colors hover:border-[rgba(251,191,36,0.3)]"
+              className="inline-flex items-center gap-2 rounded-xl border border-line-default bg-nebula px-4 py-2 text-xs font-semibold text-starlight transition-colors hover:border-line-active"
             >
               <Download size={14} />
               {panel === 'report' ? 'Export detailed PDF' : 'Export capture'}
@@ -606,7 +606,7 @@ export default function LabAnalysisPage() {
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-[rgba(168,85,247,0.1)] bg-[#0f0a1e] p-4 shadow-[0_22px_60px_rgba(4,0,12,0.4)] print:border-0 print:bg-white print:p-0 print:shadow-none">
+        <div className="rounded-[28px] border border-line-subtle bg-deep p-4 shadow-[0_22px_60px_rgba(4,0,12,0.4)] print:border-0 print:bg-white print:p-0 print:shadow-none">
           <ErrorBoundary>
             <Suspense fallback={<PanelLoader label="Dang tai capture view..." />}>
               {resolvedConfig.render()}

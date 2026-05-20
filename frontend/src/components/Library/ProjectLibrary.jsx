@@ -181,7 +181,7 @@ export default function ProjectLibrary({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[90] bg-slate-950/88 backdrop-blur-sm flex items-center justify-center p-6">
-      <div className="w-full max-w-4xl max-h-[85vh] rounded-[24px] border border-slate-700/50 bg-[#071120] shadow-2xl flex flex-col overflow-hidden">
+      <div className="w-full max-w-4xl max-h-[85vh] rounded-[24px] border border-slate-700/50 bg-deep shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800/70 px-6 py-5">
           <div>

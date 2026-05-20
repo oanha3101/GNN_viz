@@ -19,7 +19,7 @@ export default function ConfigPanel() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#020617]/60 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-abyss/60 backdrop-blur-sm z-40"
             onClick={() => setConfigOpen(false)}
           />
 
@@ -29,7 +29,7 @@ export default function ConfigPanel() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-full w-[320px] bg-[#071120]/95 border-l border-slate-800/80
+            className="fixed right-0 top-0 h-full w-[320px] bg-deep/95 border-l border-slate-800/80
                       z-50 p-6 overflow-y-auto shadow-2xl backdrop-blur-xl custom-scrollbar"
           >
             <div className="flex items-center justify-between mb-8">

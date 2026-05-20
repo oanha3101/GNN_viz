@@ -46,6 +46,17 @@
   --c-primary-softer: rgba(220, 38, 38, 0.05);
   --c-primary-glow: rgba(220, 38, 38, 0.35);
   --c-primary-fg: #ffffff;
+  /* Tonal ramp (light) so utilities like bg-cyan-300 share the brand hue. */
+  --c-primary-50:  #fff5f5;
+  --c-primary-100: #ffe4e4;
+  --c-primary-200: #fecaca;
+  --c-primary-300: #fca5a5;
+  --c-primary-400: #f87171;
+  --c-primary-500: #ef4444;
+  --c-primary-600: #dc2626;
+  --c-primary-700: #b91c1c;
+  --c-primary-800: #991b1b;
+  --c-primary-900: #7f1d1d;
 
   /* ── Secondary palette ── */
   --c-accent-blue: #2563eb;
@@ -198,6 +209,17 @@ html.dark {
   --c-primary-softer: rgba(34, 211, 238, 0.06);
   --c-primary-glow: rgba(34, 211, 238, 0.45);
   --c-primary-fg: #04060c;
+  /* Tonal ramp (dark) so utilities like bg-purple-300 share the brand hue. */
+  --c-primary-50:  #ecfeff;
+  --c-primary-100: #cffafe;
+  --c-primary-200: #a5f3fc;
+  --c-primary-300: #67e8f9;
+  --c-primary-400: #22d3ee;
+  --c-primary-500: #22d3ee;
+  --c-primary-600: #06b6d4;
+  --c-primary-700: #0891b2;
+  --c-primary-800: #0e7490;
+  --c-primary-900: #155e75;
 
   --c-accent-blue: #60a5fa;
   --c-accent-cyan: #22d3ee;

@@ -425,7 +425,7 @@ export default function EmbeddingView({
   }
 
   return (
-    <div ref={plotContainerRef} className="w-full h-full relative bg-[#020617]/40">
+    <div ref={plotContainerRef} className="w-full h-full relative bg-abyss/40">
       {selectedTask === 2 && !hideTask2Toolbar && (
         <div className="absolute left-2 top-2 z-10 flex items-center gap-2 rounded-xl border border-slate-800/70 bg-slate-950/80 px-2 py-1 text-[10px] font-semibold text-slate-300">
           <span className="uppercase tracking-ultra text-slate-500">Color</span>

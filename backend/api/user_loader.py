@@ -95,6 +95,122 @@ def _parse_and_align(df_nodes: pd.DataFrame, df_edges: pd.DataFrame,
     return df_nodes, df_edges, node_mapper, num_nodes, num_edges
 
 
+def _validate_graph_tables(
+    df_nodes: pd.DataFrame,
+    df_edges: pd.DataFrame,
+    df_graphs: Optional[pd.DataFrame],
+    mapping: MappingConfig,
+) -> tuple:
+    """Validate uploaded graph tables before training.
+
+    Returns ``(errors, warnings)`` lists. Errors block the upload; warnings
+    are surfaced to the user but do not block.
+    """
+    errors: List[str] = []
+    warnings: List[str] = []
+
+    node_col = mapping.node_id
+    src_col = mapping.edge_source
+    tgt_col = mapping.edge_target
+
+    if node_col not in df_nodes.columns:
+        errors.append(f"Nodes table is missing the node_id column '{node_col}'.")
+        return errors, warnings
+    if src_col not in df_edges.columns or tgt_col not in df_edges.columns:
+        errors.append(
+            f"Edges table is missing edge_source '{src_col}' or edge_target '{tgt_col}'."
+        )
+        return errors, warnings
+
+    node_ids = df_nodes[node_col]
+    duplicate_mask = node_ids.duplicated(keep=False)
+    if duplicate_mask.any():
+        dup_values = node_ids[duplicate_mask].unique().tolist()
+        errors.append(
+            f"Duplicate node IDs in nodes table: {dup_values[:10]}"
+        )
+
+    # ── Endpoint type consistency ────────────────────────────────────────────
+    node_dtype = node_ids.dropna().map(type).mode()
+    src_dtype = df_edges[src_col].dropna().map(type).mode()
+    tgt_dtype = df_edges[tgt_col].dropna().map(type).mode()
+    if not node_dtype.empty and not src_dtype.empty and node_dtype.iloc[0] is not src_dtype.iloc[0]:
+        errors.append(
+            f"edge_source type does not match node_id type "
+            f"({src_dtype.iloc[0].__name__} vs {node_dtype.iloc[0].__name__})."
+        )
+    if not node_dtype.empty and not tgt_dtype.empty and node_dtype.iloc[0] is not tgt_dtype.iloc[0]:
+        errors.append(
+            f"edge_target type does not match node_id type "
+            f"({tgt_dtype.iloc[0].__name__} vs {node_dtype.iloc[0].__name__})."
+        )
+
+    # ── Orphan edges ─────────────────────────────────────────────────────────
+    known_nodes = set(node_ids.dropna().unique().tolist())
+    if not errors or all('type does not match' not in e for e in errors):
+        for endpoint_col in (src_col, tgt_col):
+            unknown = [
+                value for value in df_edges[endpoint_col].dropna().unique().tolist()
+                if value not in known_nodes
+            ]
+            if unknown:
+                errors.append(
+                    f"Edge references unknown node ID(s) in column '{endpoint_col}': "
+                    f"{unknown[:10]}"
+                )
+
+    # ── Edge warnings (self-loops, duplicates) ───────────────────────────────
+    edge_pairs = list(zip(df_edges[src_col], df_edges[tgt_col]))
+    self_loops = [pair for pair in edge_pairs if pair[0] == pair[1]]
+    if self_loops:
+        warnings.append(
+            f"Detected {len(self_loops)} self-loop edge(s); ensure this matches your graph semantics."
+        )
+
+    def _norm_edge(src, tgt):
+        if mapping.is_directed:
+            return (src, tgt)
+        try:
+            return tuple(sorted([src, tgt]))
+        except TypeError:
+            return (src, tgt)
+
+    pair_counts: Dict[tuple, int] = {}
+    for src_val, tgt_val in edge_pairs:
+        key = _norm_edge(src_val, tgt_val)
+        pair_counts[key] = pair_counts.get(key, 0) + 1
+    duplicate_edges = [pair for pair, count in pair_counts.items() if count > 1]
+    if duplicate_edges:
+        warnings.append(
+            f"Detected {len(duplicate_edges)} duplicate edge pair(s); first: {duplicate_edges[:5]}"
+        )
+
+    # ── Sparse / blank node feature warnings ─────────────────────────────────
+    for feat in mapping.node_features or []:
+        if feat in df_nodes.columns:
+            blank_ratio = df_nodes[feat].isna().mean()
+            if blank_ratio > 0.0:
+                warnings.append(
+                    f"Node feature '{feat}' has {blank_ratio:.0%} blank values."
+                )
+
+    # ── Graph-level checks ───────────────────────────────────────────────────
+    if mapping.task == 2 and df_graphs is not None and mapping.graph_id and mapping.graph_label:
+        node_graph_ids = (
+            set(df_nodes[mapping.graph_id].dropna().unique().tolist())
+            if mapping.graph_id in df_nodes.columns
+            else set()
+        )
+        labelled_graph_ids = set(df_graphs[mapping.graph_id].dropna().unique().tolist())
+        missing = [gid for gid in node_graph_ids if gid not in labelled_graph_ids]
+        if missing:
+            errors.append(
+                f"Graph classification missing graph_id label for: {missing[:10]}"
+            )
+
+    return errors, warnings
+
+
 def _save_pyg_data(result: dict, dataset_name: Optional[str] = None) -> str:
     """Persist runtime training artifacts to blob storage and return the object key."""
     slug = slugify(dataset_name or "custom-runtime")
