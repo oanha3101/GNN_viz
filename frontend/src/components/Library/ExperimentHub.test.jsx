@@ -1,6 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import ExperimentHub from './ExperimentHub'
+
+function renderHub(ui) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>)
+}
 
 const gnnState = {
   setTask: vi.fn(),
@@ -232,7 +237,7 @@ describe('ExperimentHub', () => {
   })
 
   it('renders page mode and saves edited title with notes', async () => {
-    render(<ExperimentHub isOpen variant="page" onClose={vi.fn()} />)
+    renderHub(<ExperimentHub isOpen variant="page" onClose={vi.fn()} />)
 
     await waitFor(() => {
       expect(screen.getByText('Alpha Run')).toBeInTheDocument()
@@ -266,7 +271,7 @@ describe('ExperimentHub', () => {
   })
 
   it('filters visible runs through local search', async () => {
-    render(<ExperimentHub isOpen variant="page" onClose={vi.fn()} />)
+    renderHub(<ExperimentHub isOpen variant="page" onClose={vi.fn()} />)
 
     await waitFor(() => {
       expect(screen.getByText('Alpha Run')).toBeInTheDocument()
