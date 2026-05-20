@@ -90,7 +90,7 @@ def test_graph_embedding_contract(mock_node_data):
     
     assert len(snapshots) > 0
     validate_snapshot(5, snapshots[0])
-    assert isinstance(snapshots[0]['per_node_knn_preservation'], list)
+    assert isinstance(snapshots[0]['per_node_knn_preservation'], dict)
 
 def test_graph_generation_contract(mock_node_data):
     config = {'epochs': 2, 'lr': 0.01, 'hidden': 16}

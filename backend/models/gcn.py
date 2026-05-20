@@ -34,6 +34,6 @@ class GCNModel(nn.Module):
             x = x + x_res  # Residual connection to prevent oversmoothing
             x = F.dropout(x, p=self.dropout, training=self.training)
             
-        embedding = x.detach()  # Capture before final layer
+        embedding = x
         x = self.convs[-1](x, edge_index)
         return x, embedding
