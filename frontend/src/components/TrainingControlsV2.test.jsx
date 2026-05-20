@@ -124,7 +124,8 @@ describe('TrainingControlsV2', () => {
 
     render(<TrainingControlsV2 />)
 
-    fireEvent.click(screen.getByRole('button', { name: /run/i }))
+    // Start training is now triggered via the global event (dispatched by the red player button / Space key).
+    window.dispatchEvent(new CustomEvent('gnn:request-start-training'))
 
     await waitFor(() => {
       expect(sessionState.createSession).toHaveBeenCalled()
@@ -133,12 +134,16 @@ describe('TrainingControlsV2', () => {
     expect(gnnState.setTraining).toHaveBeenCalledWith(false, 0)
   })
 
-  it('disables the start button for viewer accounts', () => {
+  it('ignores start-training event for viewer accounts', async () => {
     gnnState.isTraining = false
     authState.user = { id: 2, role: 'viewer', username: 'viewer' }
 
     render(<TrainingControlsV2 />)
+    window.dispatchEvent(new CustomEvent('gnn:request-start-training'))
 
-    expect(screen.getByRole('button', { name: /run/i })).toBeDisabled()
+    // Viewers must not be able to kick off training even via the event API.
+    await new Promise((r) => setTimeout(r, 0))
+    expect(sessionState.createSession).not.toHaveBeenCalled()
+    expect(gnnState.setTraining).not.toHaveBeenCalled()
   })
 })
