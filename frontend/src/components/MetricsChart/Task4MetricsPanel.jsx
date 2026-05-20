@@ -11,6 +11,7 @@ import {
   buildClusterConfidenceHistogram,
   computeAggregateStability,
 } from '../../utils/task4Metrics'
+import { COMMUNITY_COLORS, getCommunityColor } from '../../utils/colors'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -18,8 +19,6 @@ const TABS = [
   { id: 'stability', label: 'Stability' },
   { id: 'diagnostics', label: 'Diagnostics' },
 ]
-
-const COMMUNITY_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#eab308', '#a855f7', '#06b6d4', '#ec4899']
 
 /** Tick at ~24fps to animate pulse dots — only active when Stability tab is visible. */
 function useAnimationTick() {
@@ -183,7 +182,7 @@ function BridgesTab({ snap, onFocus }) {
           <span className="text-nano font-mono font-bold text-slate-200 tabular-nums shrink-0">
             {b.strength.toFixed(2)}
           </span>
-          <span className="text-nano font-mono text-slate-500 shrink-0" style={{ color: COMMUNITY_COLORS[b.community % COMMUNITY_COLORS.length] }}>
+          <span className="text-nano font-mono text-slate-500 shrink-0" style={{ color: getCommunityColor(b.community) }}>
             C{b.community}
           </span>
         </button>
@@ -299,7 +298,7 @@ function StabilityTab({ snapshots, epochInt, currentEpochFloat }) {
         <div className="flex flex-col gap-0.5">
           {matrix.map((row, cid) => (
             <div key={cid} className="flex items-center gap-1">
-              <span className="text-nano font-mono w-6 shrink-0 text-right" style={{ color: COMMUNITY_COLORS[cid % COMMUNITY_COLORS.length] }}>C{cid}</span>
+              <span className="text-nano font-mono w-6 shrink-0 text-right" style={{ color: getCommunityColor(cid) }}>C{cid}</span>
               <div className="flex gap-[1px]">
                 {row.map((v, e) => (
                   <div

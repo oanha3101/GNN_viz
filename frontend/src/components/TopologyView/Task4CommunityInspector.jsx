@@ -2,8 +2,7 @@ import React, { useMemo } from 'react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
 import { buildBridgeRanking, buildStabilityMatrix, computeAggregateStability } from '../../utils/task4Metrics'
-
-const COMMUNITY_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#eab308', '#a855f7', '#06b6d4', '#ec4899']
+import { getCommunityColor } from '../../utils/colors'
 
 /**
  * Task4CommunityInspector — right-rail Inspector content for Task 4. Shows
@@ -42,27 +41,52 @@ export default function Task4CommunityInspector() {
   }
 
   if (selectedCommunityId == null) {
+    const numComms = snap?.community_sizes?.length || 0
+    const totalN = (snap?.community_sizes || []).reduce((a, b) => a + b, 0)
+    const modQ = snap?.modularity_q ?? 0
     return (
-      <div className="h-full flex flex-col items-center justify-center text-slate-500 p-4 gap-2">
-        <p className="text-micro text-center leading-relaxed">
-          Click a node or a legend chip to inspect a community.
-        </p>
-        <div className="flex flex-col items-start gap-1 text-nano text-slate-600 font-mono">
-          <div>Overall stability · {(stabilityInfo?.overall ?? 1).toFixed(3)}</div>
+      <div className="h-full overflow-auto p-3 text-xs space-y-3">
+        <div className="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Community Overview</div>
+        <div className="grid grid-cols-2 gap-2">
+          <MetricCell label="Communities" value={numComms} />
+          <MetricCell label="Nodes" value={totalN} />
+          <MetricCell label="Modularity Q" value={modQ} digits={3} />
+          <MetricCell label="Stability" value={stabilityInfo?.overall ?? 1} digits={3} />
         </div>
+        {numComms > 0 && (
+          <div className="space-y-1">
+            <span className="text-[7px] text-slate-500 uppercase font-bold tracking-wider block">Per community</span>
+            {(snap?.community_sizes || []).map((size, ci) => (
+              <button
+                key={ci}
+                onClick={() => setSelectedCommunity(ci)}
+                className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 border transition-colors
+                  bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800/50
+                  hover:bg-slate-100 dark:hover:bg-slate-900/70"
+              >
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getCommunityColor(ci) }} />
+                <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200">C{ci}</span>
+                <span className="text-[10px] font-mono text-slate-500 ml-auto">{size} nodes</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <p className="text-[9px] text-slate-400 dark:text-slate-600 text-center leading-relaxed">
+          Click a community above or a node on the canvas to inspect details.
+        </p>
       </div>
     )
   }
 
   const metrics = snap?.per_community_metrics?.[selectedCommunityId]
-  const color = COMMUNITY_COLORS[selectedCommunityId % COMMUNITY_COLORS.length]
+  const color = getCommunityColor(selectedCommunityId)
   const preds = snap?.node_predictions_aligned ?? snap?.node_predictions ?? []
   const nodesInComm = preds
     .map((cid, idx) => (cid === selectedCommunityId ? idx : null))
     .filter((x) => x != null)
 
   return (
-    <div className="h-full overflow-auto p-3 text-xs space-y-3 bg-slate-950">
+    <div className="h-full overflow-auto p-3 text-xs space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full shadow-[0_0_8px] shadow-current" style={{ color, backgroundColor: color }} />
@@ -182,9 +206,9 @@ function MetricCell({ label, value, digits = 0 }) {
     ? (digits > 0 ? value.toFixed(digits) : `${value}`)
     : '—'
   return (
-    <div className="bg-slate-900/60 rounded-md px-2 py-1.5 border border-slate-800/50">
-      <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra block">{label}</span>
-      <span className="text-sm font-bold font-mono text-slate-100 tabular-nums">{display}</span>
+    <div className="rounded-lg px-2 py-1.5 border bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/50">
+      <span className="text-[7px] text-slate-500 uppercase font-bold tracking-wider block">{label}</span>
+      <span className="text-sm font-bold font-mono text-slate-800 dark:text-slate-100 tabular-nums">{display}</span>
     </div>
   )
 }
