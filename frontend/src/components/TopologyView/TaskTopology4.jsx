@@ -79,6 +79,11 @@ export default function TaskTopology4() {
   }, [discretePreds, discretePredsB, snapA, snapB])
 
   const migrationRate = migratingNodes.size / Math.max(1, discretePreds.length)
+  const maxLocalSmoothness = useMemo(() => {
+    if (!Array.isArray(snap?.local_smoothness)) return 1
+    const positive = snap.local_smoothness.filter((value) => value > 0)
+    return positive.length ? Math.max(...positive, 1) : 1
+  }, [snap?.local_smoothness])
 
   // ── Force layout: pull nodes toward community centers with migration lerp ──
   useEffect(() => {
@@ -181,8 +186,7 @@ export default function TaskTopology4() {
     if (overlayMode === 'smoothness' && snap?.local_smoothness) {
       const sm = snap.local_smoothness[node.id] ?? 0
       // Normalize: lower smoothness = more oversmoothed = grayish
-      const maxSm = Math.max(...snap.local_smoothness.filter(v => v > 0), 1)
-      const norm = Math.min(1, sm / maxSm)
+      const norm = Math.min(1, sm / maxLocalSmoothness)
       // Blend from gray (#94a3b8) to community color based on smoothness
       const r = Math.round(lerp(0x94, parseInt(color.slice(1, 3), 16), norm))
       const g = Math.round(lerp(0xa3, parseInt(color.slice(3, 5), 16), norm))
@@ -232,7 +236,7 @@ export default function TaskTopology4() {
     }
 
     ctx.globalAlpha = 1
-  }, [snap, selectedCommunityId, discretePreds, migratingNodes, overlayMode])
+  }, [snap, selectedCommunityId, discretePreds, migratingNodes, overlayMode, maxLocalSmoothness])
 
   // ── Draw before (hulls + migration trails) ─────────────────────────────────
   const drawBefore = useCallback((ctx) => {

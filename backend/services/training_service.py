@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from fastapi import WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketState
 
 from api.routers.auth import DISABLE_AUTH, decode_token
 from core.session_manager import session_manager
@@ -35,6 +36,63 @@ except ImportError:
     torch = None
 
 
+def _has_multiple_labels(data) -> bool:
+    if not hasattr(data, "y") or data.y is None:
+        return False
+    try:
+        return int(torch.unique(data.y).numel()) >= 2
+    except Exception:
+        return False
+
+
+def _ensure_node_classification_compatible(data, config: Dict[str, Any]):
+    if not config.get("uploaded_file_path"):
+        return
+
+    if isinstance(data, list):
+        raise ValueError(
+            "Uploaded dataset contains multiple graphs. Use Task 2 - Graph Classification instead of Task 1 - Node Classification."
+        )
+
+    if not hasattr(data, "y") or data.y is None:
+        raise ValueError(
+            "Uploaded dataset has no node labels. Task 1 requires a label for each node."
+        )
+
+    if not _has_multiple_labels(data):
+        raise ValueError(
+            "Uploaded dataset only has one node class (or dummy labels). Task 1 would produce meaningless results. Use a node-labeled dataset or switch to the correct task."
+        )
+
+
+def _ensure_graph_classification_compatible(data, config: Dict[str, Any]):
+    if not config.get("uploaded_file_path"):
+        return
+
+    if not isinstance(data, list):
+        raise ValueError(
+            "Uploaded dataset is a single graph artifact. Task 2 - Graph Classification requires a collection of labeled graphs."
+        )
+
+    if len(data) < 2:
+        raise ValueError(
+            "Task 2 needs multiple graphs to classify. Upload a graph collection instead of a single graph."
+        )
+
+    labels = []
+    for graph in data:
+        if hasattr(graph, "y") and graph.y is not None:
+            try:
+                labels.append(int(graph.y.view(-1)[0].item()))
+            except Exception:
+                continue
+
+    if len(set(labels)) < 2:
+        raise ValueError(
+            "Uploaded graph collection does not contain at least two graph classes. Task 2 needs graph-level labels to train and visualize correctly."
+        )
+
+
 def build_graph_json_flexible(data):
     edge_index = data.edge_index.cpu().numpy()
     num_nodes = data.num_nodes or (
@@ -62,7 +120,37 @@ def build_graph_json_flexible(data):
         for i in range(num_nodes)
     ]
 
-    return {"nodes": nodes, "links": links}
+    payload = {"nodes": nodes, "links": links}
+    split_masks = _extract_split_masks(data)
+    payload.update(split_masks)
+    return payload
+
+
+def _mask_to_list(mask) -> Optional[list]:
+    if mask is None:
+        return None
+    try:
+        values = mask.cpu().numpy().tolist()
+    except Exception:
+        try:
+            values = list(mask)
+        except Exception:
+            return None
+    return [bool(value) for value in values]
+
+
+def _extract_split_masks(data) -> Dict[str, list]:
+    payload = {}
+    train_mask = _mask_to_list(getattr(data, "train_mask", None))
+    val_mask = _mask_to_list(getattr(data, "val_mask", None))
+    test_mask = _mask_to_list(getattr(data, "test_mask", None))
+    if train_mask is not None:
+        payload["trainMask"] = train_mask
+    if val_mask is not None:
+        payload["valMask"] = val_mask
+    if test_mask is not None:
+        payload["testMask"] = test_mask
+    return payload
 
 
 def _strip_auth_fields(config: Dict[str, Any]) -> Dict[str, Any]:
@@ -146,14 +234,38 @@ def build_stop_check(session_id: str):
 
 
 async def send_training_complete(websocket: WebSocket, *, seq: SequenceCounter, session_id: str, epoch_snapshots: list):
+    last_epoch = -1
+    if epoch_snapshots:
+        last_epoch = int(epoch_snapshots[-1].get("epoch", len(epoch_snapshots) - 1))
     await send_json_zipped(
         websocket,
         {
             "type": "training_complete",
-            "data": {"all_snapshots": epoch_snapshots, "session_id": session_id},
+            "data": {
+                "session_id": session_id,
+                "last_epoch": last_epoch,
+                "snapshot_count": len(epoch_snapshots),
+            },
         },
         seq_counter=seq,
     )
+
+
+async def safe_close_websocket(
+    websocket: WebSocket | None,
+    *,
+    code: int = 1000,
+    reason: str = "",
+):
+    if websocket is None:
+        return
+    try:
+        if getattr(websocket, "application_state", None) == WebSocketState.CONNECTED:
+            await websocket.close(code=code, reason=reason)
+    except Exception:
+        # Closing is best-effort only. If the socket is already gone, avoid masking
+        # the original training result/error.
+        pass
 
 
 async def finalize_task_run(
@@ -167,6 +279,11 @@ async def finalize_task_run(
     status = "stopped" if stop_check() else "completed"
     session_manager.update_status(session_id, status)
     await send_training_complete(websocket, seq=seq, session_id=session_id, epoch_snapshots=epoch_snapshots)
+    await safe_close_websocket(
+        websocket,
+        code=1000,
+        reason="training_stopped" if status == "stopped" else "training_complete",
+    )
 
 
 async def send_graph_payload(websocket: WebSocket, *, seq: SequenceCounter, graph_json: dict, ground_truth=None, class_names=None):
@@ -174,6 +291,10 @@ async def send_graph_payload(websocket: WebSocket, *, seq: SequenceCounter, grap
         "graphData": graph_json,
         "groundTruth": ground_truth or [],
     }
+    if isinstance(graph_json, dict):
+        for key in ("trainMask", "valMask", "testMask"):
+            if graph_json.get(key) is not None:
+                payload[key] = graph_json[key]
     if class_names is not None:
         payload["classNames"] = class_names
     await send_json_zipped(websocket, {"type": "graph_data", "data": payload}, seq_counter=seq)
@@ -181,6 +302,7 @@ async def send_graph_payload(websocket: WebSocket, *, seq: SequenceCounter, grap
 
 async def run_graph_classification_task(websocket, *, config, seq, session_id, stop_check, snapshot_hook):
     data = get_data_from_config(config)
+    _ensure_graph_classification_compatible(data, config)
     custom_graphs = data if isinstance(data, list) else None
     epoch_snapshots = await run_graph_classification(
         config, websocket, stop_check, custom_graphs=custom_graphs, snapshot_hook=snapshot_hook
@@ -295,6 +417,7 @@ async def run_graph_generation_task(websocket, *, config, seq, session_id, stop_
 
 def prepare_node_classification_data(config: Dict[str, Any]):
     data = get_data_from_config(config)
+    _ensure_node_classification_compatible(data, config)
     if isinstance(data, list):
         data = data[0]
     if config.get("uploaded_file_path"):
@@ -302,12 +425,6 @@ def prepare_node_classification_data(config: Dict[str, Any]):
 
     model = build_model(config, data)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.get("lr", 0.01), weight_decay=5e-4)
-
-    if hasattr(data, "y") and data.y is not None:
-        num_classes = int(data.y.max().item()) + 1
-        if num_classes > 1 and num_classes != 7:
-            model = build_model(config, data, num_classes=num_classes)
-            optimizer = torch.optim.Adam(model.parameters(), lr=config.get("lr", 0.01))
 
     return data, model, optimizer
 
@@ -334,6 +451,12 @@ def resolve_node_graph_json(config: Dict[str, Any], data) -> dict:
 
 async def send_node_graph_data(websocket: WebSocket, *, seq: SequenceCounter, graph_json: dict, data):
     if graph_json and isinstance(graph_json, dict) and "graphData" in graph_json:
+        derived_split_payload = _extract_split_masks(data)
+        split_payload = {
+            key: (graph_json.get(key) if graph_json.get(key) is not None else derived_split_payload.get(key))
+            for key in ("trainMask", "valMask", "testMask")
+            if (graph_json.get(key) is not None or derived_split_payload.get(key) is not None)
+        }
         await send_json_zipped(
             websocket,
             {
@@ -342,6 +465,7 @@ async def send_node_graph_data(websocket: WebSocket, *, seq: SequenceCounter, gr
                     "graphData": graph_json["graphData"],
                     "groundTruth": graph_json.get("groundTruth", []),
                     "classNames": graph_json.get("classNames", []),
+                    **split_payload,
                 },
             },
             seq_counter=seq,
@@ -440,6 +564,25 @@ async def handle_training_websocket(websocket: WebSocket):
         )
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected: Session %s", session_id)
+    except PermissionError as exc:
+        logger.warning("Training auth/session error session=%s: %s", session_id, exc)
+        if session_id:
+            session_manager.update_status(session_id, "failed", str(exc))
+        try:
+            await send_json_zipped(
+                websocket,
+                {
+                    "type": "error",
+                    "data": {
+                        "code": ErrorCode.ERR_AUTH_INVALID,
+                        "message": str(exc),
+                        "retriable": False,
+                    },
+                },
+                seq_counter=seq,
+            )
+        finally:
+            await safe_close_websocket(websocket, code=1008, reason="auth_error")
     except Exception as exc:
         logger.error("Training error session=%s: %s", session_id, exc, exc_info=True)
         if session_id:
@@ -457,8 +600,8 @@ async def handle_training_websocket(websocket: WebSocket):
                 },
                 seq_counter=seq,
             )
-        except Exception:
-            pass
+        finally:
+            await safe_close_websocket(websocket, code=1011, reason="training_error")
     finally:
         if session_id:
             session_manager.cleanup_session(session_id)

@@ -36,6 +36,7 @@ export default function ProjectLibrary({ isOpen, onClose }) {
   const setModel = useGNNStore((s) => s.setModel)
   const setGraphData = useGNNStore((s) => s.setGraphData)
   const setGroundTruth = useGNNStore((s) => s.setGroundTruth)
+  const setTrainMask = useGNNStore((s) => s.setTrainMask)
   const setTaskData = useGNNStore((s) => s.setTaskData)
   const setMockMode = useGNNStore((s) => s.setMockMode)
   const setHyperparams = useGNNStore((s) => s.setHyperparams)
@@ -121,9 +122,15 @@ export default function ProjectLibrary({ isOpen, onClose }) {
       if (graphPayload.ground_truth_json) {
         setGroundTruth(graphPayload.ground_truth_json)
       }
-      if (graphPayload.task_data_json) {
-        setTaskData(graphPayload.task_data_json)
-      }
+      const storedTaskData = graphPayload.task_data_json || {}
+      const derivedTrainMask = storedTaskData.trainMask || graphPayload.graph_data_json?.trainMask || null
+      setTrainMask(Array.isArray(derivedTrainMask) ? derivedTrainMask : null)
+      setTaskData({
+        ...storedTaskData,
+        trainMask: storedTaskData.trainMask ?? (Array.isArray(derivedTrainMask) ? derivedTrainMask : null),
+        valMask: storedTaskData.valMask ?? (Array.isArray(graphPayload.graph_data_json?.valMask) ? graphPayload.graph_data_json.valMask : null),
+        testMask: storedTaskData.testMask ?? (Array.isArray(graphPayload.graph_data_json?.testMask) ? graphPayload.graph_data_json.testMask : null),
+      })
 
       // Restore snapshots and enable replay
       if (exp.snapshots_json && exp.snapshots_json.length > 0) {

@@ -1,4 +1,4 @@
-export function StatCard({ label, value, tone = 'violet' }) {
+export function StatCard({ label, value, tone = 'violet', className = '' }) {
   const toneMap = {
     violet: 'border-amethyst/20 bg-amethyst/[0.08] text-moonlight',
     emerald: 'border-aurora-green/20 bg-aurora-green/[0.08] text-aurora-green',
@@ -9,16 +9,16 @@ export function StatCard({ label, value, tone = 'violet' }) {
   }
 
   return (
-    <div className={`glass-card p-5 ${toneMap[tone] || toneMap.violet}`}>
+    <div className={`glass-card stat-card p-5 ${toneMap[tone] || toneMap.violet} ${className}`}>
       <div className="text-micro font-semibold uppercase tracking-ultra text-twilight">{label}</div>
       <div className="mt-3 text-3xl font-black text-white-star">{value}</div>
     </div>
   )
 }
 
-export function SectionCard({ title, subtitle, actions, children }) {
+export function SectionCard({ title, subtitle, actions, children, className = '' }) {
   return (
-    <div className="glass-card p-5">
+    <div className={`glass-card section-card min-w-0 overflow-hidden p-5 ${className}`}>
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <div className="text-sm font-semibold text-white-star">{title}</div>

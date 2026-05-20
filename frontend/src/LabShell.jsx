@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useCallback, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Network, BarChart3, Globe2, PanelRightOpen, PanelRightClose, FlaskConical, Plug } from 'lucide-react'
+import { Network, BarChart3, Globe2, PanelRightOpen, PanelRightClose, FlaskConical, Plug, ExternalLink } from 'lucide-react'
 import useGNNStore from './store/useGNNStore'
 import usePlayerStore from './store/playerStore'
 import useSessionStore from './store/sessionStore'
@@ -9,72 +9,20 @@ import LeftSidebar from './components/Shell/LeftSidebar'
 import InductiveDemo from './components/TopologyView/InductiveDemo'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import useAuthStore from './store/authStore'
+import { AUTH_TOKEN_KEY } from './utils/api'
+import {
+  TopologyRouter,
+  EmbeddingRouter,
+  InfoRouter,
+  MetricsRouter,
+  TASK_LABELS,
+} from './components/Lab/LabViewRegistry'
 
 const Player = lazy(() => import('./components/PlayerV2'))
 const TrainingControls = lazy(() => import('./components/TrainingControlsV2'))
 const ConfigPanel = lazy(() => import('./components/ConfigPanel/ConfigPanel'))
-const DataInputView = lazy(() => import('./components/UploadPanel/DataInputView'))
 const TrainingReport = lazy(() => import('./components/TrainingReport'))
-const TopologyView = lazy(() => import('./components/TopologyView/TopologyView'))
-const TaskTopology2 = lazy(() => import('./components/TopologyView/TaskTopology2'))
-const TaskTopology3 = lazy(() => import('./components/TopologyView/TaskTopology3'))
-const TaskTopology4 = lazy(() => import('./components/TopologyView/TaskTopology4'))
-const TaskTopology5 = lazy(() => import('./components/TopologyView/TaskTopology5'))
-const TaskTopology6 = lazy(() => import('./components/TopologyView/TaskTopology6'))
-const EmbeddingView = lazy(() => import('./components/EmbeddingView/EmbeddingView'))
-const PairProximityView = lazy(() => import('./components/TopologyView/PairProximityView'))
-const CommunityEvolution = lazy(() => import('./components/TopologyView/CommunityEvolution'))
-const EmbeddingSpaceB = lazy(() => import('./components/TopologyView/EmbeddingSpaceB'))
-const LatentSpaceView = lazy(() => import('./components/TopologyView/LatentSpaceView'))
-const Task1MetricsPanel = lazy(() => import('./components/MetricsChart/Task1MetricsPanel'))
-const Task2MetricsPanel = lazy(() => import('./components/MetricsChart/Task2MetricsPanel'))
-const Task3MetricsPanel = lazy(() => import('./components/MetricsChart/Task3MetricsPanel'))
-const Task4MetricsPanel = lazy(() => import('./components/MetricsChart/Task4MetricsPanel'))
-const Task5MetricsPanel = lazy(() => import('./components/MetricsChart/Task5MetricsPanel'))
-const Task6MetricsPanel = lazy(() => import('./components/MetricsChart/Task6MetricsPanel'))
 const MetricsChart = lazy(() => import('./components/MetricsChart/MetricsChart'))
-const NodeInfoPanel = lazy(() => import('./components/TopologyView/NodeInfoPanelV2'))
-const ReadoutMonitor = lazy(() => import('./components/TopologyView/ReadoutMonitor'))
-const LinkMetricsPanel = lazy(() => import('./components/TopologyView/LinkMetricsPanel'))
-const Task4CommunityInspector = lazy(() => import('./components/TopologyView/Task4CommunityInspector'))
-const Task5NodeInspector = lazy(() => import('./components/TopologyView/Task5NodeInspector'))
-const ValidityMonitor = lazy(() => import('./components/TopologyView/ValidityMonitor'))
-
-const TOPOLOGY_COMPONENTS = {
-  1: TopologyView,
-  2: TaskTopology2,
-  3: TaskTopology3,
-  4: TaskTopology4,
-  5: TaskTopology5,
-  6: TaskTopology6,
-}
-
-const EMBEDDING_COMPONENTS = {
-  1: EmbeddingView,
-  2: EmbeddingView,
-  3: PairProximityView,
-  4: CommunityEvolution,
-  5: EmbeddingSpaceB,
-  6: LatentSpaceView,
-}
-
-const INFO_COMPONENTS = {
-  1: NodeInfoPanel,
-  2: ReadoutMonitor,
-  3: LinkMetricsPanel,
-  4: Task4CommunityInspector,
-  5: Task5NodeInspector,
-  6: ValidityMonitor,
-}
-
-const METRIC_COMPONENTS = {
-  1: Task1MetricsPanel,
-  2: Task2MetricsPanel,
-  3: Task3MetricsPanel,
-  4: Task4MetricsPanel,
-  5: Task5MetricsPanel,
-  6: Task6MetricsPanel,
-}
 
 function PanelLoader({ label = 'Dang tai panel...' }) {
   return (
@@ -82,33 +30,6 @@ function PanelLoader({ label = 'Dang tai panel...' }) {
       {label}
     </div>
   )
-}
-
-// Route to task-specific topology component
-function TopologyRouter() {
-  const selectedTask = useGNNStore((s) => s.selectedTask)
-  const Component = TOPOLOGY_COMPONENTS[selectedTask] || TopologyView
-  return <Component />
-}
-
-// Route embedding view — task-specific views
-function EmbeddingRouter() {
-  const selectedTask = useGNNStore((s) => s.selectedTask)
-  const Component = EMBEDDING_COMPONENTS[selectedTask] || EmbeddingView
-  return <Component />
-}
-
-// Node info only for tasks with node-level data
-function InfoRouter() {
-  const selectedTask = useGNNStore((s) => s.selectedTask)
-  const Component = INFO_COMPONENTS[selectedTask] || NodeInfoPanel
-  return <Component />
-}
-
-function MetricsRouter() {
-  const selectedTask = useGNNStore((s) => s.selectedTask)
-  const Component = METRIC_COMPONENTS[selectedTask] || MetricsChart
-  return <Component />
 }
 
 function PanelHeading({ title, subtitle, align = 'left' }) {
@@ -263,10 +184,10 @@ function LabShell() {
   const verifyToken = useAuthStore((s) => s.verifyToken)
   const tryRecoverSession = useSessionStore((s) => s.tryRecoverSession)
   const resumeSession = useSessionStore((s) => s.resumeSession)
+  const clearRecoveredSession = useSessionStore((s) => s.clearRecoveredSession)
   const snapshot = snapshots[currentEpoch]
   const lastReportVersionRef = useRef(0)
 
-  const [isDataInputOpen, setIsDataInputOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('gnnSidebarCollapsed')
     return saved !== null ? JSON.parse(saved) : false
@@ -289,6 +210,10 @@ function LabShell() {
   useEffect(() => {
     const recoverable = tryRecoverSession()
     if (!recoverable?.sessionId) return
+    if (activeProjectId || activeDatasetVersionId) {
+      clearRecoveredSession()
+      return
+    }
 
     resumeSession(recoverable.sessionId)
       .then((data) => {
@@ -319,6 +244,9 @@ function LabShell() {
   }, [
     loadSnapshots,
     resumeSession,
+    clearRecoveredSession,
+    activeDatasetVersionId,
+    activeProjectId,
     setActiveDatasetContext,
     setActiveProjectContext,
     setDatasetName,
@@ -379,6 +307,9 @@ function LabShell() {
       const gnnState = useGNNStore.getState()
       const hp = gnnState.hyperparams
       const up = gnnState.uploadedFilePath
+      const authToken = typeof localStorage !== 'undefined'
+        ? localStorage.getItem(AUTH_TOKEN_KEY)
+        : null
       
       if (!gnnState.mockMode && !up) {
          alert("⚠️ CHƯA CÓ DỮ LIỆU UPLOAD!\n\nVui lòng nhấn nút 'Tải dữ liệu' ở sidebar để tải dữ liệu của bạn lên trước khi chạy mô hình thực tế.")
@@ -396,6 +327,7 @@ function LabShell() {
           dropout: hp.dropout,
           heads: hp.heads,
           aggregator: hp.aggregator,
+          ...(authToken ? { auth_token: authToken } : {}),
           ...(up ? { uploaded_file_path: up } : {}),
           ...(gnnState.taskConfig || {})
         }
@@ -407,11 +339,6 @@ function LabShell() {
 
   const valAcc = snapshot ? (snapshot.val_acc * 100).toFixed(1) : '--'
   const trainLoss = snapshot ? snapshot.train_loss.toFixed(3) : '--'
-
-  const taskLabels = {
-    1: 'Node Classification', 2: 'Graph Classification', 3: 'Link Prediction',
-    4: 'Community Detection', 5: 'Graph Embedding', 6: 'Graph Generation',
-  }
 
   return (
     <div className="app-shell h-screen flex flex-col bg-[#0a0514] text-[#a5a0d0] overflow-hidden">
@@ -500,7 +427,7 @@ function LabShell() {
             rightPanelOpen={rightPanelOpen}
             setRightPanelOpen={setRightPanelOpen}
             onOpenLibrary={() => navigate('/app/experiments')}
-            onOpenDataInput={() => setIsDataInputOpen(true)}
+            onOpenDataInput={() => navigate('/app/datasets')}
             onOpenConfig={() => setConfigOpen(true)}
             onOpenAdmin={() => navigate('/admin/overview')}
             onOpenWorkspace={() => navigate('/app/dashboard')}
@@ -519,7 +446,15 @@ function LabShell() {
             rightPanelOpen={rightPanelOpen}
             leftContent={
               <div className="w-full h-full relative overflow-visible bg-transparent">
-                <PanelHeading title={taskLabels[selectedTask]} subtitle="Network Topology & Signal Flow" />
+                <PanelHeading title={TASK_LABELS[selectedTask]} subtitle="Network Topology & Signal Flow" />
+                <button
+                  type="button"
+                  onClick={() => navigate('/app/lab/analysis/structure')}
+                  className="absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-panel-soft/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#d9d6ff] backdrop-blur-xl transition-colors hover:border-[rgba(168,85,247,0.25)] hover:text-white"
+                >
+                  <ExternalLink size={12} />
+                  Open capture view
+                </button>
                 <ErrorBoundary>
                   <Suspense fallback={<PanelLoader label="Dang tai topology..." />}>
                     <TopologyRouter />
@@ -543,6 +478,13 @@ function LabShell() {
                       className={`flex-1 px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeRightTab === 'metrics' ? 'bg-[#2a1f45] text-[#a855f7] shadow-sm' : 'text-[#5b5689] hover:text-[#a5a0d0]'}`}
                     >
                       <BarChart3 size={12} /> Performance
+                    </button>
+                    <button
+                      onClick={() => navigate(`/app/lab/analysis/${activeRightTab === 'embedding' ? 'latent' : 'metrics'}`)}
+                      className="rounded-md px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-[#8f88bc] transition-all hover:bg-[#24193d] hover:text-[#e6e3ff]"
+                      title="Open this panel in a capture-friendly view"
+                    >
+                      Open
                     </button>
                   </div>
                   <div className="flex-1 relative overflow-hidden min-h-0">
@@ -590,7 +532,6 @@ function LabShell() {
         <Suspense fallback={null}>
           <TrainingReport />
           <ConfigPanel />
-          {isDataInputOpen ? <DataInputView onClose={() => setIsDataInputOpen(false)} /> : null}
         </Suspense>
       </main>
 

@@ -272,12 +272,32 @@ def auto_detect_graph(data: Data):
     if not has_labels:
         data.y = torch.zeros(num_nodes, dtype=torch.long)
 
-    # Generate masks if missing
-    if not hasattr(data, 'train_mask') or data.train_mask is None:
+    # Generate train/val/test masks if missing.
+    # Task 1 relies on all three; older custom/sample payloads may only carry
+    # train_mask or none at all.
+    has_train_mask = hasattr(data, 'train_mask') and data.train_mask is not None
+    has_val_mask = hasattr(data, 'val_mask') and data.val_mask is not None
+    has_test_mask = hasattr(data, 'test_mask') and data.test_mask is not None
+
+    if not (has_train_mask and has_val_mask and has_test_mask):
         perm = np.random.permutation(num_nodes)
+        train_end = max(1, int(0.6 * num_nodes))
+        val_end = max(train_end + 1, int(0.8 * num_nodes))
+
         train_mask = torch.zeros(num_nodes, dtype=torch.bool)
-        train_mask[perm[:int(0.6 * num_nodes)]] = True
-        data.train_mask = train_mask
+        val_mask = torch.zeros(num_nodes, dtype=torch.bool)
+        test_mask = torch.zeros(num_nodes, dtype=torch.bool)
+
+        train_mask[perm[:train_end]] = True
+        val_mask[perm[train_end:val_end]] = True
+        test_mask[perm[val_end:]] = True
+
+        if not has_train_mask:
+            data.train_mask = train_mask
+        if not has_val_mask:
+            data.val_mask = val_mask
+        if not has_test_mask:
+            data.test_mask = test_mask
 
     metadata = {
         'num_nodes': num_nodes,

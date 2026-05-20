@@ -1,8 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import useSessionStore from '../../store/sessionStore'
 import { getClassColor, CLASS_NAMES } from '../../utils/colors'
 import { computeKHopNeighbors, countNeighborsPerHop } from '../../utils/khop'
+import NodeStoryTimeline from '../ResearchAnalyst/NodeStoryTimeline'
 
 const resolveId = (value) => (typeof value === 'object' && value !== null ? value.id : value)
 
@@ -17,6 +19,8 @@ export default function NodeInfoPanelV2() {
 
   const currentEpoch = Math.floor(currentEpochFloat)
   const snapshot = snapshots[currentEpoch]
+  const [showTimeline, setShowTimeline] = useState(false)
+  const experimentId = useSessionStore((s) => s.experimentId)
 
   // Use REAL probabilities from backend if available, fallback to synthetic
   const probs = useMemo(() => {
@@ -320,6 +324,37 @@ export default function NodeInfoPanelV2() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Node Story Timeline */}
+      {experimentId && snapshots.length > 5 && (
+        <div className="mt-4">
+          <button
+            onClick={() => setShowTimeline(!showTimeline)}
+            className="w-full flex items-center justify-between rounded-2xl border border-purple-500/30 bg-purple-500/5 px-4 py-3 text-left transition-all hover:bg-purple-500/10"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-purple-400 font-bold">
+                Prediction Timeline
+              </span>
+              <span className="text-[9px] text-slate-500">
+                How this node's prediction evolved across epochs
+              </span>
+            </div>
+            <span className="text-purple-400 text-xs">
+              {showTimeline ? '▲' : '▼'}
+            </span>
+          </button>
+          {showTimeline && (
+            <div className="mt-2 rounded-2xl border border-slate-700/40 bg-slate-900/70 p-4">
+              <NodeStoryTimeline
+                experimentId={experimentId}
+                nodeId={selectedNodeId}
+                graphData={graphData}
+              />
+            </div>
+          )}
         </div>
       )}
 

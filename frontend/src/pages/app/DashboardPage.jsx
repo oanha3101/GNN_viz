@@ -68,8 +68,8 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Projects" value={projects.length} />
         <StatCard label="Datasets" value={datasets.length} tone="emerald" />
-        <StatCard label="Active Project" value={activeProjectId ? selectedProject?.title || '...' : '—'} tone="amber" />
-        <StatCard label="Active Version" value={activeDatasetVersionName || '—'} tone="blue" />
+        <StatCard label="Active Project" value={activeProjectId ? selectedProject?.title || '...' : '--'} tone="amber" />
+        <StatCard label="Active Version" value={activeDatasetVersionName || '--'} tone="blue" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
@@ -124,7 +124,7 @@ export default function DashboardPage() {
                 Processed path: <span className="font-mono text-aurora-cyan text-xs">{uploadedFilePath}</span>
               </div>
               <div className="text-twilight">
-                Nodes: {uploadMetadata?.num_nodes ?? '?'} • Edges: {uploadMetadata?.num_edges ?? '?'} • Features: {uploadMetadata?.num_features ?? '?'}
+                Nodes: {uploadMetadata?.num_nodes ?? '?'} | Edges: {uploadMetadata?.num_edges ?? '?'} | Features: {uploadMetadata?.num_features ?? '?'}
               </div>
             </div>
           ) : (

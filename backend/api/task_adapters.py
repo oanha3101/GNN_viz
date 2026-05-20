@@ -265,23 +265,28 @@ class NodeClassificationAdapter(BaseTaskAdapter):
             node_entry["inTrainSet"] = True
             nodes_json.append(node_entry)
 
+        train_mask = torch.zeros(num_nodes, dtype=torch.bool)
+        val_mask = torch.zeros(num_nodes, dtype=torch.bool)
+        test_mask = torch.zeros(num_nodes, dtype=torch.bool)
+        perm = np.random.permutation(num_nodes)
+        train_mask[perm[:int(0.6 * num_nodes)]] = True
+        val_mask[perm[int(0.6 * num_nodes):int(0.8 * num_nodes)]] = True
+        test_mask[perm[int(0.8 * num_nodes):]] = True
+        for i, node_entry in enumerate(nodes_json):
+            node_entry["inTrainSet"] = bool(train_mask[i].item())
+
         graph_json = {
             "graphData": {"nodes": nodes_json, "links": common['edges_json']},
             "groundTruth": common['labels'],
-            "classNames": common['class_names']
+            "classNames": common['class_names'],
+            "trainMask": train_mask.cpu().tolist(),
+            "valMask": val_mask.cpu().tolist(),
+            "testMask": test_mask.cpu().tolist(),
         }
 
         # Build PyG Data
         x_tensor = torch.tensor(common['features'], dtype=torch.float)
         y_tensor = torch.tensor(common['labels'], dtype=torch.long)
-
-        perm = np.random.permutation(num_nodes)
-        train_mask = torch.zeros(num_nodes, dtype=torch.bool)
-        val_mask = torch.zeros(num_nodes, dtype=torch.bool)
-        test_mask = torch.zeros(num_nodes, dtype=torch.bool)
-        train_mask[perm[:int(0.6 * num_nodes)]] = True
-        val_mask[perm[int(0.6 * num_nodes):int(0.8 * num_nodes)]] = True
-        test_mask[perm[int(0.8 * num_nodes):]] = True
 
         pyg_data = Data(
             x=x_tensor, edge_index=common['edge_index'], y=y_tensor,

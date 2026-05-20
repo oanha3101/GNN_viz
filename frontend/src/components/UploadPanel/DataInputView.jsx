@@ -55,8 +55,9 @@ const TASK_REQUIREMENTS = {
 }
 
 export default function DataInputView({ onClose }) {
+  const selectedTaskFromWorkspace = useGNNStore(s => s.selectedTask)
   const [step, setStep] = useState(1)
-  const [task, setTask] = useState(1)
+  const [task, setTask] = useState(selectedTaskFromWorkspace || 1)
   const setMockMode = useGNNStore(s => s.setMockMode)
 
   // File data states
@@ -408,24 +409,31 @@ export default function DataInputView({ onClose }) {
       }
 
       logger.info("Config Result:", configRes)
-      
+
+      const profileMetadata = {
+        ...(configRes.metadata || {}),
+        task_profile_id: task,
+        task_profile_name: selectedTaskDef?.name || `Task ${task}`,
+        task_profile_config: configRes.task_config || null,
+      }
+
       // Update store
       setMockMode(false)
       const store = useGNNStore.getState()
-      store.setTask(task)
       store.setUploadedFilePath(configRes.uploaded_file_path)
       store.setHyperparams({ dataset: configRes.dataset_name || 'custom' })
       setDatasetNameGlobal(configRes.dataset_name || 'custom')
 
-      // Save task config for training WebSocket
-      if (configRes.task_config) {
+      // Only push task-specific config into the active Lab state when the
+      // workspace is already on the same task profile.
+      if (configRes.task_config && store.selectedTask === task) {
         store.setTaskConfig(configRes.task_config)
+      } else {
+        store.setTaskConfig(null)
       }
 
       // Save upload metadata
-      if (configRes.metadata) {
-        store.setUploadMetadata(configRes.metadata)
-      }
+      store.setUploadMetadata(profileMetadata)
 
       let syncMessage = ''
       try {
@@ -436,8 +444,8 @@ export default function DataInputView({ onClose }) {
         }
         const datasetPayload = {
           name: datasetName || configRes.dataset_name || 'custom',
-          description: `Uploaded via DataInputView for task ${task}`,
-          summary_json: configRes.metadata || {},
+          description: `Uploaded via DataInputView with initial profile ${selectedTaskDef?.name || `Task ${task}`}`,
+          summary_json: profileMetadata,
           validation_json: {
             valid: true,
             warnings: configRes.validation_warnings || [],
@@ -494,8 +502,20 @@ export default function DataInputView({ onClose }) {
       if (graphJson.groundTruth) {
         store.setGroundTruth(graphJson.groundTruth)
       }
+      store.setTrainMask(Array.isArray(graphJson.trainMask) ? graphJson.trainMask : null)
+      if (graphJson.classNames) {
+        store.setClassNames(graphJson.classNames)
+      }
+      store.setTaskData({
+        trainMask: Array.isArray(graphJson.trainMask) ? graphJson.trainMask : null,
+        valMask: Array.isArray(graphJson.valMask) ? graphJson.valMask : null,
+        testMask: Array.isArray(graphJson.testMask) ? graphJson.testMask : null,
+      })
       if (graphJson.graphs) {
-        store.setTaskData({ graphs: graphJson.graphs })
+        store.setTaskData({
+          graphs: graphJson.graphs,
+          ...(graphJson.classNames ? { classNames: graphJson.classNames } : {}),
+        })
       }
       if (graphJson.communityGroundTruth) {
         store.setCommunityGroundTruth(graphJson.communityGroundTruth)
@@ -513,11 +533,12 @@ export default function DataInputView({ onClose }) {
 
       // Show warnings if any
       const warnings = configRes.validation_warnings || []
-      const meta = configRes.metadata || {}
+      const meta = profileMetadata
       const msg = `✅ Thành công!\n\n` +
         `📊 ${meta.num_nodes || '?'} nodes, ${meta.num_edges || '?'} edges\n` +
         `📐 ${meta.num_features || '?'} features, ${meta.num_classes || '?'} classes\n` +
         (meta.num_graphs > 1 ? `📦 ${meta.num_graphs} graphs\n` : '') +
+        `🧭 Initial profile: ${meta.task_profile_name}\n` +
         (meta.has_community_gt ? `🏘️ Community GT available\n` : '') +
         (warnings.length > 0 ? `\n⚠️ Warnings:\n${warnings.map(w => '  • ' + w).join('\n')}` : '') +
         syncMessage
@@ -540,7 +561,7 @@ export default function DataInputView({ onClose }) {
             <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent flex items-center gap-2">
               <Upload size={20} /> Custom Dataset Configuration
             </h2>
-            <p className="text-sm text-slate-400">Map your data to train GNN models across 6 tasks.</p>
+            <p className="text-sm text-slate-400">Upload a reusable dataset version, then choose an initial task profile for the first validation pass.</p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
             <X size={16} />
@@ -554,7 +575,7 @@ export default function DataInputView({ onClose }) {
               ${step === s ? 'border-blue-500 text-blue-400' : 
                 step > s ? 'border-green-500/50 text-green-500' : 'border-transparent text-slate-600'}`
             }>
-              Step {s}: {s===1 ? 'Upload' : s===2 ? 'Task' : s===3 ? 'Mapping' : 'Validate'}
+              Step {s}: {s===1 ? 'Upload' : s===2 ? 'Profile' : s===3 ? 'Mapping' : 'Validate'}
             </div>
           ))}
         </div>
@@ -660,6 +681,12 @@ export default function DataInputView({ onClose }) {
           {/* ═══════════════ STEP 2: Select Task ═══════════════ */}
           {step === 2 && (
             <div className="space-y-6">
+              <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-sm leading-6 text-cyan-100">
+                <div className="font-semibold text-cyan-200">Choose an initial task profile</div>
+                <div className="mt-1 text-cyan-100/80">
+                  This profile is used for the first mapping and validation pass. It helps the uploader decide which fields are required right now. It does not permanently lock the dataset version to only one task.
+                </div>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {TASKS.map(t => (
                   <button 
@@ -678,10 +705,10 @@ export default function DataInputView({ onClose }) {
                 ))}
               </div>
 
-              {/* Data requirements for selected task */}
+              {/* Data requirements for selected profile */}
               <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
                 <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
-                  <Eye size={14} /> Data Requirements for {TASKS.find(t => t.id === task)?.name}
+                  <Eye size={14} /> Data requirements for the initial profile: {TASKS.find(t => t.id === task)?.name}
                 </h4>
                 <div className="space-y-1.5">
                   {(TASK_REQUIREMENTS[task] || []).map((req, i) => (
@@ -929,7 +956,7 @@ export default function DataInputView({ onClose }) {
                       { label: 'Nodes', value: nodesData.length.toLocaleString(), color: 'blue' },
                       { label: 'Edges', value: edgesData.length.toLocaleString(), color: 'cyan' },
                       { label: 'Features', value: mapping.node_features.length || 'Auto', color: 'indigo' },
-                      { label: 'Task', value: TASKS.find(t => t.id === task)?.name, color: 'purple' },
+                      { label: 'Profile', value: TASKS.find(t => t.id === task)?.name, color: 'purple' },
                     ].map(item => (
                       <div key={item.label} className={`bg-${item.color}-500/10 border border-${item.color}-500/20 rounded-lg p-3 text-center`}>
                         <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">{item.label}</div>

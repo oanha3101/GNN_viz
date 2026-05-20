@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
   role VARCHAR(20) NOT NULL DEFAULT 'researcher',
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   is_superuser TINYINT(1) NOT NULL DEFAULT 0,
-  profile_image VARCHAR(255) NULL,
+  profile_image TEXT NULL,
   created_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_users_email (email),
@@ -277,7 +277,8 @@ CALL sp_add_column_if_missing('users', 'full_name', 'ALTER TABLE users ADD COLUM
 CALL sp_add_column_if_missing('users', 'role', 'ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT ''researcher''');
 CALL sp_add_column_if_missing('users', 'is_active', 'ALTER TABLE users ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1');
 CALL sp_add_column_if_missing('users', 'is_superuser', 'ALTER TABLE users ADD COLUMN is_superuser TINYINT(1) NOT NULL DEFAULT 0');
-CALL sp_add_column_if_missing('users', 'profile_image', 'ALTER TABLE users ADD COLUMN profile_image VARCHAR(255) NULL');
+CALL sp_add_column_if_missing('users', 'profile_image', 'ALTER TABLE users ADD COLUMN profile_image TEXT NULL');
+ALTER TABLE users MODIFY COLUMN profile_image TEXT NULL;
 CALL sp_add_column_if_missing('users', 'created_at', 'ALTER TABLE users ADD COLUMN created_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP');
 CALL sp_add_index_if_missing('users', 'uq_users_email', 0, 'email', 'CREATE UNIQUE INDEX uq_users_email ON users (email)');
 CALL sp_add_index_if_missing('users', 'uq_users_username', 0, 'username', 'CREATE UNIQUE INDEX uq_users_username ON users (username)');

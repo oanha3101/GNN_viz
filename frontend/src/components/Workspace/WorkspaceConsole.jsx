@@ -86,6 +86,7 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
   const setActiveDatasetContext = useGNNStore((s) => s.setActiveDatasetContext)
   const setUploadedFilePath = useGNNStore((s) => s.setUploadedFilePath)
   const setUploadMetadata = useGNNStore((s) => s.setUploadMetadata)
+  const setTaskConfig = useGNNStore((s) => s.setTaskConfig)
   const setDatasetName = useGNNStore((s) => s.setDatasetName)
 
   const [activeTab, setActiveTab] = useState(initialTab)
@@ -177,7 +178,8 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
     setDatasetName(dataset.name)
     setUploadedFilePath(version.processed_blob_key || null)
     setUploadMetadata(version.summary_json || null)
-  }, [setActiveDatasetContext, setDatasetName, setUploadMetadata, setUploadedFilePath])
+    setTaskConfig(version.summary_json?.task_profile_config || null)
+  }, [setActiveDatasetContext, setDatasetName, setTaskConfig, setUploadMetadata, setUploadedFilePath])
 
   const handleCreateProject = useCallback(async () => {
     if (!projectForm.title.trim()) return
@@ -361,6 +363,11 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                       <div className="text-slate-400">
                         Nodes: {uploadMetadata?.num_nodes ?? '?'} • Edges: {uploadMetadata?.num_edges ?? '?'} • Features: {uploadMetadata?.num_features ?? '?'}
                       </div>
+                      {uploadMetadata?.task_profile_name ? (
+                        <div className="text-slate-400">
+                          Initial profile: <span className="text-white font-medium">{uploadMetadata.task_profile_name}</span>
+                        </div>
+                      ) : null}
                       <div className="flex gap-2 pt-2">
                         <button
                           onClick={onOpenDataInput}

@@ -3,25 +3,42 @@ import EmptyState from '../../components/primitives/EmptyState'
 import ErrorState from '../../components/primitives/ErrorState'
 import LoadingState from '../../components/primitives/LoadingState'
 import { apiJson, normalizeCollectionPayload } from '../../utils/api'
+import { AdminListToolbar, AdminPagination, buildAdminListPath } from './AdminListControls'
 import { SectionCard } from '../shared/PageBlocks'
 
 export default function AdminAuditPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [items, setItems] = useState([])
+  const [filters, setFilters] = useState({
+    q: '',
+    action: '',
+    target_type: '',
+    date_from: '',
+    date_to: '',
+    page: 1,
+    page_size: 12,
+  })
+  const [meta, setMeta] = useState({ total: 0, page: 1, page_size: 12 })
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const payload = await apiJson('/admin/audit-logs')
-      setItems(normalizeCollectionPayload(payload).items)
+      const payload = await apiJson(buildAdminListPath('/admin/audit-logs', filters))
+      const normalized = normalizeCollectionPayload(payload)
+      setItems(normalized.items)
+      setMeta({
+        total: normalized.total,
+        page: normalized.page,
+        page_size: normalized.page_size,
+      })
     } catch (err) {
       setError(err)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [filters])
 
   useEffect(() => {
     load()
@@ -37,6 +54,36 @@ export default function AdminAuditPage() {
 
   return (
     <SectionCard title="Audit Activity" subtitle="Operational history for role changes, retention, session actions, and governance flows.">
+      <AdminListToolbar
+        searchValue={filters.q}
+        onSearchChange={(value) => setFilters((prev) => ({ ...prev, q: value, page: 1 }))}
+        searchPlaceholder="Search by action, target type, target id"
+        dateFrom={filters.date_from}
+        dateTo={filters.date_to}
+        onDateFromChange={(value) => setFilters((prev) => ({ ...prev, date_from: value, page: 1 }))}
+        onDateToChange={(value) => setFilters((prev) => ({ ...prev, date_to: value, page: 1 }))}
+        onPageSizeChange={(value) => setFilters((prev) => ({ ...prev, page_size: value, page: 1 }))}
+        onRefresh={load}
+        onClear={() => setFilters({ q: '', action: '', target_type: '', date_from: '', date_to: '', page: 1, page_size: meta.page_size || 12 })}
+        pageSize={filters.page_size}
+        showDateFilters
+        extraControls={
+          <>
+            <input
+              value={filters.action}
+              onChange={(event) => setFilters((prev) => ({ ...prev, action: event.target.value, page: 1 }))}
+              placeholder="Action"
+              className="input-cosmic text-sm"
+            />
+            <input
+              value={filters.target_type}
+              onChange={(event) => setFilters((prev) => ({ ...prev, target_type: event.target.value, page: 1 }))}
+              placeholder="Target type"
+              className="input-cosmic text-sm"
+            />
+          </>
+        }
+      />
       {items.length ? (
         <div className="space-y-3">
           {items.map((item) => (
@@ -62,6 +109,12 @@ export default function AdminAuditPage() {
       ) : (
         <EmptyState title="No audit activity" description="Audit entries will appear here once governance or admin actions occur." />
       )}
+      <AdminPagination
+        page={meta.page}
+        pageSize={meta.page_size}
+        total={meta.total}
+        onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
+      />
     </SectionCard>
   )
 }

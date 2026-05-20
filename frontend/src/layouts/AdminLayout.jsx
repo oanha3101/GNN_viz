@@ -1,10 +1,12 @@
-import { Activity, ArrowRight, Database, FileClock, FolderKanban, LogOut, Shield, Sparkles, Users } from 'lucide-react'
+import { Activity, ArrowRight, Database, FileClock, FolderKanban, LogOut, Moon, Shield, Sparkles, SunMedium, Users } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 
 const ADMIN_NAV_ITEMS = [
   { to: '/admin/overview', label: 'Overview', icon: Shield },
   { to: '/admin/users', label: 'Users', icon: Users },
+  { to: '/admin/projects', label: 'Projects', icon: FolderKanban },
   { to: '/admin/datasets', label: 'Datasets', icon: Database },
   { to: '/admin/experiments', label: 'Experiments', icon: FolderKanban },
   { to: '/admin/sessions', label: 'Sessions', icon: Activity },
@@ -22,6 +24,11 @@ const TITLES = {
     eyebrow: 'Admin',
     title: 'User Management',
     description: 'Review accounts, adjust roles, and govern who can train or mutate data.',
+  },
+  '/admin/projects': {
+    eyebrow: 'Admin',
+    title: 'Project Governance',
+    description: 'Review project containers, visibility, and whether runs are still attached to them.',
   },
   '/admin/datasets': {
     eyebrow: 'Admin',
@@ -71,12 +78,21 @@ export default function AdminLayout() {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const titleMeta = TITLES[location.pathname] || TITLES['/admin/overview']
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === 'undefined') return 'dark'
+    return window.localStorage.getItem('gnnAdminTheme') || 'dark'
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('gnnAdminTheme', theme)
+  }, [theme])
 
   return (
-    <div className="min-h-screen bg-abyss text-starlight">
+    <div className={`admin-shell admin-theme-${theme} min-h-screen bg-abyss text-starlight`}>
       <div className="grid min-h-screen lg:grid-cols-[240px_1fr]">
         {/* ── Sidebar ── */}
-        <aside className="app-sidebar admin-sidebar">
+        <aside className="app-sidebar admin-sidebar lg:sticky lg:top-0 lg:h-screen">
           {/* Amber-tinted particles */}
           <div className="sidebar-cosmos">
             {Array.from({ length: 14 }).map((_, i) => (
@@ -100,30 +116,38 @@ export default function AdminLayout() {
             </svg>
           </div>
 
-          <div className="relative z-10 flex flex-col h-full px-4 py-5">
+          <div className="relative z-10 flex h-full min-h-0 flex-col px-4 py-5">
             {/* Logo */}
-            <div className="flex items-center gap-2.5">
-              <div className="app-logo-icon admin-logo-icon">
-                <Shield size={16} className="text-white" />
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="app-logo-icon admin-logo-icon">
+                  <Shield size={16} className="text-white" />
+                </div>
+                <div>
+                  <div className="admin-brand-title text-[11px] font-bold uppercase tracking-[0.2em] text-aurora-amber">Admin Shell</div>
+                  <div className="admin-brand-subtitle text-[9px] text-text-shadow">Operational control</div>
+                </div>
               </div>
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-aurora-amber">Admin Shell</div>
-                <div className="text-[9px] text-text-shadow">Operational control</div>
-              </div>
+              <button
+                type="button"
+                onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+                className="admin-theme-toggle"
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {theme === 'dark' ? <SunMedium size={14} /> : <Moon size={14} />}
+              </button>
             </div>
 
             {/* Nav */}
-            <nav className="mt-6 space-y-1">
+            <nav className="admin-scrollbar mt-6 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
               {ADMIN_NAV_ITEMS.map((item) => (
                 <AdminNavLink key={item.to} item={item} />
               ))}
             </nav>
 
-            {/* Spacer */}
-            <div className="flex-1" />
-
             {/* User + Actions */}
-            <div className="space-y-2">
+            <div className="mt-4 space-y-2 border-t border-line-subtle/70 pt-4">
               <div className="app-user-badge admin-user-badge">
                 <div className="app-user-avatar admin-user-avatar">
                   <span className="text-sm font-bold text-white">
@@ -244,12 +268,24 @@ export default function AdminLayout() {
 
           {/* Header */}
           <header className="app-header admin-header">
-            <div className="flex items-center gap-2">
-              <Sparkles size={12} className="text-aurora-amber" />
-              <span className="text-micro font-semibold uppercase tracking-ultra text-aurora-amber">{titleMeta.eyebrow}</span>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles size={12} className="text-aurora-amber" />
+                  <span className="text-micro font-semibold uppercase tracking-ultra text-aurora-amber">{titleMeta.eyebrow}</span>
+                </div>
+                <h1 className="admin-page-title mt-1.5 text-xl font-black text-white-star">{titleMeta.title}</h1>
+                <p className="admin-page-subtitle mt-1 max-w-2xl text-xs leading-5 text-twilight">{titleMeta.description}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+                className="admin-theme-toggle admin-theme-toggle-header"
+              >
+                {theme === 'dark' ? <SunMedium size={14} /> : <Moon size={14} />}
+                <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+              </button>
             </div>
-            <h1 className="mt-1.5 text-xl font-black text-white-star">{titleMeta.title}</h1>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-twilight">{titleMeta.description}</p>
           </header>
 
           {/* Content */}

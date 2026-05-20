@@ -47,6 +47,15 @@ export default function TaskTopology5() {
   const selectedModel = useGNNStore(s => s.selectedModel)
   // Auto-derive overlay from selectedModel (selected in LeftSidebar)
   const overlayMode = selectedModel === 'GAT' ? 'attention' : selectedModel === 'GCN' ? 'smoothness' : selectedModel === 'SAGE' ? 'robustness' : 'none'
+  const attentionMap = useMemo(() => {
+    const attnEdges = animRef.current.snap?.attention_edges
+    if (!attnEdges?.length) return null
+    const map = new Map()
+    for (const edge of attnEdges) {
+      map.set(`${Math.min(edge.source, edge.target)}-${Math.max(edge.source, edge.target)}`, edge.weight)
+    }
+    return map
+  }, [currentEpochFloat])
 
   // Build display graph (subsampled if large)
   const displayGraphData = useMemo(() => {
@@ -204,12 +213,8 @@ export default function TaskTopology5() {
 
     // Attention overlay: amber glow by attention weight
     if (overlayMode === 'attention') {
-      const snap = animRef.current.snap
-      const attnEdges = snap?.attention_edges
-      if (attnEdges) {
-        const attnMap = new Map()
-        for (const e of attnEdges) attnMap.set(`${Math.min(e.source, e.target)}-${Math.max(e.source, e.target)}`, e.weight)
-        const w = attnMap.get(key) ?? 0
+      if (attentionMap) {
+        const w = attentionMap.get(key) ?? 0
         if (w > 0.05) {
           color = `rgba(251, 191, 36, ${0.3 + w * 0.7})`
           width = 1 + w * 5
@@ -240,7 +245,7 @@ export default function TaskTopology5() {
     ctx.globalAlpha = alpha
     ctx.stroke()
     ctx.globalAlpha = 1
-  }, [selectedNodeId, selectedModel])
+  }, [attentionMap, overlayMode, selectedNodeId])
 
   const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
     if (!node || !Number.isFinite(node.x) || !Number.isFinite(node.y)) return
@@ -319,7 +324,13 @@ export default function TaskTopology5() {
     ctx.stroke()
     // Label
     const fontSize = Math.max(4, 10 / Math.pow(globalScale, 0.5))
-    if (r > fontSize / 1.5 || globalScale > 1.5 || isSelected) {
+    const shouldShowLabel =
+      isSelected ||
+      globalScale > 1.8 ||
+      (numNodes <= 220 && globalScale > 1.15) ||
+      (numNodes <= 700 && r > fontSize * 0.95)
+
+    if (shouldShowLabel) {
       ctx.font = `bold ${isSelected ? Math.max(fontSize * 1.5, 10) : fontSize}px Inter, sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
@@ -327,7 +338,7 @@ export default function TaskTopology5() {
       ctx.fillText(`${node.id}`, node.x, node.y)
     }
     ctx.globalAlpha = 1.0
-  }, [hasLabels, selectedNodeId, showAnomalies, outlierPulseIdx, pulseTick, selectedModel])
+  }, [hasLabels, numNodes, outlierPulseIdx, overlayMode, pulseTick, selectedNodeId, showAnomalies])
 
   return (
     <div ref={containerRef} className="w-full h-full relative bg-transparent overflow-hidden rounded-2xl">

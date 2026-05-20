@@ -1,0 +1,2444 @@
+--- PAGE 1 ---
+22:49 18/5/26 GNN-Insight
+GNN INSIGHT
+Research workspace
+Dashboard
+Projects
+Datasets
+Experiments
+Lab
+admin
+A ADMIN
+chuyenphiemvc@gmail.com
+Admin
+Log out
+
+PAGE 1
+Latent space · predicted
+G40
+GG G GG17 G1 8115 66 315G 1 G 01G GG8 18 84GGGG 4 GG7 041
+G
+GGG GG 148 19 1
+1
+334 21 318 87 9
+1
+39GG G
+2
+G 35 2 6 54 5 G 9 GG1 G 391 3 78G1 GGG 8 GG GG 1 G G G G 86977 77 1 6 6 8 4 2 G 5926 17 G 3G 4 6 9 1 GGGG 5 GGGG3 0 3441 G 5 09124 4 6370G 774G G6 8 GG 1 2G0 G 27 9 79GG 2 04 GGGGG611G 1 GG 49179
+GG
+003 56 21493
+59
+27G 28 G
+G 94
+G11
+4
+G 61G0
+8
+6 675G 3
+GG
+5
+G11
+3
+5116
+GGGG
+68
+4113 GGG 6250 GGGGGGGGGGG11172224568889001
+G
+32695874592
+G
+037
+2682 G
+GG
+GG1
+59G
+980
+703
+51
+GGG
+6
+2 557010 G23 G108
+GG13019 G101 G5
+localhost:5173/app/lab/analysis/report 1/70
+--- PAGE 2 ---
+22:49 18/5/26 GNN-Insight
+
+DENSITY: 110%
+localhost:5173/app/lab/analysis/report 2/70
+--- PAGE 3 ---
+22:49 18/5/26 GNN-Insight
+PAGE 2 
+Latent space · correctness
+SILHOUETTE
+0.000
+G40
+GG G GG17 G1 8115 66 315G 1 G 01G GG8 18 84GGGG 4 GG7 041
+G
+GGG GG 148 19 1
+1
+334 21 318 87 9
+1
+39GG G
+2
+G 35 2 6 54 5 G 9 GG1 G 391 3 78G1 GGG 8 GG GG 1 G G G G 86977 77 1 6 6 8 4 2 G 5926 17 G 3G 4 6 9 1 GGGG 5 GGGG3 0 3441 G 5 09124 4 6370G 774G G6 8 GG 1 2G0 G 27 9 79GG 2 04 GGGGG611G 1 GG 49179
+GG
+003 56 21493
+59
+27G 28 G
+G 94
+G11
+4
+G 61G0
+8
+6 675G 3
+GG
+5
+G11
+3
+5116
+GGGG
+68
+4113 GGG 6250 GGGGGGGGGGG11172224568889001
+G
+32695874592
+G
+037
+2682 G
+GG
+GG1
+59G
+980
+703
+51
+GGG
+6
+2 557010 G23 G108
+GG13019 G101 G5
+DENSITY: 110%
+localhost:5173/app/lab/analysis/report 3/70
+--- PAGE 4 ---
+22:49 18/5/26 GNN-Insight
+PAGE 3 
+Latent space · confidence
+SILHOUETTE
+0.000
+G40
+GG G GG17 G1 8115 66 315G 1 G 01G GG8 18 84GGGG 4 GG7 041
+G
+GGG GG 148 19 1
+1
+334 21 318 87 9
+1
+39GG G
+2
+G 35 2 6 54 5 G 9 GG1 G 391 3 78G1 GGG 8 GG GG 1 G G G G 86977 77 1 6 6 8 4 2 G 5926 17 G 3G 4 6 9 1 GGGG 5 GGGG3 0 3441 G 5 09124 4 6370G 774G G6 8 GG 1 2G0 G 27 9 79GG 2 04 GGGGG611G 1 GG 49179
+GG
+003 56 21493
+59
+27G 28 G
+G 94
+G11
+4
+G 61G0
+8
+6 675G 3
+GG
+5
+G11
+3
+5116
+GGGG
+68
+4113 GGG 6250 GGGGGGGGGGG11172224568889001
+G
+32695874592
+G
+037
+2682 G
+GG
+GG1
+59G
+980
+703
+51
+GGG
+6
+2 557010 G23 G108
+GG13019 G101 G5
+DENSITY: 110%
+localhost:5173/app/lab/analysis/report 4/70
+--- PAGE 5 ---
+22:49 18/5/26 GNN-Insight
+PAGE 4 
+Latent space · entropy
+SILHOUETTE
+0.000
+G40
+GG G GG17 G1 8115 66 315G 1 G 01G GG8 18 84GGGG 4 GG7 041
+G
+GGG GG 148 19 1
+1
+334 21 318 87 9
+1
+39GG G
+2
+G 35 2 6 54 5 G 9 GG1 G 391 3 78G1 GGG 8 GG GG 1 G G G G 86977 77 1 6 6 8 4 2 G 5926 17 G 3G 4 6 9 1 GGGG 5 GGGG3 0 3441 G 5 09124 4 6370G 774G G6 8 GG 1 2G0 G 27 9 79GG 2 04 GGGGG611G 1 GG 49179
+GG
+003 56 21493
+59
+27G 28 G
+G 94
+G11
+4
+G 61G0
+8
+6 675G 3
+GG
+5
+G11
+3
+5116
+GGGG
+68
+4113 GGG 6250 GGGGGGGGGGG11172224568889001
+G
+32695874592
+G
+037
+2682 G
+GG
+GG1
+59G
+980
+703
+51
+GGG
+6
+2 557010 G23 G108
+GG13019 G101 G5
+DENSITY: 110%
+localhost:5173/app/lab/analysis/report 5/70
+--- PAGE 6 ---
+22:49 18/5/26 GNN-Insight
+PAGE 5 
+Structure and inspector
+GRAPH COLLECTION
+PREV Page 1/10 NEXT
+120 graphs · 2 class profiles · All
+Entire graph collection.
+Priority Confidence Entropy Size GT CLASS All
+G#16 G#61
+70% 71%
+11n/11e 11n/11e
+GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1
+Status Wrong Status Wrong
+margin 40% medium diffuse margin 42% medium diffuse
+concentrated readout on compact motif · concentrated readout on compact motif ·
+boundary case boundary case
+G#83 G#75
+71% 71%
+11n/11e 10n/10e
+GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1
+Status Wrong Status Wrong
+margin 42% medium diffuse margin 42% medium diffuse
+concentrated readout on compact motif · concentrated readout on compact motif ·
+boundary case boundary case
+localhost:5173/app/lab/analysis/report 6/70
+--- PAGE 7 ---
+22:49 18/5/26 GNN-Insight
+
+G#115 G#8
+71% 71%
+10n/10e 12n/13e
+GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1
+Status Wrong Status Wrong
+margin 42% medium diffuse margin 43% sparse diffuse
+concentrated readout on compact motif · concentrated readout on compact motif ·
+boundary case boundary case
+G#110 G#13
+71% 73%
+11n/11e 13n/14e
+GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1
+Status Wrong Status Wrong
+margin 43% medium diffuse margin 46% sparse diffuse
+concentrated readout on compact motif · concentrated readout on compact motif ·
+boundary case boundary case
+G#119 G#41
+73% 73%
+13n/14e 13n/14e
+GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1
+Status Wrong Status Wrong
+margin 46% sparse diffuse margin 46% sparse diffuse
+concentrated readout on compact motif · concentrated readout on compact motif ·
+boundary case boundary case
+localhost:5173/app/lab/analysis/report 7/70
+--- PAGE 8 ---
+22:49 18/5/26 GNN-Insight
+
+Hover a Task 2 embedding point
+to inspect graph-level readout
+localhost:5173/app/lab/analysis/report 8/70
+--- PAGE 9 ---
+22:49 18/5/26 GNN-Insight
+PAGE 6 
+Gallery · priority
+GRAPH COLLECTION
+Showing the full collection in one view
+120 graphs · 2 class profiles · All
+Entire graph collection.
+G#16 G#61 G#83
+70% 71% 71%
+11n/11e 11n/11e 11n/11e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 40% medium margin 42% medium margin 42% medium
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+G#75 G#115 G#8
+71% 71% 71%
+10n/10e 10n/10e 12n/13e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 42% medium margin 42% medium margin 43% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+localhost:5173/app/lab/analysis/report 9/70
+--- PAGE 10 ---
+22:49 18/5/26 GNN-Insight
+
+G#110 G#13 G#119
+71% 73% 73%
+11n/11e 13n/14e 13n/14e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 43% medium margin 46% sparse margin 46% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+G#41 G#88 G#87
+73% 73% 73%
+13n/14e 13n/14e 12n/12e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 46% sparse margin 46% sparse margin 46% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+localhost:5173/app/lab/analysis/report 10/70
+--- PAGE 11 ---
+22:49 18/5/26 GNN-Insight
+
+G#112 G#97 G#18
+74% 74% 74%
+13n/13e 13n/14e 13n/14e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 47% sparse margin 47% sparse margin 47% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+G#2 G#1 G#33
+74% 74% 74%
+13n/14e 13n/14e 13n/14e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 47% sparse margin 47% sparse margin 48% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+localhost:5173/app/lab/analysis/report 11/70
+--- PAGE 12 ---
+22:49 18/5/26 GNN-Insight
+
+G#39 G#4 G#35
+74% 75% 76%
+13n/14e 11n/11e 14n/15e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 48% sparse margin 50% medium margin 52% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif ·
+case case overconfident miss
+G#54 G#69 G#37
+76% 76% 77%
+14n/15e 14n/15e 15n/16e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 52% sparse margin 52% sparse margin 55% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · compact motif · compact motif ·
+overconfident miss overconfident miss overconfident miss
+localhost:5173/app/lab/analysis/report 12/70
+--- PAGE 13 ---
+22:49 18/5/26 GNN-Insight
+
+G#38 G#65 G#99
+77% 78% 78%
+15n/16e 16n/17e 16n/17e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 55% sparse margin 57% sparse margin 57% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · compact motif · compact motif ·
+overconfident miss overconfident miss overconfident miss
+G#76 G#113 G#72
+78% 78% 78%
+16n/17e 16n/17e 16n/17e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 57% sparse margin 57% sparse margin 57% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · compact motif · compact motif ·
+overconfident miss overconfident miss overconfident miss
+localhost:5173/app/lab/analysis/report 13/70
+--- PAGE 14 ---
+22:49 18/5/26 GNN-Insight
+
+G#64 G#77 G#6
+79% 79% 79%
+16n/17e 16n/17e 16n/17e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 57% sparse margin 58% sparse margin 58% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · compact motif · compact motif ·
+overconfident miss overconfident miss overconfident miss
+G#118 G#109
+85% 88%
+G#80
+72%
+21n/22e 24n/25e
+12n/12e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 70% sparse margin 75% sparse
+margin 45% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · compact motif ·
+compact motif · stable win
+overconfident miss overconfident miss
+localhost:5173/app/lab/analysis/report 14/70
+--- PAGE 15 ---
+22:49 18/5/26 GNN-Insight
+
+G#44 G#114 G#25
+72% 73% 76%
+12n/12e 12n/13e 13n/13e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 45% sparse margin 45% sparse margin 52% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#98 G#111 G#82
+77% 77% 78%
+15n/17e 15n/17e 16n/18e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 55% sparse margin 55% sparse margin 57% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#49 G#71 G#104
+79% 79% 79%
+16n/17e 16n/18e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 57% sparse margin 58% sparse margin 58% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 15/70
+--- PAGE 16 ---
+22:49 18/5/26 GNN-Insight
+
+G#55 G#86 G#34
+79% 79% 80%
+17n/19e 16n/18e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 59% sparse margin 59% sparse margin 60% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#0 G#9 G#43
+80% 80% 80%
+17n/19e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 60% sparse margin 60% sparse margin 60% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#36 G#47 G#10
+80% 80% 80%
+17n/18e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 60% sparse margin 60% sparse margin 60% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 16/70
+--- PAGE 17 ---
+22:49 18/5/26 GNN-Insight
+
+G#17 G#24 G#78
+81% 81% 81%
+17n/19e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 61% sparse margin 61% sparse margin 62% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#19 G#20 G#74
+81% 81% 81%
+18n/20e 18n/19e 18n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 62% sparse margin 63% sparse margin 63% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#60 G#27 G#96
+82% 82% 82%
+17n/19e 17n/19e 18n/20e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 63% sparse margin 64% sparse margin 64% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 17/70
+--- PAGE 18 ---
+22:49 18/5/26 GNN-Insight
+
+G#59 G#94 G#52
+82% 83% 83%
+19n/20e 19n/20e 19n/21e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 65% sparse margin 65% sparse margin 65% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#68 G#42 G#102
+83% 83% 83%
+19n/21e 19n/22e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 65% sparse margin 66% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#91 G#3 G#14
+83% 83% 83%
+19n/22e 19n/22e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 66% sparse margin 66% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 18/70
+--- PAGE 19 ---
+22:49 18/5/26 GNN-Insight
+
+G#79 G#93 G#107
+83% 83% 83%
+19n/22e 19n/22e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 66% sparse margin 66% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#48 G#11 G#21
+83% 84% 84%
+20n/22e 20n/23e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 66% sparse margin 67% sparse margin 68% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#63 G#105 G#66
+84% 84% 84%
+20n/22e 20n/23e 20n/23e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 68% sparse margin 69% sparse margin 69% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 19/70
+--- PAGE 20 ---
+22:49 18/5/26 GNN-Insight
+
+G#7 G#56 G#116
+85% 85% 85%
+20n/22e 21n/22e 21n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 69% sparse margin 70% sparse margin 70% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#40 G#46 G#12
+86% 86% 86%
+17n/19e 22n/25e 22n/25e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 72% sparse margin 72% sparse margin 72% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#15 G#30 G#53
+86% 86% 86%
+22n/25e 22n/25e 19n/21e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 72% sparse margin 72% sparse margin 72% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 20/70
+--- PAGE 21 ---
+22:49 18/5/26 GNN-Insight
+
+G#62 G#28 G#73
+87% 87% 87%
+23n/24e 23n/25e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#89 G#45 G#117
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#26 G#67 G#100
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 21/70
+--- PAGE 22 ---
+22:49 18/5/26 GNN-Insight
+
+G#103 G#22 G#29
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#84 G#85 G#58
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#92 G#31 G#106
+87% 88% 89%
+23n/27e 24n/25e 25n/28e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 75% sparse margin 77% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 22/70
+--- PAGE 23 ---
+22:49 18/5/26 GNN-Insight
+
+G#95 G#81 G#57
+89% 89% 89%
+25n/28e 25n/28e 25n/29e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 78% sparse margin 78% sparse margin 79% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#90 G#101 G#51
+89% 90% 90%
+25n/29e 26n/28e 26n/30e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 79% sparse margin 79% sparse margin 79% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#50 G#70 G#23
+90% 90% 91%
+26n/30e 26n/30e 27n/33e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 79% sparse margin 79% sparse margin 81% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 23/70
+--- PAGE 24 ---
+22:49 18/5/26 GNN-Insight
+
+G#32 G#5 G#108
+91% 91% 91%
+23n/25e 28n/31e 28n/33e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 81% sparse margin 82% sparse margin 82% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 24/70
+--- PAGE 25 ---
+22:49 18/5/26 GNN-Insight
+PAGE 7 
+Gallery · confidence
+GRAPH COLLECTION
+Showing the full collection in one view
+120 graphs · 2 class profiles · All
+Entire graph collection.
+G#108 G#5 G#32
+91% 91% 91%
+28n/33e 28n/31e 23n/25e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 82% sparse margin 82% sparse margin 81% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#23 G#50 G#70
+91% 90% 90%
+27n/33e 26n/30e 26n/30e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 81% sparse margin 79% sparse margin 79% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 25/70
+--- PAGE 26 ---
+22:49 18/5/26 GNN-Insight
+
+G#51 G#101 G#57
+90% 90% 89%
+26n/30e 26n/28e 25n/29e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 79% sparse margin 79% sparse margin 79% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#90 G#81 G#95
+89% 89% 89%
+25n/29e 25n/28e 25n/28e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 79% sparse margin 78% sparse margin 78% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#109
+G#106 88% G#31
+89% 88%
+24n/25e
+25n/28e 24n/25e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 75% sparse
+margin 77% sparse margin 75% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compact motif · stable win compact motif · stable win
+overconfident miss
+localhost:5173/app/lab/analysis/report 26/70
+--- PAGE 27 ---
+22:49 18/5/26 GNN-Insight
+
+G#45 G#89 G#117
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#22 G#26 G#29
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#58 G#67 G#84
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 27/70
+--- PAGE 28 ---
+22:49 18/5/26 GNN-Insight
+
+G#85 G#92 G#100
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#103 G#73 G#28
+87% 87% 87%
+23n/27e 23n/27e 23n/25e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#62 G#53 G#30
+87% 86% 86%
+23n/24e 19n/21e 22n/25e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 72% sparse margin 72% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 28/70
+--- PAGE 29 ---
+22:49 18/5/26 GNN-Insight
+
+G#15 G#12 G#46
+86% 86% 86%
+22n/25e 22n/25e 22n/25e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 72% sparse margin 72% sparse margin 72% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#118
+85%
+G#40 G#56
+86% 85%
+21n/22e
+17n/19e 21n/22e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 70% sparse
+margin 72% sparse margin 70% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compact motif · stable win compact motif · stable win
+overconfident miss
+G#116 G#7 G#66
+85% 85% 84%
+21n/22e 20n/22e 20n/23e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 70% sparse margin 69% sparse margin 69% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 29/70
+--- PAGE 30 ---
+22:49 18/5/26 GNN-Insight
+
+G#105 G#63 G#21
+84% 84% 84%
+20n/23e 20n/22e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 69% sparse margin 68% sparse margin 68% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#11 G#48 G#3
+84% 83% 83%
+20n/23e 20n/22e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 67% sparse margin 66% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#14 G#79 G#93
+83% 83% 83%
+19n/22e 19n/22e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 66% sparse margin 66% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 30/70
+--- PAGE 31 ---
+22:49 18/5/26 GNN-Insight
+
+G#107 G#91 G#42
+83% 83% 83%
+19n/22e 19n/22e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 66% sparse margin 66% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#102 G#68 G#52
+83% 83% 83%
+19n/22e 19n/21e 19n/21e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 66% sparse margin 65% sparse margin 65% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#94 G#59 G#96
+83% 82% 82%
+19n/20e 19n/20e 18n/20e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 65% sparse margin 65% sparse margin 64% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 31/70
+--- PAGE 32 ---
+22:49 18/5/26 GNN-Insight
+
+G#27 G#60 G#20
+82% 82% 81%
+17n/19e 17n/19e 18n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 64% sparse margin 63% sparse margin 63% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#74 G#19 G#78
+81% 81% 81%
+18n/19e 18n/20e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 63% sparse margin 62% sparse margin 62% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#24 G#17 G#10
+81% 81% 80%
+17n/19e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 61% sparse margin 61% sparse margin 60% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 32/70
+--- PAGE 33 ---
+22:49 18/5/26 GNN-Insight
+
+G#36 G#47 G#0
+80% 80% 80%
+17n/18e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 60% sparse margin 60% sparse margin 60% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#9 G#43 G#34
+80% 80% 80%
+17n/19e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 60% sparse margin 60% sparse margin 60% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#86 G#55 G#104
+79% 79% 79%
+16n/18e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 59% sparse margin 59% sparse margin 58% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 33/70
+--- PAGE 34 ---
+22:49 18/5/26 GNN-Insight
+
+G#6 G#77
+79% 79%
+G#71
+79%
+16n/17e 16n/17e
+16n/18e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 58% sparse margin 58% sparse
+margin 58% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · compact motif ·
+compact motif · stable win
+overconfident miss overconfident miss
+G#64 G#76
+79% 78%
+G#49
+79%
+16n/17e 16n/17e
+16n/17e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 57% sparse margin 57% sparse
+margin 57% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · compact motif ·
+compact motif · stable win
+overconfident miss overconfident miss
+localhost:5173/app/lab/analysis/report 34/70
+--- PAGE 35 ---
+22:49 18/5/26 GNN-Insight
+
+G#72 G#113 G#65
+78% 78% 78%
+16n/17e 16n/17e 16n/17e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 57% sparse margin 57% sparse margin 57% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · compact motif · compact motif ·
+overconfident miss overconfident miss overconfident miss
+G#99 G#38
+78% 77%
+G#82
+78%
+16n/17e 15n/16e
+16n/18e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 57% sparse margin 55% sparse
+margin 57% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · compact motif ·
+compact motif · stable win
+overconfident miss overconfident miss
+localhost:5173/app/lab/analysis/report 35/70
+--- PAGE 36 ---
+22:49 18/5/26 GNN-Insight
+
+G#37
+77%
+G#98 G#111
+77% 77%
+15n/16e
+15n/17e 15n/17e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 55% sparse
+margin 55% sparse margin 55% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compact motif · stable win compact motif · stable win
+overconfident miss
+G#69 G#35 G#54
+76% 76% 76%
+14n/15e 14n/15e 14n/15e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 52% sparse margin 52% sparse margin 52% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · compact motif · compact motif ·
+overconfident miss overconfident miss overconfident miss
+localhost:5173/app/lab/analysis/report 36/70
+--- PAGE 37 ---
+22:49 18/5/26 GNN-Insight
+
+G#4 G#39
+75% 74%
+G#25
+76%
+11n/11e 13n/14e
+13n/13e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 50% medium margin 48% sparse
+margin 52% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · boundary compact motif · boundary
+compact motif · stable win
+case case
+G#33 G#1 G#2
+74% 74% 74%
+13n/14e 13n/14e 13n/14e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 48% sparse margin 47% sparse margin 47% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+localhost:5173/app/lab/analysis/report 37/70
+--- PAGE 38 ---
+22:49 18/5/26 GNN-Insight
+
+G#18 G#97 G#112
+74% 74% 74%
+13n/14e 13n/14e 13n/13e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 47% sparse margin 47% sparse margin 47% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+G#87 G#88 G#41
+73% 73% 73%
+12n/12e 13n/14e 13n/14e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 46% sparse margin 46% sparse margin 46% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+localhost:5173/app/lab/analysis/report 38/70
+--- PAGE 39 ---
+22:49 18/5/26 GNN-Insight
+
+G#119 G#13
+73% 73%
+G#114
+73%
+13n/14e 13n/14e
+12n/13e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 46% sparse margin 46% sparse
+margin 45% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · boundary compact motif · boundary
+compact motif · stable win
+case case
+G#110
+71%
+G#44 G#80
+72% 72%
+11n/11e
+12n/12e 12n/12e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 43% medium
+margin 45% sparse margin 45% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif · boundary
+compact motif · stable win compact motif · stable win
+case
+localhost:5173/app/lab/analysis/report 39/70
+--- PAGE 40 ---
+22:49 18/5/26 GNN-Insight
+
+G#8 G#115 G#75
+71% 71% 71%
+12n/13e 10n/10e 10n/10e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 43% sparse margin 42% medium margin 42% medium
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+G#83 G#61 G#16
+71% 71% 70%
+11n/11e 11n/11e 11n/11e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 42% medium margin 42% medium margin 40% medium
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+localhost:5173/app/lab/analysis/report 40/70
+--- PAGE 41 ---
+22:49 18/5/26 GNN-Insight
+PAGE 8 
+Gallery · entropy
+GRAPH COLLECTION
+Showing the full collection in one view
+120 graphs · 2 class profiles · All
+Entire graph collection.
+G#23 G#62 G#78
+91% 87% 81%
+27n/33e 23n/24e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 81% sparse margin 74% sparse margin 62% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#73 G#89 G#26
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 41/70
+--- PAGE 42 ---
+22:49 18/5/26 GNN-Insight
+
+G#67 G#100 G#103
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#22 G#29 G#84
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#85 G#45 G#117
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 42/70
+--- PAGE 43 ---
+22:49 18/5/26 GNN-Insight
+
+G#58 G#92 G#90
+87% 87% 89%
+23n/27e 23n/27e 25n/29e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 79% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#57 G#11 G#105
+89% 84% 84%
+25n/29e 20n/23e 20n/23e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 79% sparse margin 67% sparse margin 69% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#66 G#42 G#102
+84% 83% 83%
+20n/23e 19n/22e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 69% sparse margin 66% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 43/70
+--- PAGE 44 ---
+22:49 18/5/26 GNN-Insight
+
+G#91 G#3 G#14
+83% 83% 83%
+19n/22e 19n/22e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 66% sparse margin 66% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#79 G#93 G#107
+83% 83% 83%
+19n/22e 19n/22e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 66% sparse margin 66% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#86 G#19 G#104
+79% 81% 79%
+16n/18e 18n/20e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 59% sparse margin 62% sparse margin 58% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 44/70
+--- PAGE 45 ---
+22:49 18/5/26 GNN-Insight
+
+G#55 G#7 G#108
+79% 85% 91%
+17n/19e 20n/22e 28n/33e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 59% sparse margin 69% sparse margin 82% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#69
+76%
+G#34 G#24
+80% 81%
+14n/15e
+17n/19e 17n/19e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 52% sparse
+margin 60% sparse margin 61% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compact motif · stable win compact motif · stable win
+overconfident miss
+G#96 G#17 G#0
+82% 81% 80%
+18n/20e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 64% sparse margin 61% sparse margin 60% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 45/70
+--- PAGE 46 ---
+22:49 18/5/26 GNN-Insight
+
+G#9 G#43 G#36
+80% 80% 80%
+17n/19e 17n/19e 17n/18e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 60% sparse margin 60% sparse margin 60% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#47 G#10 G#51
+80% 80% 90%
+17n/19e 17n/19e 26n/30e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 60% sparse margin 60% sparse margin 79% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#50 G#70 G#82
+90% 90% 78%
+26n/30e 26n/30e 16n/18e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 79% sparse margin 79% sparse margin 57% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 46/70
+--- PAGE 47 ---
+22:49 18/5/26 GNN-Insight
+
+G#38 G#65 G#99
+77% 78% 78%
+15n/16e 16n/17e 16n/17e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 55% sparse margin 57% sparse margin 57% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · compact motif · compact motif ·
+overconfident miss overconfident miss overconfident miss
+G#113 G#76 G#72
+78% 78% 78%
+16n/17e 16n/17e 16n/17e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 57% sparse margin 57% sparse margin 57% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · compact motif · compact motif ·
+overconfident miss overconfident miss overconfident miss
+localhost:5173/app/lab/analysis/report 47/70
+--- PAGE 48 ---
+22:49 18/5/26 GNN-Insight
+
+G#77
+79%
+G#101 G#71
+90% 79%
+16n/17e
+26n/28e 16n/18e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 58% sparse
+margin 79% sparse margin 58% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compact motif · stable win compact motif · stable win
+overconfident miss
+G#6 G#13 G#119
+79% 73% 73%
+16n/17e 13n/14e 13n/14e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 58% sparse margin 46% sparse margin 46% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · compact motif · boundary compact motif · boundary
+overconfident miss case case
+localhost:5173/app/lab/analysis/report 48/70
+--- PAGE 49 ---
+22:49 18/5/26 GNN-Insight
+
+G#41 G#88
+73% 73%
+G#28
+87%
+13n/14e 13n/14e
+23n/25e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 46% sparse margin 46% sparse
+margin 74% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · boundary compact motif · boundary
+compact motif · stable win
+case case
+G#37
+77%
+G#98 G#111
+77% 77%
+15n/16e
+15n/17e 15n/17e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 55% sparse
+margin 55% sparse margin 55% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compact motif · stable win compact motif · stable win
+overconfident miss
+localhost:5173/app/lab/analysis/report 49/70
+--- PAGE 50 ---
+22:49 18/5/26 GNN-Insight
+
+G#63 G#48 G#46
+84% 83% 86%
+20n/22e 20n/22e 22n/25e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 68% sparse margin 66% sparse margin 72% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#61
+71%
+G#12 G#15
+86% 86%
+11n/11e
+22n/25e 22n/25e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 42% medium
+margin 72% sparse margin 72% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif · boundary
+compact motif · stable win compact motif · stable win
+case
+localhost:5173/app/lab/analysis/report 50/70
+--- PAGE 51 ---
+22:49 18/5/26 GNN-Insight
+
+G#109
+88%
+G#30 G#5
+86% 91%
+24n/25e
+22n/25e 28n/31e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 75% sparse
+margin 72% sparse margin 82% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compact motif · stable win compact motif · stable win
+overconfident miss
+G#87 G#35
+73% 76%
+G#31
+88%
+12n/12e 14n/15e
+24n/25e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 46% sparse margin 52% sparse
+margin 75% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · boundary compact motif ·
+compact motif · stable win
+case overconfident miss
+localhost:5173/app/lab/analysis/report 51/70
+--- PAGE 52 ---
+22:49 18/5/26 GNN-Insight
+
+G#54 G#8
+76% 71%
+G#95
+89%
+14n/15e 12n/13e
+25n/28e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 52% sparse margin 43% sparse
+margin 78% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · compact motif · boundary
+compact motif · stable win
+overconfident miss case
+G#97
+74%
+G#106 G#81
+89% 89%
+13n/14e
+25n/28e 25n/28e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 47% sparse
+margin 77% sparse margin 78% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif · boundary
+compact motif · stable win compact motif · stable win
+case
+localhost:5173/app/lab/analysis/report 52/70
+--- PAGE 53 ---
+22:49 18/5/26 GNN-Insight
+
+G#18 G#2 G#1
+74% 74% 74%
+13n/14e 13n/14e 13n/14e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 47% sparse margin 47% sparse margin 47% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · boundary compact motif · boundary compact motif · boundary
+case case case
+G#52 G#68 G#56
+83% 83% 85%
+19n/21e 19n/21e 21n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 65% sparse margin 65% sparse margin 70% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 53/70
+--- PAGE 54 ---
+22:49 18/5/26 GNN-Insight
+
+G#118 G#33
+85% 74%
+G#116
+85%
+21n/22e 13n/14e
+21n/22e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 70% sparse margin 48% sparse
+margin 70% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · compact motif · boundary
+compact motif · stable win
+overconfident miss case
+G#39
+74%
+G#59 G#94
+82% 83%
+13n/14e
+19n/20e 19n/20e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 48% sparse
+margin 65% sparse margin 65% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif · boundary
+compact motif · stable win compact motif · stable win
+case
+localhost:5173/app/lab/analysis/report 54/70
+--- PAGE 55 ---
+22:49 18/5/26 GNN-Insight
+
+G#110
+71%
+G#20 G#74
+81% 81%
+11n/11e
+18n/19e 18n/19e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 43% medium
+margin 63% sparse margin 63% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif · boundary
+compact motif · stable win compact motif · stable win
+case
+G#16 G#112
+70% 74%
+G#114
+73%
+11n/11e 13n/13e
+12n/13e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 40% medium margin 47% sparse
+margin 45% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · boundary compact motif · boundary
+compact motif · stable win
+case case
+localhost:5173/app/lab/analysis/report 55/70
+--- PAGE 56 ---
+22:49 18/5/26 GNN-Insight
+
+G#64 G#83
+79% 71%
+G#49
+79%
+16n/17e 11n/11e
+16n/17e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 57% sparse margin 42% medium
+margin 57% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · compact motif · boundary
+compact motif · stable win
+overconfident miss case
+G#80 G#44 G#25
+72% 72% 76%
+12n/12e 12n/12e 13n/13e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 45% sparse margin 45% sparse margin 52% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 56/70
+--- PAGE 57 ---
+22:49 18/5/26 GNN-Insight
+
+G#75
+71%
+G#53 G#60
+86% 82%
+10n/10e
+19n/21e 17n/19e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 42% medium
+margin 72% sparse margin 63% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif · boundary
+compact motif · stable win compact motif · stable win
+case
+G#4 G#115
+75% 71%
+G#27
+82%
+11n/11e 10n/10e
+17n/19e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 50% medium margin 42% medium
+margin 64% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · boundary compact motif · boundary
+compact motif · stable win
+case case
+localhost:5173/app/lab/analysis/report 57/70
+--- PAGE 58 ---
+22:49 18/5/26 GNN-Insight
+
+G#21 G#32 G#40
+84% 91% 86%
+17n/19e 23n/25e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 68% sparse margin 81% sparse margin 72% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 58/70
+--- PAGE 59 ---
+22:49 18/5/26 GNN-Insight
+PAGE 9 
+Gallery · size
+GRAPH COLLECTION
+Showing the full collection in one view
+120 graphs · 2 class profiles · All
+Entire graph collection.
+G#5 G#108 G#23
+91% 91% 91%
+28n/31e 28n/33e 27n/33e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 82% sparse margin 82% sparse margin 81% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#50 G#51 G#70
+90% 90% 90%
+26n/30e 26n/30e 26n/30e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 79% sparse margin 79% sparse margin 79% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 59/70
+--- PAGE 60 ---
+22:49 18/5/26 GNN-Insight
+
+G#101 G#57 G#81
+90% 89% 89%
+26n/28e 25n/29e 25n/28e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 79% sparse margin 79% sparse margin 78% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#90 G#95 G#106
+89% 89% 89%
+25n/29e 25n/28e 25n/28e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 79% sparse margin 78% sparse margin 77% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#109
+G#31 88% G#22
+88% 87%
+24n/25e
+24n/25e 23n/27e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 75% sparse
+margin 75% sparse margin 74% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compact motif · stable win compact motif · stable win
+overconfident miss
+localhost:5173/app/lab/analysis/report 60/70
+--- PAGE 61 ---
+22:49 18/5/26 GNN-Insight
+
+G#26 G#28 G#29
+87% 87% 87%
+23n/27e 23n/25e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#32 G#45 G#58
+91% 87% 87%
+23n/25e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 81% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#62 G#67 G#73
+87% 87% 87%
+23n/24e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 61/70
+--- PAGE 62 ---
+22:49 18/5/26 GNN-Insight
+
+G#84 G#85 G#89
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#92 G#100 G#103
+87% 87% 87%
+23n/27e 23n/27e 23n/27e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 74% sparse margin 74% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#117 G#12 G#15
+87% 86% 86%
+23n/27e 22n/25e 22n/25e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 74% sparse margin 72% sparse margin 72% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 62/70
+--- PAGE 63 ---
+22:49 18/5/26 GNN-Insight
+
+G#30 G#46 G#56
+86% 86% 85%
+22n/25e 22n/25e 21n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 72% sparse margin 72% sparse margin 70% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#118
+85%
+G#116 G#7
+85% 85%
+21n/22e
+21n/22e 20n/22e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 70% sparse
+margin 70% sparse margin 69% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compact motif · stable win compact motif · stable win
+overconfident miss
+G#11 G#48 G#63
+84% 83% 84%
+20n/23e 20n/22e 20n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 67% sparse margin 66% sparse margin 68% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 63/70
+--- PAGE 64 ---
+22:49 18/5/26 GNN-Insight
+
+G#66 G#105 G#3
+84% 84% 83%
+20n/23e 20n/23e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 69% sparse margin 69% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#14 G#42 G#52
+83% 83% 83%
+19n/22e 19n/22e 19n/21e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 66% sparse margin 66% sparse margin 65% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#53 G#59 G#68
+86% 82% 83%
+19n/21e 19n/20e 19n/21e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 72% sparse margin 65% sparse margin 65% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 64/70
+--- PAGE 65 ---
+22:49 18/5/26 GNN-Insight
+
+G#79 G#91 G#93
+83% 83% 83%
+19n/22e 19n/22e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 66% sparse margin 66% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#94 G#102 G#107
+83% 83% 83%
+19n/20e 19n/22e 19n/22e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 65% sparse margin 66% sparse margin 66% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#19 G#20 G#74
+81% 81% 81%
+18n/20e 18n/19e 18n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 62% sparse margin 63% sparse margin 63% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 65/70
+--- PAGE 66 ---
+22:49 18/5/26 GNN-Insight
+
+G#96 G#0 G#9
+82% 80% 80%
+18n/20e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 64% sparse margin 60% sparse margin 60% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#10 G#17 G#21
+80% 81% 84%
+17n/19e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 60% sparse margin 61% sparse margin 68% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#24 G#27 G#34
+81% 82% 80%
+17n/19e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 61% sparse margin 64% sparse margin 60% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+localhost:5173/app/lab/analysis/report 66/70
+--- PAGE 67 ---
+22:49 18/5/26 GNN-Insight
+
+G#36 G#40 G#43
+80% 86% 80%
+17n/18e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 60% sparse margin 72% sparse margin 60% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#47 G#55 G#60
+80% 79% 82%
+17n/19e 17n/19e 17n/19e
+GT Class 1 GT Class 1 GT Class 1
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Correct Status Correct Status Correct
+margin 60% sparse margin 59% sparse margin 63% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · stable win compact motif · stable win compact motif · stable win
+G#6
+G#78 G#104 79%
+81% 79%
+16n/17e
+17n/19e 17n/19e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 58% sparse
+margin 62% sparse margin 58% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compact motif · stable win compact motif · stable win
+overconfident miss
+localhost:5173/app/lab/analysis/report 67/70
+--- PAGE 68 ---
+22:49 18/5/26 GNN-Insight
+
+G#64 G#65
+79% 78%
+G#49
+79%
+16n/17e 16n/17e
+16n/17e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 57% sparse margin 57% sparse
+margin 57% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · compact motif ·
+compact motif · stable win
+overconfident miss overconfident miss
+G#72 G#76
+78% 78%
+G#71
+79%
+16n/17e 16n/17e
+16n/18e
+GT Class 0 GT Class 0
+GT Class 1
+Pred Class 1 Pred Class 1
+Pred Class 1
+Status Wrong Status Wrong
+Status Correct
+margin 57% sparse margin 57% sparse
+margin 58% sparse
+diffuse diffuse
+diffuse
+concentrated readout on concentrated readout on
+concentrated readout on
+compact motif · compact motif ·
+compact motif · stable win
+overconfident miss overconfident miss
+localhost:5173/app/lab/analysis/report 68/70
+--- PAGE 69 ---
+22:49 18/5/26 GNN-Insight
+
+G#77
+79%
+G#82 G#86
+78% 79%
+16n/17e
+16n/18e 16n/18e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 58% sparse
+margin 57% sparse margin 59% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compact motif · stable win compact motif · stable win
+overconfident miss
+G#99 G#113 G#37
+78% 78% 77%
+16n/17e 16n/17e 15n/16e
+GT Class 0 GT Class 0 GT Class 0
+Pred Class 1 Pred Class 1 Pred Class 1
+Status Wrong Status Wrong Status Wrong
+margin 57% sparse margin 57% sparse margin 55% sparse
+diffuse diffuse diffuse
+concentrated readout on concentrated readout on concentrated readout on
+compact motif · compact motif · compact motif ·
+overconfident miss overconfident miss overconfident miss
+localhost:5173/app/lab/analysis/report 69/70
+--- PAGE 70 ---
+22:49 18/5/26 GNN-Insight
+
+G#38
+77%
+G#98 G#111
+77% 77%
+15n/16e
+15n/17e 15n/17e
+GT Class 0
+GT Class 1 GT Class 1
+Pred Class 1
+Pred Class 1 Pred Class 1
+Status Wrong
+Status Correct Status Correct
+margin 55% sparse
+margin 55% sparse margin 55% sparse
+diffuse
+diffuse diffuse
+concentrated readout on
+concentrated readout on concentrated readout on
+compact motif ·
+compactmotif stablewin compactmotif stablewin
+localhost:5173/app/lab/analysis/report 70/70

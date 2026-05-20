@@ -4,13 +4,14 @@ Trains a GNN with global pooling to classify entire graphs.
 Generates 50 synthetic graphs (Erdős–Rényi class 0, Scale-free class 1).
 """
 import asyncio
+import math
 import numpy as np
 import torch
 import torch.nn.functional as F
 import networkx as nx
 from sklearn.decomposition import PCA
 from torch_geometric.data import Data, Batch
-from torch_geometric.nn import GCNConv, GATConv, SAGEConv, global_add_pool
+from torch_geometric.nn import GCNConv, GATConv, SAGEConv, global_add_pool, global_mean_pool
 from utils.ws_msg import send_json_zipped
 
 
@@ -18,10 +19,11 @@ from utils.ws_msg import send_json_zipped
 # Attention-based Graph Classification Model (Explainable)
 # ───────────────────────────────────────────────────────────────────────────────
 class GraphClassifier(torch.nn.Module):
-    def __init__(self, in_channels=1, hidden=32, num_classes=2, model_type='GCN', heads=4, dropout=0.5):
+    def __init__(self, in_channels=1, hidden=32, num_classes=2, model_type='GCN', heads=4, dropout=0.5, pool_type='mean'):
         super().__init__()
         self.model_type = model_type
         self.dropout = dropout
+        self.pool_type = pool_type
 
         if model_type == 'GAT':
             self.conv1 = GATConv(in_channels, hidden, heads=heads, dropout=dropout)
@@ -47,14 +49,184 @@ class GraphClassifier(torch.nn.Module):
         node_embeddings = x
 
         # Compute attention weights alpha
-        alpha = torch.sigmoid(self.att_gate(x)) # Weight per node [num_nodes, 1]
+        raw_alpha = self.att_gate(x).squeeze(-1)
+        alpha = torch.zeros_like(raw_alpha)
+        for graph_id in batch.unique(sorted=True):
+            mask = batch == graph_id
+            alpha[mask] = torch.softmax(raw_alpha[mask], dim=0)
 
         # Apply attention to nodes and pool
-        x_g = alpha * x
-        graph_embeddings = global_add_pool(x_g, batch)
+        x_g = alpha.unsqueeze(-1) * x
+        if self.pool_type == 'add':
+            graph_embeddings = global_add_pool(x_g, batch)
+        else:
+            graph_embeddings = global_mean_pool(x_g, batch)
 
         out = self.lin(graph_embeddings)
-        return out, graph_embeddings, alpha.squeeze()
+        return out, graph_embeddings, alpha
+
+
+def split_graph_dataset(graphs, train_ratio=0.8, seed=42):
+    labels_to_indices = {}
+    for index, graph in enumerate(graphs):
+        label = int(graph.y.view(-1)[0].item())
+        labels_to_indices.setdefault(label, []).append(index)
+
+    rng = np.random.default_rng(seed)
+    train_indices = []
+    test_indices = []
+
+    for indices in labels_to_indices.values():
+        shuffled = list(indices)
+        rng.shuffle(shuffled)
+        train_count = int(round(len(shuffled) * train_ratio))
+        train_count = max(1, min(len(shuffled) - 1, train_count)) if len(shuffled) > 1 else len(shuffled)
+        train_indices.extend(shuffled[:train_count])
+        test_indices.extend(shuffled[train_count:])
+
+    rng.shuffle(train_indices)
+    rng.shuffle(test_indices)
+
+    train_graphs = [graphs[index] for index in train_indices]
+    test_graphs = [graphs[index] for index in test_indices]
+    return train_graphs, test_graphs, train_indices, test_indices
+
+
+def build_class_weight_tensor(labels, num_classes):
+    counts = torch.bincount(torch.tensor(labels, dtype=torch.long), minlength=num_classes).float()
+    counts = torch.clamp(counts, min=1.0)
+    total = counts.sum()
+    weights = total / (counts * max(1, num_classes))
+    return weights
+
+
+def compute_graph_classification_loss(logits, target, class_weights=None, focal_gamma=0.0, label_smoothing=0.0):
+    ce = F.cross_entropy(
+        logits,
+        target,
+        weight=class_weights,
+        reduction='none',
+        label_smoothing=label_smoothing,
+    )
+    if focal_gamma and focal_gamma > 0:
+        probs = torch.softmax(logits, dim=1)
+        pt = probs.gather(1, target.unsqueeze(1)).squeeze(1).clamp(min=1e-6, max=1.0)
+        focal_factor = torch.pow(1.0 - pt, focal_gamma)
+        ce = focal_factor * ce
+    return ce.mean()
+
+
+def _safe_corr(values_a, values_b):
+    if len(values_a) != len(values_b) or len(values_a) < 3:
+        return 0.0
+    a = np.asarray(values_a, dtype=float)
+    b = np.asarray(values_b, dtype=float)
+    if np.std(a) < 1e-8 or np.std(b) < 1e-8:
+        return 0.0
+    return float(np.corrcoef(a, b)[0, 1])
+
+
+def build_per_class_metrics(predictions, ground_truth, confidences, num_classes):
+    rows = []
+    for class_id in range(num_classes):
+        support = sum(1 for gt in ground_truth if gt == class_id)
+        predicted_count = sum(1 for pred in predictions if pred == class_id)
+        tp = sum(1 for pred, gt in zip(predictions, ground_truth) if pred == class_id and gt == class_id)
+        precision = tp / predicted_count if predicted_count > 0 else 0.0
+        recall = tp / support if support > 0 else 0.0
+        denom = precision + recall
+        f1 = (2 * precision * recall / denom) if denom > 0 else 0.0
+        class_conf = [confidences[index] for index, gt in enumerate(ground_truth) if gt == class_id]
+        rows.append({
+            'class_id': class_id,
+            'support': int(support),
+            'predicted_count': int(predicted_count),
+            'true_positive': int(tp),
+            'precision': float(precision),
+            'recall': float(recall),
+            'f1': float(f1),
+            'mean_confidence': float(np.mean(class_conf)) if class_conf else 0.0,
+        })
+    return rows
+
+
+def build_graph_calibration(confidences, correctness, bins=10):
+    rows = []
+    ece = 0.0
+    n = max(1, len(confidences))
+    for bucket in range(bins):
+        lower = bucket / bins
+        upper = (bucket + 1) / bins
+        idxs = [i for i, confidence in enumerate(confidences) if lower <= confidence < upper or (bucket == bins - 1 and confidence == 1.0)]
+        if not idxs:
+            rows.append({
+                'bin': bucket,
+                'range': [lower, upper],
+                'count': 0,
+                'mean_confidence': 0.0,
+                'accuracy': 0.0,
+                'gap': 0.0,
+            })
+            continue
+        mean_conf = float(np.mean([confidences[i] for i in idxs]))
+        acc = float(np.mean([correctness[i] for i in idxs]))
+        gap = abs(mean_conf - acc)
+        ece += (len(idxs) / n) * gap
+        rows.append({
+            'bin': bucket,
+            'range': [lower, upper],
+            'count': int(len(idxs)),
+            'mean_confidence': mean_conf,
+            'accuracy': acc,
+            'gap': float(gap),
+        })
+    return {
+        'ece': float(ece),
+        'bins': rows,
+        'mean_confidence': float(np.mean(confidences)) if confidences else 0.0,
+        'mean_accuracy': float(np.mean(correctness)) if correctness else 0.0,
+    }
+
+
+def build_structural_bias_signals(graphs_data, confidences, correctness, predictions):
+    num_nodes = [graph['numNodes'] for graph in graphs_data]
+    num_edges = [graph['numEdges'] for graph in graphs_data]
+    density = []
+    clustering = []
+    avg_degree = []
+    for graph in graphs_data:
+        G = nx.Graph()
+        G.add_nodes_from(range(graph['numNodes']))
+        G.add_edges_from([(link['source'], link['target']) for link in graph['links']])
+        if G.number_of_edges() > 0:
+            density.append(float(nx.density(G)))
+            clustering.append(float(nx.average_clustering(G)))
+            avg_degree.append(float(np.mean([d for _, d in G.degree()])))
+        else:
+            density.append(0.0)
+            clustering.append(0.0)
+            avg_degree.append(0.0)
+
+    pred_float = [float(value) for value in predictions]
+    correct_float = [float(value) for value in correctness]
+    return {
+        'confidence_vs_num_nodes': _safe_corr(confidences, num_nodes),
+        'confidence_vs_num_edges': _safe_corr(confidences, num_edges),
+        'confidence_vs_density': _safe_corr(confidences, density),
+        'confidence_vs_clustering': _safe_corr(confidences, clustering),
+        'prediction_vs_num_nodes': _safe_corr(pred_float, num_nodes),
+        'prediction_vs_density': _safe_corr(pred_float, density),
+        'correctness_vs_num_nodes': _safe_corr(correct_float, num_nodes),
+        'correctness_vs_density': _safe_corr(correct_float, density),
+        'correctness_vs_avg_degree': _safe_corr(correct_float, avg_degree),
+        'collection_summary': {
+            'mean_num_nodes': float(np.mean(num_nodes)) if num_nodes else 0.0,
+            'mean_num_edges': float(np.mean(num_edges)) if num_edges else 0.0,
+            'mean_density': float(np.mean(density)) if density else 0.0,
+            'mean_clustering': float(np.mean(clustering)) if clustering else 0.0,
+            'mean_avg_degree': float(np.mean(avg_degree)) if avg_degree else 0.0,
+        },
+    }
 
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -122,6 +294,14 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                       If None, synthetic graphs are generated.
     """
     epochs = config.get('epochs', 80)
+    split_seed = int(config.get('split_seed', 42))
+    train_ratio = float(config.get('train_ratio', 0.8))
+    pool_type = config.get('task2_pool', 'mean')
+    use_class_weights = bool(config.get('task2_class_weighting', False))
+    balanced_oversample = bool(config.get('task2_balanced_sampler', True))
+    focal_gamma = float(config.get('task2_focal_gamma', 1.5))
+    label_smoothing = float(config.get('task2_label_smoothing', 0.03))
+    weight_decay = float(config.get('task2_weight_decay', config.get('weight_decay', 5e-4)))
 
     if custom_graphs and len(custom_graphs) > 0:
         # ── Use user-uploaded graphs ──
@@ -207,17 +387,48 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         model_type=config.get('model', 'GCN'),
         heads=config.get('heads', 4),
         dropout=config.get('dropout', 0.5),
+        pool_type=pool_type,
     )
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.get('lr', 0.01))
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.get('lr', 0.01), weight_decay=weight_decay)
 
-    # Prepare batched data (train: 80%, test: 20%)
-    n_train = int(len(pyg_graphs) * 0.8)
-    train_graphs = pyg_graphs[:n_train]
-    test_graphs = pyg_graphs[n_train:]
+    # Prepare batched data with a stratified split to keep class support stable.
+    train_graphs, test_graphs, train_indices, _ = split_graph_dataset(
+        pyg_graphs,
+        train_ratio=train_ratio,
+        seed=split_seed,
+    )
+    if not test_graphs:
+        test_graphs = train_graphs
+
+    train_labels = [int(g.y.view(-1)[0].item()) for g in train_graphs]
+    train_label_counts = torch.bincount(torch.tensor(train_labels, dtype=torch.long), minlength=num_classes)
+    class_weights = build_class_weight_tensor(train_labels, num_classes) if use_class_weights else None
+
+    effective_train_graphs = train_graphs
+    if balanced_oversample and train_graphs:
+        label_to_graphs = {}
+        for graph in train_graphs:
+            label = int(graph.y.view(-1)[0].item())
+            label_to_graphs.setdefault(label, []).append(graph)
+        target_count = max(len(items) for items in label_to_graphs.values())
+        rng = np.random.default_rng(split_seed)
+        oversampled = []
+        for label in sorted(label_to_graphs.keys()):
+            graphs_for_label = label_to_graphs[label]
+            oversampled.extend(graphs_for_label)
+            deficit = target_count - len(graphs_for_label)
+            if deficit > 0:
+                extra_indices = rng.choice(len(graphs_for_label), size=deficit, replace=True)
+                oversampled.extend([graphs_for_label[index] for index in extra_indices])
+        rng.shuffle(oversampled)
+        effective_train_graphs = oversampled
+
     train_batch = Batch.from_data_list(train_graphs)
     test_batch = Batch.from_data_list(test_graphs)
+    effective_train_batch = Batch.from_data_list(effective_train_graphs)
 
     train_y = torch.tensor([g.y.item() for g in train_graphs])
+    effective_train_y = torch.tensor([g.y.item() for g in effective_train_graphs])
     test_y = torch.tensor([g.y.item() for g in test_graphs])
 
     epoch_snapshots = []
@@ -229,8 +440,14 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         # ── Training ───────────────────────────────────────────────────────
         model.train()
         optimizer.zero_grad()
-        out, _, _ = model(train_batch.x, train_batch.edge_index, train_batch.batch)
-        loss = F.cross_entropy(out, train_y)
+        out, _, _ = model(effective_train_batch.x, effective_train_batch.edge_index, effective_train_batch.batch)
+        loss = compute_graph_classification_loss(
+            out,
+            effective_train_y,
+            class_weights=class_weights,
+            focal_gamma=focal_gamma,
+            label_smoothing=label_smoothing,
+        )
         loss.backward()
         optimizer.step()
 
@@ -252,7 +469,13 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             train_out, _, _ = model(train_batch.x, train_batch.edge_index, train_batch.batch)
             train_pred = train_out.argmax(dim=1)
 
-            val_loss = F.cross_entropy(test_out, test_y)
+            val_loss = compute_graph_classification_loss(
+                test_out,
+                test_y,
+                class_weights=class_weights,
+                focal_gamma=0.0,
+                label_smoothing=0.0,
+            )
             val_acc = (test_pred == test_y).float().mean()
             train_acc = (train_pred == train_y).float().mean()
 
@@ -342,6 +565,20 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                     'avg_degree': float(avg_degree),
                 })
 
+            graph_per_class_metrics = build_per_class_metrics(
+                predictions=all_pred,
+                ground_truth=graph_truths,
+                confidences=confidences,
+                num_classes=num_classes,
+            )
+            graph_calibration = build_graph_calibration(confidences, graph_correct)
+            structural_bias_signals = build_structural_bias_signals(
+                graphs_data=graphs_data,
+                confidences=confidences,
+                correctness=graph_correct,
+                predictions=all_pred,
+            )
+
         snapshot = {
             'epoch': epoch,
             'model_type': config.get('model', 'GCN'),
@@ -354,6 +591,9 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             'graph_correct': graph_correct,
             'graph_embeddings_2d': emb_2d,
             'node_contributions': node_contributions,
+            'graph_per_class_metrics': graph_per_class_metrics,
+            'graph_calibration': graph_calibration,
+            'structural_bias_signals': structural_bias_signals,
             'train_loss': float(loss.item()),
             'val_loss': float(val_loss.item()),
             'train_acc': float(train_acc.item()),

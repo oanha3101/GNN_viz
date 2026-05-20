@@ -14,14 +14,15 @@ const usePlayerStore = create((set, get) => ({
   autoFollow: true, // When true, new snapshots auto-advance the view
 
   loadSnapshots: (snapshots) => {
-    set({
+    set((s) => ({
       snapshots,
       totalEpochs: snapshots.length,
-      currentEpoch: 0,
-      currentEpochFloat: 0,
+      // Preserve current position if already viewing; jump to latest if at start
+      currentEpoch: s.currentEpoch > 0 ? Math.min(s.currentEpoch, snapshots.length - 1) : snapshots.length - 1,
+      currentEpochFloat: s.currentEpochFloat > 0 ? Math.min(s.currentEpochFloat, snapshots.length - 1) : snapshots.length - 1,
       trainingDone: snapshots.length > 0,
       isPlaying: false
-    })
+    }))
   },
 
   resetForTraining: () => {
@@ -36,6 +37,7 @@ const usePlayerStore = create((set, get) => ({
       totalEpochs: 0,
       trainingDone: false,
       bestEpoch: 0,
+      autoFollow: true,  // Must re-enable so addSnapshot auto-advances during new training
     })
   },
 

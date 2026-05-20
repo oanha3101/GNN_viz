@@ -1,7 +1,10 @@
 import os
 import sys
+from types import SimpleNamespace
 
 import numpy as np
+import pytest
+import torch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -43,6 +46,8 @@ class DummyData:
         self.x = DummyTensor([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
         self.y = DummyTensor([0, 1, 0])
         self.train_mask = DummyTensor([1, 1, 0])
+        self.val_mask = DummyTensor([0, 0, 1])
+        self.test_mask = DummyTensor([0, 0, 1])
         self.num_nodes = 3
 
 
@@ -81,3 +86,62 @@ def test_build_graph_json_flexible_emits_nodes_and_links():
     assert payload["nodes"][1]["groundTruth"] == 1
     assert payload["nodes"][2]["inTrainSet"] is False
     assert payload["links"] == [{"source": 0, "target": 1}, {"source": 1, "target": 2}]
+    assert payload["trainMask"] == [True, True, False]
+    assert payload["valMask"] == [False, False, True]
+    assert payload["testMask"] == [False, False, True]
+
+
+def test_node_classification_guard_rejects_multi_graph_upload():
+    config = {"uploaded_file_path": "datasets/runtime/graphs/mutag.pt"}
+    multi_graph_payload = [
+        SimpleNamespace(y=torch.tensor([0, 1])),
+        SimpleNamespace(y=torch.tensor([1, 0])),
+    ]
+
+    with pytest.raises(ValueError, match="multiple graphs"):
+        training_service._ensure_node_classification_compatible(multi_graph_payload, config)
+
+
+def test_node_classification_guard_rejects_missing_labels():
+    config = {"uploaded_file_path": "datasets/runtime/graphs/custom.pt"}
+    unlabeled_graph = SimpleNamespace()
+
+    with pytest.raises(ValueError, match="no node labels"):
+        training_service._ensure_node_classification_compatible(unlabeled_graph, config)
+
+
+def test_node_classification_guard_rejects_single_class_labels():
+    config = {"uploaded_file_path": "datasets/runtime/graphs/custom.pt"}
+    single_class_graph = SimpleNamespace(y=torch.tensor([0, 0, 0, 0]))
+
+    with pytest.raises(ValueError, match="one node class"):
+        training_service._ensure_node_classification_compatible(single_class_graph, config)
+
+
+def test_graph_classification_guard_rejects_single_graph_artifact():
+    config = {"uploaded_file_path": "datasets/runtime/graphs/custom.pt"}
+    single_graph = SimpleNamespace(y=torch.tensor([1, 0, 1]))
+
+    with pytest.raises(ValueError, match="single graph artifact"):
+        training_service._ensure_graph_classification_compatible(single_graph, config)
+
+
+def test_graph_classification_guard_rejects_single_label_collection():
+    config = {"uploaded_file_path": "datasets/runtime/graphs/custom.pt"}
+    graph_list = [
+        SimpleNamespace(y=torch.tensor([0])),
+        SimpleNamespace(y=torch.tensor([0])),
+    ]
+
+    with pytest.raises(ValueError, match="at least two graph classes"):
+        training_service._ensure_graph_classification_compatible(graph_list, config)
+
+
+def test_graph_classification_guard_accepts_labeled_collection():
+    config = {"uploaded_file_path": "datasets/runtime/graphs/custom.pt"}
+    graph_list = [
+        SimpleNamespace(y=torch.tensor([0])),
+        SimpleNamespace(y=torch.tensor([1])),
+    ]
+
+    training_service._ensure_graph_classification_compatible(graph_list, config)

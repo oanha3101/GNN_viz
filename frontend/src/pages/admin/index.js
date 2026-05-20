@@ -1,5 +1,6 @@
 export { default as AdminOverviewPage } from './AdminOverviewPage'
 export { default as AdminUsersPage } from './AdminUsersPage'
+export { default as AdminProjectsPage } from './AdminProjectsPage'
 export { default as AdminDatasetsPage } from './AdminDatasetsPage'
 export { default as AdminExperimentsPage } from './AdminExperimentsPage'
 export { default as AdminSessionsPage } from './AdminSessionsPage'

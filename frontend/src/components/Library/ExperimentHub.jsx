@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   BarChart3,
   BookOpen,
+  Brain,
   CheckCircle2,
   FileText,
   Filter,
@@ -12,8 +13,10 @@ import {
   Save,
   Sparkles,
   Star,
+  Target,
   Trash2,
   X,
+  Zap,
 } from 'lucide-react'
 import {
   CartesianGrid,
@@ -34,6 +37,8 @@ import Panel from '../primitives/Panel'
 import LoadingState from '../primitives/LoadingState'
 import ErrorState from '../primitives/ErrorState'
 import EmptyState from '../primitives/EmptyState'
+import ResearchInsightsPanel from '../ResearchAnalyst/ResearchInsightsPanel'
+import RecommendationsPanel from '../ResearchAnalyst/RecommendationsPanel'
 
 const COMPARE_COLORS = ['#818cf8', '#f472b6', '#22d3ee', '#34d399']
 
@@ -150,6 +155,7 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
   const setHyperparams = useGNNStore((s) => s.setHyperparams)
   const setGraphData = useGNNStore((s) => s.setGraphData)
   const setGroundTruth = useGNNStore((s) => s.setGroundTruth)
+  const setTrainMask = useGNNStore((s) => s.setTrainMask)
   const setTaskData = useGNNStore((s) => s.setTaskData)
   const setMockMode = useGNNStore((s) => s.setMockMode)
   const setActiveProjectContext = useGNNStore((s) => s.setActiveProjectContext)
@@ -183,6 +189,7 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
     ownerId: '',
     status: '',
   })
+  const [rightTab, setRightTab] = useState('details') // details | analyst | compare
 
   const fetchJson = useCallback(async (path, options = {}) => {
     const res = await fetch(apiUrl(path), {
@@ -391,7 +398,15 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
       const graphPayload = replay.graph_payload || detail.graph_payload || {}
       setGraphData(graphPayload.graph_data_json || null)
       setGroundTruth(graphPayload.ground_truth_json || null)
-      setTaskData(graphPayload.task_data_json || null)
+      const storedTaskData = graphPayload.task_data_json || {}
+      const derivedTrainMask = storedTaskData.trainMask || graphPayload.graph_data_json?.trainMask || null
+      setTrainMask(Array.isArray(derivedTrainMask) ? derivedTrainMask : null)
+      setTaskData({
+        ...storedTaskData,
+        trainMask: storedTaskData.trainMask ?? (Array.isArray(derivedTrainMask) ? derivedTrainMask : null),
+        valMask: storedTaskData.valMask ?? (Array.isArray(graphPayload.graph_data_json?.valMask) ? graphPayload.graph_data_json.valMask : null),
+        testMask: storedTaskData.testMask ?? (Array.isArray(graphPayload.graph_data_json?.testMask) ? graphPayload.graph_data_json.testMask : null),
+      })
 
       const snapshots = replay.snapshots || detail.snapshots_json || []
       loadSnapshots(snapshots)
@@ -418,6 +433,7 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
     setMockMode,
     setTask,
     setTaskData,
+    setTrainMask,
   ])
 
   const handleSaveMetadata = useCallback(async (nextIsBest = selectedDetail?.is_best) => {
@@ -704,8 +720,50 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
           </div>
 
           {/* ── Right: Detail Panels ── */}
-          <div className="min-h-0 overflow-auto custom-scrollbar rounded-2xl bg-black/20 p-5 shadow-inner shadow-white/5">
+          <div className="min-h-0 overflow-hidden custom-scrollbar rounded-2xl bg-black/20 shadow-inner shadow-white/5 flex flex-col">
+            {/* Right pane tab bar */}
+            <div className="flex items-center gap-1 px-5 pt-4 pb-2 border-b border-white/5">
+              <button
+                onClick={() => setRightTab('details')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  rightTab === 'details'
+                    ? 'bg-amethyst/15 text-amethyst ring-1 ring-amethyst/30'
+                    : 'text-twilight hover:text-starlight hover:bg-white/5'
+                }`}
+              >
+                <FileText size={13} /> Details
+              </button>
+              <button
+                onClick={() => setRightTab('analyst')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  rightTab === 'analyst'
+                    ? 'bg-amethyst/15 text-amethyst ring-1 ring-amethyst/30'
+                    : 'text-twilight hover:text-starlight hover:bg-white/5'
+                }`}
+              >
+                <Brain size={13} /> AI Analyst
+              </button>
+              <button
+                onClick={() => setRightTab('compare')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  rightTab === 'compare'
+                    ? 'bg-amethyst/15 text-amethyst ring-1 ring-amethyst/30'
+                    : 'text-twilight hover:text-starlight hover:bg-white/5'
+                }`}
+              >
+                <BarChart3 size={13} /> Compare
+                {selectedCompareIds.length >= 2 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-aurora-green/10 text-aurora-green text-[10px] font-bold">
+                    {selectedCompareIds.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-5">
             <div className="space-y-6">
+              {/* ── Details Tab ── */}
+              {rightTab === 'details' && <>
               <Panel
                 title="Selected Run"
                 subtitle="Pin best run, edit notes, and load replay from one place."
@@ -908,12 +966,38 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                   </motion.div>
                 )}
               </Panel>
+              </>}
 
-              {/* ── Compare Panel ── */}
+              {/* ── AI Analyst Tab ── */}
+              {rightTab === 'analyst' && <>
+                {selectedExperimentId ? (
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
+                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-400 mb-2">
+                        <Brain size={14} /> AI Research Analyst
+                      </div>
+                      <p className="text-xs text-slate-300">
+                        Deep analysis of {selectedDetail?.model_type || 'this model'} on {selectedDetail?.dataset_name || 'this dataset'}.
+                        Recommendations, failure patterns, and research notes auto-generated from training data.
+                      </p>
+                    </div>
+                    <RecommendationsPanel experimentId={selectedExperimentId} />
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Brain size={28} className="text-moonlight/40" />}
+                    title="No run selected"
+                    description="Select a run to view AI analysis and recommendations."
+                  />
+                )}
+              </>}
+
+              {/* ── Compare Tab ── */}
+              {rightTab === 'compare' && <>
               <Panel
                 title="Metrics Comparison"
                 subtitle="Select 2–4 runs to visualize learning curves side-by-side."
-                className="!h-auto !border-transparent !bg-transparent !p-0 !shadow-none mt-6"
+                className="!h-auto !border-transparent !bg-transparent !p-0 !shadow-none"
                 actions={
                   <button
                     onClick={handleCompare}
@@ -1018,7 +1102,16 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                   </motion.div>
                 )}
               </Panel>
+
+              {/* AI Comparison Insights */}
+              {selectedCompareIds.length >= 2 && (
+                <div className="mt-4">
+                  <ResearchInsightsPanel experimentIds={selectedCompareIds} />
+                </div>
+              )}
+              </>}
             </div>
+          </div>
           </div>
         </div>
       </motion.div>

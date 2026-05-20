@@ -5,54 +5,78 @@ import {
 } from '../../utils/task2Metrics'
 import EmptyState from '../primitives/EmptyState'
 
-/**
- * Task2Diagnostics
- *   - Confidence-distribution histogram split by correct / wrong.
- *   - Scatter: attention-entropy (x) vs graph density (y), coloured by
- *     correctness. Helps spot "model relies on one node for diffuse graphs".
- *
- * Stateless / pure — no D3 / Plotly; uses SVG + divs so the panel stays
- * lightweight and works regardless of container size.
- */
-export default function Task2Diagnostics({ snap, graphs, onSelect, selectedId }) {
+function matchesCell(point, selectedCell) {
+  if (!selectedCell) return true
+  return point.predicted === selectedCell.pred && point.groundTruth === selectedCell.gt
+}
+
+function buildExplanation(points = []) {
+  const sparseDiffuse = points.filter((point) => (
+    Number.isFinite(point.entropy) && point.entropy >= 0.7
+    && Number.isFinite(point.density) && point.density < 0.2
+  ))
+  const denseStable = points.filter((point) => (
+    point.correct
+    && Number.isFinite(point.entropy) && point.entropy < 0.35
+    && Number.isFinite(point.density) && point.density >= 0.5
+  ))
+
+  if (sparseDiffuse.length) {
+    return `${sparseDiffuse.length} sparse, high-entropy graph${sparseDiffuse.length === 1 ? '' : 's'} suggest the model is missing a strong local motif.`
+  }
+  if (denseStable.length) {
+    return `${denseStable.length} dense, low-entropy graph${denseStable.length === 1 ? '' : 's'} behave like stable motif wins.`
+  }
+  return 'Read entropy, density, and correctness together to decide whether the model is reasoning from one motif or many weak cues.'
+}
+
+export default function Task2Diagnostics({
+  snap,
+  graphs,
+  onSelect,
+  selectedId,
+  selectedCell = null,
+}) {
   const hist = useMemo(() => buildConfidenceHistogram(snap, 10), [snap])
   const points = useMemo(() => buildDiagnosticsPoints(snap, graphs || []), [snap, graphs])
 
-  const hasPoints = points.some((p) => p.density != null)
+  const hasPoints = points.some((point) => point.density != null)
   const hasConfidences = (snap?.graph_confidences?.length || 0) > 0
 
   if (!hasPoints && !hasConfidences) {
     return (
       <EmptyState
         title="Diagnostics unavailable"
-        description="Live Task 2 snapshots expose entropy, density and confidence metrics after training starts."
+        description="Live Task 2 snapshots expose entropy, density, and confidence metrics after training starts."
       />
     )
   }
 
-  const maxBinCount = Math.max(1, ...hist.map((b) => b.count))
+  const scopedPoints = selectedCell
+    ? points.filter((point) => matchesCell(point, selectedCell))
+    : points
+  const explanation = buildExplanation(scopedPoints)
+  const maxBinCount = Math.max(1, ...hist.map((bin) => bin.count))
 
-  // Scatter bounds
-  const ex = points.map((p) => p.entropy).filter(Number.isFinite)
-  const dy = points.map((p) => p.density).filter((v) => v != null && Number.isFinite(v))
-  const exMin = ex.length ? Math.min(...ex, 0) : 0
-  const exMax = ex.length ? Math.max(...ex, 1) : 1
-  const dyMin = dy.length ? Math.min(...dy, 0) : 0
-  const dyMax = dy.length ? Math.max(...dy, 1) : 1
-  const exRange = Math.max(0.01, exMax - exMin)
-  const dyRange = Math.max(0.01, dyMax - dyMin)
+  const entropyValues = points.map((point) => point.entropy).filter(Number.isFinite)
+  const densityValues = points.map((point) => point.density).filter((value) => value != null && Number.isFinite(value))
+  const entropyMin = entropyValues.length ? Math.min(...entropyValues, 0) : 0
+  const entropyMax = entropyValues.length ? Math.max(...entropyValues, 1) : 1
+  const densityMin = densityValues.length ? Math.min(...densityValues, 0) : 0
+  const densityMax = densityValues.length ? Math.max(...densityValues, 1) : 1
+  const entropyRange = Math.max(0.01, entropyMax - entropyMin)
+  const densityRange = Math.max(0.01, densityMax - densityMin)
 
   const scatterW = 100
   const scatterH = 100
-  const projX = (v) => ((v - exMin) / exRange) * scatterW
-  const projY = (v) => scatterH - ((v - dyMin) / dyRange) * scatterH
+  const projectX = (value) => ((value - entropyMin) / entropyRange) * scatterW
+  const projectY = (value) => scatterH - ((value - densityMin) / densityRange) * scatterH
 
   return (
     <div
       className="grid gap-4 h-full"
       style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}
     >
-      {/* Confidence histogram */}
       <section className="min-w-0">
         <div className="flex items-baseline justify-between mb-2">
           <h4 className="text-nano uppercase tracking-ultra text-slate-500">
@@ -63,17 +87,17 @@ export default function Task2Diagnostics({ snap, graphs, onSelect, selectedId })
           </span>
         </div>
         <div className="flex items-end gap-0.5 h-24 rounded-md border border-slate-800/60 p-2 bg-slate-950/40">
-          {hist.map((b, i) => {
-            const correctH = (b.correct / maxBinCount) * 100
-            const wrongH = (b.wrong / maxBinCount) * 100
+          {hist.map((bin, index) => {
+            const correctHeight = (bin.correct / maxBinCount) * 100
+            const wrongHeight = (bin.wrong / maxBinCount) * 100
             return (
               <div
-                key={i}
+                key={index}
                 className="flex-1 h-full flex flex-col-reverse gap-px min-w-0"
-                title={`Conf ${(b.range[0] * 100).toFixed(0)}–${(b.range[1] * 100).toFixed(0)}% · ${b.count} total · ✓${b.correct} ✗${b.wrong}`}
+                title={`Conf ${(bin.range[0] * 100).toFixed(0)}-${(bin.range[1] * 100).toFixed(0)}% · ${bin.count} total · correct ${bin.correct} · wrong ${bin.wrong}`}
               >
-                <div style={{ height: `${correctH}%` }} className="bg-emerald-500/80 rounded-sm" />
-                <div style={{ height: `${wrongH}%` }} className="bg-red-500/80 rounded-sm" />
+                <div style={{ height: `${correctHeight}%` }} className="bg-emerald-500/80 rounded-sm" />
+                <div style={{ height: `${wrongHeight}%` }} className="bg-red-500/80 rounded-sm" />
               </div>
             )
           })}
@@ -89,44 +113,49 @@ export default function Task2Diagnostics({ snap, graphs, onSelect, selectedId })
         </div>
       </section>
 
-      {/* Entropy × density scatter */}
       {hasPoints && (
         <section className="min-w-0">
-          <div className="flex items-baseline justify-between mb-2">
+          <div className="flex items-baseline justify-between mb-2 gap-3">
             <h4 className="text-nano uppercase tracking-ultra text-slate-500">
-              Attention entropy × structural density
+              Entropy × density
             </h4>
             <span className="text-nano text-slate-600 font-mono">
-              [{exMin.toFixed(2)}, {exMax.toFixed(2)}] · [{dyMin.toFixed(2)}, {dyMax.toFixed(2)}]
+              [{entropyMin.toFixed(2)}, {entropyMax.toFixed(2)}] · [{densityMin.toFixed(2)}, {densityMax.toFixed(2)}]
             </span>
           </div>
+          <p className="mb-2 text-[11px] leading-relaxed text-slate-400">
+            {explanation}
+          </p>
           <div className="relative rounded-md border border-slate-800/60 bg-slate-950/40 p-2">
             <svg viewBox={`-8 -4 ${scatterW + 12} ${scatterH + 16}`} className="w-full h-40" role="img" aria-label="entropy vs density scatter">
-              {/* Axes */}
               <line x1="0" y1={scatterH} x2={scatterW} y2={scatterH} stroke="#1e293b" strokeWidth="0.4" />
               <line x1="0" y1="0" x2="0" y2={scatterH} stroke="#1e293b" strokeWidth="0.4" />
-              {/* Axis labels */}
               <text x={scatterW / 2} y={scatterH + 10} textAnchor="middle" fill="#64748b" fontSize="4">entropy →</text>
               <text x={-6} y={scatterH / 2} transform={`rotate(-90 -6 ${scatterH / 2})`} textAnchor="middle" fill="#64748b" fontSize="4">density →</text>
-              {points.map((p) => {
-                if (p.density == null || !Number.isFinite(p.entropy)) return null
-                const cx = projX(p.entropy)
-                const cy = projY(p.density)
-                const fill = p.correct ? 'rgba(16,185,129,0.75)' : 'rgba(239,68,68,0.85)'
-                const stroke = selectedId === p.id ? '#22d3ee' : 'rgba(15,23,42,0.9)'
+              {points.map((point) => {
+                if (point.density == null || !Number.isFinite(point.entropy)) return null
+                const active = selectedId === point.id
+                const matched = matchesCell(point, selectedCell)
+                const cx = projectX(point.entropy)
+                const cy = projectY(point.density)
+                const fill = point.correct ? 'rgba(16,185,129,0.78)' : 'rgba(239,68,68,0.82)'
+                const opacity = matched ? 1 : 0.18
+                const stroke = active ? '#22d3ee' : matched ? 'rgba(15,23,42,0.85)' : 'rgba(71,85,105,0.55)'
+
                 return (
                   <circle
-                    key={p.id}
+                    key={point.id}
                     cx={cx}
                     cy={cy}
-                    r={selectedId === p.id ? 2.6 : 1.8}
+                    r={active ? 2.7 : matched ? 2 : 1.6}
                     fill={fill}
+                    fillOpacity={opacity}
                     stroke={stroke}
                     strokeWidth="0.4"
-                    onClick={() => onSelect?.(p.id)}
+                    onClick={() => onSelect?.(point.id)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <title>{`G#${p.id} · entropy ${p.entropy.toFixed(2)} · density ${p.density?.toFixed(2)} · ${p.correct ? '✓' : '✗'}`}</title>
+                    <title>{`G#${point.id} · entropy ${point.entropy.toFixed(2)} · density ${point.density?.toFixed(2)} · ${point.correct ? 'correct' : 'wrong'}`}</title>
                   </circle>
                 )
               })}

@@ -117,6 +117,9 @@ class SnapshotTask2(BaseModel):
     graph_correct: List[int]
     graph_embeddings_2d: List[List[float]]
     node_contributions: List[List[float]]
+    graph_per_class_metrics: List[Dict[str, Any]] = Field(default_factory=list)
+    graph_calibration: Dict[str, Any] = Field(default_factory=dict)
+    structural_bias_signals: Dict[str, Any] = Field(default_factory=dict)
     train_loss: float
     val_loss: float
     train_acc: float

@@ -19,6 +19,7 @@ export default function TopologyView() {
   const selectedModel = useGNNStore(s => s.selectedModel)
   const viewMode = useGNNStore(s => s.viewMode)
   const selectedNodeId = useGNNStore(s => s.selectedNodeId)
+  const classNames = useGNNStore(s => s.classNames)
   const setSelectedNode = useGNNStore(s => s.setSelectedNode)
   const setHoveredNode = useGNNStore(s => s.setHoveredNode)
   const attentionHead = useGNNStore(s => s.attentionHead)
@@ -50,6 +51,7 @@ export default function TopologyView() {
   const animState = useRef({
     snaps: [],
     cef: 0,
+    currentSnapshot: null,
     sid: null,
     vm: 'prediction',
     gt: null,
@@ -60,7 +62,36 @@ export default function TopologyView() {
     kHopNeighbors: null,
     showErrorsOnly: false,
     nodeCorrectness: null,
+    attentionMap: null,
+    perHeadMap: null,
+    nodeMaxAttnMap: null,
+    showNodeLabels: true,
+    disableMotion: false,
+    showLinkParticles: true,
   })
+
+  const graphPerf = useMemo(() => {
+    const nodeCount = rawGraphData?.nodes?.length || 0
+    const linkCount = rawGraphData?.links?.length || 0
+    const isShowcaseGraph = nodeCount > 0 && nodeCount <= 80 && linkCount <= 260
+    const isMediumGraph = nodeCount > 140 || linkCount > 320
+    const isLargeGraph = nodeCount > 800 || linkCount > 2000
+    const isVeryLargeGraph = nodeCount > 1800 || linkCount > 4500
+    return {
+      nodeCount,
+      linkCount,
+      isShowcaseGraph,
+      isMediumGraph,
+      isLargeGraph,
+      isVeryLargeGraph,
+      showNodeLabels: nodeCount <= 80,
+      disableMotion: isVeryLargeGraph,
+      showLinkParticles: !isLargeGraph,
+      enableNodeDrag: nodeCount < 900,
+      warmupTicks: isShowcaseGraph ? 45 : isVeryLargeGraph ? 12 : 30,
+      cooldownTicks: isShowcaseGraph ? 140 : isVeryLargeGraph ? 40 : 100,
+    }
+  }, [rawGraphData])
 
   // Cập nhật Ref và ép Redraw 60 lần/giây
   useEffect(() => {
@@ -135,6 +166,8 @@ export default function TopologyView() {
     animState.current = {
       snaps: snapshots || [],
       cef: currentEpochFloat,
+      currentSnapshot: currentSnap,
+      totalEpochs: snapshots?.length || 0,
       sid: selectedNodeId,
       vm: viewMode,
       gt: groundTruth || null,
@@ -148,6 +181,9 @@ export default function TopologyView() {
       attentionMap,
       perHeadMap,
       nodeMaxAttnMap,
+      showNodeLabels: graphPerf.showNodeLabels,
+      disableMotion: graphPerf.disableMotion,
+      showLinkParticles: graphPerf.showLinkParticles,
     }
 
     // Compute K-Hop neighbors when selected node changes
@@ -156,7 +192,7 @@ export default function TopologyView() {
     } else {
       kHopNeighborsRef.current = null
     }
-  }, [snapshots, currentEpochFloat, selectedNodeId, viewMode, groundTruth, selectedModel, attentionHead, kHopEnabled, kHopMaxHops, rawGraphData, showErrorsOnly])
+  }, [snapshots, currentEpochFloat, selectedNodeId, viewMode, groundTruth, selectedModel, attentionHead, kHopEnabled, kHopMaxHops, rawGraphData, showErrorsOnly, graphPerf])
 
   // Resize handler — re-attach whenever the target node remounts
   // (e.g. after activeGraphData flips from null → data, the render tree swaps
@@ -208,6 +244,38 @@ export default function TopologyView() {
   }, [graphData])
 
   const activeGraphData = stableGraphData || graphData
+
+  const legendEntries = useMemo(() => {
+    const explicitNames = Array.isArray(classNames) && classNames.length > 0
+      ? classNames
+      : null
+    const labels = new Set()
+
+    if (explicitNames) {
+      explicitNames.forEach((_, index) => labels.add(index))
+    } else if (Array.isArray(groundTruth) && groundTruth.length > 0) {
+      groundTruth.forEach((label) => {
+        if (Number.isFinite(label) && label >= 0) labels.add(Number(label))
+      })
+    } else {
+      const epochInt = snapshots?.length
+        ? Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat || 0)))
+        : 0
+      const snap = snapshots?.[epochInt]
+      snap?.node_predictions?.forEach?.((label) => {
+        if (Number.isFinite(label) && label >= 0) labels.add(Number(label))
+      })
+    }
+
+    return Array.from(labels)
+      .sort((a, b) => a - b)
+      .slice(0, 12)
+      .map((label) => ({
+        label,
+        name: explicitNames?.[label] || CLASS_NAMES[label] || `C${label}`,
+        color: CLASS_COLORS[label % CLASS_COLORS.length],
+      }))
+  }, [classNames, currentEpochFloat, groundTruth, snapshots])
 
   // Context Menu Handlers
   const handleNodeRightClick = useCallback((node, event) => {
@@ -274,7 +342,7 @@ export default function TopologyView() {
       if (!node || !ctx) return
       if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
 
-      const totalEpochsSafe = totalEpochs || 100
+      const totalEpochsSafe = state.totalEpochs || 100
       const selectedModelSafe = selectedModel || 'GCN'
       const gtSafe = gt || []
 
@@ -303,32 +371,52 @@ export default function TopologyView() {
 
       // Draw K-Hop glow effect
       if (kHopInfo && typeof kHopInfo === 'object' && kHopInfo.hop > 0) {
-        const glowRadius = 15 - kHopInfo.hop * 3
-        const alpha = 0.4 - kHopInfo.hop * 0.1
-        const hopColors = ['#a855f7', '#6366f1', '#ec4899']
+        if (!graphPerf.isLargeGraph) {
+          const glowRadius = 15 - kHopInfo.hop * 3
+          const alpha = 0.4 - kHopInfo.hop * 0.1
+          const hopColors = ['#a855f7', '#6366f1', '#ec4899']
 
-        ctx.beginPath()
-        ctx.arc(node.x, node.y, glowRadius, 0, 2 * Math.PI)
-        ctx.fillStyle = hopColors[kHopInfo.hop - 1] + Math.floor(alpha * 255).toString(16).padStart(2, '0')
-        ctx.fill()
+          ctx.beginPath()
+          ctx.arc(node.x, node.y, glowRadius, 0, 2 * Math.PI)
+          ctx.fillStyle = hopColors[kHopInfo.hop - 1] + Math.floor(alpha * 255).toString(16).padStart(2, '0')
+          ctx.fill()
+        }
       }
 
       if (isMisclassified) {
-        const pulseRadius = 12 + Math.sin(Date.now() / 200) * 3
-        ctx.beginPath()
-        ctx.arc(node.x, node.y, pulseRadius, 0, 2 * Math.PI)
-        ctx.strokeStyle = 'rgba(244, 63, 94, 0.6)'
-        ctx.lineWidth = 2
-        ctx.stroke()
+        if (graphPerf.isLargeGraph) {
+          // Simple small dot — no animation, no glow
+          ctx.beginPath()
+          ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI)
+          ctx.fillStyle = 'rgba(244, 63, 94, 0.35)'
+          ctx.fill()
+        } else {
+          const pulseRadius = state.disableMotion ? 11 : 12 + Math.sin(Date.now() / 200) * 3
+          ctx.beginPath()
+          ctx.arc(node.x, node.y, pulseRadius, 0, 2 * Math.PI)
+          ctx.strokeStyle = 'rgba(244, 63, 94, 0.6)'
+          ctx.lineWidth = 2
+          ctx.stroke()
 
-        ctx.beginPath()
-        ctx.arc(node.x, node.y, 8, 0, 2 * Math.PI)
-        ctx.fillStyle = 'rgba(244, 63, 94, 0.15)'
-        ctx.fill()
+          ctx.beginPath()
+          ctx.arc(node.x, node.y, 8, 0, 2 * Math.PI)
+          ctx.fillStyle = 'rgba(244, 63, 94, 0.15)'
+          ctx.fill()
+        }
       }
 
       // Enrich node with GAT maxAttn for glow effect
-      const enrichedNode = { ...node, color: nodeColor }
+      const enrichedNode = {
+        ...node,
+        color: nodeColor,
+        confidence: state.currentSnapshot?.node_confidence?.[node.id] ?? 0,
+        isCorrect: state.currentSnapshot?.node_correctness?.[node.id] === 1,
+        majorityRatio: state.currentSnapshot?.majority_ratio?.[node.id] ?? 0,
+        neighborContext: state.currentSnapshot?.neighbor_majority?.[node.id] ?? null,
+        dirichletEnergy: state.currentSnapshot?.dirichlet_energy ?? null,
+        initialDirichletEnergy: snaps?.[0]?.dirichlet_energy ?? null,
+        isShowcaseGraph: graphPerf.isShowcaseGraph,
+      }
       if (selectedModelSafe === 'GAT' && state.nodeMaxAttnMap) {
         enrichedNode.maxAttn = state.nodeMaxAttnMap.get(node.id) || 0
       }
@@ -341,11 +429,15 @@ export default function TopologyView() {
         isHovered: false,
         kHopInfo,
         isMisclassified,
+        showNodeLabels: state.showNodeLabels,
+        disableMotion: state.disableMotion,
+        showcaseMode: graphPerf.isShowcaseGraph,
+        largeGraph: graphPerf.isLargeGraph,
       })
     } catch (error) {
       logger.error('nodeCanvasObject error:', error)
     }
-  }, [selectedModel, totalEpochs]) // Removed showErrorsOnly dependency
+  }, [graphPerf, selectedModel]) // totalEpochs removed — read from animState ref to avoid re-creating callback on every snapshot
 
   if (!activeGraphData) {
     return (
@@ -386,7 +478,6 @@ export default function TopologyView() {
             const srcHop = kHopNeighbors.get(srcId)
             const tgtHop = kHopNeighbors.get(tgtId)
 
-            // Highlight edges in the K-Hop neighborhood
             if (srcHop && tgtHop) {
               const maxHop = Math.max(srcHop.hop, tgtHop.hop)
               if (maxHop <= 3) {
@@ -394,14 +485,25 @@ export default function TopologyView() {
                 return `rgba(168, 85, 247, ${alpha})`
               }
             }
-            // Dim edges outside the neighborhood
-            return 'rgba(91, 86, 137, 0.03)'
+            return graphPerf.isShowcaseGraph ? 'rgba(91, 86, 137, 0.04)' : 'rgba(91, 86, 137, 0.05)'
+          }
+
+          // Large graph: use static color to avoid per-link prediction lookups
+          if (graphPerf.isLargeGraph) {
+            if (sid !== null) {
+              const srcId = typeof link.source === 'object' ? link.source.id : link.source
+              const tgtId = typeof link.target === 'object' ? link.target.id : link.target
+              return (srcId === sid || tgtId === sid) ? 'rgba(168, 85, 247, 0.4)' : 'rgba(91, 86, 137, 0.08)'
+            }
+            return 'rgba(91, 86, 137, 0.1)'
           }
 
           if (model === 'SAGE') {
             const seed = link._idx + Math.floor(cef * 5)
             const isActive = (Math.sin(seed) * 10000 % 1) > 0.4
-            return isActive ? 'rgba(168, 85, 247, 0.2)' : 'rgba(91, 86, 137, 0.04)'
+            return isActive
+              ? (graphPerf.isShowcaseGraph ? 'rgba(168, 85, 247, 0.18)' : 'rgba(168, 85, 247, 0.24)')
+              : (graphPerf.isShowcaseGraph ? 'rgba(91, 86, 137, 0.045)' : 'rgba(91, 86, 137, 0.055)')
           }
           // GCN: gradient based on neighbor prediction agreement
           if (model === 'GCN' && snaps && snaps.length > 0) {
@@ -414,12 +516,15 @@ export default function TopologyView() {
               const tgtPred = snap.node_predictions[tgtId]
               if (srcPred !== undefined && tgtPred !== undefined) {
                 const agree = srcPred === tgtPred
-                return agree ? 'rgba(99, 102, 241, 0.25)' : 'rgba(91, 86, 137, 0.06)'
+                if (graphPerf.isShowcaseGraph) {
+                  return agree ? 'rgba(99, 102, 241, 0.18)' : 'rgba(91, 86, 137, 0.05)'
+                }
+                return agree ? 'rgba(99, 102, 241, 0.3)' : 'rgba(91, 86, 137, 0.08)'
               }
             }
-            return 'rgba(91,86,137,0.1)'
+            return graphPerf.isShowcaseGraph ? 'rgba(91,86,137,0.06)' : 'rgba(91,86,137,0.12)'
           }
-          if (model !== 'GAT' || !snaps || snaps.length === 0) return 'rgba(91,86,137,0.1)'
+          if (model !== 'GAT' || !snaps || snaps.length === 0) return graphPerf.isShowcaseGraph ? 'rgba(91,86,137,0.06)' : 'rgba(91,86,137,0.12)'
 
           // Get attention weight from attentionMap (correct edge mapping)
           const srcId = typeof link.source === 'object' ? link.source.id : link.source
@@ -427,7 +532,6 @@ export default function TopologyView() {
           const edgeKey = Math.min(srcId, tgtId) + '-' + Math.max(srcId, tgtId)
 
           let weight = 0
-          // Use per-head map if a specific head is selected, otherwise use average
           const activeMap = perHeadMap || attentionMap
           if (activeMap) {
             weight = activeMap.get(edgeKey) || 0
@@ -435,12 +539,13 @@ export default function TopologyView() {
 
           if (sid !== null) {
             const isConnected = link.source.id === sid || link.target.id === sid
-            return isConnected ? `rgba(168, 85, 247, ${0.4 + weight * 0.6})` : 'rgba(91,86,137,0.05)'
+            return isConnected ? `rgba(168, 85, 247, ${0.34 + weight * 0.42})` : (graphPerf.isShowcaseGraph ? 'rgba(91,86,137,0.045)' : 'rgba(91,86,137,0.065)')
           }
-          return `rgba(99, 102, 241, ${0.08 + weight * 0.25})`
+          return `rgba(99, 102, 241, ${graphPerf.isShowcaseGraph ? 0.075 + weight * 0.18 : 0.1 + weight * 0.27})`
         }}
         linkDirectionalParticles={(link) => {
-          const { model, snaps, cef, attentionMap, perHeadMap } = animState.current
+          const { model, snaps, cef, attentionMap, perHeadMap, showLinkParticles, disableMotion } = animState.current
+          if (!showLinkParticles || disableMotion) return 0
           if (model === 'SAGE') {
             const seed = link._idx + Math.floor(cef * 10)
             return (Math.sin(seed) * 10000 % 1) > 0.85 ? 1 : 0
@@ -464,7 +569,8 @@ export default function TopologyView() {
         }}
         linkDirectionalParticleWidth={1.5}
         linkDirectionalParticleSpeed={(link) => {
-          const { model, attentionMap, perHeadMap } = animState.current
+          const { model, attentionMap, perHeadMap, showLinkParticles, disableMotion } = animState.current
+          if (!showLinkParticles || disableMotion) return 0
           if (model === 'SAGE') return 0.015
           if (model === 'GCN') return 0.01
 
@@ -492,10 +598,10 @@ export default function TopologyView() {
             }
           }
         }}
-        warmupTicks={30}
-        cooldownTicks={100}
+        warmupTicks={graphPerf.warmupTicks}
+        cooldownTicks={graphPerf.cooldownTicks}
         backgroundColor="transparent"
-        enableNodeDrag={true}
+        enableNodeDrag={graphPerf.enableNodeDrag}
       />
 
       <NodeHoverCard />
@@ -640,11 +746,21 @@ export default function TopologyView() {
       {/* Legend */}
       <div className="absolute bottom-3 left-3 bg-[#0a0514]/80 backdrop-blur-md rounded-lg px-3 py-2
                       border border-[rgba(168,85,247,0.08)]/50 z-10 pointer-events-none">
-        <div className="flex items-center gap-3">
-          {CLASS_COLORS.slice(0, 7).map((c, i) => (
-            <div key={i} className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: c }} />
-              <span className="text-[9px] text-[#5b5689] font-bold font-mono">C{i}</span>
+        <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-[rgba(168,85,247,0.08)]/50 pb-2">
+          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[8px] uppercase tracking-[0.18em] text-[#a5a0d0]">
+            {selectedModel}
+          </span>
+          <span className="text-[9px] text-[#8f88c8]">
+            {selectedModel === 'GCN' && 'Edge agreement + smoothing halo'}
+            {selectedModel === 'GAT' && 'Attention focus + head-sensitive glow'}
+            {selectedModel === 'SAGE' && 'Neighborhood context + boundary resilience'}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 max-w-[22rem]">
+          {legendEntries.map((entry) => (
+            <div key={entry.label} className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
+              <span className="text-[9px] text-[#5b5689] font-bold font-mono">{entry.name}</span>
             </div>
           ))}
         </div>

@@ -11,10 +11,11 @@ def build_model(config, data=None, num_features=None, num_classes=None):
     default_dropout = 0.6 if model_type == 'GAT' else 0.5
     dropout = config.get('dropout', default_dropout)
     num_layers = config.get('num_layers', 3)
-    
+
     if data is not None:
         num_features = data.x.size(1)
-        num_classes = max(2, int(data.y.max().item()) + 1)
+        if num_classes is None:
+            num_classes = max(2, int(data.y.max().item()) + 1)
     elif num_features is None or num_classes is None:
         # Mặc định cho Cora
         num_features = 1433

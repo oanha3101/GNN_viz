@@ -10,11 +10,14 @@ import { getDefaultPathForUser, isAdminUser } from './utils/appRoutes'
 const AuthPage = lazy(() => import('./pages/AuthPage'))
 const ExperimentsPage = lazy(() => import('./pages/ExperimentsPage'))
 const LabShell = lazy(() => import('./LabShell'))
+const LabAnalysisPage = lazy(() => import('./pages/app/LabAnalysisPage'))
 const DashboardPage = lazy(() => import('./pages/app/DashboardPage'))
 const DatasetsPage = lazy(() => import('./pages/app/DatasetsPage'))
 const ProjectsPage = lazy(() => import('./pages/app/ProjectsPage'))
+const ProfilePage = lazy(() => import('./pages/app/ProfilePage'))
 const AdminOverviewPage = lazy(() => import('./pages/admin/AdminOverviewPage'))
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'))
+const AdminProjectsPage = lazy(() => import('./pages/admin/AdminProjectsPage'))
 const AdminDatasetsPage = lazy(() => import('./pages/admin/AdminDatasetsPage'))
 const AdminExperimentsPage = lazy(() => import('./pages/admin/AdminExperimentsPage'))
 const AdminSessionsPage = lazy(() => import('./pages/admin/AdminSessionsPage'))
@@ -92,10 +95,12 @@ export default function App() {
         <Route path="/app" element={<AppLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<LazyRoute><DashboardPage /></LazyRoute>} />
+          <Route path="profile" element={<LazyRoute><ProfilePage /></LazyRoute>} />
           <Route path="projects" element={<LazyRoute><ProjectsPage /></LazyRoute>} />
           <Route path="datasets" element={<LazyRoute><DatasetsPage /></LazyRoute>} />
           <Route path="experiments" element={<LazyRoute><ExperimentsPage /></LazyRoute>} />
           <Route path="lab" element={<LazyRoute><LabShell /></LazyRoute>} />
+          <Route path="lab/analysis/:panel" element={<LazyRoute><LabAnalysisPage /></LazyRoute>} />
           <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
         </Route>
       </Route>
@@ -105,6 +110,7 @@ export default function App() {
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<LazyRoute><AdminOverviewPage /></LazyRoute>} />
           <Route path="users" element={<LazyRoute><AdminUsersPage /></LazyRoute>} />
+          <Route path="projects" element={<LazyRoute><AdminProjectsPage /></LazyRoute>} />
           <Route path="datasets" element={<LazyRoute><AdminDatasetsPage /></LazyRoute>} />
           <Route path="experiments" element={<LazyRoute><AdminExperimentsPage /></LazyRoute>} />
           <Route path="sessions" element={<LazyRoute><AdminSessionsPage /></LazyRoute>} />

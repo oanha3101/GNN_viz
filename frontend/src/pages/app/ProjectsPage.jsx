@@ -1,4 +1,4 @@
-import { FolderKanban, Plus, RefreshCw } from 'lucide-react'
+import { FolderKanban, Plus, RefreshCw, Sparkles, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import EmptyState from '../../components/primitives/EmptyState'
 import ErrorState from '../../components/primitives/ErrorState'
@@ -14,6 +14,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [projects, setProjects] = useState([])
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [form, setForm] = useState({ title: '', description: '' })
   const [submitting, setSubmitting] = useState(false)
 
@@ -47,6 +48,7 @@ export default function ProjectsPage() {
         }),
       })
       setForm({ title: '', description: '' })
+      setIsCreateOpen(false)
       setActiveProjectContext(project.id, project.title)
       await loadProjects()
     } catch (err) {
@@ -67,8 +69,8 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-6">
       <SectionCard
-        title="Create Project"
-        subtitle="Each experiment run should belong to a clear project container."
+        title="Project Setup"
+        subtitle="Keep project creation tucked away until you need a new governed space for upcoming runs."
         actions={
           <button
             type="button"
@@ -79,29 +81,64 @@ export default function ProjectsPage() {
           </button>
         }
       >
-        <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-          <input
-            value={form.title}
-            onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-            placeholder="Project title"
-            className="input-cosmic"
-          />
-          <input
-            value={form.description}
-            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-            placeholder="Short description"
-            className="input-cosmic"
-          />
+        <div className="workspace-create-banner">
+          <div>
+            <div className="text-sm font-semibold text-white-star">Create project</div>
+            <div className="mt-1 text-xs text-twilight">
+              Open a draft only when you are ready to group experiments under a shared context.
+            </div>
+          </div>
           <button
             type="button"
-            disabled={submitting || !form.title.trim()}
-            onClick={handleCreateProject}
-            className="btn-galaxy inline-flex items-center justify-center gap-2 disabled:opacity-50"
+            onClick={() => setIsCreateOpen((prev) => !prev)}
+            className="btn-galaxy inline-flex items-center justify-center gap-2"
           >
-            <Plus size={14} /> {submitting ? 'Creating...' : 'Create'}
+            <Plus size={14} /> {isCreateOpen ? 'Close form' : 'Create project'}
           </button>
         </div>
-        {error ? <div className="mt-3 text-sm text-aurora-rose">{error.message}</div> : null}
+        {isCreateOpen ? (
+          <div className="workspace-edit-card mt-4">
+            <div className="workspace-edit-banner">
+              <Sparkles size={13} />
+              New project
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                value={form.title}
+                onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                placeholder="Project title"
+                className="input-cosmic"
+              />
+              <input
+                value={form.description}
+                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder="Short description"
+                className="input-cosmic"
+              />
+            </div>
+            <div className="workspace-inline-actions mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setForm({ title: '', description: '' })
+                  setIsCreateOpen(false)
+                }}
+                className="btn-ghost inline-flex items-center gap-2"
+              >
+                <X size={14} /> Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submitting || !form.title.trim()}
+                onClick={handleCreateProject}
+                className="btn-galaxy inline-flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Plus size={14} /> {submitting ? 'Creating...' : 'Create project'}
+              </button>
+            </div>
+            {error ? <div className="mt-3 text-sm text-aurora-rose">{error.message}</div> : null}
+          </div>
+        ) : null}
       </SectionCard>
 
       <SectionCard title="Project Library" subtitle="Select the active project that should own upcoming runs.">
@@ -110,27 +147,38 @@ export default function ProjectsPage() {
             {projects.map((project) => (
               <div
                 key={project.id}
-                className={`glass-card p-5 transition-all ${
+                className={`workspace-record-card ${
                   activeProjectId === project.id
                     ? 'border-amethyst/25 glow-violet-sm'
                     : ''
                 }`}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
+                <div className="workspace-project-card">
+                  <div className="workspace-project-copy">
                     <div className="text-base font-semibold text-white-star">{project.title}</div>
                     <div className="mt-1 text-sm text-twilight">{project.description || 'No description yet.'}</div>
+                    <div className="workspace-project-meta">
+                      <div className="workspace-info-item">
+                        <span className="workspace-info-label">Owner</span>
+                        <strong>{project.owner_id || 'system'}</strong>
+                      </div>
+                      <div className="workspace-info-item">
+                        <span className="workspace-info-label">Visibility</span>
+                        <strong>{project.is_public ? 'Public' : 'Private'}</strong>
+                      </div>
+                    </div>
                     <div className="mt-3 flex items-center gap-3 text-xs text-text-shadow">
-                      <span>owner: {project.owner_id || 'system'}</span>
                       <span className={`badge-cosmic ${project.is_public ? 'badge-aurora' : ''}`}>
                         {project.is_public ? 'public' : 'private'}
                       </span>
                     </div>
                   </div>
-                  <SelectionButton
-                    active={activeProjectId === project.id}
-                    onClick={() => setActiveProjectContext(project.id, project.title)}
-                  />
+                  <div className="workspace-project-actions">
+                    <SelectionButton
+                      active={activeProjectId === project.id}
+                      onClick={() => setActiveProjectContext(project.id, project.title)}
+                    />
+                  </div>
                 </div>
               </div>
             ))}

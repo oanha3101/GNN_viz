@@ -1,6 +1,35 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, LockKeyhole, Network, Sparkles, UserPlus, Zap, Eye, GitBranch } from 'lucide-react'
+import {
+  ArrowRight,
+  Database,
+  GitBranch,
+  Globe2,
+  KeyRound,
+  LockKeyhole,
+  Network,
+  ShieldCheck,
+  Sparkles,
+  UserPlus,
+} from 'lucide-react'
 import useAuthStore from '../../store/authStore'
+
+const PLATFORM_POINTS = [
+  {
+    icon: <Network size={18} />,
+    title: 'Connected workspace',
+    description: 'Keep projects, datasets, and experiments under one research shell.',
+  },
+  {
+    icon: <Database size={18} />,
+    title: 'Governed data flow',
+    description: 'Track versions and training context without juggling multiple screens.',
+  },
+  {
+    icon: <ShieldCheck size={18} />,
+    title: 'Admin-ready controls',
+    description: 'Role-based access and audit-friendly operations are built into the platform.',
+  },
+]
 
 export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticated }) {
   const login = useAuthStore((s) => s.login)
@@ -32,152 +61,75 @@ export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticat
   }
 
   return (
-    <div className="auth-page min-h-screen bg-void text-starlight overflow-hidden">
-      {/* ── Animated Cosmic Background ── */}
-      <div className="auth-cosmos">
-        {/* Nebula clouds — brighter, more visible */}
-        <div className="auth-nebula auth-nebula-1" />
-        <div className="auth-nebula auth-nebula-2" />
-        <div className="auth-nebula auth-nebula-3" />
-        <div className="auth-nebula auth-nebula-4" />
-
-        {/* Floating particles */}
-        {Array.from({ length: 50 }).map((_, i) => (
-          <div
-            key={i}
-            className="auth-particle"
-            style={{
-              '--x': `${Math.random() * 100}%`,
-              '--y': `${Math.random() * 100}%`,
-              '--size': `${Math.random() * 3 + 1}px`,
-              '--duration': `${Math.random() * 20 + 15}s`,
-              '--delay': `${Math.random() * -20}s`,
-              '--drift': `${(Math.random() - 0.5) * 120}px`,
-            }}
-          />
-        ))}
-
-        {/* Constellation graph — connected nodes with edges */}
-        <svg className="auth-constellation" viewBox="0 0 1440 900" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="line-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="rgba(147,51,234,0)" />
-              <stop offset="50%" stopColor="rgba(147,51,234,0.35)" />
-              <stop offset="100%" stopColor="rgba(129,140,248,0)" />
-            </linearGradient>
-            <linearGradient id="line-grad-2" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(129,140,248,0)" />
-              <stop offset="50%" stopColor="rgba(129,140,248,0.25)" />
-              <stop offset="100%" stopColor="rgba(244,114,182,0)" />
-            </linearGradient>
-            <linearGradient id="line-grad-3" x1="100%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="rgba(244,114,182,0)" />
-              <stop offset="50%" stopColor="rgba(196,181,253,0.2)" />
-              <stop offset="100%" stopColor="rgba(147,51,234,0)" />
-            </linearGradient>
-            {/* Node glow filter */}
-            <filter id="node-glow">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-
-          {/* Graph cluster 1 — top left */}
-          <line x1="80" y1="120" x2="250" y2="200" stroke="url(#line-grad)" strokeWidth="1" className="auth-line" />
-          <line x1="250" y1="200" x2="180" y2="350" stroke="url(#line-grad)" strokeWidth="1" className="auth-line" style={{ animationDelay: '-2s' }} />
-          <line x1="80" y1="120" x2="180" y2="350" stroke="url(#line-grad)" strokeWidth="0.7" className="auth-line" style={{ animationDelay: '-4s' }} />
-          <line x1="250" y1="200" x2="420" y2="150" stroke="url(#line-grad)" strokeWidth="1" className="auth-line" style={{ animationDelay: '-1s' }} />
-          <line x1="420" y1="150" x2="380" y2="320" stroke="url(#line-grad-2)" strokeWidth="1" className="auth-line" style={{ animationDelay: '-5s' }} />
-          <line x1="180" y1="350" x2="380" y2="320" stroke="url(#line-grad)" strokeWidth="0.7" className="auth-line" style={{ animationDelay: '-3s' }} />
-
-          {/* Graph cluster 2 — top right */}
-          <line x1="1050" y1="100" x2="1200" y2="220" stroke="url(#line-grad-2)" strokeWidth="1" className="auth-line" style={{ animationDelay: '-6s' }} />
-          <line x1="1200" y1="220" x2="1350" y2="150" stroke="url(#line-grad-2)" strokeWidth="1" className="auth-line" style={{ animationDelay: '-8s' }} />
-          <line x1="1050" y1="100" x2="1350" y2="150" stroke="url(#line-grad-2)" strokeWidth="0.7" className="auth-line" style={{ animationDelay: '-7s' }} />
-          <line x1="1200" y1="220" x2="1280" y2="380" stroke="url(#line-grad-3)" strokeWidth="1" className="auth-line" style={{ animationDelay: '-9s' }} />
-          <line x1="1350" y1="150" x2="1380" y2="350" stroke="url(#line-grad-2)" strokeWidth="0.7" className="auth-line" style={{ animationDelay: '-10s' }} />
-
-          {/* Graph cluster 3 — bottom */}
-          <line x1="150" y1="550" x2="350" y2="650" stroke="url(#line-grad-3)" strokeWidth="1" className="auth-line" style={{ animationDelay: '-4s' }} />
-          <line x1="350" y1="650" x2="550" y2="580" stroke="url(#line-grad-3)" strokeWidth="1" className="auth-line" style={{ animationDelay: '-6s' }} />
-          <line x1="550" y1="580" x2="750" y2="700" stroke="url(#line-grad)" strokeWidth="1" className="auth-line" style={{ animationDelay: '-8s' }} />
-          <line x1="150" y1="550" x2="550" y2="580" stroke="url(#line-grad-3)" strokeWidth="0.5" className="auth-line" style={{ animationDelay: '-5s' }} />
-
-          {/* Cross-cluster bridge edges */}
-          <line x1="420" y1="150" x2="700" y2="280" stroke="url(#line-grad)" strokeWidth="0.5" className="auth-line" style={{ animationDelay: '-11s' }} />
-          <line x1="700" y1="280" x2="1050" y2="100" stroke="url(#line-grad-2)" strokeWidth="0.5" className="auth-line" style={{ animationDelay: '-12s' }} />
-          <line x1="380" y1="320" x2="550" y2="580" stroke="url(#line-grad-3)" strokeWidth="0.5" className="auth-line" style={{ animationDelay: '-7s' }} />
-          <line x1="1280" y1="380" x2="1380" y2="550" stroke="url(#line-grad-2)" strokeWidth="0.5" className="auth-line" style={{ animationDelay: '-13s' }} />
-        </svg>
-
-        {/* Constellation nodes — bright stars at graph vertices */}
-        {[
-          // Cluster 1
-          { x: 80, y: 120, s: 5 }, { x: 250, y: 200, s: 6 }, { x: 180, y: 350, s: 4 },
-          { x: 420, y: 150, s: 5 }, { x: 380, y: 320, s: 4 }, { x: 700, y: 280, s: 3 },
-          // Cluster 2
-          { x: 1050, y: 100, s: 5 }, { x: 1200, y: 220, s: 6 }, { x: 1350, y: 150, s: 4 },
-          { x: 1280, y: 380, s: 4 }, { x: 1380, y: 550, s: 3 },
-          // Cluster 3
-          { x: 150, y: 550, s: 4 }, { x: 350, y: 650, s: 5 }, { x: 550, y: 580, s: 4 },
-          { x: 750, y: 700, s: 3 }, { x: 900, y: 750, s: 3 },
-          // Scattered
-          { x: 600, y: 100, s: 2 }, { x: 900, y: 450, s: 2 }, { x: 1100, y: 600, s: 3 },
-        ].map((node, i) => (
-          <div
-            key={`node-${i}`}
-            className="auth-node"
-            style={{
-              left: `${(node.x / 1440) * 100}%`,
-              top: `${(node.y / 900) * 100}%`,
-              width: `${node.s}px`,
-              height: `${node.s}px`,
-              animationDelay: `${i * -1.2}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* ── Content ── */}
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-10">
-        <div className="w-full max-w-md">
-          {/* Logo */}
-          <div className="mb-8 text-center">
-            <div className="auth-logo mx-auto mb-4">
-              <Network size={28} className="text-white" />
+    <div className="auth-page auth-page-split min-h-screen bg-void text-starlight">
+      <div className="auth-split-shell">
+        <section className="auth-visual-pane">
+          <div className="auth-visual-overlay" />
+          <div className="auth-visual-copy">
+            <div className="auth-badge">
+              <Sparkles size={14} />
+              Research Platform
             </div>
-            <div className="text-xs font-bold uppercase tracking-[0.24em] text-moonlight">GNN-Insight</div>
-            <div className="mt-1 text-[11px] text-twilight">Graph Neural Network Research Platform</div>
+            <div className="auth-hero-mark">
+              <div className="auth-logo">
+                <Network size={28} className="text-white" />
+              </div>
+              <div>
+                <div className="auth-brand-name">GNN Insight</div>
+                <div className="auth-brand-subtitle">Graph Neural Network Research Platform</div>
+              </div>
+            </div>
+            <h1 className="auth-hero-title">
+              Graph work, grounded.
+            </h1>
+            <p className="auth-hero-text">
+              A split workspace for serious experiments: cleaner dataset governance, structured project context, and training flows that stay readable.
+            </p>
+
+            <div className="auth-visual-grid">
+              {PLATFORM_POINTS.map((item) => (
+                <div key={item.title} className="auth-visual-card">
+                  <div className="auth-visual-icon">{item.icon}</div>
+                  <div>
+                    <div className="auth-visual-card-title">{item.title}</div>
+                    <div className="auth-visual-card-text">{item.description}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="auth-visual-metrics">
+              <div className="auth-metric-card">
+                <span className="auth-metric-label">Project-aware runs</span>
+                <strong>Tracked context</strong>
+              </div>
+              <div className="auth-metric-card">
+                <span className="auth-metric-label">Dataset lifecycle</span>
+                <strong>Versioned inputs</strong>
+              </div>
+              <div className="auth-metric-card">
+                <span className="auth-metric-label">Session review</span>
+                <strong>Replay-ready logs</strong>
+              </div>
+            </div>
           </div>
+        </section>
 
-          {/* Form Card */}
-          <div className="auth-card-container">
-            {/* Sparkle dust around card */}
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div
-                key={`sparkle-${i}`}
-                className="auth-sparkle"
-                style={{
-                  '--sx': `${Math.random() * 100}%`,
-                  '--sy': `${Math.random() * 100}%`,
-                  '--sd': `${Math.random() * 3 + 1}px`,
-                  '--sdur': `${Math.random() * 4 + 3}s`,
-                  '--sdel': `${Math.random() * -5}s`,
-                }}
-              />
-            ))}
+        <section className="auth-form-pane">
+          <div className="auth-form-shell">
+            <div className="auth-compact-brand">
+              <div className="auth-logo auth-logo-compact">
+                <Network size={22} className="text-white" />
+              </div>
+              <div>
+                <div className="auth-brand-name">GNN Insight</div>
+                <div className="auth-brand-subtitle">Graph Neural Network Research Platform</div>
+              </div>
+            </div>
 
-            <div className="auth-card">
-              {/* Aurora shimmer sweep */}
-              <div className="auth-card-glow" />
-              <div className="auth-card-shimmer" />
-
-            <div className="relative z-10 p-7">
-              {/* Mode tabs */}
-              <div className="auth-tabs mb-6">
+            <div className="auth-form-header">
+              <div className="auth-form-eyebrow">Secure Access</div>
+              <div className="auth-tabs">
                 <button
                   type="button"
                   onClick={() => onModeChange?.('login')}
@@ -195,19 +147,28 @@ export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticat
                   Register
                 </button>
               </div>
+            </div>
 
-              {/* Title */}
-              <h2 className="text-xl font-bold text-white-star">
-                {mode === 'login' ? 'Welcome back, researcher' : 'Create your account'}
+            <div className="auth-form-body auth-form-card">
+              <h2 className="auth-form-title">
+                {mode === 'login' ? 'Welcome back' : 'Create your account'}
               </h2>
-              <p className="mt-1.5 text-xs text-twilight">
+              <p className="auth-form-text">
                 {mode === 'login'
-                  ? 'Enter your credentials to access the workspace'
-                  : 'Initialize a new research account to start training'}
+                  ? 'Sign in to continue into your research workspace.'
+                  : 'Open a new account to start managing graph learning workflows.'}
               </p>
 
-              {/* Form */}
-              <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+              <div className="auth-social-stack">
+                <QuickAuth icon={<Globe2 size={16} />} label="Continue with Google" note="Coming soon" />
+                <QuickAuth icon={<GitBranch size={16} />} label="Continue with GitHub" note="Coming soon" />
+              </div>
+
+              <div className="auth-divider my-6">
+                <span>or use your credentials</span>
+              </div>
+
+              <form className="space-y-4" onSubmit={handleSubmit}>
                 {mode === 'register' ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field
@@ -235,9 +196,19 @@ export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticat
                   label="Password"
                   value={form.password}
                   onChange={(value) => setForm((prev) => ({ ...prev, password: value }))}
-                  placeholder="••••••••••"
+                  placeholder="Enter your password"
                   type="password"
                 />
+
+                {mode === 'login' ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-xs text-twilight">Use your existing workspace account.</div>
+                    <button type="button" className="auth-link-subtle">
+                      <KeyRound size={14} />
+                      Forgot password
+                    </button>
+                  </div>
+                ) : null}
 
                 {error ? (
                   <div className="auth-error">
@@ -264,27 +235,9 @@ export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticat
                   )}
                 </button>
               </form>
-
-              {/* Divider */}
-              <div className="auth-divider my-6">
-                <span>or continue with</span>
-              </div>
-
-              {/* Social / quick actions */}
-              <div className="grid grid-cols-3 gap-3">
-                <QuickAuth icon={<Zap size={16} />} label="Quick Demo" />
-                <QuickAuth icon={<Eye size={16} />} label="Viewer" />
-                <QuickAuth icon={<GitBranch size={16} />} label="GitHub" />
-              </div>
             </div>
           </div>
-          </div>
-
-          {/* Footer */}
-          <div className="mt-6 text-center text-[11px] text-text-shadow">
-            GNN-Insight Research Platform • Galaxy Constellation UI
-          </div>
-        </div>
+        </section>
       </div>
     </div>
   )
@@ -308,11 +261,12 @@ function Field({ label, value, onChange, placeholder, type = 'text' }) {
   )
 }
 
-function QuickAuth({ icon, label }) {
+function QuickAuth({ icon, label, note }) {
   return (
-    <button type="button" className="auth-quick-btn">
-      {icon}
-      <span>{label}</span>
+    <button type="button" className="auth-social-btn">
+      <span className="auth-social-icon">{icon}</span>
+      <span className="auth-social-label">{label}</span>
+      <span className="auth-social-note">{note}</span>
     </button>
   )
 }

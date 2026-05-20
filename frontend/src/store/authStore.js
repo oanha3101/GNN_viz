@@ -3,7 +3,7 @@
  * Stores access_token in localStorage for persistence across page reloads.
  */
 import { create } from 'zustand';
-import { apiUrl, AUTH_TOKEN_KEY } from '../utils/api';
+import { apiJson, AUTH_TOKEN_KEY } from '../utils/api';
 
 const TOKEN_KEY = AUTH_TOKEN_KEY;
 const USER_KEY = 'gnn_user';
@@ -21,13 +21,10 @@ const useAuthStore = create((set, get) => ({
   register: async (email, username, password, fullName) => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch(apiUrl('/auth/register'), {
+      const data = await apiJson('/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, username, password, full_name: fullName }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Registration failed');
       localStorage.setItem(TOKEN_KEY, data.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(data.user));
       set({
@@ -49,13 +46,10 @@ const useAuthStore = create((set, get) => ({
   login: async (username, password) => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch(apiUrl('/auth/login'), {
+      const data = await apiJson('/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Login failed');
       localStorage.setItem(TOKEN_KEY, data.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(data.user));
       set({
@@ -95,24 +89,42 @@ const useAuthStore = create((set, get) => ({
   verifyToken: async () => {
     const token = get().token;
     if (!token) return false;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(apiUrl('/auth/me'), {
+      const user = await apiJson('/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
         signal: controller.signal,
       });
-      clearTimeout(timeout);
-      if (!res.ok) {
-        get().logout();
-        return false;
-      }
-      const user = await res.json();
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
       set({ user, isAuthenticated: true });
       return true;
     } catch {
       get().logout();
       return false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  },
+
+  updateProfile: async (profile) => {
+    const token = get().token;
+    if (!token) throw new Error('Not authenticated');
+    set({ loading: true, error: null });
+    try {
+      const data = await apiJson('/auth/me', {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(profile),
+      });
+      localStorage.setItem(USER_KEY, JSON.stringify(data));
+      set({ user: data, loading: false, isAuthenticated: true });
+      return data;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      throw err;
     }
   },
 }));

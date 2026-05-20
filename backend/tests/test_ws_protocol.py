@@ -40,3 +40,21 @@ def test_ws_error_handling():
             assert response.get("v") == 3
             assert response.get("type") == "error"
             assert response.get("payload", {}).get("code") == ErrorCode.ERR_TRAINING_FAILED
+
+
+def test_ws_error_closes_with_server_error_code():
+    with TestClient(app) as client:
+        token = _auth_token(client)
+        with client.websocket_connect("/ws/train") as websocket:
+            websocket.send_json({"task": 999, "auth_token": token})
+            import gzip
+            import json
+            from starlette.websockets import WebSocketDisconnect
+
+            raw_bytes = websocket.receive_bytes()
+            response = json.loads(gzip.decompress(raw_bytes).decode('utf-8'))
+            assert response.get("type") == "error"
+
+            with pytest.raises(WebSocketDisconnect) as exc_info:
+                websocket.receive_bytes()
+            assert exc_info.value.code == 1011

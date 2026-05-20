@@ -49,9 +49,21 @@ def test_admin_summary_and_user_role_update():
         users_payload = users_response.json()
         assert users_payload["total"] >= 2
         assert users_payload["page"] == 1
-        assert users_payload["page_size"] >= 2
+        assert users_payload["page_size"] >= 1
         items = users_payload["items"]
         assert any(item["username"] == researcher_data["user"]["username"] for item in items)
+
+        filtered_users_response = client.get(
+            "/api/admin/users",
+            params={"q": researcher_data["user"]["username"], "page": 1, "page_size": 1},
+            headers=admin_headers,
+        )
+        assert filtered_users_response.status_code == 200, filtered_users_response.text
+        filtered_payload = filtered_users_response.json()
+        assert filtered_payload["page"] == 1
+        assert filtered_payload["page_size"] == 1
+        assert filtered_payload["total"] >= 1
+        assert filtered_payload["items"][0]["username"] == researcher_data["user"]["username"]
 
         role_response = client.patch(
             f"/api/admin/users/{researcher_data['user']['id']}/role",
@@ -61,6 +73,15 @@ def test_admin_summary_and_user_role_update():
         assert role_response.status_code == 200, role_response.text
         assert role_response.json()["role"] == "viewer"
 
+        update_response = client.patch(
+            f"/api/admin/users/{researcher_data['user']['id']}",
+            json={"role": "researcher", "is_active": False},
+            headers=admin_headers,
+        )
+        assert update_response.status_code == 200, update_response.text
+        assert update_response.json()["role"] == "researcher"
+        assert update_response.json()["is_active"] is False
+
 
 def test_non_admin_cannot_access_admin_routes():
     with TestClient(app) as client:
@@ -69,6 +90,110 @@ def test_non_admin_cannot_access_admin_routes():
 
         response = client.get("/api/admin/summary", headers=headers)
         assert response.status_code == 403
+
+
+def test_admin_can_delete_unreferenced_user():
+    with TestClient(app) as client:
+        admin_data = _register(client, "admin", "admin_user_delete")
+        victim_data = _register(client, "researcher", "user_delete_target")
+        admin_headers = {"Authorization": f"Bearer {admin_data['access_token']}"}
+
+        delete_response = client.delete(
+            f"/api/admin/users/{victim_data['user']['id']}",
+            headers=admin_headers,
+        )
+        assert delete_response.status_code == 200, delete_response.text
+        assert delete_response.json()["status"] == "deleted"
+
+
+def test_admin_can_create_user():
+    with TestClient(app) as client:
+        admin_data = _register(client, "admin", "admin_user_create")
+        admin_headers = {"Authorization": f"Bearer {admin_data['access_token']}"}
+        suffix = uuid.uuid4().hex[:8]
+
+        create_response = client.post(
+            "/api/admin/users",
+            json={
+                "email": f"created_{suffix}@example.com",
+                "username": f"created_{suffix}",
+                "password": "password123",
+                "full_name": "Created From Admin",
+                "bio": "Admin-created profile",
+                "github_url": "https://github.com/created-user",
+                "organization": "GNN Ops",
+                "job_title": "Viewer",
+                "location": "Da Nang",
+                "profile_image": "https://example.com/avatar.png",
+                "role": "viewer",
+                "is_active": False,
+            },
+            headers=admin_headers,
+        )
+        assert create_response.status_code == 200, create_response.text
+        payload = create_response.json()
+        assert payload["username"] == f"created_{suffix}"
+        assert payload["role"] == "viewer"
+        assert payload["is_active"] is False
+        assert payload["organization"] == "GNN Ops"
+        assert payload["profile_image"] == "https://example.com/avatar.png"
+
+
+def test_admin_can_update_user_profile_fields():
+    with TestClient(app) as client:
+        admin_data = _register(client, "admin", "admin_user_profile")
+        target_data = _register(client, "researcher", "user_profile_target")
+        admin_headers = {"Authorization": f"Bearer {admin_data['access_token']}"}
+
+        update_response = client.patch(
+            f"/api/admin/users/{target_data['user']['id']}",
+            json={
+                "email": f"updated_{uuid.uuid4().hex[:6]}@example.com",
+                "username": f"updated_{uuid.uuid4().hex[:6]}",
+                "full_name": "Updated Profile User",
+                "bio": "Works on graph explainability.",
+                "github_url": "https://github.com/profile-target",
+                "organization": "BKDN",
+                "job_title": "Research Assistant",
+                "location": "Da Nang",
+                "profile_image": "https://example.com/updated-avatar.png",
+                "role": "viewer",
+                "is_active": False,
+            },
+            headers=admin_headers,
+        )
+        assert update_response.status_code == 200, update_response.text
+        payload = update_response.json()
+        assert payload["full_name"] == "Updated Profile User"
+        assert payload["bio"] == "Works on graph explainability."
+        assert payload["github_url"] == "https://github.com/profile-target"
+        assert payload["organization"] == "BKDN"
+        assert payload["job_title"] == "Research Assistant"
+        assert payload["location"] == "Da Nang"
+        assert payload["profile_image"] == "https://example.com/updated-avatar.png"
+        assert payload["role"] == "viewer"
+        assert payload["is_active"] is False
+
+
+def test_admin_cannot_delete_user_with_owned_records():
+    with TestClient(app) as client:
+        admin_data = _register(client, "admin", "admin_user_block")
+        researcher_data = _register(client, "researcher", "user_block_target")
+        admin_headers = {"Authorization": f"Bearer {admin_data['access_token']}"}
+        researcher_headers = {"Authorization": f"Bearer {researcher_data['access_token']}"}
+
+        project_response = client.post(
+            "/api/projects",
+            json={"title": "Owned Project", "description": "blocks delete"},
+            headers=researcher_headers,
+        )
+        assert project_response.status_code == 200, project_response.text
+
+        delete_response = client.delete(
+            f"/api/admin/users/{researcher_data['user']['id']}",
+            headers=admin_headers,
+        )
+        assert delete_response.status_code == 409, delete_response.text
 
 
 def test_admin_can_stop_retry_and_view_audit_logs():
@@ -108,6 +233,59 @@ def test_admin_can_stop_retry_and_view_audit_logs():
         audit_payload = audit_response.json()
         assert isinstance(audit_payload["items"], list)
         assert "total" in audit_payload
+
+
+def test_admin_can_delete_stopped_session():
+    with TestClient(app) as client:
+        admin_data = _register(client, "admin", "admin_session_delete")
+        admin_headers = {"Authorization": f"Bearer {admin_data['access_token']}"}
+
+        session_response = client.post(
+            "/api/sessions",
+            json={
+                "task": 1,
+                "model": "GCN",
+                "dataset": "cora",
+                "epochs": 5,
+            },
+            headers=admin_headers,
+        )
+        assert session_response.status_code == 200, session_response.text
+        session_id = session_response.json()["session_id"]
+
+        stop_response = client.post(f"/api/admin/sessions/{session_id}/stop", headers=admin_headers)
+        assert stop_response.status_code == 200, stop_response.text
+
+        delete_response = client.delete(f"/api/admin/sessions/{session_id}", headers=admin_headers)
+        assert delete_response.status_code == 200, delete_response.text
+        assert delete_response.json()["status"] == "deleted"
+
+        sessions_response = client.get("/api/admin/sessions", headers=admin_headers)
+        assert sessions_response.status_code == 200, sessions_response.text
+        assert not any(item["id"] == session_id for item in sessions_response.json()["items"])
+
+
+def test_admin_cannot_delete_active_session():
+    with TestClient(app) as client:
+        admin_data = _register(client, "admin", "admin_session_delete_block")
+        admin_headers = {"Authorization": f"Bearer {admin_data['access_token']}"}
+
+        session_response = client.post(
+            "/api/sessions",
+            json={
+                "task": 1,
+                "model": "GCN",
+                "dataset": "cora",
+                "epochs": 5,
+            },
+            headers=admin_headers,
+        )
+        assert session_response.status_code == 200, session_response.text
+        session_id = session_response.json()["session_id"]
+
+        delete_response = client.delete(f"/api/admin/sessions/{session_id}", headers=admin_headers)
+        assert delete_response.status_code == 409, delete_response.text
+        assert "Stop it before deleting" in delete_response.json()["detail"]
 
 
 def test_owner_can_stop_own_session_but_other_researcher_cannot():
@@ -193,6 +371,130 @@ def test_admin_dataset_listing_includes_usage_and_current_version():
         assert target["usage_count"] >= 1
         assert target["current_version"]["id"] == version["id"]
         assert target["current_version"]["version"] == 1
+
+
+def test_admin_can_update_and_delete_unreferenced_dataset():
+    with TestClient(app) as client:
+        admin_data = _register(client, "admin", "admin_dataset_crud")
+        researcher_data = _register(client, "researcher", "dataset_owner_crud")
+        admin_headers = {"Authorization": f"Bearer {admin_data['access_token']}"}
+        researcher_headers = {"Authorization": f"Bearer {researcher_data['access_token']}"}
+
+        dataset_response = client.post(
+            "/api/datasets",
+            json={
+                "name": f"Mutable Dataset {uuid.uuid4().hex[:6]}",
+                "description": "before update",
+                "summary_json": {"rows": 12},
+            },
+            headers=researcher_headers,
+        )
+        assert dataset_response.status_code == 200, dataset_response.text
+        dataset = dataset_response.json()["dataset"]
+
+        update_response = client.patch(
+            f"/api/admin/datasets/{dataset['id']}",
+            json={
+                "name": f"Updated Dataset {uuid.uuid4().hex[:4]}",
+                "description": "after update",
+                "is_public": True,
+            },
+            headers=admin_headers,
+        )
+        assert update_response.status_code == 200, update_response.text
+        updated = update_response.json()
+        assert updated["description"] == "after update"
+        assert updated["is_public"] is True
+
+        delete_response = client.delete(
+            f"/api/admin/datasets/{dataset['id']}",
+            headers=admin_headers,
+        )
+        assert delete_response.status_code == 200, delete_response.text
+        assert delete_response.json()["status"] == "deleted"
+
+
+def test_admin_can_update_and_delete_unreferenced_project():
+    with TestClient(app) as client:
+        admin_data = _register(client, "admin", "admin_project_crud")
+        researcher_data = _register(client, "researcher", "project_owner_crud")
+        admin_headers = {"Authorization": f"Bearer {admin_data['access_token']}"}
+        researcher_headers = {"Authorization": f"Bearer {researcher_data['access_token']}"}
+
+        project_response = client.post(
+            "/api/projects",
+            json={
+                "title": f"Mutable Project {uuid.uuid4().hex[:6]}",
+                "description": "before update",
+            },
+            headers=researcher_headers,
+        )
+        assert project_response.status_code == 200, project_response.text
+        project = project_response.json()
+
+        update_response = client.patch(
+            f"/api/admin/projects/{project['id']}",
+            json={
+                "title": f"Updated Project {uuid.uuid4().hex[:4]}",
+                "description": "after update",
+                "is_public": True,
+            },
+            headers=admin_headers,
+        )
+        assert update_response.status_code == 200, update_response.text
+        updated = update_response.json()
+        assert updated["description"] == "after update"
+        assert updated["is_public"] is True
+
+        delete_response = client.delete(
+            f"/api/admin/projects/{project['id']}",
+            headers=admin_headers,
+        )
+        assert delete_response.status_code == 200, delete_response.text
+        assert delete_response.json()["status"] == "deleted"
+
+
+def test_admin_cannot_delete_project_with_experiments():
+    with TestClient(app) as client:
+        admin_data = _register(client, "admin", "admin_project_block")
+        researcher_data = _register(client, "researcher", "project_block_owner")
+        admin_headers = {"Authorization": f"Bearer {admin_data['access_token']}"}
+        researcher_headers = {"Authorization": f"Bearer {researcher_data['access_token']}"}
+
+        project_response = client.post(
+            "/api/projects",
+            json={
+                "title": f"Protected Project {uuid.uuid4().hex[:6]}",
+                "description": "will get an experiment",
+            },
+            headers=researcher_headers,
+        )
+        assert project_response.status_code == 200, project_response.text
+        project = project_response.json()
+
+        experiment_response = client.post(
+            "/api/experiments",
+            json={
+                "title": "Project-bound run",
+                "project_id": project["id"],
+                "task_type": 1,
+                "model_type": "GCN",
+                "dataset_name": "cora",
+                "epoch_count": 2,
+                "snapshots_json": [{"epoch": 0}, {"epoch": 1}],
+                "graph_data_json": {"nodes": [], "links": []},
+                "ground_truth_json": [],
+                "task_data_json": {},
+            },
+            headers=researcher_headers,
+        )
+        assert experiment_response.status_code == 200, experiment_response.text
+
+        delete_response = client.delete(
+            f"/api/admin/projects/{project['id']}",
+            headers=admin_headers,
+        )
+        assert delete_response.status_code == 409, delete_response.text
 
 
 def test_admin_can_run_blob_cleanup_dry_run_and_real_run():

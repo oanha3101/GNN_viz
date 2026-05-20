@@ -6,10 +6,15 @@ import json
 import gzip
 import logging
 import time
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 from schemas.constants import SCHEMA_VERSION
 
 logger = logging.getLogger(__name__)
+
+
+class WebSocketClosed(Exception):
+    """Raised when the WebSocket is closed and cannot send messages."""
+    pass
 
 
 class SequenceCounter:
@@ -68,9 +73,14 @@ async def send_json_zipped(websocket: WebSocket, data: dict, seq_counter: Sequen
         compressed_data = gzip.compress(json_str.encode('utf-8'))
         await websocket.send_bytes(compressed_data)
     except Exception as e:
+        # If the WebSocket is closed, stop trying — raise so callers can abort the loop
+        if 'close' in str(e).lower() or 'disconnect' in str(e).lower():
+            raise WebSocketClosed(str(e))
         # Fallback to standard JSON if compression fails
         logger.warning("WS Compression Error: %s", e)
         try:
             await websocket.send_json(data)
-        except Exception:
-            pass
+        except Exception as inner:
+            if 'close' in str(inner).lower() or 'disconnect' in str(inner).lower():
+                raise WebSocketClosed(str(inner))
+            logger.warning("WS Fallback Error: %s", inner)

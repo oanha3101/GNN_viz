@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.session_manager import session_manager
 from database import Base, engine
 from main import app
+from services import analytics_service
 
 
 client = TestClient(app)
@@ -310,6 +311,57 @@ def test_list_experiments_supports_search_and_model_filters():
 
     assert client.delete(f"/api/experiments/{alpha_id}").status_code == 200
     assert client.delete(f"/api/experiments/{beta_id}").status_code == 200
+
+
+def test_recommendations_endpoint_surfaces_llm_brief(monkeypatch):
+    payload = {
+        "title": "LLM Analyst Run",
+        "task_type": 2,
+        "model_type": "GAT",
+        "dataset_name": "proteins",
+        "epoch_count": 2,
+        "accuracy": 0.68,
+        "loss": 0.41,
+        "is_mock": True,
+        "config_json": {"dataset": "PROTEINS"},
+        "snapshots_json": [
+            {"epoch": 0, "val_acc": 0.54, "train_loss": 0.9},
+            {"epoch": 1, "val_acc": 0.68, "train_loss": 0.41, "macro_f1": 0.63},
+        ],
+        "graph_data_json": {"nodes": [], "links": []},
+        "ground_truth_json": [],
+        "task_data_json": {},
+    }
+
+    create_response = client.post("/api/experiments", json=payload)
+    assert create_response.status_code == 200, create_response.text
+    exp_id = create_response.json()["id"]
+
+    monkeypatch.setattr(
+        analytics_service.llm_analyst_service,
+        "generate_recommendation_brief",
+        lambda **kwargs: {
+            "summary": "LLM summary for the weak class failure mode.",
+            "analyst_brief": {
+                "findings": ["Class 1 recall is lagging."],
+                "risks": ["Density shortcut remains active."],
+                "next_steps": ["Select best epoch with Macro F1."],
+            },
+            "source": "llm",
+            "llm": {"enabled": True, "provider": "deepseek", "model": "deepseek-chat"},
+        },
+    )
+
+    response = client.post(f"/api/experiments/{exp_id}/recommendations")
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    assert body["source"] == "llm"
+    assert body["summary"] == "LLM summary for the weak class failure mode."
+    assert body["analyst_brief"]["findings"] == ["Class 1 recall is lagging."]
+    assert "recommendations" in body
+
+    assert client.delete(f"/api/experiments/{exp_id}").status_code == 200
 
 
 def test_replay_specific_epoch_and_compare_contract():

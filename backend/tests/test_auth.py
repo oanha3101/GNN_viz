@@ -46,6 +46,25 @@ def test_register_login_me():
         assert resp.status_code == 200
         assert resp.json()["username"] == username
 
+        update = client.patch("/api/auth/me", headers={"Authorization": f"Bearer {token}"}, json={
+            "email": email,
+            "username": username,
+            "full_name": "Updated User",
+            "bio": "Working on graph representation learning.",
+            "github_url": "https://github.com/test-user",
+            "organization": "GNN Lab",
+            "job_title": "Research Engineer",
+            "location": "Ho Chi Minh City",
+            "profile_image": "https://example.com/avatar.png",
+        })
+        assert update.status_code == 200, update.text
+        updated_payload = update.json()
+        assert updated_payload["bio"] == "Working on graph representation learning."
+        assert updated_payload["github_url"] == "https://github.com/test-user"
+        assert updated_payload["organization"] == "GNN Lab"
+        assert updated_payload["job_title"] == "Research Engineer"
+        assert updated_payload["location"] == "Ho Chi Minh City"
+
 def test_login_invalid():
     with TestClient(app) as client:
         resp = client.post("/api/auth/login", json={

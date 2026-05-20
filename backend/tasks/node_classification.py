@@ -50,9 +50,20 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
 
         if should_take_snapshot(epoch, epochs):
             # ── PCA Reduction ───────────────────────────────────────────────────
-            emb_np = embedding_eval.cpu().numpy()
-            pca = PCA(n_components=2)
-            emb_2d = pca.fit_transform(emb_np).tolist()
+            try:
+                emb_np = embedding_eval.cpu().numpy()
+                n_components = min(2, emb_np.shape[1], emb_np.shape[0])
+                if n_components < 2:
+                    # Fallback: use first 2 columns padded with zeros
+                    padded = np.zeros((emb_np.shape[0], 2))
+                    padded[:, :emb_np.shape[1]] = emb_np[:, :2]
+                    emb_2d = padded.tolist()
+                else:
+                    pca = PCA(n_components=2)
+                    emb_2d = pca.fit_transform(emb_np).tolist()
+            except Exception as e:
+                logger.warning("PCA Reduction Error: %s", e)
+                emb_2d = [[0.0, 0.0]] * embedding_eval.shape[0]
 
             # ── Dirichlet Energy (oversmoothing metric) ───────────────────
             # D = (1/|E|) * sum_{(i,j) in E} ||h_i - h_j||^2
@@ -69,37 +80,45 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
             attn_data = None
             attention_edges = None
             attention_per_head = None
-            if len(eval_outputs) > 2 and eval_outputs[2] is not None:
-                attn_raw = eval_outputs[2].cpu().numpy()
-                # Normalize to [0, 1] per-edge
-                attn_min, attn_max = attn_raw.min(), attn_raw.max()
-                if attn_max > attn_min:
-                    attn_data = ((attn_raw - attn_min) / (attn_max - attn_min)).tolist()
-                else:
-                    attn_data = attn_raw.tolist()
+            try:
+                if len(eval_outputs) > 2 and eval_outputs[2] is not None:
+                    attn_raw = eval_outputs[2].cpu().numpy()
+                    # Normalize to [0, 1] per-edge
+                    attn_min, attn_max = attn_raw.min(), attn_raw.max()
+                    if attn_max > attn_min:
+                        attn_data = ((attn_raw - attn_min) / (attn_max - attn_min)).tolist()
+                    else:
+                        attn_data = attn_raw.tolist()
 
-                # Attention edges: aggregated undirected, no self-loops
-                if hasattr(model, '_attention_edges') and model._attention_edges:
-                    attention_edges = [{'source': u, 'target': v, 'weight': w} for u, v, w in model._attention_edges]
+                    # Attention edges: aggregated undirected, no self-loops
+                    if hasattr(model, '_attention_edges') and model._attention_edges:
+                        attention_edges = [{'source': u, 'target': v, 'weight': w} for u, v, w in model._attention_edges]
 
-                # Per-head attention for head selector
-                if hasattr(model, '_per_head_attn') and model._per_head_attn:
-                    attention_per_head = {}
-                    for (u, v), heads in model._per_head_attn.items():
-                        key = f"{min(u,v)}-{max(u,v)}"
-                        attention_per_head[key] = heads
+                    # Per-head attention for head selector
+                    if hasattr(model, '_per_head_attn') and model._per_head_attn:
+                        attention_per_head = {}
+                        for (u, v), heads in model._per_head_attn.items():
+                            key = f"{min(u,v)}-{max(u,v)}"
+                            attention_per_head[key] = heads
+            except Exception as e:
+                logger.warning("Attention extraction error: %s", e)
 
             # ── Explainability Data ─────────────────────────────────────────────
-            
-            # 1. Softmax probabilities per node (real confidence, not hardcoded)
-            probs = F.softmax(out_eval, dim=1)
-            node_probabilities = probs.cpu().tolist()
-            
-            # 2. Confidence score (max probability per node)
-            node_confidence = probs.max(dim=1).values.cpu().tolist()
-            
-            # 3. Correctness flag (prediction == ground truth)
-            node_correctness = (pred == data.y).cpu().tolist()
+            try:
+                # 1. Softmax probabilities per node (real confidence, not hardcoded)
+                probs = F.softmax(out_eval, dim=1)
+                node_probabilities = probs.cpu().tolist()
+
+                # 2. Confidence score (max probability per node)
+                node_confidence = probs.max(dim=1).values.cpu().tolist()
+
+                # 3. Correctness flag (prediction == ground truth)
+                node_correctness = (pred == data.y).cpu().tolist()
+            except Exception as e:
+                logger.warning("Explainability data error: %s", e)
+                node_probabilities = []
+                node_confidence = []
+                node_correctness = []
             
             # 4. Neighbor context (majority neighbor class per node)
             try:

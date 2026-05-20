@@ -74,6 +74,11 @@ const useGNNStore = create((set, get) => ({
   task5Exporting: false,
 
   // ─── Task 6 specific ────────────────────────────────────────
+  task2FocusMode: persistedWorkspace.task2FocusMode ?? 'all',
+  task2SelectedCell: persistedWorkspace.task2SelectedCell ?? null,
+  task2GallerySort: persistedWorkspace.task2GallerySort ?? 'priority',
+  task2ClassFilter: persistedWorkspace.task2ClassFilter ?? 'all',
+  task2EmbeddingColorMode: persistedWorkspace.task2EmbeddingColorMode ?? 'predicted',
   task6FilterMode: 'all',   // all | valid | invalid | novel — drives grid filter
 
   // ─── Uploaded file path (for custom datasets) ───────────────
@@ -106,6 +111,11 @@ const useGNNStore = create((set, get) => ({
       selectedNodeId: null,
       hoveredNodeId: null,
       selectedTargetNodeId: null,
+      task2FocusMode: 'all',
+      task2SelectedCell: null,
+      task2GallerySort: 'priority',
+      task2ClassFilter: 'all',
+      task2EmbeddingColorMode: 'predicted',
       task6FilterMode: 'all',
       selectedCommunityId: null,
       focusedEdgeIdx: null,
@@ -133,6 +143,11 @@ const useGNNStore = create((set, get) => ({
       taskData: null,
       selectedNodeId: null,
       hoveredNodeId: null,
+      task2FocusMode: 'all',
+      task2SelectedCell: null,
+      task2GallerySort: 'priority',
+      task2ClassFilter: 'all',
+      task2EmbeddingColorMode: 'predicted',
       selectedCommunityId: null,
       focusedEdgeIdx: null,
       outlierPulseIdx: null,
@@ -155,7 +170,12 @@ const useGNNStore = create((set, get) => ({
   setGroundTruth: (gt) => set({ groundTruth: gt }),
   setClassNames: (names) => set({ classNames: names }),
   setTrainMask: (mask) => set({ trainMask: mask }),
-  setTaskData: (td) => set({ taskData: td }),
+  setTaskData: (td) => set((s) => ({
+    taskData: {
+      ...(s.taskData || {}),
+      ...(td || {}),
+    },
+  })),
   setSelectedNode: (id) => {
     const current = get().selectedNodeId;
     if (current !== id) {
@@ -165,6 +185,30 @@ const useGNNStore = create((set, get) => ({
     }
   },
   setSelectedTargetNode: (id) => set({ selectedTargetNodeId: id }),
+  setTask2FocusMode: (mode) => {
+    const nextMode = mode || 'all'
+    writeWorkspaceContext({ task2FocusMode: nextMode })
+    set({ task2FocusMode: nextMode })
+  },
+  setTask2SelectedCell: (cell) => {
+    writeWorkspaceContext({ task2SelectedCell: cell || null })
+    set({ task2SelectedCell: cell || null })
+  },
+  setTask2GallerySort: (sort) => {
+    const nextSort = sort || 'priority'
+    writeWorkspaceContext({ task2GallerySort: nextSort })
+    set({ task2GallerySort: nextSort })
+  },
+  setTask2ClassFilter: (filter) => {
+    const nextFilter = filter === undefined || filter === null ? 'all' : filter
+    writeWorkspaceContext({ task2ClassFilter: nextFilter })
+    set({ task2ClassFilter: nextFilter })
+  },
+  setTask2EmbeddingColorMode: (mode) => {
+    const nextMode = mode || 'predicted'
+    writeWorkspaceContext({ task2EmbeddingColorMode: nextMode })
+    set({ task2EmbeddingColorMode: nextMode })
+  },
   setTask6FilterMode: (mode) => set({ task6FilterMode: mode || 'all' }),
   setSelectedCommunity: (id) => set({ selectedCommunityId: id }),
   setFocusedEdge: (idx) => set({ focusedEdgeIdx: idx }),

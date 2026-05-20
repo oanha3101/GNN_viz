@@ -54,6 +54,7 @@ const playerState = {
 const sessionState = {
   tryRecoverSession: vi.fn(() => null),
   resumeSession: vi.fn(),
+  clearRecoveredSession: vi.fn(),
 }
 
 const authState = {
@@ -145,6 +146,7 @@ function renderLab() {
       <Routes>
         <Route path="/app/lab" element={<LabShell />} />
         <Route path="/app/experiments" element={<div>experiments-page</div>} />
+        <Route path="/app/lab/analysis/:panel" element={<div>analysis-page</div>} />
       </Routes>
       <LocationProbe />
     </MemoryRouter>,
@@ -154,6 +156,12 @@ function renderLab() {
 describe('LabShell run management navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    sessionState.tryRecoverSession.mockImplementation(() => null)
+    gnnState.activeProjectId = 7
+    gnnState.activeProjectName = 'Project A'
+    gnnState.activeDatasetVersionId = 31
+    gnnState.activeDatasetVersionName = 'Dataset v1'
+    gnnState.datasetName = 'cora'
   })
 
   it('routes library actions to /app/experiments without mounting legacy library modals', async () => {
@@ -168,6 +176,40 @@ describe('LabShell run management navigation', () => {
     await waitFor(() => {
       expect(screen.getByText('experiments-page')).toBeInTheDocument()
       expect(screen.getByTestId('location')).toHaveTextContent('/app/experiments')
+    })
+  })
+
+  it('does not let recovered session overwrite an explicitly selected workspace dataset', async () => {
+    sessionState.tryRecoverSession.mockImplementation(() => ({
+      sessionId: 'sess-old',
+      lastEpoch: 4,
+      lastSeq: 9,
+      disconnectedAt: Date.now(),
+    }))
+
+    renderLab()
+
+    await waitFor(() => {
+      expect(screen.getByText('topology-view')).toBeInTheDocument()
+    })
+
+    expect(sessionState.resumeSession).not.toHaveBeenCalled()
+    expect(sessionState.clearRecoveredSession).toHaveBeenCalled()
+    expect(gnnState.setActiveDatasetContext).not.toHaveBeenCalled()
+  })
+
+  it('opens the capture-friendly analysis route from the right panel', async () => {
+    renderLab()
+
+    await waitFor(() => {
+      expect(screen.getByText('topology-view')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('analysis-page')).toBeInTheDocument()
+      expect(screen.getByTestId('location')).toHaveTextContent('/app/lab/analysis/latent')
     })
   })
 })

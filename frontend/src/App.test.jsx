@@ -39,6 +39,10 @@ vi.mock('./pages/admin/AdminUsersPage', () => ({
   default: () => <div>admin-users-page</div>,
 }))
 
+vi.mock('./pages/admin/AdminProjectsPage', () => ({
+  default: () => <div>admin-projects-page</div>,
+}))
+
 vi.mock('./pages/admin/AdminDatasetsPage', () => ({
   default: () => <div>admin-datasets-page</div>,
 }))
@@ -65,6 +69,10 @@ vi.mock('./components/Library/ExperimentHub', () => ({
 
 vi.mock('./LabShell', () => ({
   default: () => <div>lab-shell</div>,
+}))
+
+vi.mock('./pages/app/LabAnalysisPage', () => ({
+  default: () => <div>lab-analysis-page</div>,
 }))
 
 function LocationProbe() {
@@ -130,6 +138,30 @@ describe('App routing', () => {
     await waitFor(() => {
       expect(screen.getByText('lab-shell')).toBeInTheDocument()
       expect(screen.getByTestId('location')).toHaveTextContent('/app/lab')
+    })
+  })
+
+  it('opens the analysis capture route inside the protected app namespace', async () => {
+    authState.user = { id: 3, role: 'viewer', username: 'viewer' }
+    authState.token = 'token'
+
+    renderApp(['/app/lab/analysis/metrics'])
+
+    await waitFor(() => {
+      expect(screen.getByText('lab-analysis-page')).toBeInTheDocument()
+      expect(screen.getByTestId('location')).toHaveTextContent('/app/lab/analysis/metrics')
+    })
+  })
+
+  it('opens the three-page pdf report route inside the protected app namespace', async () => {
+    authState.user = { id: 3, role: 'viewer', username: 'viewer' }
+    authState.token = 'token'
+
+    renderApp(['/app/lab/analysis/report'])
+
+    await waitFor(() => {
+      expect(screen.getByText('lab-analysis-page')).toBeInTheDocument()
+      expect(screen.getByTestId('location')).toHaveTextContent('/app/lab/analysis/report')
     })
   })
 })

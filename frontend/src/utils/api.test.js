@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { API_BASE, WS_URL, apiUrl } from './api'
+import { API_BASE, WS_URL, apiUrl, parseJsonSafely, readApiResponse } from './api'
 
 describe('api utility', () => {
   it('exposes a non-empty API_BASE', () => {
@@ -19,5 +19,22 @@ describe('api utility', () => {
 
   it('apiUrl() returns API_BASE when called without args', () => {
     expect(apiUrl()).toBe(API_BASE)
+  })
+
+  it('parseJsonSafely() returns parsed objects and falls back for plain text', () => {
+    expect(parseJsonSafely('{"ok":true}')).toEqual({ ok: true })
+    expect(parseJsonSafely('Internal Server Error', 'fallback')).toBe('fallback')
+  })
+
+  it('readApiResponse() reads JSON and plain text responses safely', async () => {
+    const jsonResponse = new Response(JSON.stringify({ detail: 'ok' }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const textResponse = new Response('Internal Server Error', {
+      headers: { 'Content-Type': 'text/plain' },
+    })
+
+    await expect(readApiResponse(jsonResponse)).resolves.toEqual({ detail: 'ok' })
+    await expect(readApiResponse(textResponse)).resolves.toBe('Internal Server Error')
   })
 })

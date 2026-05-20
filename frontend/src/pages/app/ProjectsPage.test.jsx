@@ -20,6 +20,9 @@ describe('ProjectsPage', () => {
     setActiveProjectContext.mockReset()
     global.fetch = vi.fn(async () => ({
       ok: true,
+      headers: {
+        get: () => 'application/json',
+      },
       json: async () => [
         { id: 7, title: 'Graph Bench', description: 'Main research stream', owner_id: 3, is_public: false },
       ],

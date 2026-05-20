@@ -11,6 +11,7 @@ export default function useWebSocket() {
   const wsRef       = useRef(null)
   const statusRef   = useRef('disconnected')
   const configRef   = useRef(null)
+  const expectedCloseRef = useRef(false)
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectAttempts = 5
   const reconnectDelay = 2000 // 2 seconds
@@ -18,6 +19,7 @@ export default function useWebSocket() {
   const setTraining   = useGNNStore((s) => s.setTraining)
   const setGraphData  = useGNNStore((s) => s.setGraphData)
   const setGroundTruth = useGNNStore((s) => s.setGroundTruth)
+  const setTrainMask = useGNNStore((s) => s.setTrainMask)
   const setTaskData   = useGNNStore((s) => s.setTaskData)
   const setTask5Meta  = useGNNStore((s) => s.setTask5Meta)
   const setClassNames = useGNNStore((s) => s.setClassNames)
@@ -44,10 +46,20 @@ export default function useWebSocket() {
     }, reconnectDelay)
   }, [setTraining])
 
+  const closeCurrentSocket = useCallback((code = 1000, reason = 'client_disconnect') => {
+    const current = wsRef.current
+    if (current) {
+      expectedCloseRef.current = true
+      current.close(code, reason)
+      wsRef.current = null
+    }
+  }, [])
+
   const connect = useCallback((config) => {
     // Store config for reconnection
     configRef.current = config
     reconnectAttemptsRef.current = 0
+    expectedCloseRef.current = false
 
     wsRef.current = new WebSocket(WS_URL)
     statusRef.current = 'connecting'
@@ -109,6 +121,14 @@ export default function useWebSocket() {
         if (d.groundTruth) {
           setGroundTruth(d.groundTruth)
         }
+        if (d.graphData) {
+          setTrainMask(Array.isArray(d.trainMask) ? d.trainMask : null)
+          setTaskData({
+            trainMask: Array.isArray(d.trainMask) ? d.trainMask : null,
+            valMask: Array.isArray(d.valMask) ? d.valMask : null,
+            testMask: Array.isArray(d.testMask) ? d.testMask : null,
+          })
+        }
         if (d.classNames) {
           setClassNames(d.classNames)
         }
@@ -144,36 +164,50 @@ export default function useWebSocket() {
           console.warn('[Snapshot Validation]', `Task ${currentTask} missing fields:`, validation.missingFields)
         }
         addSnapshot(payload)
-        setTraining(true, msg.progress)
+        const progress = typeof msg.progress === 'number' ? msg.progress : null
+        const reachedFinalEpoch = progress !== null && progress >= 1
+        setTraining(!reachedFinalEpoch, progress)
         if (typeof payload?.epoch === 'number') {
           useSessionStore.getState().onEpochReceived(payload.epoch, msg.seq)
         }
+        if (reachedFinalEpoch) {
+          useSessionStore.getState().setStatus('completed')
+          const finalSnapshots = usePlayerStore.getState().snapshots
+          if (finalSnapshots.length > 0 && !usePlayerStore.getState().trainingDone) {
+            setDone(finalSnapshots.length - 1)
+          }
+        }
 
       } else if (msg.type === 'training_complete') {
-        // v3: payload = { all_snapshots, session_id }
-        // legacy: top-level all_snapshots
-        const allSnaps = payload?.all_snapshots || rawMsg.all_snapshots;
-        if (allSnaps && allSnaps.length > 0) {
-          loadSnapshots(allSnaps)
-        }
+        // Snapshots were already streamed via epoch_snapshot messages during training.
+        // DO NOT call loadSnapshots here — it resets currentEpochFloat to 0,
+        // and setDone then locks autoFollow=false, leaving the view stuck at epoch 0.
+        const existingSnaps = usePlayerStore.getState().snapshots
         setTraining(false, 1)
         useSessionStore.getState().setStatus('completed')
-        // Don't auto-seek to 0 - let user stay at the latest epoch they were watching
-        if (allSnaps && allSnaps.length > 0) {
-          setDone(allSnaps.length - 1)
+        if (existingSnaps.length > 0 && !usePlayerStore.getState().trainingDone) {
+          setDone(existingSnaps.length - 1)
         }
+        expectedCloseRef.current = true
 
       } else if (msg.type === 'error') {
         // v3: structured error with code, message, retriable (no traceback)
         // legacy: raw message + traceback
         const errPayload = payload || {};
         const errMsg = errPayload.message || errPayload.code || 'Unknown error';
-        const userMsg = errPayload.code 
+        const translated = errPayload.code
           ? getErrorMessage(errPayload.code, errPayload.message)
-          : errMsg;
+          : errMsg
+        const userMsg = errMsg && translated !== errMsg
+          ? `${translated}\n\nChi tiết: ${errMsg}`
+          : translated
         console.error('Training error:', userMsg);
+        if (typeof window !== 'undefined' && userMsg) {
+          window.alert(`Live training failed: ${userMsg}`)
+        }
         setTraining(false, 0)
         useSessionStore.getState().setStatus('failed')
+        expectedCloseRef.current = true
 
       } else if (msg.type === 'pong' || msg.type === 'ping' || msg.type === 'session_created') {
         // Protocol messages — handled in future phases
@@ -188,24 +222,28 @@ export default function useWebSocket() {
 
     wsRef.current.onclose = (event) => {
       statusRef.current = 'disconnected'
-      // Disable auto-reconnect for training tasks to avoid infinite crash loops.
-      // If the backend fails, the user should be notified and choose to rerun manually.
       setTraining(false, 0)
-      useSessionStore.getState().onDisconnect()
-      
-      if (event.code === 1006) {
-        console.warn('WebSocket closed abnormally (1006). Potential backend crash or network issue.')
+      const sessionState = useSessionStore.getState()
+      const sessionStatus = sessionState.status
+      const wasExpected = expectedCloseRef.current || event.wasClean || [1000, 1008, 1011].includes(event.code)
+
+      if (!['completed', 'failed', 'stopped', 'idle'].includes(sessionStatus)) {
+        sessionState.onDisconnect()
       }
+
+      if (event.code === 1006 && !wasExpected) {
+        console.warn('WebSocket closed abnormally (1006). Potential backend crash or network issue.')
+      } else if (!wasExpected && event.code !== 1005) {
+        console.warn(`WebSocket closed unexpectedly (${event.code}).`, event.reason || 'No reason provided.')
+      }
+      expectedCloseRef.current = false
     }
-  }, [addSnapshot, loadSnapshots, setTraining, setGraphData, setGroundTruth, setTaskData, setTask5Meta, setDone, attemptReconnect])
+  }, [addSnapshot, loadSnapshots, setTraining, setGraphData, setGroundTruth, setTrainMask, setTaskData, setTask5Meta, setDone, attemptReconnect])
 
   const disconnect = useCallback(() => {
-    if (wsRef.current) {
-      wsRef.current.close()
-      wsRef.current = null
-    }
+    closeCurrentSocket()
     statusRef.current = 'disconnected'
-  }, [])
+  }, [closeCurrentSocket])
 
   const send = useCallback((data) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

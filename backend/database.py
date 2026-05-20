@@ -132,8 +132,8 @@ else:
         logger.warning(f"⚠️ Warning: MongoDB connection failed, falling back to local files: {e}")
         mongo_available = False
 
-    mongo_db = mongo_client["gnn_insight"] if mongo_available and mongo_client else None
-    if mongo_available and mongo_db:
+    mongo_db = mongo_client["gnn_insight"] if mongo_available and mongo_client is not None else None
+    if mongo_available and mongo_db is not None:
         mongo_experiment_snapshots = mongo_db["experiment_snapshots"]
         mongo_experiment_metrics = mongo_db["experiment_metrics"]
         mongo_graph_payloads = mongo_db["graph_payloads"]
@@ -286,6 +286,51 @@ def _log_startup_status() -> None:
         logger.info("[RUNTIME] All services healthy (MySQL, MongoDB, Redis).")
 
 
+def _ensure_user_profile_columns() -> None:
+    expected_columns = {
+        "bio": "TEXT",
+        "github_url": "VARCHAR(255)",
+        "organization": "VARCHAR(120)",
+        "job_title": "VARCHAR(120)",
+        "location": "VARCHAR(120)",
+        "profile_image": "TEXT",
+        "updated_at": "DATETIME",
+    }
+
+    try:
+        with engine.begin() as connection:
+            dialect = engine.dialect.name
+            if dialect == "sqlite":
+                rows = connection.execute(text("PRAGMA table_info(users)")).fetchall()
+                existing = {row[1] for row in rows}
+            else:
+                rows = connection.execute(text("SHOW COLUMNS FROM users")).fetchall()
+                existing = {row[0] for row in rows}
+
+            for column_name, column_type in expected_columns.items():
+                if column_name in existing:
+                    continue
+                if dialect == "sqlite" and column_name == "updated_at":
+                    ddl = f"ALTER TABLE users ADD COLUMN {column_name} DATETIME"
+                else:
+                    ddl = f"ALTER TABLE users ADD COLUMN {column_name} {column_type}"
+                connection.execute(text(ddl))
+
+            if dialect == "mysql":
+                column_types = {
+                    row[0]: str(row[1]).lower()
+                    for row in rows
+                }
+                profile_image_type = column_types.get("profile_image", "")
+                if profile_image_type.startswith("varchar"):
+                    connection.execute(text("ALTER TABLE users MODIFY COLUMN profile_image TEXT NULL"))
+
+            if "updated_at" not in existing:
+                connection.execute(text("UPDATE users SET updated_at = created_at WHERE updated_at IS NULL"))
+    except Exception as exc:
+        logger.warning("[DB] Could not ensure user profile columns: %s", exc)
+
+
 def init_db():
     from models.sql_models import (
         AuditLog,
@@ -299,9 +344,20 @@ def init_db():
     )
 
     Base.metadata.create_all(bind=engine)
+    _ensure_user_profile_columns()
     # Satisfy linters that complain about unused imports used for metadata registration
     _ = [AuditLog, Dataset, DatasetVersion, Experiment, Project, SessionSnapshot, TrainingSession, User]
     ensure_mongo_indexes()
+    try:
+        from services.sample_dataset_service import ensure_sample_datasets
+
+        sample_db = SessionLocal()
+        try:
+            ensure_sample_datasets(sample_db)
+        finally:
+            sample_db.close()
+    except Exception as exc:
+        logger.warning("[DB] Could not ensure starter sample datasets: %s", exc)
     logger.info("Relational Database initialized.")
     _validate_env_config()
     _log_startup_status()

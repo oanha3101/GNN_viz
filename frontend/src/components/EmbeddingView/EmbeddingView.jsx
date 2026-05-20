@@ -2,12 +2,10 @@ import { useMemo, useRef, useEffect, useCallback, useState } from 'react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
 import LazyPlot from '../primitives/LazyPlot'
-import { CLASS_COLORS, getClassColor } from '../../utils/colors'
+import { getClassColor } from '../../utils/colors'
 import { easeInOutCubic, interpolateSnapshots } from '../../engine/interpolate'
+import { buildTask2GraphDescriptors } from '../../utils/task2Metrics'
 
-/**
- * Tính toán dải tọa độ và độ nén linh hoạt.
- */
 function getSpreadStats(points = []) {
   if (!points.length) {
     return { xRange: [-3, 3], yRange: [-3, 3], compactness: 1 }
@@ -15,7 +13,7 @@ function getSpreadStats(points = []) {
 
   let minX = Infinity, maxX = -Infinity
   let minY = Infinity, maxY = -Infinity
-  
+
   points.forEach(([x, y]) => {
     if (Number.isFinite(x)) { minX = Math.min(minX, x); maxX = Math.max(maxX, x) }
     if (Number.isFinite(y)) { minY = Math.min(minY, y); maxY = Math.max(maxY, y) }
@@ -25,143 +23,212 @@ function getSpreadStats(points = []) {
 
   const spanX = Math.max(maxX - minX, 0.5)
   const spanY = Math.max(maxY - minY, 0.5)
-  
-  // Ép tỉ lệ 1:1 và căn giữa dữ liệu thực tế
   const maxSpan = Math.max(spanX, spanY)
-  const padding = maxSpan * 0.25 // Thêm lề xung quanh cho thoáng
-
+  const padding = maxSpan * 0.25
   const centerX = (minX + maxX) / 2
   const centerY = (minY + maxY) / 2
-
   const compactness = Math.max(0.4, Math.min(1.3, 4 / maxSpan))
 
-  return { 
-    xRange: [centerX - maxSpan/2 - padding, centerX + maxSpan/2 + padding], 
-    yRange: [centerY - maxSpan/2 - padding, centerY + maxSpan/2 + padding], 
-    compactness 
+  return {
+    xRange: [centerX - maxSpan / 2 - padding, centerX + maxSpan / 2 + padding],
+    yRange: [centerY - maxSpan / 2 - padding, centerY + maxSpan / 2 + padding],
+    compactness,
   }
 }
 
-/* ─── Mini-Graph Popup for Task 2 ─────────────────────────────────────────── */
-function MiniGraphPopup({ graph, hoveredGraphId, currSnap, position }) {
-  if (!graph || !position) return null
-  const { nodes, links } = graph
+function colorByMode(descriptor, mode) {
+  if (mode === 'correctness') {
+    return descriptor.correct === 1 ? '#10b981' : '#ef4444'
+  }
+  if (mode === 'confidence') {
+    const confidence = descriptor.confidence ?? 0
+    return confidence > 0.8 ? '#f8fafc' : confidence > 0.55 ? '#f59e0b' : '#ef4444'
+  }
+  if (mode === 'entropy') {
+    const entropy = descriptor.entropy ?? 0
+    return entropy >= 0.7 ? '#fb7185' : entropy >= 0.35 ? '#f59e0b' : '#22d3ee'
+  }
+  return getClassColor(descriptor.predicted)
+}
+
+function MiniGraphPopup({ descriptor, currSnap, position }) {
+  if (!descriptor || !position) return null
+  const { nodes, links } = descriptor
   const size = 100
-  const r = 35
-  const cx = 50
-  const cy = 50
+  const radius = 35
+  const centerX = 50
+  const centerY = 50
 
   const nodePos = {}
-  nodes.forEach((node, i) => {
-    const angle = (i / nodes.length) * Math.PI * 2 - Math.PI / 2
-    nodePos[node.id] = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) }
+  nodes.forEach((node, index) => {
+    const angle = (index / nodes.length) * Math.PI * 2 - Math.PI / 2
+    nodePos[node.id] = { x: centerX + radius * Math.cos(angle), y: centerY + radius * Math.sin(angle) }
   })
 
   return (
-    <div
-      className="fixed z-[9999] pointer-events-none"
-      style={{ left: position.x + 16, top: position.y - 60 }}
-    >
-      <div className="bg-slate-900/95 backdrop-blur-md rounded-xl border border-slate-600/60 shadow-2xl shadow-black/50 p-2 w-[160px]">
+    <div className="fixed z-[9999] pointer-events-none" style={{ left: position.x + 16, top: position.y - 60 }}>
+      <div className="bg-slate-900/95 backdrop-blur-md rounded-xl border border-slate-600/60 shadow-2xl shadow-black/50 p-2 w-[180px]">
         <svg width="100" height="100" viewBox="0 0 100 100" className="mx-auto">
-          {links.map((l, i) => {
-            const s = typeof l.source === 'object' ? l.source.id : l.source
-            const t = typeof l.target === 'object' ? l.target.id : l.target
-            return nodePos[s] && nodePos[t] ? (
-              <line key={i} x1={nodePos[s].x} y1={nodePos[s].y}
-                    x2={nodePos[t].x} y2={nodePos[t].y}
-                    stroke="rgba(148,163,184,0.2)" strokeWidth="1" />
+          {links.map((link, index) => {
+            const source = typeof link.source === 'object' ? link.source.id : link.source
+            const target = typeof link.target === 'object' ? link.target.id : link.target
+            return nodePos[source] && nodePos[target] ? (
+              <line
+                key={index}
+                x1={nodePos[source].x}
+                y1={nodePos[source].y}
+                x2={nodePos[target].x}
+                y2={nodePos[target].y}
+                stroke="rgba(148,163,184,0.2)"
+                strokeWidth="1"
+              />
             ) : null
           })}
-          {nodes.map((n) => nodePos[n.id] ? (
-            <circle key={n.id} cx={nodePos[n.id].x} cy={nodePos[n.id].y}
-                    r="4" fill="#6366f1" />
-          ) : null)}
+          {nodes.map((node) => (
+            nodePos[node.id] ? (
+              <circle
+                key={node.id}
+                cx={nodePos[node.id].x}
+                cy={nodePos[node.id].y}
+                r="4"
+                fill="#6366f1"
+              />
+            ) : null
+          ))}
         </svg>
-        <div className="text-[7px] text-center text-slate-400 mt-1 space-y-0.5 leading-tight">
-          <div>{nodes.length}n/{links.length}e</div>
-          <div>D: {currSnap?.graph_structural_metrics?.[hoveredGraphId]?.density?.toFixed(3) || '?'} | C: {currSnap?.graph_structural_metrics?.[hoveredGraphId]?.avg_clustering?.toFixed(3) || '?'} | D°: {currSnap?.graph_structural_metrics?.[hoveredGraphId]?.avg_degree?.toFixed(1) || '?'}</div>
+        <div className="mt-1 space-y-0.5 text-center text-[7px] leading-tight text-slate-400">
+          <div>G#{descriptor.originalGraphId} · {nodes.length}n/{links.length}e</div>
+          <div>{descriptor.motifSignature}</div>
+          <div>{descriptor.failureTag}</div>
         </div>
       </div>
     </div>
   )
 }
 
-/* ─── Main EmbeddingView ──────────────────────────────────────────────────── */
-export default function EmbeddingView() {
-  const { snapshots, currentEpochFloat, currentEpoch } = usePlayerStore()
-  const selectedTask = useGNNStore((s) => s.selectedTask)
-  const selectedNodeId = useGNNStore((s) => s.selectedNodeId)
-  const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
-  const setHoveredGraph = useGNNStore((s) => s.setHoveredGraph)
-  const hoveredGraphId = useGNNStore((s) => s.hoveredGraphId)
-  const taskData = useGNNStore((s) => s.taskData)
+export default function EmbeddingView({ forcedTask2ColorMode = null, hideTask2Toolbar = false }) {
+  const { snapshots, currentEpochFloat } = usePlayerStore()
+  const selectedTask = useGNNStore((state) => state.selectedTask)
+  const selectedNodeId = useGNNStore((state) => state.selectedNodeId)
+  const setSelectedNode = useGNNStore((state) => state.setSelectedNode)
+  const setHoveredGraph = useGNNStore((state) => state.setHoveredGraph)
+  const hoveredGraphId = useGNNStore((state) => state.hoveredGraphId)
+  const taskData = useGNNStore((state) => state.taskData)
+  const graphColorMode = useGNNStore((state) => state.task2EmbeddingColorMode)
+  const setGraphColorMode = useGNNStore((state) => state.setTask2EmbeddingColorMode)
+  const selectedCell = useGNNStore((state) => state.task2SelectedCell)
+  const activeGraphColorMode = forcedTask2ColorMode || graphColorMode
 
   const [showTrajectory, setShowTrajectory] = useState(false)
   const [popupPos, setPopupPos] = useState(null)
   const plotContainerRef = useRef(null)
-  
+
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
   const tRaw = currentEpochFloat - epochInt
   const t = easeInOutCubic(Math.max(0, Math.min(1, tRaw)))
-  
+
   const snapA = snapshots[epochInt]
   const snapB = snapshots[epochInt + 1] || snapA
-  
+
   const currSnap = useMemo(() => {
     if (!snapA || !snapB) return null
     return interpolateSnapshots(snapA, snapB, t)
   }, [snapA, snapB, t])
 
-  /* ── Trajectory trace (10-epoch trail for selected node) ──────────── */
+  const indexedGraphs = useMemo(
+    () => (taskData?.graphs || []).map((graph, index) => ({
+      ...graph,
+      originalGraphId: graph?.originalGraphId ?? index,
+      sourceIndex: graph?.sourceIndex ?? index,
+    })),
+    [taskData?.graphs]
+  )
+
+  const task2Descriptors = useMemo(() => {
+    if (selectedTask !== 2) return []
+    return buildTask2GraphDescriptors({
+      snapshot: currSnap,
+      graphs: indexedGraphs,
+      classNames: taskData?.classNames || [],
+    })
+  }, [selectedTask, currSnap, indexedGraphs, taskData?.classNames])
+
+  const task2DescriptorByGraphId = useMemo(() => {
+    const map = new Map()
+    task2Descriptors.forEach((descriptor) => {
+      map.set(descriptor.originalGraphId, descriptor)
+    })
+    return map
+  }, [task2Descriptors])
+
   const trajectoryTrace = useMemo(() => {
     if (!showTrajectory || selectedNodeId === null || !currSnap?.embeddings_2d) return null
     if (selectedTask === 2 || selectedTask === 3) return null
 
     const trailLen = Math.min(10, epochInt)
-    const x = [], y = []
+    const x = []
+    const y = []
     for (let offset = trailLen; offset >= 0; offset--) {
       const idx = epochInt - offset
       if (idx < 0) continue
       const emb = snapshots[idx]?.embeddings_2d?.[selectedNodeId]
-      if (emb) { x.push(emb[0]); y.push(emb[1]) }
+      if (emb) {
+        x.push(emb[0])
+        y.push(emb[1])
+      }
     }
 
     if (x.length < 2) return null
     return {
-      type: 'scatter', mode: 'lines+markers',
-      x, y,
+      type: 'scatter',
+      mode: 'lines+markers',
+      x,
+      y,
       line: { color: 'rgba(251, 146, 60, 0.5)', width: 2, shape: 'spline' },
       marker: {
-        color: x.map((_, i) => `rgba(251, 146, 60, ${0.2 + (i / x.length) * 0.8})`),
-        size: x.map((_, i) => 3 + (i / x.length) * 4),
+        color: x.map((_, index) => `rgba(251, 146, 60, ${0.2 + (index / x.length) * 0.8})`),
+        size: x.map((_, index) => 3 + (index / x.length) * 4),
       },
       hoverinfo: 'none',
       showlegend: false,
     }
   }, [showTrajectory, selectedNodeId, epochInt, snapshots, currSnap, selectedTask])
 
-  /* ── Main plotData ──────────────────────────────────────────────────── */
   const plotData = useMemo(() => {
     if (!currSnap) return null
-    
-    // Task 2: Graph-level embedding
+
     if (selectedTask === 2 && currSnap.graph_embeddings_2d) {
-      const activeId = selectedNodeId !== null ? selectedNodeId : hoveredGraphId
       const emb = currSnap.graph_embeddings_2d
-      const preds = currSnap.graph_predictions || []
       const { compactness } = getSpreadStats(emb)
-      const x = emb.map(p => p[0])
-      const y = emb.map(p => p[1])
-      const colors = preds.map(c => getClassColor(c))
-      const sizes = emb.map((_, i) => (i === activeId) ? 14 * compactness : 8 * compactness)
-      const opacities = emb.map((_, i) => (i === activeId) ? 1.0 : 0.75)
-      
+      const x = emb.map((point) => point[0])
+      const y = emb.map((point) => point[1])
+      const descriptors = task2Descriptors.length ? task2Descriptors : indexedGraphs.map((graph, index) => ({
+        originalGraphId: graph.originalGraphId,
+        sourceIndex: graph.sourceIndex,
+        predicted: currSnap.graph_predictions?.[index] ?? null,
+        confidence: currSnap.graph_confidences?.[index] ?? 0,
+        correct: currSnap.graph_correct?.[index] ?? null,
+        entropy: currSnap.attention_entropy?.[index] ?? 0,
+      }))
+      const selectedCellSet = selectedCell
+        ? new Set(descriptors.filter((descriptor) => descriptor.predicted === selectedCell.pred && descriptor.groundTruth === selectedCell.gt).map((descriptor) => descriptor.originalGraphId))
+        : null
+      const colors = descriptors.map((descriptor) => colorByMode(descriptor, activeGraphColorMode))
+      const sizes = descriptors.map((descriptor) => {
+        const selected = descriptor.originalGraphId === selectedNodeId
+        return selected ? 14 * compactness : 8 * compactness
+      })
+      const opacities = descriptors.map((descriptor) => {
+        if (!selectedCellSet) return 0.85
+        return selectedCellSet.has(descriptor.originalGraphId) ? 1 : 0.18
+      })
+
       return [{
         type: 'scatter',
         mode: 'markers+text',
-        x, y,
-        text: emb.map((_, i) => `G${i}`),
+        x,
+        y,
+        text: descriptors.map((descriptor) => `G${descriptor.originalGraphId}`),
         textposition: 'top center',
         textfont: { family: 'monospace', size: 9, color: '#94a3b8' },
         marker: {
@@ -169,43 +236,44 @@ export default function EmbeddingView() {
           size: sizes,
           opacity: opacities,
           line: {
-            color: emb.map((_, i) => (i === activeId) ? 'white' : 'rgba(255,255,255,0.08)'),
-            width: emb.map((_, i) => (i === activeId) ? 2 : 0.5),
+            color: descriptors.map((descriptor) => (descriptor.originalGraphId === selectedNodeId ? 'white' : 'rgba(255,255,255,0.08)')),
+            width: descriptors.map((descriptor) => (descriptor.originalGraphId === selectedNodeId ? 2 : 0.5)),
           },
         },
-        hoverinfo: 'none', 
+        hoverinfo: 'none',
       }]
     }
 
-    // Task 3: Pair Proximity Midpoints
-    const testEdges = taskData?.testEdges
-    
-    if (selectedTask === 3 && currSnap.embeddings_2d && testEdges) {
+    if (selectedTask === 3 && currSnap.embeddings_2d && taskData?.testEdges) {
       const emb = currSnap.embeddings_2d
       const scores = currSnap.edge_scores || []
       const { compactness } = getSpreadStats(emb)
-      
-      const x = [], y = [], colors = [], texts = [], labels = [], sizes = [], opacities = []
+      const x = []
+      const y = []
+      const colors = []
+      const labels = []
+      const sizes = []
+      const opacities = []
 
-      testEdges.forEach((e, i) => {
-         const p1 = emb[e.source]
-         const p2 = emb[e.target]
-         if (p1 && p2) {
-             const score = scores[i] ?? 0.5
-             x.push((p1[0] + p2[0]) / 2)
-             y.push((p1[1] + p2[1]) / 2)
-             colors.push(e.exists ? '#10b981' : '#ef4444')
-             sizes.push((7 + score * 7) * compactness)
-             opacities.push(0.5 + score * 0.5)
-             labels.push(`${e.source}-${e.target}`)
-             texts.push(`Pair: ${e.source}-${e.target}<br>GT: ${e.exists ? 'Link' : 'No Link'}<br>Confidence: ${(score*100).toFixed(1)}%`)
-         }
+      taskData.testEdges.forEach((edge, index) => {
+        const source = emb[edge.source]
+        const target = emb[edge.target]
+        if (source && target) {
+          const score = scores[index] ?? 0.5
+          x.push((source[0] + target[0]) / 2)
+          y.push((source[1] + target[1]) / 2)
+          colors.push(edge.exists ? '#10b981' : '#ef4444')
+          sizes.push((7 + score * 7) * compactness)
+          opacities.push(0.5 + score * 0.5)
+          labels.push(`${edge.source}-${edge.target}`)
+        }
       })
 
       return [{
         type: 'scatter',
         mode: 'markers+text',
-        x, y,
+        x,
+        y,
         text: labels,
         textposition: 'top center',
         textfont: { family: 'monospace', size: 8, color: '#64748b' },
@@ -213,29 +281,28 @@ export default function EmbeddingView() {
           color: colors,
           size: sizes,
           opacity: opacities,
-          line: { color: 'rgba(255,255,255,0.2)', width: 1 }
+          line: { color: 'rgba(255,255,255,0.2)', width: 1 },
         },
-        textinfo: 'text',
-        hoverinfo: 'text'
+        hoverinfo: 'text',
       }]
     }
 
-    // Task 1: Node-level embedding
     if (!currSnap?.embeddings_2d) return null
     const emb = currSnap.embeddings_2d
     const preds = currSnap.node_predictions || []
     const { compactness } = getSpreadStats(emb)
-    const x = emb.map((p) => p[0])
-    const y = emb.map((p) => p[1])
-    const colors = preds.map(c => getClassColor(c))
-    const sizes = emb.map((_, i) => i === selectedNodeId ? 14 * compactness : 8 * compactness)
-    const opacities = emb.map((_, i) => i === selectedNodeId ? 1.0 : 0.82)
+    const x = emb.map((point) => point[0])
+    const y = emb.map((point) => point[1])
+    const colors = preds.map((classId) => getClassColor(classId))
+    const sizes = emb.map((_, index) => index === selectedNodeId ? 14 * compactness : 8 * compactness)
+    const opacities = emb.map((_, index) => index === selectedNodeId ? 1 : 0.82)
 
     const traces = [{
       type: 'scatter',
       mode: 'markers+text',
-      x, y,
-      text: emb.map((_, i) => String(i)),
+      x,
+      y,
+      text: emb.map((_, index) => String(index)),
       textposition: 'top center',
       textfont: { family: 'monospace', size: 9, color: '#ffffff' },
       marker: {
@@ -243,10 +310,8 @@ export default function EmbeddingView() {
         size: sizes,
         opacity: opacities,
         line: {
-          color: emb.map((_, i) =>
-            i === selectedNodeId ? 'white' : 'rgba(255,255,255,0.08)'
-          ),
-          width: emb.map((_, i) => i === selectedNodeId ? 2 : 0.5),
+          color: emb.map((_, index) => index === selectedNodeId ? 'white' : 'rgba(255,255,255,0.08)'),
+          width: emb.map((_, index) => index === selectedNodeId ? 2 : 0.5),
         },
       },
       hoverinfo: 'text',
@@ -254,11 +319,10 @@ export default function EmbeddingView() {
 
     if (trajectoryTrace) traces.push(trajectoryTrace)
     return traces
-  }, [currSnap, selectedNodeId, selectedTask, hoveredGraphId, taskData, trajectoryTrace])
+  }, [currSnap, selectedNodeId, selectedTask, taskData, trajectoryTrace, activeGraphColorMode, selectedCell, indexedGraphs, task2Descriptors])
 
-  // Silhouette score
   const silhouetteScore = useMemo(() => {
-    const snapToUse = selectedTask === 2 
+    const snapToUse = selectedTask === 2
       ? { emb: currSnap?.graph_embeddings_2d, preds: currSnap?.graph_predictions }
       : { emb: currSnap?.embeddings_2d, preds: currSnap?.node_predictions }
 
@@ -268,24 +332,31 @@ export default function EmbeddingView() {
     if (classes.length <= 1 || emb.length < 4) return 0
 
     const sampleSize = Math.min(emb.length, 30)
-    let totalScore = 0, count = 0
+    let totalScore = 0
+    let count = 0
 
     for (let i = 0; i < sampleSize; i++) {
       const ci = preds[i]
-      let intra = 0, intraCount = 0, inter = Infinity
+      let intra = 0
+      let intraCount = 0
+      let inter = Infinity
 
       for (let j = 0; j < emb.length; j++) {
         if (i === j) continue
-        const d = Math.hypot(emb[i][0] - emb[j][0], emb[i][1] - emb[j][1])
-        if (preds[j] === ci) { intra += d; intraCount++ }
+        const distance = Math.hypot(emb[i][0] - emb[j][0], emb[i][1] - emb[j][1])
+        if (preds[j] === ci) {
+          intra += distance
+          intraCount++
+        }
       }
       intra = intraCount > 0 ? intra / intraCount : 0
 
-      for (const c of classes) {
-        if (c === ci) continue
-        let dist = 0, cnt = 0
+      for (const cls of classes) {
+        if (cls === ci) continue
+        let dist = 0
+        let cnt = 0
         for (let j = 0; j < emb.length; j++) {
-          if (preds[j] === c) {
+          if (preds[j] === cls) {
             dist += Math.hypot(emb[i][0] - emb[j][0], emb[i][1] - emb[j][1])
             cnt++
           }
@@ -294,47 +365,87 @@ export default function EmbeddingView() {
       }
 
       const s = inter > 0 ? (inter - intra) / Math.max(inter, intra) : 0
-      totalScore += s; count++
+      totalScore += s
+      count++
     }
     return count > 0 ? totalScore / count : 0
   }, [currSnap, selectedTask])
 
   const handlePointClick = useCallback((event) => {
     if (event.points && event.points.length > 0) {
-      const idx = event.points[0].pointIndex
+      const point = event.points[0]
+      const idx = point.pointIndex
+      if (selectedTask === 2) {
+        const descriptor = task2Descriptors[idx]
+        if (descriptor) {
+          setSelectedNode(descriptor.originalGraphId)
+          return
+        }
+      }
       setSelectedNode(idx)
       if (selectedTask === 1) setShowTrajectory(true)
     }
-  }, [setSelectedNode, selectedTask])
+  }, [setSelectedNode, selectedTask, task2Descriptors])
 
   const handleHover = useCallback((event) => {
     if (event.points && event.points.length > 0) {
-      const pt = event.points[0]
+      const point = event.points[0]
       if (selectedTask === 2) {
-        setHoveredGraph(pt.pointIndex)
+        const descriptor = task2Descriptors[point.pointIndex]
+        setHoveredGraph(descriptor?.originalGraphId ?? null)
         setPopupPos({ x: (event.event?.clientX || 0), y: (event.event?.clientY || 0) })
       }
     }
-  }, [selectedTask, setHoveredGraph])
+  }, [selectedTask, setHoveredGraph, task2Descriptors])
 
   const handleUnhover = useCallback(() => {
-    if (selectedTask === 2) { setHoveredGraph(null); setPopupPos(null) }
+    if (selectedTask === 2) {
+      setHoveredGraph(null)
+      setPopupPos(null)
+    }
   }, [selectedTask, setHoveredGraph])
 
-  const hoveredGraph = useMemo(() => {
-    if (selectedTask !== 2 || hoveredGraphId === null || !taskData?.graphs) return null
-    return taskData.graphs[hoveredGraphId]
-  }, [selectedTask, hoveredGraphId, taskData])
+  const hoveredDescriptor = useMemo(() => {
+    if (selectedTask !== 2 || hoveredGraphId === null) return null
+    return task2DescriptorByGraphId.get(hoveredGraphId) || null
+  }, [selectedTask, hoveredGraphId, task2DescriptorByGraphId])
 
   const axisConfig = useMemo(() => {
     if (selectedTask === 2) return getSpreadStats(currSnap?.graph_embeddings_2d || [])
     return getSpreadStats(currSnap?.embeddings_2d || [])
   }, [currSnap, selectedTask])
 
-  if (!plotData) return <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-950/20 animate-pulse text-[10px] uppercase font-black tracking-widest">Awaiting Latent...</div>
+  if (!plotData) {
+    return <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-950/20 animate-pulse text-[10px] uppercase font-black tracking-widest">Awaiting Latent...</div>
+  }
 
   return (
     <div ref={plotContainerRef} className="w-full h-full relative bg-[#020617]/40">
+      {selectedTask === 2 && !hideTask2Toolbar && (
+        <div className="absolute left-2 top-2 z-10 flex items-center gap-2 rounded-xl border border-slate-800/70 bg-slate-950/80 px-2 py-1 text-[10px] font-semibold text-slate-300">
+          <span className="uppercase tracking-ultra text-slate-500">Color</span>
+          {[
+            ['predicted', 'Predicted'],
+            ['correctness', 'Correct'],
+            ['confidence', 'Confidence'],
+            ['entropy', 'Entropy'],
+          ].map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setGraphColorMode(mode)}
+              className={`rounded-md px-2 py-1 transition-colors ${
+                activeGraphColorMode === mode
+                  ? 'bg-cyan-500/12 text-cyan-200'
+                  : 'text-slate-500 hover:text-slate-200'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <LazyPlot
         data={plotData}
         layout={{
@@ -342,19 +453,27 @@ export default function EmbeddingView() {
           plot_bgcolor: 'transparent',
           font: { color: '#94a3b8', size: 10 },
           xaxis: {
-            showgrid: true, gridcolor: 'rgba(255,255,255,0.02)',
-            zeroline: false, showticklabels: false,
-            range: axisConfig.xRange, fixedrange: false,
+            showgrid: true,
+            gridcolor: 'rgba(255,255,255,0.02)',
+            zeroline: false,
+            showticklabels: false,
+            range: axisConfig.xRange,
+            fixedrange: false,
           },
           yaxis: {
-            showgrid: true, gridcolor: 'rgba(255,255,255,0.02)',
-            zeroline: false, showticklabels: false,
-            range: axisConfig.yRange, fixedrange: false,
-            scaleanchor: 'x', scaleratio: 1,
+            showgrid: true,
+            gridcolor: 'rgba(255,255,255,0.02)',
+            zeroline: false,
+            showticklabels: false,
+            range: axisConfig.yRange,
+            fixedrange: false,
+            scaleanchor: 'x',
+            scaleratio: 1,
           },
           margin: { l: 30, r: 30, t: 40, b: 30 },
-          uirevision: `gnn-embed-${selectedTask}`,
-          showlegend: false, dragmode: 'pan',
+          uirevision: `gnn-embed-${selectedTask}-${activeGraphColorMode}`,
+          showlegend: false,
+          dragmode: 'pan',
         }}
         style={{ width: '100%', height: '100%' }}
         useResizeHandler
@@ -373,11 +492,13 @@ export default function EmbeddingView() {
 
       <div className="absolute bottom-3 left-3 bg-slate-950/80 backdrop-blur-md border border-white/5 rounded-lg px-2 py-1 pointer-events-none flex items-center gap-2">
         <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_#06b6d4]" />
-        <span className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Density: {(axisConfig.compactness * 100).toFixed(0)}%</span>
+        <span className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">
+          Density: {(axisConfig.compactness * 100).toFixed(0)}%
+        </span>
       </div>
 
-      {hoveredGraph && popupPos && (
-        <MiniGraphPopup graph={hoveredGraph} hoveredGraphId={hoveredGraphId} currSnap={currSnap} position={popupPos} />
+      {hoveredDescriptor && popupPos && (
+        <MiniGraphPopup descriptor={hoveredDescriptor} currSnap={currSnap} position={popupPos} />
       )}
     </div>
   )

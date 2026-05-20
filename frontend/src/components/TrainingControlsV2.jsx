@@ -3,6 +3,7 @@ import { Play, Square, Loader2, Save } from 'lucide-react'
 import useGNNStore from '../store/useGNNStore'
 import usePlayerStore from '../store/playerStore'
 import useSessionStore from '../store/sessionStore'
+import useAuthStore from '../store/authStore'
 import {
   generateTask1Mock,
   generateTask2Mock,
@@ -11,7 +12,16 @@ import {
   generateTask5Mock,
   generateTask6Mock,
 } from '../mock/generateMockSnapshots'
-import { apiUrl, getAuthHeaders } from '../utils/api'
+import { apiUrl, AUTH_TOKEN_KEY, getAuthHeaders } from '../utils/api'
+
+const TASK_PROFILE_LABELS = {
+  1: 'Node Classification',
+  2: 'Graph Classification',
+  3: 'Link Prediction',
+  4: 'Community Detection',
+  5: 'Graph Embedding',
+  6: 'Graph Generation',
+}
 
 const TASK_NAMES = {
   1: 'Phân loại nút',
@@ -20,6 +30,34 @@ const TASK_NAMES = {
   4: 'Phát hiện cộng đồng',
   5: 'Biểu diễn đồ thị',
   6: 'Sinh đồ thị',
+}
+
+function getDatasetTaskIssue(gnnState, selectedTask) {
+  const meta = gnnState.uploadMetadata || {}
+  if (!gnnState.uploadedFilePath || !gnnState.uploadMetadata) return null
+
+  const numClasses = Number(meta.num_classes ?? 0)
+  const numGraphs = Number(meta.num_graphs ?? 0)
+
+  if (selectedTask === 1) {
+    if (numGraphs > 1) {
+      return 'Dataset version nay chua nhieu graph. Bai toan phu hop hon la Task 2 - Graph Classification, khong phai Node Classification.'
+    }
+    if (numClasses < 2) {
+      return 'Dataset version nay khong co node labels hop le cho Task 1, hoac chi co mot lop duy nhat. Chay Node Classification se cho ra visualization vo nghia.'
+    }
+  }
+
+  if (selectedTask === 2) {
+    if (numGraphs > 0 && numGraphs < 2) {
+      return 'Task 2 can mot tap nhieu graph, trong khi dataset version nay giong mot graph don le.'
+    }
+    if (numClasses < 2) {
+      return 'Dataset version nay khong co graph labels hop le cho Task 2, nen khong the train va visualize Graph Classification dung cach.'
+    }
+  }
+
+  return null
 }
 
 /**
@@ -43,7 +81,10 @@ async function saveExperiment(taskType, modelType, hyperparams, snapshots, graph
       snapshots_json: snapshots,
       graph_data_json: graphData,
       ground_truth_json: groundTruth,
-      task_data_json: taskData,
+      task_data_json: {
+        ...(taskData || {}),
+        ...(Array.isArray(extra.trainMask) ? { trainMask: extra.trainMask } : {}),
+      },
       is_mock: isMock,
       ...extra,
     }
@@ -84,6 +125,7 @@ export default function TrainingControlsV2() {
   const setReportOpen = useGNNStore((s) => s.setReportOpen)
   const createSession = useSessionStore((s) => s.createSession)
   const setSessionStatus = useSessionStore((s) => s.setStatus)
+  const currentUser = useAuthStore((s) => s.user)
 
   const playerSnapshots = usePlayerStore((s) => s.snapshots)
   const loadSnapshots = usePlayerStore((s) => s.loadSnapshots)
@@ -91,6 +133,7 @@ export default function TrainingControlsV2() {
   const resetForTraining = usePlayerStore((s) => s.resetForTraining)
   const trainingDone = usePlayerStore((s) => s.trainingDone)
   const reportVersion = usePlayerStore((s) => s.reportVersion)
+  const isViewer = currentUser?.role === 'viewer'
 
   // Track the save state
   const lastPreparedVersion = useRef(0)
@@ -130,6 +173,7 @@ export default function TrainingControlsV2() {
         session_id: useSessionStore.getState().sessionId,
         upload_metadata: gnnState.uploadMetadata,
         uploaded_file_path: gnnState.uploadedFilePath,
+        trainMask: gnnState.trainMask,
       },
     )
     setSaveState(saved ? 'saved' : 'ready')
@@ -137,6 +181,9 @@ export default function TrainingControlsV2() {
 
   const handleStart = useCallback(async () => {
     if (isTraining) {
+      return
+    }
+    if (isViewer) {
       return
     }
     resetForTraining()
@@ -195,15 +242,28 @@ export default function TrainingControlsV2() {
         setTraining(false, 1)
       }, 280)
     } else {
-      // Upload file path if available
-      const uploadedPath = useGNNStore.getState().uploadedFilePath
-      if (!uploadedPath) {
-        alert("⚠️ CHƯA CÓ DỮ LIỆU UPLOAD!\n\nVui lòng nhấn nút 'Upload Data' ở bảng điều khiển bên phải để tải dữ liệu của bạn lên trước khi chạy mô hình thực tế.")
-        return
-      }
       const gnnState = useGNNStore.getState()
       if (!gnnState.activeProjectId || !gnnState.activeDatasetVersionId) {
-        alert("â ï¸ THIáº¾U PROJECT / DATASET VERSION!\n\nHÃ£y vá» Workspace Ä‘á»ƒ chá»n project vĂ  dataset version trÆ°á»›c khi cháº¡y huáº¥n luyá»‡n live.")
+        alert("THIẾU PROJECT / DATASET VERSION!\n\nHãy vào Workspace để chọn project và dataset version trước khi chạy huấn luyện live.")
+        return
+      }
+      const uploadProfileTaskId = gnnState.uploadMetadata?.task_profile_id || null
+      if (uploadProfileTaskId && uploadProfileTaskId !== selectedTask) {
+        const profileName = gnnState.uploadMetadata?.task_profile_name
+          || TASK_PROFILE_LABELS[uploadProfileTaskId]
+          || `Task ${uploadProfileTaskId}`
+        const selectedTaskName = TASK_PROFILE_LABELS[selectedTask] || `Task ${selectedTask}`
+        alert(`TASK KHONG KHOP VOI DATASET VERSION!\n\nDataset version dang chon duoc intake theo profile ${profileName}, nhung ban dang chay ${selectedTaskName}.\n\nHien tai he thong chua remap profile nay an toan cho task khac. Hay chuyen sang task phu hop hoac tao dataset version/profile dung voi bai toan can train.`)
+        return
+      }
+      const uploadedPath = gnnState.uploadedFilePath
+      if (!uploadedPath) {
+        alert("DATASET VERSION CHUA SAN SANG!\n\nVersion du lieu dang chon moi chi co metadata hoac chua co payload train. Hay vao Datasets, chon version co nhan 'Ready to train', hoac upload them mot version moi truoc khi chay live.")
+        return
+      }
+      const datasetTaskIssue = getDatasetTaskIssue(gnnState, selectedTask)
+      if (datasetTaskIssue) {
+        alert(`DATASET VERSION KHONG HOP VOI TASK NAY!\n\n${datasetTaskIssue}`)
         return
       }
       let sessionId = useSessionStore.getState().sessionId
@@ -227,10 +287,26 @@ export default function TrainingControlsV2() {
         setSessionStatus('pending')
       } catch (e) {
         console.error('Failed to create session before training:', e)
+        alert(`Khong tao duoc live session: ${e.message}`)
+        setTraining(false, 0)
+        return
       }
-      const taskConfig = useGNNStore.getState().taskConfig || {}
+      const taskConfig = uploadProfileTaskId && uploadProfileTaskId !== selectedTask
+        ? {}
+        : (useGNNStore.getState().taskConfig || {})
+      const authToken = typeof localStorage !== 'undefined'
+        ? localStorage.getItem(AUTH_TOKEN_KEY)
+        : null
       window.dispatchEvent(new CustomEvent('gnn:start-training', {
         detail: {
+          ...(selectedTask === 2 ? {
+            task2_pool: 'mean',
+            task2_class_weighting: false,
+            task2_balanced_sampler: true,
+            task2_focal_gamma: 1.5,
+            task2_label_smoothing: 0.03,
+            task2_weight_decay: 5e-4,
+          } : {}),
           task: selectedTask,
           model: gnnState.selectedModel,
           dataset: hyperparams.dataset || 'cora',
@@ -243,6 +319,7 @@ export default function TrainingControlsV2() {
           project_id: gnnState.activeProjectId,
           dataset_version_id: gnnState.activeDatasetVersionId,
           session_id: sessionId,
+          ...(authToken ? { auth_token: authToken } : {}),
           ...(uploadedPath ? { uploaded_file_path: uploadedPath } : {}),
           // Task-specific config from upload
           ...taskConfig,
@@ -250,7 +327,7 @@ export default function TrainingControlsV2() {
       }))
       setTraining(true, 0)
     }
-  }, [hyperparams, isTraining, mockMode, selectedTask, setTraining, setGraphData, setGroundTruth, setTrainMask, setTaskData, loadSnapshots, setDone, resetForTraining, setReportOpen])
+  }, [hyperparams, isTraining, isViewer, mockMode, selectedTask, setTraining, setGraphData, setGroundTruth, setTrainMask, setTaskData, loadSnapshots, setDone, resetForTraining, setReportOpen])
 
   useEffect(() => {
     const handler = () => {
@@ -290,10 +367,11 @@ export default function TrainingControlsV2() {
       <div className="flex items-center justify-between">
         <button
           onClick={isTraining ? handleStop : handleStart}
+          disabled={!isTraining && isViewer}
           className={`flex-1 rounded-xl px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
             isTraining
               ? 'bg-aurora-rose/20 text-aurora-rose border border-aurora-rose/30 hover:bg-aurora-rose/30 shadow-[0_0_15px_rgba(225,29,72,0.15)]'
-              : 'bg-amethyst/20 text-amethyst border border-amethyst/30 hover:bg-amethyst/30 shadow-[0_0_20px_rgba(147,51,234,0.2)]'
+              : 'bg-amethyst/20 text-amethyst border border-amethyst/30 hover:bg-amethyst/30 shadow-[0_0_20px_rgba(147,51,234,0.2)] disabled:opacity-40 disabled:cursor-not-allowed'
           }`}
         >
           {isTraining ? (

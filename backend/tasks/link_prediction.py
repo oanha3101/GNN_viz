@@ -125,7 +125,8 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag, sn
             links_json.append({'source': s, 'target': t})
 
     degrees = np.zeros(num_nodes)
-    for s, t in links_json:
+    for edge in links_json:
+        s, t = edge['source'], edge['target']
         degrees[s] += 1
         degrees[t] += 1
 

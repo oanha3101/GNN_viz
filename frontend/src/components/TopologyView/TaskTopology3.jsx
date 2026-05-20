@@ -30,6 +30,8 @@ export default function TaskTopology3() {
   const [showTriangles, setShowTriangles] = useState(true)
   // Auto-derive overlay from selectedModel (selected in LeftSidebar)
   const overlayMode = selectedModel === 'GAT' ? 'attention' : selectedModel === 'GCN' ? 'smoothness' : selectedModel === 'SAGE' ? 'stability' : 'none'
+  const nodeCount = rawGraphData?.nodes?.length || 0
+  const showBulkNodeLabels = nodeCount <= 180
 
   // Pre-compute testEdgeMap for O(1) lookup (replaces O(n) findIndex per frame)
   const testEdgeMap = useMemo(() => {
@@ -344,23 +346,31 @@ export default function TaskTopology3() {
     ctx.lineWidth = (isSelected || isCommonNeighbor ? 3 : 1.2) / globalScale; ctx.stroke()
 
     // ID Label (Luôn luôn hiện)
-    const fontSize = Math.max(4, (isSelected || isCommonNeighbor ? 12 : 8.5) / Math.sqrt(globalScale))
-    ctx.font = `900 ${fontSize}px Inter, system-ui, sans-serif`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    
-    const text = String(node.id)
-    
-    // Thay thế "bôi đen" bằng viền trắng mờ hoặc bóng đổ thông minh
-    ctx.strokeStyle = 'rgba(0,0,0,0.8)'
-    ctx.lineWidth = 2 / globalScale
-    ctx.strokeText(text, node.x, node.y)
-    
-    ctx.fillStyle = '#fff'
-    ctx.fillText(text, node.x, node.y)
+    const shouldShowLabel =
+      isSelected ||
+      isCommonNeighbor ||
+      globalScale > 1.4 ||
+      (showBulkNodeLabels && globalScale > 0.8)
+
+    if (shouldShowLabel) {
+      const fontSize = Math.max(4, (isSelected || isCommonNeighbor ? 12 : 8.5) / Math.sqrt(globalScale))
+      ctx.font = `900 ${fontSize}px Inter, system-ui, sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      
+      const text = String(node.id)
+      
+      // Thay thế "bôi đen" bằng viền trắng mờ hoặc bóng đổ thông minh
+      ctx.strokeStyle = 'rgba(0,0,0,0.8)'
+      ctx.lineWidth = 2 / globalScale
+      ctx.strokeText(text, node.x, node.y)
+      
+      ctx.fillStyle = '#fff'
+      ctx.fillText(text, node.x, node.y)
+    }
     
     ctx.restore()
-  }, [groundTruth, selectedNodeId, commonNeighbors, showNodes, hoveredLink])
+  }, [groundTruth, selectedNodeId, commonNeighbors, showNodes, hoveredLink, showBulkNodeLabels])
 
   if (!activeGraphData) return <div className="w-full h-full bg-[#0a0514] flex items-center justify-center text-[#5b5689] text-[10px] uppercase font-black">Loading...</div>
 

@@ -67,8 +67,28 @@ class UserResponse(BaseModel):
     email: str
     username: str
     full_name: Optional[str]
+    bio: Optional[str] = None
+    github_url: Optional[str] = None
+    organization: Optional[str] = None
+    job_title: Optional[str] = None
+    location: Optional[str] = None
+    profile_image: Optional[str] = None
     role: str
     is_active: bool
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class ProfileUpdateRequest(BaseModel):
+    email: str
+    username: str
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
+    github_url: Optional[str] = None
+    organization: Optional[str] = None
+    job_title: Optional[str] = None
+    location: Optional[str] = None
+    profile_image: Optional[str] = None
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -175,3 +195,26 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
 async def get_me(user: User = Depends(get_current_user)):
     """Get current user profile."""
     return auth_service.get_me_payload(user)
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+    req: ProfileUpdateRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update current user profile."""
+    updated = auth_service.update_current_user_profile(
+        db,
+        user=user,
+        email=req.email,
+        username=req.username,
+        full_name=req.full_name,
+        bio=req.bio,
+        github_url=req.github_url,
+        organization=req.organization,
+        job_title=req.job_title,
+        location=req.location,
+        profile_image=req.profile_image,
+    )
+    return UserResponse(**updated)

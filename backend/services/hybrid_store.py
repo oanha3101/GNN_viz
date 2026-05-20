@@ -663,6 +663,29 @@ class MongoRunRepository:
             self._require_document_store("session resume replay")
         return self._read_session_fallback(session_id, from_epoch)
 
+    def delete_session_snapshots(self, session_id: str) -> int:
+        run_id = f"session:{session_id}"
+        deleted = 0
+        if mongo_available:
+            result = mongo_experiment_snapshots.delete_many({"run_id": run_id})
+            return int(getattr(result, "deleted_count", 0) or 0)
+
+        path = os.path.join(LOCAL_MONGO_FALLBACK_DIR, "session_snapshots")
+        if not os.path.exists(path):
+            return 0
+
+        prefix = f"{session_id}_epoch_"
+        for filename in os.listdir(path):
+            if not filename.startswith(prefix) or not filename.endswith(".json.gz"):
+                continue
+            filepath = os.path.join(path, filename)
+            try:
+                os.remove(filepath)
+                deleted += 1
+            except OSError:
+                continue
+        return deleted
+
     def save_metrics(
         self,
         experiment: Experiment,
