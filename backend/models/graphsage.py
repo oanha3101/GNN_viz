@@ -34,6 +34,6 @@ class GraphSAGEModel(nn.Module):
             x = x + x_res
             x = F.dropout(x, p=self.dropout, training=self.training)
             
-        embedding = x.detach()
+        embedding = x
         x = self.convs[-1](x, edge_index)
         return x, embedding
