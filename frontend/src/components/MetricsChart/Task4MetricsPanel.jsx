@@ -32,10 +32,11 @@ function useAnimationTick() {
   return tick
 }
 
-export default function Task4MetricsPanel() {
+export default function Task4MetricsPanel({ forcedTab = null, hideTabControls = false }) {
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const setSelectedCommunity = useGNNStore((s) => s.setSelectedCommunity)
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState(forcedTab || 'overview')
+  useEffect(() => { if (forcedTab) setActiveTab(forcedTab) }, [forcedTab])
 
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
   const snap = snapshots[epochInt]
@@ -51,21 +52,23 @@ export default function Task4MetricsPanel() {
 
   return (
     <div className="h-full flex flex-col gap-2">
-      <div className="flex items-center gap-1 px-1">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id)}
-            className={`text-nano font-bold uppercase tracking-ultra px-2.5 py-1 rounded-md transition-colors ${
-              activeTab === t.id
-                ? 'bg-slate-800 text-white'
-                : 'bg-transparent text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {!hideTabControls && (
+        <div className="flex items-center gap-1 px-1">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={`text-nano font-bold uppercase tracking-ultra px-2.5 py-1 rounded-md transition-colors ${
+                activeTab === t.id
+                  ? 'bg-slate-800 text-white'
+                  : 'bg-transparent text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {activeTab === 'overview' && <OverviewTab snap={snap} snapshots={snapshots} epochInt={epochInt} currentEpochFloat={currentEpochFloat} />}
       {activeTab === 'bridges' && <BridgesTab snap={snap} onFocus={(cid) => setSelectedCommunity(cid)} />}

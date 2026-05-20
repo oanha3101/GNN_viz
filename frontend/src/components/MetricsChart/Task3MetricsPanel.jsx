@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -31,12 +31,13 @@ const TABS = [
   { id: 'diagnostics', label: 'Diagnostics' },
 ]
 
-export default function Task3MetricsPanel() {
+export default function Task3MetricsPanel({ forcedTab = null, hideTabControls = false }) {
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const taskData = useGNNStore((s) => s.taskData)
   const selectedModel = useGNNStore((s) => s.selectedModel)
   const setFocusedEdge = useGNNStore((s) => s.setFocusedEdge)
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState(forcedTab || 'overview')
+  useEffect(() => { if (forcedTab) setActiveTab(forcedTab) }, [forcedTab])
 
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
   const snap = snapshots[epochInt]
@@ -56,7 +57,7 @@ export default function Task3MetricsPanel() {
 
   return (
     <div className="h-full flex flex-col gap-2">
-      <div className="flex items-center gap-1 px-1">
+      {!hideTabControls && (<div className="flex items-center gap-1 px-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -70,7 +71,7 @@ export default function Task3MetricsPanel() {
             {tab.label}
           </button>
         ))}
-      </div>
+      </div>)}
 
       {activeTab === 'overview' && (
         <OverviewTab snap={snap} snapshots={snapshots} epochInt={epochInt} paired={paired} />

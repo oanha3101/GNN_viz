@@ -305,46 +305,67 @@ export default function LabAnalysisPage() {
 
   const reportPages = useMemo(() => {
     if (selectedTask !== 2) {
-      if (selectedTask === 1) {
+      // Task-specific tab configs for the PDF Book
+      const TASK_TABS = {
+        1: [
+          { tab: 'overview', label: 'Task 1 Metrics - overview' },
+          { tab: 'confusion', label: 'Task 1 Metrics - confusion' },
+          { tab: 'homophily', label: 'Task 1 Metrics - homophily' },
+          { tab: 'insights', label: 'Task 1 Metrics - insights' },
+        ],
+        3: [
+          { tab: 'overview', label: 'Task 3 Metrics - overview' },
+          { tab: 'curves', label: 'Task 3 Metrics - ROC & PR curves' },
+          { tab: 'hard', label: 'Task 3 Metrics - hard edges' },
+          { tab: 'diagnostics', label: 'Task 3 Metrics - diagnostics' },
+        ],
+        4: [
+          { tab: 'overview', label: 'Task 4 Metrics - overview' },
+          { tab: 'bridges', label: 'Task 4 Metrics - bridge nodes' },
+          { tab: 'stability', label: 'Task 4 Metrics - stability heatmap' },
+          { tab: 'diagnostics', label: 'Task 4 Metrics - diagnostics' },
+        ],
+        5: [
+          { tab: 'overview', label: 'Task 5 Metrics - overview' },
+          { tab: 'outliers', label: 'Task 5 Metrics - outlier nodes' },
+          { tab: 'neighborhood', label: 'Task 5 Metrics - neighborhood preservation' },
+          { tab: 'diagnostics', label: 'Task 5 Metrics - diagnostics' },
+        ],
+        6: [
+          { tab: 'overview', label: 'Task 6 Metrics - overview' },
+          { tab: 'comparison', label: 'Task 6 Metrics - comparison histograms' },
+          { tab: 'invalidity', label: 'Task 6 Metrics - invalidity reasons' },
+          { tab: 'signatures', label: 'Task 6 Metrics - signatures' },
+        ],
+      }
+
+      const tabs = TASK_TABS[selectedTask]
+      if (tabs) {
+        const taskLabel = TASK_LABELS[selectedTask] || `Task ${selectedTask}`
+        const metricsPages = tabs.map((t) => ({
+          id: `task${selectedTask}-metrics-${t.tab}`,
+          label: t.label,
+          icon: ScanSearch,
+          render: () => <MetricsRouter forcedTab={t.tab} hideTabControls />,
+        }))
         return [
-          {
-            id: 'task1-metrics-overview',
-            label: 'Task 1 Metrics - overview',
-            icon: ScanSearch,
-            render: () => <MetricsRouter forcedTab="overview" hideTabControls />,
-          },
-          {
-            id: 'task1-metrics-confusion',
-            label: 'Task 1 Metrics - confusion',
-            icon: ScanSearch,
-            render: () => <MetricsRouter forcedTab="confusion" hideTabControls />,
-          },
-          {
-            id: 'task1-metrics-homophily',
-            label: 'Task 1 Metrics - homophily',
-            icon: ScanSearch,
-            render: () => <MetricsRouter forcedTab="homophily" hideTabControls />,
-          },
-          {
-            id: 'task1-metrics-insights',
-            label: 'Task 1 Metrics - insights',
-            icon: ScanSearch,
-            render: () => <MetricsRouter forcedTab="insights" hideTabControls />,
-          },
+          ...metricsPages,
           {
             id: 'latent-full',
-            label: 'Latent - full canvas',
+            label: `${taskLabel} Latent Space - full canvas`,
             icon: Globe2,
             render: () => <EmbeddingRouter />,
           },
           {
             id: 'structure-full',
-            label: 'Structure - full canvas',
+            label: `${taskLabel} Structure - full canvas`,
             icon: Network,
             render: () => VIEW_CONFIG.structure.render(),
           },
         ]
       }
+
+      // Fallback: 3-page generic report
       return [
         {
           id: 'metrics-full',

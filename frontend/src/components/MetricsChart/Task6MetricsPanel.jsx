@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -28,8 +28,9 @@ const TABS = [
   { id: 'signatures', label: 'Signatures' },
 ]
 
-export default function Task6MetricsPanel() {
-  const [tab, setTab] = useState('overview')
+export default function Task6MetricsPanel({ forcedTab = null, hideTabControls = false }) {
+  const [tab, setTab] = useState(forcedTab || 'overview')
+  useEffect(() => { if (forcedTab) setTab(forcedTab) }, [forcedTab])
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
   const snap = snapshots[epochInt]
@@ -44,22 +45,24 @@ export default function Task6MetricsPanel() {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="flex items-center gap-1 px-3 pt-2 pb-1.5 border-b border-slate-800/60 shrink-0 flex-wrap">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-2.5 py-1 rounded-md text-micro font-bold transition-colors ${
-              tab === t.id
-                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-        <span className="ml-auto text-nano font-mono text-slate-500">Epoch {epochInt}</span>
-      </div>
+      {!hideTabControls && (
+        <div className="flex items-center gap-1 px-3 pt-2 pb-1.5 border-b border-slate-800/60 shrink-0 flex-wrap">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-2.5 py-1 rounded-md text-micro font-bold transition-colors ${
+                tab === t.id
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+          <span className="ml-auto text-nano font-mono text-slate-500">Epoch {epochInt}</span>
+        </div>
+      )}
 
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar p-3">
         {tab === 'overview' && <OverviewTab snapshots={snapshots} snap={snap} />}

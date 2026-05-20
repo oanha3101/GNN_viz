@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -29,13 +29,14 @@ const TABS = [
   { id: 'diagnostics', label: 'Diagnostics' },
 ]
 
-export default function Task5MetricsPanel() {
+export default function Task5MetricsPanel({ forcedTab = null, hideTabControls = false }) {
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const graphData = useGNNStore((s) => s.graphData)
   const selectedModel = useGNNStore((s) => s.selectedModel)
   const setOutlierPulse = useGNNStore((s) => s.setOutlierPulse)
   const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState(forcedTab || 'overview')
+  useEffect(() => { if (forcedTab) setActiveTab(forcedTab) }, [forcedTab])
 
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
   const snap = snapshots[epochInt]
@@ -56,21 +57,23 @@ export default function Task5MetricsPanel() {
 
   return (
     <div className="h-full flex flex-col gap-2">
-      <div className="flex items-center gap-1 px-1 flex-wrap">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`text-nano font-bold uppercase tracking-ultra px-2.5 py-1 rounded-md transition-colors ${
-              activeTab === tab.id
-                ? 'bg-slate-800 text-white'
-                : 'bg-transparent text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {!hideTabControls && (
+        <div className="flex items-center gap-1 px-1 flex-wrap">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`text-nano font-bold uppercase tracking-ultra px-2.5 py-1 rounded-md transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-slate-800 text-white'
+                  : 'bg-transparent text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {activeTab === 'overview' && <OverviewTab snap={snap} snapshots={snapshots} epochInt={epochInt} />}
       {activeTab === 'outliers' && (
