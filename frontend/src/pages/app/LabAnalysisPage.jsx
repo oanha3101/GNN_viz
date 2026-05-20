@@ -1,6 +1,6 @@
-import { Suspense, useMemo } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Download, Globe2, Network, Printer, ScanSearch } from 'lucide-react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import usePlayerStore from '../../store/playerStore'
 import useGNNStore from '../../store/useGNNStore'
 import {
@@ -9,6 +9,7 @@ import {
   MetricsRouter,
   TASK_LABELS,
   TopologyRouter,
+  preloadLabAnalysisViews,
 } from '../../components/Lab/LabViewRegistry'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import {
@@ -236,7 +237,7 @@ function ReportSection({ page, index }) {
   return (
     <section
       key={page.id}
-      className="rounded-xl border border-line-subtle/35 bg-deep/45 p-3 print:min-h-screen print:break-after-page print:rounded-none print:border-0 print:bg-white print:p-0 print:shadow-none"
+      className="lab-report-section rounded-xl border border-line-subtle/35 bg-deep/45 p-3 print:min-h-screen print:break-after-page print:rounded-none print:border-0 print:bg-white print:p-0 print:shadow-none"
     >
       <div className="mb-3 flex items-center gap-2 border-b border-line-subtle/45 pb-2 print:border-slate-200">
         <ViewIcon size={15} className="text-amethyst print:text-slate-700" />
@@ -275,10 +276,10 @@ const VIEW_CONFIG = {
     icon: Network,
     render: () => (
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-        <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
+        <div className="lab-report-panel-shell min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
           <TopologyRouter />
         </div>
-        <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
+        <div className="lab-report-panel-shell min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
           <InfoRouter />
         </div>
       </div>
@@ -288,6 +289,7 @@ const VIEW_CONFIG = {
 
 export default function LabAnalysisPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { panel = 'metrics' } = useParams()
   const { snapshots, currentEpochFloat, totalEpochs } = usePlayerStore()
   const selectedTask = useGNNStore((state) => state.selectedTask)
@@ -295,12 +297,54 @@ export default function LabAnalysisPage() {
   const classNames = useGNNStore((state) => state.classNames)
   const selectedCell = useGNNStore((state) => state.task2SelectedCell)
   const datasetName = useGNNStore((state) => state.datasetName || state.activeDatasetVersionName || 'Active dataset')
+  const [printPreparing, setPrintPreparing] = useState(false)
+  const handledPrintRequestRef = useRef(null)
 
   const config = VIEW_CONFIG[panel] || VIEW_CONFIG.metrics
   const Icon = config.icon
 
   const reportPages = useMemo(() => {
     if (selectedTask !== 2) {
+      if (selectedTask === 1) {
+        return [
+          {
+            id: 'task1-metrics-overview',
+            label: 'Task 1 Metrics - overview',
+            icon: ScanSearch,
+            render: () => <MetricsRouter forcedTab="overview" hideTabControls />,
+          },
+          {
+            id: 'task1-metrics-confusion',
+            label: 'Task 1 Metrics - confusion',
+            icon: ScanSearch,
+            render: () => <MetricsRouter forcedTab="confusion" hideTabControls />,
+          },
+          {
+            id: 'task1-metrics-homophily',
+            label: 'Task 1 Metrics - homophily',
+            icon: ScanSearch,
+            render: () => <MetricsRouter forcedTab="homophily" hideTabControls />,
+          },
+          {
+            id: 'task1-metrics-insights',
+            label: 'Task 1 Metrics - insights',
+            icon: ScanSearch,
+            render: () => <MetricsRouter forcedTab="insights" hideTabControls />,
+          },
+          {
+            id: 'latent-full',
+            label: 'Latent - full canvas',
+            icon: Globe2,
+            render: () => <EmbeddingRouter />,
+          },
+          {
+            id: 'structure-full',
+            label: 'Structure - full canvas',
+            icon: Network,
+            render: () => VIEW_CONFIG.structure.render(),
+          },
+        ]
+      }
       return [
         {
           id: 'metrics-full',
@@ -493,10 +537,10 @@ export default function LabAnalysisPage() {
         icon: Network,
         render: () => (
           <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
+            <div className="lab-report-panel-shell min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
               <TopologyRouter forcedFocus="weak_class" forcedSelectedCell={reportCell} hideGalleryControls showFullCollection />
             </div>
-            <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
+            <div className="lab-report-panel-shell min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
               <InfoRouter forcedFocus="weak_class" forcedSelectedCell={reportCell} />
             </div>
           </div>
@@ -508,10 +552,10 @@ export default function LabAnalysisPage() {
         icon: Network,
         render: () => (
           <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
+            <div className="lab-report-panel-shell min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
               <TopologyRouter forcedFocus="outlier" hideGalleryControls showFullCollection />
             </div>
-            <div className="min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
+            <div className="lab-report-panel-shell min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
               <InfoRouter forcedFocus="outlier" />
             </div>
           </div>
@@ -525,7 +569,7 @@ export default function LabAnalysisPage() {
     description: 'A print-ready analysis book with dedicated pages for metrics, latent-space modes, structure, and readout slices.',
     icon: Download,
     render: () => (
-      <div className="space-y-6 print:space-y-0">
+      <div className="lab-report-book space-y-6 print:space-y-0">
         {reportPages.map((page, index) => (
           <ReportSection key={page.id} page={page} index={index} />
         ))}
@@ -535,6 +579,33 @@ export default function LabAnalysisPage() {
 
   const resolvedConfig = panel === 'report' ? reportConfig : config
   const ResolvedIcon = resolvedConfig.icon
+  const pendingPrintRequest = location.state?.printRequestId
+
+  const printWhenReady = useCallback(async () => {
+    setPrintPreparing(true)
+    await preloadLabAnalysisViews(selectedTask)
+    window.setTimeout(() => {
+      window.print()
+      setPrintPreparing(false)
+    }, 150)
+  }, [selectedTask])
+
+  const handlePrintAll = useCallback(() => {
+    if (panel !== 'report') {
+      navigate('/app/lab/analysis/report', {
+        state: { printRequestId: Date.now() },
+      })
+      return
+    }
+    printWhenReady()
+  }, [navigate, panel, printWhenReady])
+
+  useEffect(() => {
+    if (panel !== 'report' || !pendingPrintRequest) return
+    if (handledPrintRequestRef.current === pendingPrintRequest) return
+    handledPrintRequestRef.current = pendingPrintRequest
+    printWhenReady()
+  }, [panel, pendingPrintRequest, printWhenReady])
 
   // We always also render the PDF Book content in a print-only container so
   // that triggering window.print() from any capture tab produces the same
@@ -550,8 +621,8 @@ export default function LabAnalysisPage() {
   )
 
   return (
-    <div className="min-h-screen bg-abyss text-starlight">
-      <div className="mx-auto flex max-w-[1800px] flex-col gap-3 px-6 py-4 print:gap-0 print:px-0 print:py-0">
+    <div className="lab-analysis-page min-h-screen bg-abyss text-starlight">
+      <div className="lab-analysis-inner mx-auto flex max-w-[1800px] flex-col gap-3 px-6 py-4 print:gap-0 print:px-0 print:py-0">
         <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-line-subtle/55 bg-deep/55 px-4 py-3 backdrop-blur-md print:hidden">
           <div className="min-w-0">
             <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-twilight">
@@ -602,25 +673,27 @@ export default function LabAnalysisPage() {
             </button>
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={handlePrintAll}
+              disabled={printPreparing}
               className="inline-flex items-center gap-2 rounded-lg border border-line-subtle/60 bg-nebula/70 px-3 py-1.5 text-[11px] font-semibold text-starlight transition-colors hover:border-line-active"
-              title="Prints the same editorial layout as PDF Book."
+              title="Opens the full PDF Book, preloads every report section, then prints."
             >
               <Printer size={13} />
-              Print / Save PDF
+              {printPreparing ? 'Preparing PDF...' : 'Print / Save PDF'}
             </button>
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={handlePrintAll}
+              disabled={printPreparing}
               className="inline-flex items-center gap-2 rounded-lg border border-line-subtle/60 bg-nebula/70 px-3 py-1.5 text-[11px] font-semibold text-starlight transition-colors hover:border-line-active"
             >
               <Download size={13} />
-              {panel === 'report' ? 'Export detailed PDF' : 'Export capture'}
+              {printPreparing ? 'Preparing...' : panel === 'report' ? 'Export detailed PDF' : 'Export full PDF'}
             </button>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-line-subtle/35 bg-transparent p-0 print:border-0 print:bg-white">
+        <div className="lab-analysis-content rounded-2xl border border-line-subtle/35 bg-transparent p-0 print:border-0 print:bg-white">
           <ErrorBoundary>
             <Suspense fallback={<PanelLoader label="Dang tai capture view..." />}>
               {panel === 'report' ? (

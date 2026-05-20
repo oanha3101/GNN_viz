@@ -32,12 +32,13 @@ const TABS = [
   { id: 'insights', label: 'Insights' },
 ]
 
-export default function Task1MetricsPanel() {
+export default function Task1MetricsPanel({ forcedTab = null, hideTabControls = false }) {
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const graphData = useGNNStore((s) => s.graphData)
   const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
   const selectedNodeId = useGNNStore((s) => s.selectedNodeId)
   const [tab, setTab] = useState('overview')
+  const activeTab = forcedTab || tab
 
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
   const snap = snapshots[epochInt]
@@ -76,35 +77,37 @@ export default function Task1MetricsPanel() {
         <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
           <span>Polished for readability only, without adding heavier charts or runtime effects.</span>
           <span className="rounded-full border border-slate-700/70 bg-slate-900/70 px-2.5 py-1 font-semibold text-slate-300">
-            Active view: {TABS.find((t) => t.id === tab)?.label}
+            Active view: {TABS.find((t) => t.id === activeTab)?.label}
           </span>
         </div>
       )}
     >
       <div className="flex h-full flex-col gap-3 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`rounded-full border px-3 py-1.5 text-nano font-bold uppercase tracking-ultra transition-colors ${
-                tab === t.id
-                  ? 'border-cyan-400/35 bg-cyan-500/12 text-cyan-300 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]'
-                  : 'border-slate-800/70 bg-slate-900/55 text-slate-500 hover:border-slate-700 hover:text-slate-300'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        {!hideTabControls && (
+          <div className="flex flex-wrap items-center gap-2">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`rounded-full border px-3 py-1.5 text-nano font-bold uppercase tracking-ultra transition-colors ${
+                  activeTab === t.id
+                    ? 'border-cyan-400/35 bg-cyan-500/12 text-cyan-300 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]'
+                    : 'border-slate-800/70 bg-slate-900/55 text-slate-500 hover:border-slate-700 hover:text-slate-300'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="min-h-0 flex-1">
-          {tab === 'overview' && <OverviewTab snapshots={snapshots} epochInt={epochInt} snap={snap} graphData={graphData} />}
-          {tab === 'confusion' && (
+          {activeTab === 'overview' && <OverviewTab snapshots={snapshots} epochInt={epochInt} snap={snap} graphData={graphData} />}
+          {activeTab === 'confusion' && (
             <ConfusionTab snap={snap} graphData={graphData} onPick={setSelectedNode} snapshots={snapshots} epochInt={epochInt} />
           )}
-          {tab === 'homophily' && <HomophilyTab snap={snap} onPick={setSelectedNode} />}
-          {tab === 'insights' && (
+          {activeTab === 'homophily' && <HomophilyTab snap={snap} onPick={setSelectedNode} />}
+          {activeTab === 'insights' && (
             <InsightsTab
               snap={snap}
               snapshots={snapshots}

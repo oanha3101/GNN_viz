@@ -3767,6 +3767,9 @@ html.dark .project-vis-pill.is-public {
   html, body {
     background: #ffffff !important;
     color: #0f172a !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
   .app-sidebar,
   .app-header,
@@ -3777,4 +3780,72 @@ html.dark .project-vis-pill.is-public {
   }
   .print\:bg-white { background-color: #ffffff !important; }
   .print\:text-slate-900 { color: #0f172a !important; }
+
+  .lab-analysis-page,
+  .lab-analysis-inner,
+  .lab-analysis-content,
+  .lab-report-book {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+  }
+
+  .lab-report-book {
+    padding: 0 !important;
+  }
+
+  .lab-report-section {
+    display: block !important;
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    break-after: page !important;
+    page-break-after: always !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .lab-report-section:last-child {
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+
+  .lab-report-section *,
+  .lab-report-panel-shell {
+    max-height: none !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .lab-report-section .h-full,
+  .lab-report-section .min-h-0,
+  .lab-report-section .flex-1,
+  .lab-report-section [class*="h-full"],
+  .lab-report-section [class*="min-h-0"],
+  .lab-report-section [class*="overflow-"] {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .lab-report-section svg,
+  .lab-report-section canvas {
+    max-width: 100% !important;
+  }
 }

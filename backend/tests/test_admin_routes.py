@@ -9,6 +9,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api.routers import auth
 from main import app
+from core.session_manager import session_manager
+from models.sql_models import SessionStatus
 from services.hybrid_store import blob_store
 
 auth.DISABLE_AUTH = False
@@ -286,6 +288,57 @@ def test_admin_cannot_delete_active_session():
         delete_response = client.delete(f"/api/admin/sessions/{session_id}", headers=admin_headers)
         assert delete_response.status_code == 409, delete_response.text
         assert "Stop it before deleting" in delete_response.json()["detail"]
+
+
+def test_admin_can_delete_all_terminal_sessions_without_touching_active_sessions():
+    with TestClient(app) as client:
+        admin_data = _register(client, "admin", "admin_session_delete_all")
+        admin_headers = {"Authorization": f"Bearer {admin_data['access_token']}"}
+
+        completed_response = client.post(
+            "/api/sessions",
+            json={
+                "task": 1,
+                "model": "GCN",
+                "dataset": "delete_all_done",
+                "epochs": 5,
+            },
+            headers=admin_headers,
+        )
+        assert completed_response.status_code == 200, completed_response.text
+        completed_id = completed_response.json()["session_id"]
+        session_manager.update_status(completed_id, SessionStatus.COMPLETED.value)
+
+        active_response = client.post(
+            "/api/sessions",
+            json={
+                "task": 2,
+                "model": "GraphSAGE",
+                "dataset": "delete_all_active",
+                "epochs": 5,
+            },
+            headers=admin_headers,
+        )
+        assert active_response.status_code == 200, active_response.text
+        active_id = active_response.json()["session_id"]
+
+        delete_response = client.delete("/api/admin/sessions", headers=admin_headers)
+        assert delete_response.status_code == 200, delete_response.text
+        payload = delete_response.json()
+        assert payload["status"] == "bulk_deleted"
+        assert completed_id in payload["deleted"]
+        assert active_id in payload["skipped_active"]
+
+        remaining_response = client.get("/api/admin/sessions", headers=admin_headers)
+        assert remaining_response.status_code == 200, remaining_response.text
+        remaining_ids = [item["id"] for item in remaining_response.json()["items"]]
+        assert completed_id not in remaining_ids
+        assert active_id in remaining_ids
+
+        stop_response = client.post(f"/api/admin/sessions/{active_id}/stop", headers=admin_headers)
+        assert stop_response.status_code == 200, stop_response.text
+        cleanup_response = client.delete(f"/api/admin/sessions/{active_id}", headers=admin_headers)
+        assert cleanup_response.status_code == 200, cleanup_response.text
 
 
 def test_owner_can_stop_own_session_but_other_researcher_cannot():
