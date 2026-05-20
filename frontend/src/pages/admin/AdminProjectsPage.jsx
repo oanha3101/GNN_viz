@@ -212,6 +212,8 @@ export default function AdminProjectsPage() {
                 value={createDraft.task_type}
                 onChange={(event) => setCreateDraft((prev) => ({ ...prev, task_type: event.target.value }))}
                 className="input-cosmic w-full"
+                aria-label="Task type"
+                placeholder="Task type"
               >
                 <option value="">Select task type</option>
                 <option value="1">Node Classification</option>
@@ -225,6 +227,8 @@ export default function AdminProjectsPage() {
                 value={createDraft.model_type}
                 onChange={(event) => setCreateDraft((prev) => ({ ...prev, model_type: event.target.value }))}
                 className="input-cosmic w-full"
+                aria-label="Model type"
+                placeholder="Model type"
               >
                 <option value="">Select model type</option>
                 <option value="GCN">GCN</option>

@@ -16,7 +16,12 @@ export function topKOutliers(scores, k = 10) {
       : null
     if (score == null || !Number.isFinite(score)) continue
     const nodeId = (s && typeof s === 'object' && s.node_id != null) ? s.node_id : i
-    rows.push({ id: nodeId, score })
+    const isOutlier = (s && typeof s === 'object' && typeof s.is_outlier === 'boolean')
+      ? s.is_outlier
+      : undefined
+    const row = { id: nodeId, score }
+    if (isOutlier !== undefined) row.isOutlier = isOutlier
+    rows.push(row)
   }
   rows.sort((a, b) => b.score - a.score)
   const safeK = Math.max(0, Math.min(rows.length, k))

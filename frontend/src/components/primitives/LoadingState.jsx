@@ -13,7 +13,8 @@ export function LoadingState({ title = 'Loading...', progress = null, className 
       {pct !== null && (
         <div className="mt-3 w-40 h-1 rounded-full bg-deep overflow-hidden">
           <div
-            className="h-full bg-amethyst transition-all"
+            data-testid="progress-bar"
+            className="h-full bg-amethyst bg-cyan-500 transition-all"
             style={{ width: `${pct * 100}%` }}
           />
         </div>
