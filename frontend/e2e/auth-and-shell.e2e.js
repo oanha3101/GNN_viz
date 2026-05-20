@@ -44,10 +44,13 @@ async function apiJson(request, path, { method = 'GET', token, data } = {}) {
 }
 
 test.describe('Auth-first shell flows', () => {
-  test('redirects anonymous users to /login', async ({ page }) => {
+  test('anonymous users see the public landing page and can reach /login', async ({ page }) => {
     await page.goto('/')
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole('link', { name: /sign in/i }).first()).toBeVisible()
+    await page.getByRole('link', { name: /sign in/i }).first().click()
     await expect(page).toHaveURL(/\/login$/)
-    await expect(page.getByRole('heading', { name: /vao dung shell theo role/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /graph work, grounded/i })).toBeVisible()
   })
 
   test('researcher can create governed context and admin can inspect the resulting experiment', async ({ page, request }) => {
