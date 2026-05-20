@@ -43,20 +43,37 @@ def compute_metrics_sync(
     if not np.all(np.isfinite(z_np)):
         z_np = np.nan_to_num(z_np, nan=0.0, posinf=1.0, neginf=-1.0)
 
-    # 1. PCA projection (always)
+    def _zscore_2d(arr):
+        """Z-score normalize 2D points so the scatter spreads even when
+        the raw embedding has tiny absolute variance (avoids the 'all dots
+        on top of each other' look).  Preserves relative geometry."""
+        arr = np.asarray(arr, dtype=float)
+        if arr.ndim != 2 or arr.shape[1] != 2 or arr.shape[0] == 0:
+            return arr.tolist() if hasattr(arr, 'tolist') else arr
+        mean = arr.mean(axis=0, keepdims=True)
+        std = arr.std(axis=0, keepdims=True)
+        std = np.where(std < 1e-6, 1.0, std)
+        return ((arr - mean) / std).tolist()
+
+    # 1. PCA projection (always) — z-score normalized so layout is stable
     try:
         pca = PCA(n_components=2)
-        pca_2d = pca.fit_transform(z_np).tolist()
+        pca_2d_raw = pca.fit_transform(z_np)
+        pca_2d = _zscore_2d(pca_2d_raw)
     except Exception:
         pca_2d = [[0.0, 0.0]] * num_nodes
 
-    # 2. t-SNE projection (conditional)
+    # 2. t-SNE projection (conditional) — z-score normalized
     tsne_2d = last_tsne
     if do_tsne:
         try:
             perplexity = min(30, max(5, num_nodes - 1))
-            tsne = TSNE(n_components=2, perplexity=perplexity, n_iter=300, random_state=42)
-            tsne_2d = tsne.fit_transform(z_np).tolist()
+            try:
+                tsne = TSNE(n_components=2, perplexity=perplexity, max_iter=300, random_state=42)
+            except TypeError:
+                tsne = TSNE(n_components=2, perplexity=perplexity, n_iter=300, random_state=42)
+            tsne_2d_raw = tsne.fit_transform(z_np)
+            tsne_2d = _zscore_2d(tsne_2d_raw)
         except Exception:
             tsne_2d = last_tsne if last_tsne else pca_2d
 
