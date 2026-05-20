@@ -139,6 +139,11 @@ export default function TrainingControlsV2() {
   const lastPreparedVersion = useRef(0)
   const [saveState, setSaveState] = useState('idle')
 
+  const openPdfBook = useCallback(() => {
+    if (typeof window === 'undefined') return
+    window.location.assign('/app/lab/analysis/report')
+  }, [])
+
   // Prepare for saving when training completes
   useEffect(() => {
     if (!trainingDone) return
@@ -300,12 +305,15 @@ export default function TrainingControlsV2() {
       window.dispatchEvent(new CustomEvent('gnn:start-training', {
         detail: {
           ...(selectedTask === 2 ? {
-            task2_pool: 'mean',
+            task2_pool: 'attention_sum',
             task2_class_weighting: false,
             task2_balanced_sampler: true,
-            task2_focal_gamma: 1.5,
-            task2_label_smoothing: 0.03,
-            task2_weight_decay: 5e-4,
+            task2_focal_gamma: 1.0,
+            task2_label_smoothing: 0.02,
+            task2_weight_decay: 1e-3,
+            task2_edge_dropout: 0.08,
+            task2_readout_entropy_weight: 0.02,
+            task2_density_contrastive_weight: 0.025,
           } : {}),
           task: selectedTask,
           model: gnnState.selectedModel,
@@ -434,14 +442,23 @@ export default function TrainingControlsV2() {
       </div>
 
       {!isTraining && trainingDone ? (
-        <div className={`rounded-xl border px-3 py-2 text-[10px] font-semibold ${
+        <div className={`rounded-xl border px-3 py-2 ${
           saveState === 'saved'
             ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
             : 'border-aurora-amber/20 bg-aurora-amber/10 text-aurora-amber'
         }`}>
-          {saveState === 'saved'
-            ? 'This run has been saved to Experiment Hub.'
-            : 'Training is complete. Save Experiment is now ready.'}
+          <div className="text-[10px] font-semibold">
+            {saveState === 'saved'
+              ? 'This run has been saved to Experiment Hub.'
+              : 'Training is complete. Save Experiment is now ready.'}
+          </div>
+          <button
+            type="button"
+            onClick={openPdfBook}
+            className="mt-2 inline-flex items-center rounded-lg border border-white/10 bg-black/15 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-starlight transition-colors hover:bg-white/10"
+          >
+            Open PDF Book
+          </button>
         </div>
       ) : null}
     </div>

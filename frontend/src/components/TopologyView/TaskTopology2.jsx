@@ -129,6 +129,8 @@ function matchesCell(descriptor, selectedCell) {
 export default function TaskTopology2({
   forcedGallerySort = null,
   forcedFocus = null,
+  forcedSelectedCell = null,
+  forcedClassFilter = null,
   hideGalleryControls = false,
   showFullCollection = false,
   showGalleryOnly = false,
@@ -185,7 +187,10 @@ export default function TaskTopology2({
     () => buildTask2FocusBuckets({ snapshot: snap, graphs: indexedGraphs }),
     [snap, indexedGraphs]
   )
-  const activeFocus = focusBuckets.find((bucket) => bucket.id === focusMode) || focusBuckets[0] || {
+  const resolvedFocusId = forcedFocus || focusMode
+  const resolvedClassFilter = forcedClassFilter ?? classFilter
+  const resolvedSelectedCell = forcedSelectedCell ?? selectedCell
+  const activeFocus = focusBuckets.find((bucket) => bucket.id === resolvedFocusId) || focusBuckets[0] || {
     id: 'all',
     label: 'All',
     description: 'Entire graph collection.',
@@ -199,9 +204,9 @@ export default function TaskTopology2({
   }, [activeFocus, descriptors])
 
   const filteredDescriptors = useMemo(() => {
-    if (classFilter === 'all') return focusDescriptors
-    return focusDescriptors.filter((descriptor) => descriptor.groundTruth === Number(classFilter))
-  }, [classFilter, focusDescriptors])
+    if (resolvedClassFilter === 'all') return focusDescriptors
+    return focusDescriptors.filter((descriptor) => descriptor.groundTruth === Number(resolvedClassFilter))
+  }, [focusDescriptors, resolvedClassFilter])
 
   const activeGallerySort = forcedGallerySort || gallerySort
 
@@ -211,8 +216,8 @@ export default function TaskTopology2({
   )
 
   const selectedCellMatches = useMemo(
-    () => sortedDescriptors.filter((descriptor) => matchesCell(descriptor, selectedCell)),
-    [sortedDescriptors, selectedCell]
+    () => sortedDescriptors.filter((descriptor) => matchesCell(descriptor, resolvedSelectedCell)),
+    [resolvedSelectedCell, sortedDescriptors]
   )
 
   const pageSize = Math.max(8, cols * 6)
@@ -225,12 +230,6 @@ export default function TaskTopology2({
   )
 
   useEffect(() => {
-    if (forcedFocus && forcedFocus !== focusMode) {
-      setFocusMode(forcedFocus)
-    }
-  }, [forcedFocus, focusMode, setFocusMode])
-
-  useEffect(() => {
     if (showFullCollection) return undefined
     setPage((current) => Math.min(Math.max(current, 1), totalPages))
     return undefined
@@ -240,7 +239,7 @@ export default function TaskTopology2({
     if (showFullCollection) return undefined
     setPage(1)
     return undefined
-  }, [showFullCollection, focusMode, gallerySort, classFilter, selectedCell, graphs.length])
+  }, [showFullCollection, resolvedFocusId, activeGallerySort, resolvedClassFilter, resolvedSelectedCell, graphs.length])
 
   const selectedGraph = useMemo(
     () => {
@@ -377,7 +376,7 @@ export default function TaskTopology2({
                 <span>{activeFocus.label}</span>
               </div>
               <div className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                {selectedCell
+                {resolvedSelectedCell
                   ? `${selectedCellMatches.length} graphs match the active confusion cell. The rest stay visible so you can keep structural context.`
                   : activeFocus.description}
               </div>
@@ -438,7 +437,7 @@ export default function TaskTopology2({
               <label className="flex items-center gap-2 text-[11px] text-slate-400">
                 <span className="uppercase tracking-ultra text-slate-500">GT class</span>
                 <select
-                  value={classFilter}
+                  value={resolvedClassFilter}
                   onChange={(event) => setClassFilter(event.target.value === 'all' ? 'all' : Number(event.target.value))}
                   className="rounded-md border border-slate-800/70 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
                 >
@@ -456,7 +455,7 @@ export default function TaskTopology2({
 
         <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
           {pagedDescriptors.map((descriptor) => {
-            const matched = matchesCell(descriptor, selectedCell)
+            const matched = matchesCell(descriptor, resolvedSelectedCell)
             const confidence = descriptor.confidence || 0
             const selected = descriptor.originalGraphId === selectedNodeId
             const predictionLabel = descriptor.predicted != null

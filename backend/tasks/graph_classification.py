@@ -19,7 +19,7 @@ from utils.ws_msg import send_json_zipped
 # Attention-based Graph Classification Model (Explainable)
 # ───────────────────────────────────────────────────────────────────────────────
 class GraphClassifier(torch.nn.Module):
-    def __init__(self, in_channels=1, hidden=32, num_classes=2, model_type='GCN', heads=4, dropout=0.5, pool_type='mean'):
+    def __init__(self, in_channels=1, hidden=32, num_classes=2, model_type='GCN', heads=4, dropout=0.5, pool_type='attention_sum'):
         super().__init__()
         self.model_type = model_type
         self.dropout = dropout
@@ -35,17 +35,31 @@ class GraphClassifier(torch.nn.Module):
             self.conv1 = GCNConv(in_channels, hidden)
             self.conv2 = GCNConv(hidden, hidden)
 
-        # Attention layer for Readout
-        self.att_gate = torch.nn.Linear(hidden, 1)
+        self.norm1 = torch.nn.LayerNorm(hidden)
+        self.norm2 = torch.nn.LayerNorm(hidden)
+
+        # Gated readout gives the UI a more faithful motif-level signal than a
+        # single linear gate while staying cheap enough for realtime playback.
+        gate_hidden = max(4, hidden // 2)
+        self.att_gate = torch.nn.Sequential(
+            torch.nn.Linear(hidden, gate_hidden),
+            torch.nn.Tanh(),
+            torch.nn.Dropout(dropout * 0.5),
+            torch.nn.Linear(gate_hidden, 1),
+        )
 
         self.lin = torch.nn.Linear(hidden, num_classes)
 
     def forward(self, x, edge_index, batch):
-        x = self.conv1(x, edge_index)
-        x = F.elu(x) if self.model_type == 'GAT' else F.relu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.conv2(x, edge_index)
-        x = F.elu(x) if self.model_type == 'GAT' else F.relu(x)
+        h1 = self.conv1(x, edge_index)
+        h1 = self.norm1(h1)
+        h1 = F.elu(h1) if self.model_type == 'GAT' else F.relu(h1)
+        h1 = F.dropout(h1, p=self.dropout, training=self.training)
+
+        h2 = self.conv2(h1, edge_index)
+        h2 = self.norm2(h2)
+        h2 = h2 + h1
+        x = F.elu(h2) if self.model_type == 'GAT' else F.relu(h2)
         node_embeddings = x
 
         # Compute attention weights alpha
@@ -55,12 +69,16 @@ class GraphClassifier(torch.nn.Module):
             mask = batch == graph_id
             alpha[mask] = torch.softmax(raw_alpha[mask], dim=0)
 
-        # Apply attention to nodes and pool
+        # Apply attention to nodes and pool. The default is weighted-sum: alpha
+        # already sums to one per graph, so a second mean would dilute motifs in
+        # larger/sparser graphs and reintroduce a size shortcut.
         x_g = alpha.unsqueeze(-1) * x
-        if self.pool_type == 'add':
+        if self.pool_type in ('attention_sum', 'attn_sum', 'add'):
             graph_embeddings = global_add_pool(x_g, batch)
+        elif self.pool_type == 'mean':
+            graph_embeddings = global_mean_pool(x, batch)
         else:
-            graph_embeddings = global_mean_pool(x_g, batch)
+            graph_embeddings = global_add_pool(x_g, batch)
 
         out = self.lin(graph_embeddings)
         return out, graph_embeddings, alpha
@@ -116,6 +134,76 @@ def compute_graph_classification_loss(logits, target, class_weights=None, focal_
     return ce.mean()
 
 
+def drop_edge_index(edge_index, drop_prob=0.0, training=True, seed=None):
+    if not training or drop_prob <= 0 or edge_index.numel() == 0:
+        return edge_index
+    keep_prob = max(0.0, min(1.0, 1.0 - float(drop_prob)))
+    if keep_prob >= 1.0:
+        return edge_index
+    generator = None
+    if seed is not None:
+        generator = torch.Generator(device=edge_index.device)
+        generator.manual_seed(int(seed))
+    mask = torch.rand(edge_index.size(1), device=edge_index.device, generator=generator) < keep_prob
+    if not bool(mask.any()):
+        keep_idx = torch.randint(edge_index.size(1), (1,), device=edge_index.device, generator=generator)
+        mask[keep_idx] = True
+    return edge_index[:, mask]
+
+
+def compute_attention_entropy_regularizer(alpha, batch, target_entropy=0.62):
+    if alpha.numel() == 0:
+        return alpha.new_tensor(0.0)
+    penalties = []
+    for graph_id in batch.unique(sorted=True):
+        mask = batch == graph_id
+        values = alpha[mask].clamp(min=1e-8)
+        if values.numel() <= 1:
+            continue
+        probs = values / values.sum().clamp(min=1e-8)
+        entropy = -(probs * torch.log(probs)).sum() / math.log(values.numel())
+        penalties.append(torch.relu(entropy - target_entropy).pow(2))
+    if not penalties:
+        return alpha.new_tensor(0.0)
+    return torch.stack(penalties).mean()
+
+
+def _graph_density_from_data(graph):
+    num_nodes = int(graph.num_nodes or (graph.x.size(0) if getattr(graph, 'x', None) is not None else 0))
+    if num_nodes <= 1:
+        return 0.0
+    # edge_index is usually directed for undirected graphs in PyG.
+    num_edges = int(graph.edge_index.size(1)) // 2 if getattr(graph, 'edge_index', None) is not None else 0
+    return float(num_edges / max(1, (num_nodes * (num_nodes - 1)) / 2))
+
+
+def compute_density_aware_contrastive_loss(embeddings, labels, densities, pos_density_gap=0.18, neg_density_gap=0.12, margin=0.7):
+    if embeddings.size(0) < 3:
+        return embeddings.new_tensor(0.0)
+    z = F.normalize(embeddings, p=2, dim=1)
+    distances = torch.cdist(z, z, p=2)
+    labels = labels.to(embeddings.device).view(-1)
+    densities = densities.to(embeddings.device).view(-1)
+    same_label = labels.unsqueeze(0) == labels.unsqueeze(1)
+    density_gap = torch.abs(densities.unsqueeze(0) - densities.unsqueeze(1))
+    eye = torch.eye(labels.numel(), dtype=torch.bool, device=embeddings.device)
+
+    # Pull together same-label graphs even when density differs, and push apart
+    # different-label graphs that have similar density. This directly discourages
+    # density from becoming the primary decision rule.
+    pos_mask = same_label & (density_gap >= pos_density_gap) & ~eye
+    neg_mask = (~same_label) & (density_gap <= neg_density_gap)
+
+    terms = []
+    if bool(pos_mask.any()):
+        terms.append(distances[pos_mask].pow(2).mean())
+    if bool(neg_mask.any()):
+        terms.append(torch.relu(margin - distances[neg_mask]).pow(2).mean())
+    if not terms:
+        return embeddings.new_tensor(0.0)
+    return torch.stack(terms).mean()
+
+
 def _safe_corr(values_a, values_b):
     if len(values_a) != len(values_b) or len(values_a) < 3:
         return 0.0
@@ -124,6 +212,38 @@ def _safe_corr(values_a, values_b):
     if np.std(a) < 1e-8 or np.std(b) < 1e-8:
         return 0.0
     return float(np.corrcoef(a, b)[0, 1])
+
+
+def build_classification_summary(predictions, ground_truth, confidences, num_classes):
+    per_class = build_per_class_metrics(predictions, ground_truth, confidences, num_classes)
+    supported = [row for row in per_class if row['support'] > 0]
+    macro_f1 = float(np.mean([row['f1'] for row in supported])) if supported else 0.0
+    balanced_accuracy = float(np.mean([row['recall'] for row in supported])) if supported else 0.0
+    return {
+        'per_class': per_class,
+        'macro_f1': macro_f1,
+        'balanced_accuracy': balanced_accuracy,
+    }
+
+
+def tune_temperature(logits, targets):
+    if logits.numel() == 0 or targets.numel() == 0:
+        return 1.0
+    candidates = torch.tensor([0.7, 0.85, 1.0, 1.15, 1.3, 1.5, 1.8, 2.2, 2.6, 3.0], dtype=logits.dtype, device=logits.device)
+    best_temp = 1.0
+    best_loss = None
+    with torch.no_grad():
+        for temp in candidates:
+            loss = F.cross_entropy(logits / temp, targets)
+            if best_loss is None or loss.item() < best_loss:
+                best_loss = loss.item()
+                best_temp = float(temp.item())
+    return best_temp
+
+
+def apply_temperature(logits, temperature):
+    temp = max(0.5, float(temperature or 1.0))
+    return torch.softmax(logits / temp, dim=1)
 
 
 def build_per_class_metrics(predictions, ground_truth, confidences, num_classes):
@@ -150,7 +270,7 @@ def build_per_class_metrics(predictions, ground_truth, confidences, num_classes)
     return rows
 
 
-def build_graph_calibration(confidences, correctness, bins=10):
+def build_graph_calibration(confidences, correctness, bins=10, probabilities=None, ground_truth=None):
     rows = []
     ece = 0.0
     n = max(1, len(confidences))
@@ -180,11 +300,30 @@ def build_graph_calibration(confidences, correctness, bins=10):
             'accuracy': acc,
             'gap': float(gap),
         })
+    brier = 0.0
+    if probabilities is not None and ground_truth is not None and len(probabilities) == len(ground_truth):
+        brier_terms = []
+        for probs, gt in zip(probabilities, ground_truth):
+            if gt is None:
+                continue
+            target = np.zeros(len(probs), dtype=float)
+            if 0 <= int(gt) < len(probs):
+                target[int(gt)] = 1.0
+            brier_terms.append(float(np.mean((np.asarray(probs, dtype=float) - target) ** 2)))
+        brier = float(np.mean(brier_terms)) if brier_terms else 0.0
+    high_conf_wrong = [
+        confidence
+        for confidence, is_correct in zip(confidences, correctness)
+        if confidence >= 0.75 and is_correct == 0
+    ]
     return {
         'ece': float(ece),
         'bins': rows,
         'mean_confidence': float(np.mean(confidences)) if confidences else 0.0,
         'mean_accuracy': float(np.mean(correctness)) if correctness else 0.0,
+        'brier': brier,
+        'high_conf_wrong_rate': float(len(high_conf_wrong) / n),
+        'high_conf_wrong_count': int(len(high_conf_wrong)),
     }
 
 
@@ -209,16 +348,29 @@ def build_structural_bias_signals(graphs_data, confidences, correctness, predict
 
     pred_float = [float(value) for value in predictions]
     correct_float = [float(value) for value in correctness]
+    confidence_vs_density = _safe_corr(confidences, density)
+    confidence_vs_num_nodes = _safe_corr(confidences, num_nodes)
+    confidence_vs_num_edges = _safe_corr(confidences, num_edges)
+    prediction_vs_density = _safe_corr(pred_float, density)
+    correctness_vs_density = _safe_corr(correct_float, density)
+    shortcut_risk_score = max(
+        abs(confidence_vs_density),
+        abs(confidence_vs_num_nodes),
+        abs(confidence_vs_num_edges),
+        abs(prediction_vs_density),
+        abs(correctness_vs_density),
+    )
     return {
-        'confidence_vs_num_nodes': _safe_corr(confidences, num_nodes),
-        'confidence_vs_num_edges': _safe_corr(confidences, num_edges),
-        'confidence_vs_density': _safe_corr(confidences, density),
+        'confidence_vs_num_nodes': confidence_vs_num_nodes,
+        'confidence_vs_num_edges': confidence_vs_num_edges,
+        'confidence_vs_density': confidence_vs_density,
         'confidence_vs_clustering': _safe_corr(confidences, clustering),
         'prediction_vs_num_nodes': _safe_corr(pred_float, num_nodes),
-        'prediction_vs_density': _safe_corr(pred_float, density),
+        'prediction_vs_density': prediction_vs_density,
         'correctness_vs_num_nodes': _safe_corr(correct_float, num_nodes),
-        'correctness_vs_density': _safe_corr(correct_float, density),
+        'correctness_vs_density': correctness_vs_density,
         'correctness_vs_avg_degree': _safe_corr(correct_float, avg_degree),
+        'shortcut_risk_score': float(shortcut_risk_score),
         'collection_summary': {
             'mean_num_nodes': float(np.mean(num_nodes)) if num_nodes else 0.0,
             'mean_num_edges': float(np.mean(num_edges)) if num_edges else 0.0,
@@ -296,12 +448,15 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
     epochs = config.get('epochs', 80)
     split_seed = int(config.get('split_seed', 42))
     train_ratio = float(config.get('train_ratio', 0.8))
-    pool_type = config.get('task2_pool', 'mean')
+    pool_type = config.get('task2_pool', 'attention_sum')
     use_class_weights = bool(config.get('task2_class_weighting', False))
     balanced_oversample = bool(config.get('task2_balanced_sampler', True))
-    focal_gamma = float(config.get('task2_focal_gamma', 1.5))
-    label_smoothing = float(config.get('task2_label_smoothing', 0.03))
-    weight_decay = float(config.get('task2_weight_decay', config.get('weight_decay', 5e-4)))
+    focal_gamma = float(config.get('task2_focal_gamma', 1.0))
+    label_smoothing = float(config.get('task2_label_smoothing', 0.02))
+    weight_decay = float(config.get('task2_weight_decay', config.get('weight_decay', 1e-3)))
+    edge_dropout = float(config.get('task2_edge_dropout', 0.08))
+    readout_entropy_weight = float(config.get('task2_readout_entropy_weight', 0.02))
+    contrastive_weight = float(config.get('task2_density_contrastive_weight', 0.025))
 
     if custom_graphs and len(custom_graphs) > 0:
         # ── Use user-uploaded graphs ──
@@ -430,6 +585,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
     train_y = torch.tensor([g.y.item() for g in train_graphs])
     effective_train_y = torch.tensor([g.y.item() for g in effective_train_graphs])
     test_y = torch.tensor([g.y.item() for g in test_graphs])
+    effective_train_density = torch.tensor([_graph_density_from_data(g) for g in effective_train_graphs], dtype=torch.float)
 
     epoch_snapshots = []
 
@@ -440,7 +596,8 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         # ── Training ───────────────────────────────────────────────────────
         model.train()
         optimizer.zero_grad()
-        out, _, _ = model(effective_train_batch.x, effective_train_batch.edge_index, effective_train_batch.batch)
+        train_edge_index = drop_edge_index(effective_train_batch.edge_index, edge_dropout, training=True)
+        out, train_graph_embs, train_alpha = model(effective_train_batch.x, train_edge_index, effective_train_batch.batch)
         loss = compute_graph_classification_loss(
             out,
             effective_train_y,
@@ -448,6 +605,9 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             focal_gamma=focal_gamma,
             label_smoothing=label_smoothing,
         )
+        entropy_loss = compute_attention_entropy_regularizer(train_alpha, effective_train_batch.batch)
+        contrastive_loss = compute_density_aware_contrastive_loss(train_graph_embs, effective_train_y, effective_train_density)
+        loss = loss + (readout_entropy_weight * entropy_loss) + (contrastive_weight * contrastive_loss)
         loss.backward()
         optimizer.step()
 
@@ -458,16 +618,17 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             all_batch = Batch.from_data_list(pyg_graphs)
             all_out, graph_embs, node_embs = model(all_batch.x, all_batch.edge_index, all_batch.batch)
             all_pred = all_out.argmax(dim=1).tolist()
-            all_probs = F.softmax(all_out, dim=1).tolist()
-
-            # Compute confidence (max prob)
-            confidences = [max(p) for p in all_probs]
 
             # Test metrics
             test_out, _, _ = model(test_batch.x, test_batch.edge_index, test_batch.batch)
             test_pred = test_out.argmax(dim=1)
             train_out, _, _ = model(train_batch.x, train_batch.edge_index, train_batch.batch)
             train_pred = train_out.argmax(dim=1)
+            calibration_temperature = tune_temperature(test_out, test_y)
+            all_probs = apply_temperature(all_out, calibration_temperature).tolist()
+
+            # Compute calibrated confidence (max prob)
+            confidences = [max(p) for p in all_probs]
 
             val_loss = compute_graph_classification_loss(
                 test_out,
@@ -565,19 +726,42 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                     'avg_degree': float(avg_degree),
                 })
 
-            graph_per_class_metrics = build_per_class_metrics(
+            classification_summary = build_classification_summary(
                 predictions=all_pred,
                 ground_truth=graph_truths,
                 confidences=confidences,
                 num_classes=num_classes,
             )
-            graph_calibration = build_graph_calibration(confidences, graph_correct)
+            graph_per_class_metrics = classification_summary['per_class']
+            graph_calibration = build_graph_calibration(
+                confidences,
+                graph_correct,
+                probabilities=all_probs,
+                ground_truth=graph_truths,
+            )
             structural_bias_signals = build_structural_bias_signals(
                 graphs_data=graphs_data,
                 confidences=confidences,
                 correctness=graph_correct,
                 predictions=all_pred,
             )
+            readout_quality = {
+                'mean_entropy': float(np.mean(attention_entropy)) if attention_entropy else 0.0,
+                'diffuse_share': float(np.mean([1.0 if value >= 0.7 else 0.0 for value in attention_entropy])) if attention_entropy else 0.0,
+                'concentrated_share': float(np.mean([1.0 if value <= 0.35 else 0.0 for value in attention_entropy])) if attention_entropy else 0.0,
+            }
+            trust_profile = {
+                'macro_f1': float(classification_summary['macro_f1']),
+                'balanced_accuracy': float(classification_summary['balanced_accuracy']),
+                'brier': float(graph_calibration['brier']),
+                'ece': float(graph_calibration['ece']),
+                'high_conf_wrong_rate': float(graph_calibration['high_conf_wrong_rate']),
+                'shortcut_risk_score': float(structural_bias_signals['shortcut_risk_score']),
+                'readout_diffuse_share': float(readout_quality['diffuse_share']),
+                'calibration_temperature': float(calibration_temperature),
+                'edge_dropout': float(edge_dropout),
+                'pool_type': pool_type,
+            }
 
         snapshot = {
             'epoch': epoch,
@@ -594,6 +778,12 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             'graph_per_class_metrics': graph_per_class_metrics,
             'graph_calibration': graph_calibration,
             'structural_bias_signals': structural_bias_signals,
+            'readout_quality': readout_quality,
+            'trust_profile': trust_profile,
+            'macro_f1': float(classification_summary['macro_f1']),
+            'balanced_accuracy': float(classification_summary['balanced_accuracy']),
+            'median_margin': float(np.median(confidence_margins)) if confidence_margins else 0.0,
+            'calibration_temperature': float(calibration_temperature),
             'train_loss': float(loss.item()),
             'val_loss': float(val_loss.item()),
             'train_acc': float(train_acc.item()),

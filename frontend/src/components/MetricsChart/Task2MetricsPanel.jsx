@@ -78,8 +78,10 @@ const TABS = [
 export default function Task2MetricsPanel({
   forcedTab = null,
   forcedFocus = null,
+  forcedSelectedCell = null,
   hideTabControls = false,
   hideFocusControls = false,
+  disableAutoSelection = false,
 }) {
   const { snapshots, currentEpochFloat, seekTo } = usePlayerStore()
   const taskData = useGNNStore((s) => s.taskData)
@@ -127,7 +129,9 @@ export default function Task2MetricsPanel({
     () => buildTask2FocusBuckets({ snapshot: snap, graphs: indexedGraphs, classNames: graphClassNames }),
     [snap, indexedGraphs, graphClassNames]
   )
-  const activeFocus = focusBuckets.find((bucket) => bucket.id === focus) || focusBuckets[0] || {
+  const resolvedFocusId = forcedFocus || focus
+  const resolvedSelectedCell = forcedSelectedCell ?? selectedCell
+  const activeFocus = focusBuckets.find((bucket) => bucket.id === resolvedFocusId) || focusBuckets[0] || {
     id: 'all',
     label: 'All',
     description: 'Entire graph collection.',
@@ -135,10 +139,11 @@ export default function Task2MetricsPanel({
   }
 
   useEffect(() => {
+    if (forcedFocus) return
     if (!focusBuckets.some((bucket) => bucket.id === focus)) {
       setFocus('all')
     }
-  }, [focus, focusBuckets, setFocus])
+  }, [focus, focusBuckets, forcedFocus, setFocus])
 
   const focusedDescriptors = useMemo(() => {
     if (activeFocus.id === 'all') return descriptors
@@ -152,15 +157,15 @@ export default function Task2MetricsPanel({
   )
 
   const selectedCellDescriptors = useMemo(
-    () => filterTask2DescriptorsByCell(focusedDescriptors, selectedCell),
-    [focusedDescriptors, selectedCell]
+    () => filterTask2DescriptorsByCell(focusedDescriptors, resolvedSelectedCell),
+    [focusedDescriptors, resolvedSelectedCell]
   )
   const featuredDescriptor = useMemo(() => {
     const explicit = focusedDescriptors.find((descriptor) => descriptor.originalGraphId === selectedNodeId)
     if (explicit) return explicit
-    const scoped = selectedCell ? selectedCellDescriptors : focusedDescriptors
+    const scoped = resolvedSelectedCell ? selectedCellDescriptors : focusedDescriptors
     return sortTask2Descriptors(scoped, 'priority')[0] || focusedDescriptors[0] || null
-  }, [focusedDescriptors, selectedCell, selectedCellDescriptors, selectedNodeId])
+  }, [focusedDescriptors, resolvedSelectedCell, selectedCellDescriptors, selectedNodeId])
   const narrative = useMemo(
     () => buildTask2NarrativeSummary(focusedDescriptors, reliability),
     [focusedDescriptors, reliability]
@@ -201,18 +206,13 @@ export default function Task2MetricsPanel({
   }, [forcedTab])
 
   useEffect(() => {
-    if (forcedFocus && forcedFocus !== focus) {
-      setFocus(forcedFocus)
-    }
-  }, [forcedFocus, focus, setFocus])
-
-  useEffect(() => {
+    if (disableAutoSelection) return
     if (!featuredDescriptor) return
     const explicit = focusedDescriptors.find((descriptor) => descriptor.originalGraphId === selectedNodeId)
     if (explicit) return
     if (selectedNodeId === featuredDescriptor.originalGraphId) return
     setSelectedNode(featuredDescriptor.originalGraphId)
-  }, [featuredDescriptor, focusedDescriptors, selectedNodeId, setSelectedNode])
+  }, [disableAutoSelection, featuredDescriptor, focusedDescriptors, selectedNodeId, setSelectedNode])
 
   if (!snapshots.length) {
     return (
@@ -253,13 +253,13 @@ export default function Task2MetricsPanel({
         <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
           <span>{reliability?.readingGuide}</span>
           <div className="flex flex-wrap items-center gap-2">
-            {selectedCell && (
+            {resolvedSelectedCell && !forcedSelectedCell && (
               <button
                 type="button"
                 onClick={() => setSelectedCell(null)}
                 className="rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 font-semibold text-cyan-200 transition-colors hover:bg-cyan-500/12"
               >
-                Cell {selectedCell.pred} {'->'} {selectedCell.gt}
+                Cell {resolvedSelectedCell.pred} {'->'} {resolvedSelectedCell.gt}
               </button>
             )}
             <span className="rounded-full border border-slate-700/70 bg-slate-900/70 px-2.5 py-1 font-semibold text-slate-300">
@@ -365,13 +365,14 @@ export default function Task2MetricsPanel({
               snapshots={snapshots}
               epochInt={epochInt}
               graphs={focusedDescriptors}
-              hardCaseGraphs={selectedCell ? selectedCellDescriptors : focusedDescriptors}
+              hardCaseGraphs={resolvedSelectedCell ? selectedCellDescriptors : focusedDescriptors}
               groundTruth={groundTruth}
               classNames={graphClassNames}
               selectedId={selectedNodeId}
-              selectedCell={selectedCell}
+              selectedCell={resolvedSelectedCell}
               onSelectCell={(pred, gt) => {
-                if (selectedCell?.pred === pred && selectedCell?.gt === gt) {
+                if (forcedSelectedCell) return
+                if (resolvedSelectedCell?.pred === pred && resolvedSelectedCell?.gt === gt) {
                   setSelectedCell(null)
                   return
                 }
@@ -387,7 +388,7 @@ export default function Task2MetricsPanel({
               selectedId={selectedNodeId}
               onSelect={setSelectedNode}
               focus={activeFocus}
-              selectedCell={selectedCell}
+              selectedCell={resolvedSelectedCell}
             />
           )}
           {tab === 'readout' && (
@@ -465,6 +466,7 @@ function OverviewTab({
       <HeroNarrativeCard narrative={narrative} onNextLensAction={onNextLensAction} />
       <BestEpochSuggestionCard suggestion={epochSuggestion} onJumpToEpoch={onJumpToEpoch} />
       <ResearchSignalsCard signals={researchSignals} onSignalAction={onSignalAction} />
+      <TrustProfileCard metrics={metrics} />
       <FocusRoutingCard
         story={focusStory}
         weakClass={metrics.weakClass}
@@ -609,6 +611,58 @@ function ResearchSignalsCard({ signals, onSignalAction }) {
         {items.map((item) => (
           <SignalCard key={item.id} signal={item} onAction={onSignalAction} />
         ))}
+      </div>
+    </div>
+  )
+}
+
+function TrustProfileCard({ metrics }) {
+  if (!metrics) return null
+  const brier = metrics.brier
+  const highConfWrong = metrics.highConfWrongRate || 0
+  const shortcutRisk = metrics.shortcutRiskScore || 0
+  const diffuseShare = metrics.readoutDiffuseShare || 0
+  const temperature = metrics.calibrationTemperature
+
+  return (
+    <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/6 p-3">
+      <div className="text-nano font-bold uppercase tracking-ultra text-emerald-200">Trust profile</div>
+      <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+        A compact research-grade read: calibration quality, high-confidence mistakes, shortcut pressure, and whether readout is concentrated enough to support motif-level claims.
+      </p>
+      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
+        <StatCell
+          label="Brier"
+          value={Number.isFinite(brier) ? brier : 0}
+          digits={3}
+          tone={Number.isFinite(brier) && brier < 0.18 ? 'good' : 'warn'}
+        />
+        <StatCell
+          label="High-conf wrong"
+          value={highConfWrong * 100}
+          digits={1}
+          suffix="%"
+          tone={highConfWrong > 0.15 ? 'bad' : highConfWrong > 0.05 ? 'warn' : 'good'}
+        />
+        <StatCell
+          label="Shortcut risk"
+          value={shortcutRisk}
+          digits={2}
+          tone={Math.abs(shortcutRisk) > 0.5 ? 'bad' : Math.abs(shortcutRisk) > 0.3 ? 'warn' : 'good'}
+        />
+        <StatCell
+          label="Readout diffuse"
+          value={diffuseShare * 100}
+          digits={1}
+          suffix="%"
+          tone={diffuseShare > 0.45 ? 'bad' : diffuseShare > 0.25 ? 'warn' : 'good'}
+        />
+        <StatCell
+          label="Temp scale"
+          value={Number.isFinite(temperature) ? temperature : 1}
+          digits={2}
+          tone={Number.isFinite(temperature) && temperature > 1.4 ? 'warn' : 'info'}
+        />
       </div>
     </div>
   )
@@ -1141,6 +1195,14 @@ function BatchHeatmap({ snap, snapshots, epochInt, graphs, selectedId, onSelect 
                 </div>
                 {heatmapRows.map((row, ci) => {
                   const val = row.data[gi]
+                  const status = val === 1 ? 'correct' : val === 0 ? 'wrong' : 'unknown'
+                  const tileFill =
+                    val === 1
+                      ? (row.isCurrent ? '#22c55e' : isSelected ? '#4ade80' : '#86efac')
+                      : val === 0
+                        ? (row.isCurrent ? '#ef4444' : isSelected ? '#f87171' : '#fca5a5')
+                        : '#1e293b'
+                  const tileStroke = val === 1 ? '#047857' : val === 0 ? '#b91c1c' : '#334155'
                   return (
                     <div
                       key={ci}
@@ -1159,8 +1221,48 @@ function BatchHeatmap({ snap, snapshots, epochInt, graphs, selectedId, onSelect 
                             : val === 0
                               ? `rgba(239,68,68,${row.isCurrent ? 0.8 : isSelected ? 0.6 : 0.4})`
                               : 'rgba(15,23,42,0.6)',
+                        printColorAdjust: 'exact',
+                        WebkitPrintColorAdjust: 'exact',
+                        forcedColorAdjust: 'none',
                       }}
-                    />
+                    >
+                      <svg
+                        data-testid="task2-batch-heatmap-tile"
+                        role="img"
+                        aria-label={`Graph ${graphLabels[gi]} epoch ${row.epoch}: ${status}`}
+                        viewBox="0 0 20 20"
+                        className="block h-full w-full"
+                        style={{
+                          printColorAdjust: 'exact',
+                          WebkitPrintColorAdjust: 'exact',
+                          forcedColorAdjust: 'none',
+                        }}
+                      >
+                        <title>{`Graph ${graphLabels[gi]} - Epoch ${row.epoch}: ${status}`}</title>
+                        <rect
+                          x="1"
+                          y="1"
+                          width="18"
+                          height="18"
+                          rx="3"
+                          fill={tileFill}
+                          stroke={tileStroke}
+                          strokeWidth={row.isCurrent ? 1.2 : 0.8}
+                        />
+                        {row.isCurrent && (
+                          <rect
+                            x="0.5"
+                            y="0.5"
+                            width="19"
+                            height="19"
+                            rx="3.5"
+                            fill="none"
+                            stroke="#22d3ee"
+                            strokeWidth={isSelected ? 2 : 1.2}
+                          />
+                        )}
+                      </svg>
+                    </div>
                   )
                 })}
               </div>
