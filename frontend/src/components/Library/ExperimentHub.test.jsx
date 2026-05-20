@@ -184,6 +184,49 @@ describe('ExperimentHub', () => {
         }
       }
 
+      if (url.endsWith('/api/experiments/2')) {
+        return {
+          ok: true,
+          json: async () => ({
+            id: 2,
+            title: 'Beta Run',
+            project_id: 8,
+            dataset_id: 22,
+            dataset_version_id: 32,
+            task_type: 1,
+            model_type: 'GAT',
+            dataset_name: 'citeseer',
+            epoch_count: 3,
+            learning_rate: 0.01,
+            hidden_dim: 64,
+            dropout: 0.5,
+            accuracy: 0.84,
+            loss: 0.2,
+            best_epoch: 2,
+            status: 'completed',
+            is_best: true,
+            retention_state: 'full',
+            created_at: '2026-05-05T00:00:00Z',
+            notes: 'baseline',
+          }),
+        }
+      }
+
+      if (url.endsWith('/api/experiments/2/report')) {
+        return {
+          ok: true,
+          json: async () => ({
+            experiment: { id: 2, dataset_name: 'citeseer' },
+            summary: { best_epoch: 2, best_score: 0.84 },
+            replay: { api_path: '/api/experiments/2/replay?epoch=2' },
+            dataset_version: { version: 1, lifecycle: 'published' },
+            config: { epochs: 3 },
+            next_action: 'compare',
+            notes: 'baseline',
+          }),
+        }
+      }
+
       throw new Error(`Unhandled fetch for ${url}`)
     })
   })
@@ -196,16 +239,16 @@ describe('ExperimentHub', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/ghi lại giả thuyết/i)).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/record hypotheses/i)).toBeInTheDocument()
     })
 
     const titleInput = screen.getByDisplayValue('Alpha Run')
     fireEvent.change(titleInput, { target: { value: 'Alpha Production Run' } })
 
-    const notesInput = screen.getByPlaceholderText(/ghi lại giả thuyết/i)
+    const notesInput = screen.getByPlaceholderText(/record hypotheses/i)
     fireEvent.change(notesInput, { target: { value: 'ready for publish' } })
 
-    fireEvent.click(screen.getByRole('button', { name: /lưu notes/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -230,11 +273,13 @@ describe('ExperimentHub', () => {
       expect(screen.getByText('Beta Run')).toBeInTheDocument()
     })
 
-    fireEvent.change(screen.getByPlaceholderText(/tìm theo title/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search by title/i), {
       target: { value: 'beta' },
     })
 
-    expect(screen.queryByText('Alpha Run')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByText('Alpha Run')).not.toBeInTheDocument()
+    })
     expect(screen.getByText('Beta Run')).toBeInTheDocument()
   })
 })

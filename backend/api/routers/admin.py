@@ -15,6 +15,16 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+def _bcrypt_safe(password: str) -> str:
+    """Truncate to bcrypt's 72-byte cap so newer bcrypt builds don't raise."""
+    if password is None:
+        return ""
+    encoded = password.encode("utf-8")
+    if len(encoded) <= 72:
+        return password
+    return encoded[:72].decode("utf-8", errors="ignore")
+
+
 class RoleUpdateRequest(BaseModel):
     role: str
 
@@ -114,7 +124,7 @@ def create_user(
     return admin_service.create_user(
         db,
         payload=payload.model_dump(),
-        password_hash=pwd_context.hash(payload.password),
+        password_hash=pwd_context.hash(_bcrypt_safe(payload.password)),
         admin=admin,
     )
 

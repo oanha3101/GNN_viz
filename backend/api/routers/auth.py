@@ -36,6 +36,16 @@ except ImportError:
     logger.warning("python-jose not installed. Using basic token fallback.")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def _bcrypt_safe(password: str) -> str:
+    """Truncate to bcrypt's 72-byte cap so newer bcrypt builds don't raise."""
+    if password is None:
+        return ""
+    encoded = password.encode("utf-8")
+    if len(encoded) <= 72:
+        return password
+    return encoded[:72].decode("utf-8", errors="ignore")
 security = HTTPBearer(auto_error=False)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -172,7 +182,7 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
         password=req.password,
         full_name=req.full_name,
         role=req.role,
-        password_hash=pwd_context.hash(req.password),
+        password_hash=pwd_context.hash(_bcrypt_safe(req.password)),
         token_factory=_token_factory,
     )
     return TokenResponse(access_token=payload["access_token"], user=payload["user"])
@@ -185,7 +195,7 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
         db,
         username=req.username,
         password=req.password,
-        password_verifier=lambda plain, hashed: pwd_context.verify(plain, hashed),
+        password_verifier=lambda plain, hashed: pwd_context.verify(_bcrypt_safe(plain), hashed),
         token_factory=_token_factory,
     )
     return TokenResponse(access_token=payload["access_token"], user=payload["user"])
