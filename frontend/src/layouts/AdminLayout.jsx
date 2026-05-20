@@ -116,7 +116,7 @@ export default function AdminLayout() {
                   <Shield size={16} className="text-white" />
                 </div>
                 <div>
-                  <div className="admin-brand-title text-[11px] font-bold uppercase tracking-[0.2em] text-aurora-amber">Admin Shell</div>
+                  <div className="admin-brand-title text-[11px] font-bold uppercase tracking-[0.2em]">Admin Shell</div>
                   <div className="admin-brand-subtitle text-[9px] text-text-shadow">Operational control</div>
                 </div>
               </div>
@@ -263,8 +263,8 @@ export default function AdminLayout() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <Sparkles size={12} className="text-aurora-amber" />
-                  <span className="text-micro font-semibold uppercase tracking-ultra text-aurora-amber">{titleMeta.eyebrow}</span>
+                  <Sparkles size={12} className="admin-eyebrow-icon" />
+                  <span className="text-micro font-semibold uppercase tracking-ultra admin-eyebrow">{titleMeta.eyebrow}</span>
                 </div>
                 <h1 className="admin-page-title mt-1.5 text-xl font-black text-white-star">{titleMeta.title}</h1>
                 <p className="admin-page-subtitle mt-1 max-w-2xl text-xs leading-5 text-twilight">{titleMeta.description}</p>
