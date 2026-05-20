@@ -485,3 +485,66 @@ async def run_graph_generation(config, data, websocket, stop_flag, snapshot_hook
         await asyncio.sleep(0.01)
 
     return epoch_snapshots
+
+
+def _epoch_payload(epoch, epochs, data, source_graphs_cache=None):
+    """Build a snapshot payload for visualization, training-free.
+
+    Generates pseudo-random graphs from a random embedding so the FE can render
+    the expected schema (epoch, generated_graphs with stable string signatures,
+    source_graphs). Used by visualization contract tests and offline preview.
+    """
+    if source_graphs_cache is None:
+        source_graphs_cache = []
+
+    num_nodes = data.x.size(0)
+    edge_index_np = data.edge_index.cpu().numpy()
+    adj = _build_adj_list(edge_index_np, num_nodes)
+    source_degrees = sorted((len(neigh) for neigh in adj), reverse=True)
+    source_density = _graph_density(num_nodes, edge_index_np.shape[1] // 2)
+
+    num_gen = 6
+    gen_rng = random.Random(42)
+    gen_node_sets = []
+    for _ in range(num_gen):
+        size_hi = min(num_nodes, 8)
+        size_lo = min(3, num_nodes)
+        size = gen_rng.randint(size_lo, max(size_lo, size_hi))
+        size = min(size, num_nodes)
+        nodes = sorted(gen_rng.sample(range(num_nodes), size))
+        gen_node_sets.append(nodes)
+
+    rng = np.random.default_rng(epoch + 1)
+    z_np = rng.standard_normal((num_nodes, 16)).astype(np.float32)
+
+    progress = epoch / max(1, epochs - 1)
+    temperature = max(0.5, 2.0 - 1.5 * progress)
+
+    generated_graphs = []
+    for g_idx, node_set in enumerate(gen_node_sets):
+        sub_z = z_np[node_set]
+        n_sub = len(node_set)
+        target_dens = max(0.18, min(0.72, source_density * (0.8 + progress * 0.6) + 0.25))
+        edges = _generate_from_embeddings(
+            sub_z, n_sub,
+            temperature=temperature,
+            target_density=target_dens,
+            rng=random.Random(g_idx * 1337 + epoch + 1),
+        )
+        nodes = [{'id': i} for i in range(n_sub)]
+        metrics = _evaluate_graph(nodes, edges, source_density, source_degrees)
+        graph = {
+            'id': g_idx,
+            'nodes': nodes,
+            'links': [{'source': s, 'target': t} for s, t in edges],
+            **metrics,
+        }
+        generated_graphs.append(graph)
+
+    return {
+        'epoch': epoch,
+        'generated_graphs': generated_graphs,
+        'source_graphs': list(source_graphs_cache) if source_graphs_cache else [],
+        'epochs': epochs,
+        'progress': float(progress),
+    }

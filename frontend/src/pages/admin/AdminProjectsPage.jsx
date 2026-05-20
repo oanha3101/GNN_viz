@@ -1,106 +1,169 @@
-import { useCallback, useEffect, useState } from 'react'
-import { CalendarDays, FolderKanban, Globe2, PencilLine, PlaySquare, Save, Trash2, User2, Waves, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  FolderKanban,
+  Globe2,
+  Lock,
+  Pencil,
+  PlaySquare,
+  Plus,
+  RefreshCw,
+  Save,
+  Search,
+  ShieldCheck,
+  Trash2,
+  User2,
+  Waves,
+} from 'lucide-react'
 import EmptyState from '../../components/primitives/EmptyState'
 import ErrorState from '../../components/primitives/ErrorState'
 import LoadingState from '../../components/primitives/LoadingState'
 import { apiJson, normalizeCollectionPayload } from '../../utils/api'
-import { AdminListToolbar, AdminPagination, buildAdminListPath } from './AdminListControls'
-import { SectionCard } from '../shared/PageBlocks'
+import { buildAdminListPath } from './AdminListControls'
+import {
+  AdminPagination,
+  ChipGroup,
+  FormField,
+  PAGE_SIZE_OPTIONS,
+  SlideOver,
+  relativeDate,
+} from './AdminPrimitives'
+
+const TASK_OPTIONS = [
+  { value: '', label: 'All tasks' },
+  { value: '1', label: 'Task 1' },
+  { value: '2', label: 'Task 2' },
+  { value: '3', label: 'Task 3' },
+  { value: '4', label: 'Task 4' },
+  { value: '5', label: 'Task 5' },
+  { value: '6', label: 'Task 6' },
+]
+
+const VISIBILITY_OPTIONS = [
+  { value: '', label: 'Any' },
+  { value: 'public', label: 'Public' },
+  { value: 'private', label: 'Private' },
+]
+
+const TASK_LABEL = {
+  1: 'Node Classification',
+  2: 'Graph Classification',
+  3: 'Link Prediction',
+  4: 'Community Detection',
+  5: 'Graph Embedding',
+  6: 'Graph Generation',
+}
+
+const TASK_TONE = {
+  1: 'bg-sky-500/12 text-sky-700 border-sky-500/25 dark:text-sky-300',
+  2: 'bg-violet-500/12 text-violet-700 border-violet-500/25 dark:text-violet-300',
+  3: 'bg-emerald-500/12 text-emerald-700 border-emerald-500/25 dark:text-emerald-300',
+  4: 'bg-amber-500/12 text-amber-700 border-amber-500/25 dark:text-amber-300',
+  5: 'bg-fuchsia-500/12 text-fuchsia-700 border-fuchsia-500/25 dark:text-fuchsia-300',
+  6: 'bg-rose-500/12 text-rose-700 border-rose-500/25 dark:text-rose-300',
+}
+
+function getCreateDraft() {
+  return {
+    title: '',
+    description: '',
+    task_type: '',
+    model_type: '',
+    is_public: false,
+  }
+}
+
+function getEditDraft(item) {
+  return {
+    title: item.title || '',
+    description: item.description || '',
+    is_public: Boolean(item.is_public),
+  }
+}
 
 export default function AdminProjectsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [items, setItems] = useState([])
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [createDraft, setCreateDraft] = useState({
-    title: '',
-    description: '',
-    task_type: '',
-    model_type: '',
-    is_public: false,
-  })
+  const [createDraft, setCreateDraft] = useState(getCreateDraft)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState(null)
-  const [drafts, setDrafts] = useState({})
-  const [editingId, setEditingId] = useState(null)
-  const [busyKey, setBusyKey] = useState(null)
+  const [editTarget, setEditTarget] = useState(null)
+  const [editDraft, setEditDraft] = useState(null)
+  const [savingId, setSavingId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
+  const [editError, setEditError] = useState(null)
   const [filters, setFilters] = useState({
     q: '',
-    date_from: '',
-    date_to: '',
+    task_type: '',
+    visibility: '',
     page: 1,
     page_size: 12,
   })
   const [meta, setMeta] = useState({ total: 0, page: 1, page_size: 12 })
 
+  const apiFilters = useMemo(() => {
+    const { task_type, visibility, ...rest } = filters
+    const out = { ...rest }
+    if (task_type) out.task_type = task_type
+    if (visibility) out.is_public = visibility === 'public' ? 'true' : 'false'
+    return out
+  }, [filters])
+
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const payload = await apiJson(buildAdminListPath('/admin/projects', filters))
+      const payload = await apiJson(buildAdminListPath('/admin/projects', apiFilters))
       const normalized = normalizeCollectionPayload(payload)
-      const nextItems = normalized.items
-      setItems(nextItems)
-      setMeta({
-        total: normalized.total,
-        page: normalized.page,
-        page_size: normalized.page_size,
-      })
-      setDrafts(
-        Object.fromEntries(
-          nextItems.map((item) => [
-            item.id,
-            {
-              title: item.title || '',
-              description: item.description || '',
-              is_public: Boolean(item.is_public),
-            },
-          ])
-        )
-      )
+      setItems(normalized.items)
+      setMeta({ total: normalized.total, page: normalized.page, page_size: normalized.page_size })
     } catch (err) {
       setError(err)
     } finally {
       setLoading(false)
     }
-  }, [filters])
+  }, [apiFilters])
 
   useEffect(() => {
     load()
   }, [load])
 
-  const handleSave = useCallback(async (projectId) => {
+  const handleSave = useCallback(async () => {
+    if (!editTarget || !editDraft) return
     try {
-      setBusyKey(`save-${projectId}`)
-      const draft = drafts[projectId]
-      await apiJson(`/admin/projects/${projectId}`, {
+      setSavingId(editTarget.id)
+      setEditError(null)
+      await apiJson(`/admin/projects/${editTarget.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          title: draft?.title,
-          description: draft?.description,
-          is_public: draft?.is_public,
+          title: editDraft.title,
+          description: editDraft.description,
+          is_public: editDraft.is_public,
         }),
       })
-      setEditingId(null)
+      setEditTarget(null)
+      setEditDraft(null)
       await load()
     } catch (err) {
       setError(err)
+      setEditError(err.message)
     } finally {
-      setBusyKey(null)
+      setSavingId(null)
     }
-  }, [drafts, load])
+  }, [editTarget, editDraft, load])
 
-  const handleDelete = useCallback(async (projectId, title) => {
-    const confirmed = window.confirm(`Delete project "${title}"?`)
+  const handleDelete = useCallback(async (project) => {
+    const confirmed = window.confirm(`Delete project "${project.title}"?`)
     if (!confirmed) return
     try {
-      setBusyKey(`delete-${projectId}`)
-      await apiJson(`/admin/projects/${projectId}`, { method: 'DELETE' })
+      setDeletingId(project.id)
+      await apiJson(`/admin/projects/${project.id}`, { method: 'DELETE' })
       await load()
     } catch (err) {
       setError(err)
     } finally {
-      setBusyKey(null)
+      setDeletingId(null)
     }
   }, [load])
 
@@ -108,7 +171,6 @@ export default function AdminProjectsPage() {
     try {
       setCreating(true)
       setCreateError(null)
-      setError(null)
       await apiJson('/projects', {
         method: 'POST',
         body: JSON.stringify({
@@ -119,13 +181,7 @@ export default function AdminProjectsPage() {
           is_public: createDraft.is_public,
         }),
       })
-      setCreateDraft({
-        title: '',
-        description: '',
-        task_type: '',
-        model_type: '',
-        is_public: false,
-      })
+      setCreateDraft(getCreateDraft())
       setIsCreateOpen(false)
       await load()
     } catch (err) {
@@ -137,90 +193,224 @@ export default function AdminProjectsPage() {
   }, [createDraft, load])
 
   const openEdit = useCallback((item) => {
-    setDrafts((prev) => ({
-      ...prev,
-      [item.id]: {
-        title: item.title || '',
-        description: item.description || '',
-        is_public: Boolean(item.is_public),
-      },
-    }))
-    setEditingId(item.id)
+    setEditTarget(item)
+    setEditDraft(getEditDraft(item))
+    setEditError(null)
   }, [])
 
-  const cancelEdit = useCallback((item) => {
-    setDrafts((prev) => ({
-      ...prev,
-      [item.id]: {
-        title: item.title || '',
-        description: item.description || '',
-        is_public: Boolean(item.is_public),
-      },
-    }))
-    setEditingId((current) => (current === item.id ? null : current))
+  const closeEdit = useCallback(() => {
+    setEditTarget(null)
+    setEditDraft(null)
+    setEditError(null)
   }, [])
-
-  if (loading) {
-    return <LoadingState title="Loading governed projects..." className="min-h-[480px]" />
-  }
-
-  if (error && items.length === 0) {
-    return <ErrorState title="Could not load projects" error={error} onRetry={load} className="min-h-[480px]" />
-  }
 
   return (
-    <SectionCard title="Project Governance" subtitle="Review, edit, and retire project containers from the admin shell.">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-subtle bg-deep/60 px-4 py-4">
-        <div>
-          <div className="text-sm font-semibold text-white-star">Create project</div>
-          <div className="mt-1 text-xs text-twilight">Keep project creation tucked away until you need a new workspace container.</div>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setCreateError(null)
-            setIsCreateOpen((prev) => !prev)
-          }}
-          className="admin-action-pill admin-action-pill-primary"
-        >
-          <FolderKanban size={14} />
-          {isCreateOpen ? 'Close form' : 'Create project'}
-        </button>
-      </div>
-      {isCreateOpen ? (
-        <div className="glass-card admin-record-card admin-record-card-editing mb-4">
-          <div className="admin-edit-banner">
-            <FolderKanban size={13} />
-            New project
+    <div className="space-y-4">
+      <header className="admin-list-hero">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="admin-list-hero-icon"><FolderKanban size={18} /></div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Project Governance</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                <span className="font-semibold text-slate-700 dark:text-slate-200">{meta.total}</span> total · <span className="font-semibold">{items.filter((p) => p.is_public).length}</span> public here
+              </p>
+            </div>
           </div>
-          <div className="admin-edit-shell">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={load} className="admin-btn-secondary" title="Refresh">
+              <RefreshCw size={13} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setCreateError(null); setIsCreateOpen(true) }}
+              className="admin-btn-primary"
+            >
+              <Plus size={14} /> New project
+            </button>
+          </div>
+        </div>
+        <div className="admin-filter-strip">
+          <label className="admin-search">
+            <Search size={13} />
+            <input
+              value={filters.q}
+              onChange={(event) => setFilters((prev) => ({ ...prev, q: event.target.value, page: 1 }))}
+              placeholder="Search by title, description, model..."
+              className="admin-search-input"
+            />
+          </label>
+          <ChipGroup
+            value={filters.task_type}
+            options={TASK_OPTIONS}
+            onChange={(value) => setFilters((prev) => ({ ...prev, task_type: value, page: 1 }))}
+          />
+          <ChipGroup
+            value={filters.visibility}
+            options={VISIBILITY_OPTIONS}
+            onChange={(value) => setFilters((prev) => ({ ...prev, visibility: value, page: 1 }))}
+          />
+          <select
+            value={filters.page_size}
+            onChange={(event) => setFilters((prev) => ({ ...prev, page_size: Number(event.target.value), page: 1 }))}
+            className="admin-select"
+          >
+            {PAGE_SIZE_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option} / page</option>
+            ))}
+          </select>
+        </div>
+      </header>
+
+      {loading ? (
+        <LoadingState title="Loading governed projects..." className="min-h-[320px]" />
+      ) : error && items.length === 0 ? (
+        <ErrorState title="Could not load projects" error={error} onRetry={load} className="min-h-[320px]" />
+      ) : items.length === 0 ? (
+        <div className="admin-card">
+          <EmptyState title="No projects" description="Create the first workspace project to get started." />
+        </div>
+      ) : (
+        <div className="admin-card overflow-hidden p-0">
+          <div className="overflow-x-auto">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th className="admin-th admin-th-lead">Project</th>
+                  <th className="admin-th">Task</th>
+                  <th className="admin-th">Visibility</th>
+                  <th className="admin-th admin-th-meta">Activity</th>
+                  <th className="admin-th">Created</th>
+                  <th className="admin-th admin-th-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id} className="admin-tr">
+                    <td className="admin-td">
+                      <div className="flex items-start gap-3">
+                        <div className="admin-user-cell-avatar">
+                          <FolderKanban size={15} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-white">
+                            <span className="truncate">{item.title}</span>
+                            <span className="admin-id-pill">#{item.id}</span>
+                          </div>
+                          <div className="mt-0.5 line-clamp-2 max-w-[280px] truncate text-xs text-slate-500 dark:text-slate-400">{item.description || 'No description'}</div>
+                          <div className="mt-1 flex items-center gap-2 text-[10px] text-slate-400">
+                            <User2 size={10} className="opacity-70" />
+                            Owner #{item.owner_id || 'system'}
+                            {item.model_type ? (
+                              <>
+                                <span>·</span>
+                                <span className="font-semibold text-slate-500 dark:text-slate-300">{item.model_type}</span>
+                              </>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="admin-td">
+                      {item.task_type ? (
+                        <span className={`admin-role-pill ${TASK_TONE[item.task_type] || ''}`}>
+                          T{item.task_type}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="admin-td">
+                      <span className={`admin-status-dot ${item.is_public ? 'admin-status-active' : 'admin-status-disabled'}`}>
+                        {item.is_public ? <Globe2 size={11} /> : <Lock size={11} />}
+                        {item.is_public ? 'Public' : 'Private'}
+                      </span>
+                    </td>
+                    <td className="admin-td admin-td-meta">
+                      <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300">
+                        <span className="inline-flex items-center gap-1"><PlaySquare size={11} className="opacity-60" /> {item.experiment_count ?? 0}</span>
+                        <span className="inline-flex items-center gap-1"><Waves size={11} className="opacity-60" /> {item.session_count ?? 0}</span>
+                      </div>
+                    </td>
+                    <td className="admin-td">
+                      <span className="text-xs text-slate-600 dark:text-slate-300">{relativeDate(item.created_at)}</span>
+                    </td>
+                    <td className="admin-td admin-td-actions">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button type="button" onClick={() => openEdit(item)} className="admin-icon-btn" title="Edit project">
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item)}
+                          disabled={deletingId === item.id}
+                          className="admin-icon-btn admin-icon-btn-danger"
+                          title="Delete project"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <AdminPagination
+            page={meta.page}
+            pageSize={meta.page_size}
+            total={meta.total}
+            onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
+          />
+        </div>
+      )}
+
+      <SlideOver
+        open={isCreateOpen}
+        title="Create project"
+        subtitle="A new workspace container for experiments."
+        icon={FolderKanban}
+        onClose={() => { setCreateError(null); setIsCreateOpen(false) }}
+        footer={
+          <>
+            <button type="button" onClick={() => { setCreateError(null); setIsCreateOpen(false) }} className="admin-btn-secondary">Cancel</button>
+            <button type="button" onClick={handleCreate} disabled={creating} className="admin-btn-primary">
+              <Save size={13} /> {creating ? 'Creating...' : 'Create project'}
+            </button>
+          </>
+        }
+      >
+        <div className="grid gap-3">
+          <FormField icon={FolderKanban} label="Title" required>
             <input
               value={createDraft.title}
               onChange={(event) => setCreateDraft((prev) => ({ ...prev, title: event.target.value }))}
               className="input-cosmic w-full"
-              placeholder="Project title"
             />
+          </FormField>
+          <FormField label="Description">
             <textarea
               value={createDraft.description}
               onChange={(event) => setCreateDraft((prev) => ({ ...prev, description: event.target.value }))}
               rows={3}
               className="input-cosmic w-full resize-none"
-              placeholder="Project description"
             />
-            <div className="grid gap-3 md:grid-cols-3">
+          </FormField>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField icon={PlaySquare} label="Task type">
               <select
                 value={createDraft.task_type}
                 onChange={(event) => setCreateDraft((prev) => ({ ...prev, task_type: event.target.value }))}
                 className="input-cosmic w-full"
               >
                 <option value="">Select task type</option>
-                <option value="1">Node Classification</option>
-                <option value="2">Graph Classification</option>
-                <option value="3">Link Prediction</option>
-                <option value="4">Community Detection</option>
-                <option value="5">Graph Embedding</option>
-                <option value="6">Graph Generation</option>
+                {Object.entries(TASK_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
               </select>
+            </FormField>
+            <FormField icon={ShieldCheck} label="Model type">
               <select
                 value={createDraft.model_type}
                 onChange={(event) => setCreateDraft((prev) => ({ ...prev, model_type: event.target.value }))}
@@ -231,200 +421,77 @@ export default function AdminProjectsPage() {
                 <option value="GAT">GAT</option>
                 <option value="SAGE">GraphSAGE</option>
               </select>
-              <label className="admin-checkbox-chip justify-center md:justify-start">
+            </FormField>
+          </div>
+          <FormField icon={Globe2} label="Visibility">
+            <label className="inline-flex h-10 items-center gap-2 rounded-lg border border-line-subtle/55 bg-deep/45 px-3 text-sm text-slate-700 dark:text-slate-200">
+              <input
+                type="checkbox"
+                checked={Boolean(createDraft.is_public)}
+                onChange={(event) => setCreateDraft((prev) => ({ ...prev, is_public: event.target.checked }))}
+              />
+              Public project
+            </label>
+          </FormField>
+        </div>
+        {createError ? (
+          <div className="mt-3 rounded-lg border border-aurora-rose/25 bg-aurora-rose/[0.08] px-3 py-2 text-xs text-aurora-rose">
+            {createError}
+          </div>
+        ) : null}
+      </SlideOver>
+
+      <SlideOver
+        open={Boolean(editTarget)}
+        title={editTarget ? `Edit ${editTarget.title}` : ''}
+        subtitle="Update project metadata."
+        icon={FolderKanban}
+        onClose={closeEdit}
+        footer={
+          <>
+            <button type="button" onClick={closeEdit} className="admin-btn-secondary">Cancel</button>
+            <button type="button" onClick={handleSave} disabled={savingId === editTarget?.id} className="admin-btn-primary">
+              <Save size={13} /> {savingId === editTarget?.id ? 'Saving...' : 'Save changes'}
+            </button>
+          </>
+        }
+      >
+        {editDraft ? (
+          <div className="grid gap-3">
+            <FormField icon={FolderKanban} label="Title">
+              <input
+                value={editDraft.title}
+                onChange={(event) => setEditDraft((prev) => ({ ...prev, title: event.target.value }))}
+                className="input-cosmic w-full"
+              />
+            </FormField>
+            <FormField label="Description">
+              <textarea
+                value={editDraft.description}
+                onChange={(event) => setEditDraft((prev) => ({ ...prev, description: event.target.value }))}
+                rows={3}
+                className="input-cosmic w-full resize-none"
+              />
+            </FormField>
+            <FormField icon={Globe2} label="Visibility">
+              <label className="inline-flex h-10 items-center gap-2 rounded-lg border border-line-subtle/55 bg-deep/45 px-3 text-sm text-slate-700 dark:text-slate-200">
                 <input
                   type="checkbox"
-                  checked={Boolean(createDraft.is_public)}
-                  onChange={(event) => setCreateDraft((prev) => ({ ...prev, is_public: event.target.checked }))}
+                  checked={Boolean(editDraft.is_public)}
+                  onChange={(event) => setEditDraft((prev) => ({ ...prev, is_public: event.target.checked }))}
                 />
                 Public
               </label>
-            </div>
-            <div className="admin-card-actions">
-              <button
-                type="button"
-                onClick={() => {
-                  setCreateError(null)
-                  setIsCreateOpen(false)
-                }}
-                className="admin-action-pill admin-action-pill-subtle"
-              >
-                <X size={14} />
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCreate}
-                disabled={creating}
-                className="admin-action-pill admin-action-pill-primary"
-              >
-                <Save size={14} />
-                {creating ? 'Creating...' : 'Create project'}
-              </button>
-            </div>
+            </FormField>
           </div>
-          {createError ? (
-            <div className="mt-3 rounded-lg border border-aurora-rose/20 bg-aurora-rose/[0.08] px-3 py-2 text-xs text-aurora-rose">
-              {createError}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-      <AdminListToolbar
-        searchValue={filters.q}
-        onSearchChange={(value) => setFilters((prev) => ({ ...prev, q: value, page: 1 }))}
-        searchPlaceholder="Search by project title, description, model"
-        dateFrom={filters.date_from}
-        dateTo={filters.date_to}
-        onDateFromChange={(value) => setFilters((prev) => ({ ...prev, date_from: value, page: 1 }))}
-        onDateToChange={(value) => setFilters((prev) => ({ ...prev, date_to: value, page: 1 }))}
-        onPageSizeChange={(value) => setFilters((prev) => ({ ...prev, page_size: value, page: 1 }))}
-        onRefresh={load}
-        onClear={() => setFilters({ q: '', date_from: '', date_to: '', page: 1, page_size: meta.page_size || 12 })}
-        pageSize={filters.page_size}
-        showDateFilters
-      />
-      {items.length ? (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <div key={item.id} className={`glass-card admin-record-card ${editingId === item.id ? 'admin-record-card-editing' : ''}`}>
-              <div className="admin-record-header">
-                <div className="admin-record-copy space-y-3">
-                  {editingId === item.id ? (
-                    <div className="admin-edit-banner">
-                      <FolderKanban size={13} />
-                      Editing project
-                    </div>
-                  ) : null}
-                  <div className="text-base font-semibold text-white-star">{item.title}</div>
-                  <div className="text-sm text-twilight">{item.description || 'No description'}</div>
-                </div>
-                {editingId === item.id ? (
-                  <div className="admin-card-actions">
-                    <label className="admin-checkbox-chip">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(drafts[item.id]?.is_public)}
-                        onChange={(event) =>
-                          setDrafts((prev) => ({
-                            ...prev,
-                            [item.id]: {
-                              ...(prev[item.id] || {}),
-                              is_public: event.target.checked,
-                            },
-                          }))
-                        }
-                      />
-                      Public
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => cancelEdit(item)}
-                      className="admin-action-pill admin-action-pill-subtle"
-                    >
-                      <X size={14} />
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSave(item.id)}
-                      disabled={busyKey === `save-${item.id}`}
-                      className="admin-action-pill admin-action-pill-primary"
-                    >
-                      <Save size={14} />
-                      {busyKey === `save-${item.id}` ? 'Saving...' : 'Save'}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="admin-card-actions">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(item)}
-                      className="admin-action-pill"
-                    >
-                      <PencilLine size={14} />
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(item.id, item.title)}
-                      disabled={busyKey === `delete-${item.id}`}
-                      className="admin-action-pill admin-action-pill-danger"
-                    >
-                      <Trash2 size={14} />
-                      {busyKey === `delete-${item.id}` ? 'Deleting...' : 'Delete'}
-                    </button>
-                  </div>
-                )}
-              </div>
-              {editingId === item.id ? (
-                <div className="admin-edit-shell">
-                  <input
-                    value={drafts[item.id]?.title || ''}
-                    onChange={(event) =>
-                      setDrafts((prev) => ({
-                        ...prev,
-                        [item.id]: {
-                          ...(prev[item.id] || {}),
-                          title: event.target.value,
-                        },
-                      }))
-                    }
-                    className="input-cosmic w-full"
-                    placeholder="Project title"
-                  />
-                  <textarea
-                    value={drafts[item.id]?.description || ''}
-                    onChange={(event) =>
-                      setDrafts((prev) => ({
-                        ...prev,
-                        [item.id]: {
-                          ...(prev[item.id] || {}),
-                          description: event.target.value,
-                        },
-                      }))
-                    }
-                    rows={3}
-                    className="input-cosmic w-full resize-none"
-                    placeholder="Project description"
-                  />
-                </div>
-              ) : null}
-              <div className="admin-metadata-grid">
-                <div className="admin-metadata-item">
-                  <User2 size={14} className="text-moonlight" />
-                  <span>Owner <strong>{item.owner_id || 'system'}</strong></span>
-                </div>
-                <div className="admin-metadata-item">
-                  <PlaySquare size={14} className="text-aurora-cyan" />
-                  <span>Experiments <strong>{item.experiment_count ?? 0}</strong></span>
-                </div>
-                <div className="admin-metadata-item">
-                  <Waves size={14} className="text-aurora-cyan" />
-                  <span>Sessions <strong>{item.session_count ?? 0}</strong></span>
-                </div>
-                <div className="admin-metadata-item">
-                  <Globe2 size={14} className={item.is_public ? 'text-aurora-green' : 'text-aurora-amber'} />
-                  <span>Visibility <strong>{item.is_public ? 'Public' : 'Private'}</strong></span>
-                </div>
-                <div className="admin-metadata-item">
-                  <CalendarDays size={14} className="text-moonlight" />
-                  <span>Created <strong>{item.created_at || 'n/a'}</strong></span>
-                </div>
-              </div>
-            </div>
-          ))}
-          {error ? <div className="text-sm text-aurora-rose">{error.message}</div> : null}
-        </div>
-      ) : (
-        <EmptyState title="No governed projects" description="Project inventory will appear here once project records are created." />
-      )}
-      <AdminPagination
-        page={meta.page}
-        pageSize={meta.page_size}
-        total={meta.total}
-        onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
-      />
-    </SectionCard>
+        ) : null}
+        {editError ? (
+          <div className="mt-3 rounded-lg border border-aurora-rose/25 bg-aurora-rose/[0.08] px-3 py-2 text-xs text-aurora-rose">
+            {editError}
+          </div>
+        ) : null}
+      </SlideOver>
+    </div>
   )
 }
+

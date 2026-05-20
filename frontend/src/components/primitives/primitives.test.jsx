@@ -47,14 +47,14 @@ describe('LoadingState primitive', () => {
   it('renders title and progress bar when progress provided', () => {
     const { container } = render(<LoadingState title="Loading…" progress={0.5} />)
     expect(screen.getByText('Loading…')).toBeInTheDocument()
-    const bar = container.querySelector('.bg-cyan-500')
+    const bar = screen.getByTestId('progress-bar')
     expect(bar).toBeTruthy()
     expect(bar.getAttribute('style')).toContain('50%')
   })
 
   it('clamps progress outside [0, 1] range', () => {
     const { container } = render(<LoadingState progress={2} />)
-    const bar = container.querySelector('.bg-cyan-500')
+    const bar = screen.getByTestId('progress-bar')
     expect(bar.getAttribute('style')).toContain('100%')
   })
 })

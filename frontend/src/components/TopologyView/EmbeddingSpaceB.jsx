@@ -4,15 +4,22 @@ import useGNNStore from '../../store/useGNNStore'
 import LazyPlot from '../primitives/LazyPlot'
 import { CLASS_COLORS } from '../../utils/colors'
 
-function computeAxisRange(values, paddingRatio = 0.18, minSpan = 6) {
-  if (!values?.length) return [-minSpan / 2, minSpan / 2]
+function computeAxisRange(values, paddingRatio = 0.12, minSpan = 0.5) {
+  if (!values?.length) return [-1, 1]
   let min = Infinity, max = -Infinity
   values.forEach(v => { if (Number.isFinite(v)) { min = Math.min(min, v); max = Math.max(max, v) } })
-  if (!Number.isFinite(min)) return [-minSpan / 2, minSpan / 2]
-  const span = Math.max(max - min, minSpan)
+  if (!Number.isFinite(min)) return [-1, 1]
+  // Honor the natural span of the embedding. Only floor at `minSpan` to avoid
+  // a degenerate 1-pixel viewport — never inflate a tight cluster to a huge box.
+  const naturalSpan = Math.max(max - min, minSpan)
   const center = (min + max) / 2
-  const half = (span * (1 + paddingRatio)) / 2
+  const half = (naturalSpan * (1 + paddingRatio)) / 2
   return [center - half, center + half]
+}
+
+function isDarkMode() {
+  if (typeof document === 'undefined') return false
+  return document.documentElement.classList.contains('dark')
 }
 
 /**
@@ -123,21 +130,24 @@ export default function EmbeddingSpaceB() {
       return CLASS_COLORS[pred % CLASS_COLORS.length] || '#6366f1'
     })
 
-    const sizes = displayPoints.map(() => 6)
+    const sizes = displayPoints.map((_, i) => {
+      const realIdx = sampleIndices ? sampleIndices[i] : i
+      return realIdx === selectedNodeId ? 14 : 10
+    })
 
     const traces = [{
       type: 'scatter', mode: 'markers',
       x, y,
       marker: {
-        color: colors, size: sizes, opacity: 0.8,
+        color: colors, size: sizes, opacity: 0.85,
         line: { 
           color: displayPoints.map((_, i) => {
             const realIdx = sampleIndices ? sampleIndices[i] : i
-            return realIdx === selectedNodeId ? '#ffffff' : 'rgba(255,255,255,0.1)'
+            return realIdx === selectedNodeId ? '#0ea5e9' : 'rgba(15,23,42,0.35)'
           }), 
           width: displayPoints.map((_, i) => {
             const realIdx = sampleIndices ? sampleIndices[i] : i
-            return realIdx === selectedNodeId ? 2 : 0.5
+            return realIdx === selectedNodeId ? 2.5 : 0.6
           })
         },
       },
@@ -148,6 +158,47 @@ export default function EmbeddingSpaceB() {
       }),
       hoverinfo: 'text',
     }]
+
+    // Cluster centroid markers — show 'X' at the mean of each class/cluster
+    if (numClasses > 1) {
+      const classBuckets = {}
+      displayPoints.forEach((p, i) => {
+        const realIdx = sampleIndices ? sampleIndices[i] : i
+        const cls = hasLabels
+          ? graphData?.nodes?.[realIdx]?.groundTruth ?? predictions[realIdx]
+          : predictions[realIdx]
+        if (cls === undefined || cls === null) return
+        if (!classBuckets[cls]) classBuckets[cls] = { x: [], y: [] }
+        classBuckets[cls].x.push(p[0])
+        classBuckets[cls].y.push(p[1])
+      })
+      const centroidX = []
+      const centroidY = []
+      const centroidColor = []
+      const centroidText = []
+      Object.entries(classBuckets).forEach(([cls, bucket]) => {
+        if (!bucket.x.length) return
+        const cx = bucket.x.reduce((s, v) => s + v, 0) / bucket.x.length
+        const cy = bucket.y.reduce((s, v) => s + v, 0) / bucket.y.length
+        centroidX.push(cx)
+        centroidY.push(cy)
+        centroidColor.push(CLASS_COLORS[Number(cls) % CLASS_COLORS.length] || '#6366f1')
+        centroidText.push(`${hasLabels ? 'Class' : 'Cluster'} ${cls} centroid (n=${bucket.x.length})`)
+      })
+      if (centroidX.length) {
+        traces.push({
+          type: 'scatter', mode: 'markers',
+          x: centroidX, y: centroidY,
+          marker: {
+            color: centroidColor, size: 18, symbol: 'cross-thin',
+            line: { color: 'rgba(15,23,42,0.65)', width: 2.5 },
+          },
+          text: centroidText,
+          hoverinfo: 'text',
+          showlegend: false,
+        })
+      }
+    }
 
     if (trajectoryTrace) traces.push(...trajectoryTrace)
     return traces
@@ -175,20 +226,25 @@ export default function EmbeddingSpaceB() {
     )
   }
 
+  const dark = isDarkMode()
+  const plotBg = dark ? 'rgba(2, 6, 23, 0.35)' : 'rgba(241, 245, 249, 0.55)'
+  const gridColor = dark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(148, 163, 184, 0.25)'
+  const fontColor = dark ? '#cbd5e1' : '#475569'
+
   return (
     <div ref={plotContainerRef} className="w-full h-full relative">
       <LazyPlot
         data={plotData}
         layout={{
           paper_bgcolor: 'transparent',
-          plot_bgcolor: 'rgba(15,23,42,0.25)',
-          font: { color: '#94a3b8', size: 10 },
+          plot_bgcolor: plotBg,
+          font: { color: fontColor, size: 10 },
           xaxis: {
-            showgrid: false, zeroline: false, showticklabels: false,
+            showgrid: true, gridcolor: gridColor, zeroline: false, showticklabels: false,
             range: axisConfig.xRange, fixedrange: false,
           },
           yaxis: {
-            showgrid: false, zeroline: false, showticklabels: false,
+            showgrid: true, gridcolor: gridColor, zeroline: false, showticklabels: false,
             range: axisConfig.yRange, fixedrange: false,
             scaleanchor: 'x', scaleratio: 1,
           },
@@ -239,10 +295,10 @@ export default function EmbeddingSpaceB() {
       </div>
 
       {/* Isotropy Badge */}
-      <div className="absolute top-2 right-2 z-10 bg-slate-900/85 border border-slate-700/40 rounded-lg px-2.5 py-1.5 text-right">
+      <div className="absolute top-2 right-2 z-10 bg-white/90 dark:bg-slate-900/85 border border-slate-300/60 dark:border-slate-700/40 rounded-lg px-2.5 py-1.5 text-right shadow-sm">
         <span className="text-[8px] text-slate-500 block uppercase tracking-wider">Isotropy</span>
         <span className={`text-sm font-bold font-mono ${
-          isotropy > 0.6 ? 'text-green-400' : isotropy > 0.3 ? 'text-yellow-400' : 'text-red-400'
+          isotropy > 0.6 ? 'text-emerald-500 dark:text-emerald-400' : isotropy > 0.3 ? 'text-amber-500 dark:text-yellow-400' : 'text-rose-500 dark:text-red-400'
         }`}>
           {(isotropy * 100).toFixed(0)}%
         </span>
@@ -250,26 +306,26 @@ export default function EmbeddingSpaceB() {
 
       {/* Subsample indicator */}
       {sampleIndices && (
-        <div className="absolute bottom-2 left-2 bg-slate-900/80 border border-amber-500/30 rounded-lg px-2 py-1 z-10">
-          <span className="text-[9px] text-amber-400 font-semibold">
+        <div className="absolute bottom-2 left-2 bg-white/90 dark:bg-slate-900/80 border border-amber-500/40 rounded-lg px-2 py-1 z-10 shadow-sm">
+          <span className="text-[9px] text-amber-600 dark:text-amber-400 font-semibold">
             Showing {sampleIndices.length.toLocaleString()} / {totalNodes.toLocaleString()} nodes
           </span>
         </div>
       )}
 
       {/* Epoch badge */}
-      <div className="absolute bottom-2 right-2 bg-slate-900/70 rounded px-2 py-0.5 z-10">
+      <div className="absolute bottom-2 right-2 bg-white/85 dark:bg-slate-900/70 border border-slate-300/60 dark:border-slate-700/40 rounded px-2 py-0.5 z-10 shadow-sm">
         <span className="text-[9px] text-slate-500">Epoch </span>
-        <span className="text-[9px] text-slate-300 font-semibold">{currentEpoch}</span>
+        <span className="text-[9px] text-slate-700 dark:text-slate-300 font-semibold">{currentEpoch}</span>
       </div>
 
       {/* Color legend */}
-      {hasLabels && numClasses > 1 && (
-        <div className="absolute bottom-10 left-2 bg-slate-900/80 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-slate-700/30 z-10">
-          <div className="text-[7px] text-slate-500 uppercase tracking-wider font-bold mb-1">Classes</div>
+      {numClasses > 1 && (
+        <div className="absolute bottom-10 left-2 bg-white/90 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-slate-300/60 dark:border-slate-700/30 z-10 shadow-sm">
+          <div className="text-[7px] text-slate-500 uppercase tracking-wider font-bold mb-1">{hasLabels ? 'Classes' : 'Clusters'}</div>
           <div className="flex gap-2 flex-wrap">
             {Array.from({ length: Math.min(numClasses, 8) }, (_, c) => (
-              <div key={c} className="flex items-center gap-1 text-[8px] text-slate-400">
+              <div key={c} className="flex items-center gap-1 text-[8px] text-slate-600 dark:text-slate-400">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CLASS_COLORS[c] }} />
                 {c}
               </div>

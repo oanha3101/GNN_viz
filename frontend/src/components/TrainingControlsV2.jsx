@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Play, Square, Loader2, Save } from 'lucide-react'
+import { CheckCircle2, Loader2, Save, Square } from 'lucide-react'
 import useGNNStore from '../store/useGNNStore'
 import usePlayerStore from '../store/playerStore'
 import useSessionStore from '../store/sessionStore'
@@ -300,12 +300,15 @@ export default function TrainingControlsV2() {
       window.dispatchEvent(new CustomEvent('gnn:start-training', {
         detail: {
           ...(selectedTask === 2 ? {
-            task2_pool: 'mean',
+            task2_pool: 'attention_sum',
             task2_class_weighting: false,
             task2_balanced_sampler: true,
-            task2_focal_gamma: 1.5,
-            task2_label_smoothing: 0.03,
-            task2_weight_decay: 5e-4,
+            task2_focal_gamma: 1.0,
+            task2_label_smoothing: 0.02,
+            task2_weight_decay: 1e-3,
+            task2_edge_dropout: 0.08,
+            task2_readout_entropy_weight: 0.02,
+            task2_density_contrastive_weight: 0.025,
           } : {}),
           task: selectedTask,
           model: gnnState.selectedModel,
@@ -363,87 +366,70 @@ export default function TrainingControlsV2() {
   }, [mockMode, setSessionStatus, setTraining, trainingProgress])
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <button
-          onClick={isTraining ? handleStop : handleStart}
-          disabled={!isTraining && isViewer}
-          className={`flex-1 rounded-xl px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-            isTraining
-              ? 'bg-aurora-rose/20 text-aurora-rose border border-aurora-rose/30 hover:bg-aurora-rose/30 shadow-[0_0_15px_rgba(225,29,72,0.15)]'
-              : 'bg-amethyst/20 text-amethyst border border-amethyst/30 hover:bg-amethyst/30 shadow-[0_0_20px_rgba(147,51,234,0.2)] disabled:opacity-40 disabled:cursor-not-allowed'
-          }`}
-        >
-          {isTraining ? (
-            <>
-              <Square size={12} /> Stop Training
-            </>
-          ) : (
-            <>
-              <Play size={12} /> Run {TASK_NAMES[selectedTask]}
-            </>
-          )}
-        </button>
-
-        <button
-          onClick={handleSaveExperiment}
-          disabled={isTraining || !trainingDone || saveState === 'idle' || saveState === 'saving' || saveState === 'saved'}
-          className={`ml-2 rounded-xl border px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-            saveState === 'ready'
-              ? 'animate-pulse border-aurora-amber/40 bg-aurora-amber/15 text-aurora-amber shadow-[0_0_15px_rgba(245,158,11,0.2)]'
-              : saveState === 'saved'
-                ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
-                : 'border-white/5 bg-white/5 text-twilight disabled:opacity-40 disabled:cursor-not-allowed'
-          }`}
-        >
-          <Save size={12} />
-          {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? 'Saved' : 'Save'}
-        </button>
-      </div>
-
-      <div className="flex items-center gap-2">
-        {isTraining ? (
-          <div className="flex-1 flex flex-col gap-1">
-             <div className="h-1.5 w-full rounded-full bg-black/40 border border-white/5 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-amethyst via-indigo-500 to-aurora-blue transition-[width] duration-150"
-                  style={{ width: `${trainingProgress * 100}%` }}
-                />
-              </div>
-              <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-tighter">
-                <span className="text-twilight flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Progress</span>
-                <span className="text-amethyst font-mono">{Math.round(trainingProgress * 100)}%</span>
-              </div>
+    <div className="flex flex-col items-end gap-1.5">
+      {isTraining ? (
+        <div className="flex w-full flex-col gap-1">
+          <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider">
+            <span className="text-twilight flex items-center gap-1">
+              <Loader2 size={10} className="animate-spin" /> Đang huấn luyện
+            </span>
+            <span className="font-mono text-amethyst">{Math.round(trainingProgress * 100)}%</span>
           </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-between px-3 py-1.5 rounded-lg border border-white/5 bg-black/20 backdrop-blur-sm">
-            <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">Epochs</span>
-              <span className="text-[10px] font-mono text-starlight">{hyperparams.epochs}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">LR</span>
-              <span className="text-[10px] font-mono text-starlight">{hyperparams.lr}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">Hidden</span>
-              <span className="text-[10px] font-mono text-starlight">{hyperparams.hidden}</span>
-            </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full border border-white/5 bg-black/40">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-amethyst via-indigo-500 to-aurora-blue transition-[width] duration-150"
+              style={{ width: `${trainingProgress * 100}%` }}
+            />
           </div>
-        )}
-      </div>
-
-      {!isTraining && trainingDone ? (
-        <div className={`rounded-xl border px-3 py-2 text-[10px] font-semibold ${
-          saveState === 'saved'
-            ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
-            : 'border-aurora-amber/20 bg-aurora-amber/10 text-aurora-amber'
-        }`}>
-          {saveState === 'saved'
-            ? 'This run has been saved to Experiment Hub.'
-            : 'Training is complete. Save Experiment is now ready.'}
+          <button
+            type="button"
+            onClick={handleStop}
+            className="self-end inline-flex items-center gap-1 rounded-md border border-aurora-rose/30 bg-aurora-rose/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-aurora-rose transition-colors hover:bg-aurora-rose/20"
+          >
+            <Square size={10} /> Stop training
+          </button>
         </div>
-      ) : null}
+      ) : trainingDone ? (
+        <div className="flex flex-col items-end gap-1">
+          <button
+            type="button"
+            onClick={handleSaveExperiment}
+            disabled={saveState === 'idle' || saveState === 'saving' || saveState === 'saved'}
+            data-testid="footer-save-experiment"
+            className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${
+              saveState === 'ready'
+                ? 'animate-pulse border-aurora-amber/40 bg-aurora-amber/15 text-aurora-amber shadow-[0_0_12px_rgba(245,158,11,0.18)] hover:bg-aurora-amber/25'
+                : saveState === 'saving'
+                  ? 'border-aurora-amber/30 bg-aurora-amber/10 text-aurora-amber'
+                  : saveState === 'saved'
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                    : 'border-white/10 bg-white/5 text-twilight disabled:opacity-50'
+            }`}
+          >
+            {saveState === 'saving'
+              ? <Loader2 size={11} className="animate-spin" />
+              : saveState === 'saved'
+                ? <CheckCircle2 size={11} />
+                : <Save size={11} />}
+            {saveState === 'saving' ? 'Đang lưu' : saveState === 'saved' ? 'Đã lưu' : 'Lưu thí nghiệm'}
+          </button>
+          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+            saveState === 'saved'
+              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+              : 'border-aurora-amber/30 bg-aurora-amber/10 text-aurora-amber'
+          }`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            {saveState === 'saved' ? 'Saved to Hub' : 'Ready to save'}
+          </span>
+        </div>
+      ) : (
+        <div className="flex flex-col items-end gap-0.5 text-right">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-twilight/70">Sẵn sàng</span>
+          <span className="text-[9px] uppercase tracking-wider text-twilight/50">
+            Bấm <kbd className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-[8px] text-starlight">Space</kbd> hoặc nút <span className="inline-block h-2 w-2 -mb-0.5 rounded-full bg-rose-500" /> để chạy
+          </span>
+        </div>
+      )}
     </div>
   )
 }

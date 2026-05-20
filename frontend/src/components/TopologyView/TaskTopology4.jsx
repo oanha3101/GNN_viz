@@ -6,8 +6,7 @@ import NodeHoverCard from './NodeHoverCard'
 import { polygonHull } from 'd3-polygon'
 import { normalizeCommunityCenters } from '../../utils/task4Metrics'
 import { interpolateSnapshots, lerp } from '../../engine/interpolate'
-
-const COMMUNITY_COLORS = ['#a855f7', '#6366f1', '#ec4899', '#34d399', '#fbbf24', '#818cf8', '#f43f5e']
+import { COMMUNITY_COLORS, getCommunityColor } from '../../utils/colors'
 const ANCHOR_REFERENCE = [
   { x: -220, y: -150 }, { x: 220, y: -150 },
   { x: -220, y: 150 }, { x: 220, y: 150 },
@@ -182,7 +181,7 @@ export default function TaskTopology4() {
     const isDimmed = selectedCommunityId != null && !isSelectedComm
 
     // Base color: community or smoothness-tinted
-    let color = COMMUNITY_COLORS[communityId % COMMUNITY_COLORS.length]
+    let color = getCommunityColor(communityId)
     if (overlayMode === 'smoothness' && snap?.local_smoothness) {
       const sm = snap.local_smoothness[node.id] ?? 0
       // Normalize: lower smoothness = more oversmoothed = grayish
@@ -242,7 +241,7 @@ export default function TaskTopology4() {
   const drawBefore = useCallback((ctx) => {
     // Hulls — thin stroke (6px, not 28px)
     communityHulls.forEach((hull) => {
-      const color = COMMUNITY_COLORS[hull.cid % COMMUNITY_COLORS.length]
+      const color = getCommunityColor(hull.cid)
       const dim = selectedCommunityId != null && hull.cid !== selectedCommunityId
       ctx.beginPath()
       ctx.moveTo(hull.path[0][0], hull.path[0][1])
@@ -250,10 +249,10 @@ export default function TaskTopology4() {
       ctx.closePath()
       ctx.lineJoin = 'round'
       ctx.lineCap = 'round'
-      ctx.strokeStyle = dim ? `${color}18` : `${color}22`
-      ctx.lineWidth = 6
+      ctx.strokeStyle = dim ? `${color}20` : `${color}44`
+      ctx.lineWidth = dim ? 4 : 8
       ctx.stroke()
-      ctx.fillStyle = dim ? `${color}08` : `${color}11`
+      ctx.fillStyle = dim ? `${color}08` : `${color}18`
       ctx.fill()
     })
 
@@ -304,7 +303,7 @@ export default function TaskTopology4() {
         : ''
 
   return (
-    <div ref={containerRef} className="w-full h-full relative bg-slate-950 overflow-hidden">
+    <div ref={containerRef} className="w-full h-full relative bg-white dark:bg-slate-950 overflow-hidden">
       <ForceGraph2D
         ref={fgRef}
         graphData={graphData}
@@ -335,8 +334,8 @@ export default function TaskTopology4() {
           }
 
           return srcComm === tgtComm
-            ? `${COMMUNITY_COLORS[srcComm % COMMUNITY_COLORS.length]}33`
-            : 'rgba(148, 163, 184, 0.05)'
+            ? `${getCommunityColor(srcComm)}44`
+            : 'rgba(148, 163, 184, 0.08)'
         }}
         linkWidth={(link) => {
           if (!snap) return 0.5
@@ -369,14 +368,14 @@ export default function TaskTopology4() {
       {/* ── HUD — top-right ──────────────────────────────────────────────────── */}
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 items-end">
         {/* Q score */}
-        <div className="bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-2 border border-white/5 flex items-center gap-2">
+        <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-md rounded-lg px-3 py-2 border border-slate-300/60 dark:border-slate-700/40 flex items-center gap-2 shadow-sm">
           <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra">Q</span>
-          <span className={`text-sm font-black font-mono leading-none ${modularityQ > 0.4 ? 'text-green-400' : 'text-amber-400'}`}>
+          <span className={`text-sm font-black font-mono leading-none ${modularityQ > 0.4 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
             {modularityQ.toFixed(3)}
           </span>
-          <div className="w-14 bg-slate-800/50 h-1.5 rounded-full overflow-hidden">
+          <div className="w-14 bg-slate-200 dark:bg-slate-800/50 h-1.5 rounded-full overflow-hidden">
             <div
-              className="h-full bg-amber-400"
+              className="h-full bg-amber-500 dark:bg-amber-400"
               style={{ width: `${Math.max(0, Math.min(1, modularityQ)) * 100}%` }}
             />
           </div>
@@ -384,9 +383,9 @@ export default function TaskTopology4() {
 
         {/* Overlay metric (auto-shown when model has data) */}
         {overlayMode !== 'none' && overlayMetric != null && (
-          <div className="bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-white/5 flex items-center gap-2">
+          <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-slate-300/60 dark:border-slate-700/40 flex items-center gap-2 shadow-sm">
             <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra">{overlayMetricLabel}</span>
-            <span className="text-sm font-black font-mono leading-none text-cyan-400">
+            <span className="text-sm font-black font-mono leading-none text-cyan-600 dark:text-cyan-400">
               {overlayMode === 'migration'
                 ? `${(overlayMetric * 100).toFixed(1)}%`
                 : overlayMetric.toFixed(4)}
@@ -395,7 +394,7 @@ export default function TaskTopology4() {
         )}
 
         {/* Community legend */}
-        <div className="bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-white/5 flex items-center gap-2 flex-wrap max-w-[220px] justify-end">
+        <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-slate-300/60 dark:border-slate-700/40 flex items-center gap-2 flex-wrap max-w-[220px] justify-end shadow-sm">
           {activeCommunityIds.map((i) => (
             <button
               key={i}
@@ -404,7 +403,7 @@ export default function TaskTopology4() {
                 selectedCommunityId != null && selectedCommunityId !== i ? 'opacity-40 hover:opacity-100' : 'opacity-100'
               }`}
             >
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COMMUNITY_COLORS[i % COMMUNITY_COLORS.length] }} />
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getCommunityColor(i) }} />
               <span className="text-slate-400">C{i}</span>
             </button>
           ))}
@@ -426,7 +425,7 @@ export default function TaskTopology4() {
       {/* Fit to view */}
       <button
         onClick={() => { try { fgRef.current && fgRef.current.zoomToFit(400, 80) } catch { /* ignore */ } }}
-        className="absolute bottom-3 right-3 z-10 bg-panel-soft/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-white/5 text-nano font-bold text-slate-300 hover:text-white hover:border-cyan-500/40 transition-colors uppercase tracking-ultra"
+        className="absolute bottom-3 right-3 z-10 bg-white/85 dark:bg-slate-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 border border-slate-300/60 dark:border-slate-700/40 text-nano font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-cyan-500/40 transition-colors uppercase tracking-ultra shadow-sm"
         title="Fit to view (F)"
       >
         Fit · F

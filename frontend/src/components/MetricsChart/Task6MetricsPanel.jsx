@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -28,8 +28,9 @@ const TABS = [
   { id: 'signatures', label: 'Signatures' },
 ]
 
-export default function Task6MetricsPanel() {
-  const [tab, setTab] = useState('overview')
+export default function Task6MetricsPanel({ forcedTab = null, hideTabControls = false }) {
+  const [tab, setTab] = useState(forcedTab || 'overview')
+  useEffect(() => { if (forcedTab) setTab(forcedTab) }, [forcedTab])
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
   const snap = snapshots[epochInt]
@@ -44,24 +45,26 @@ export default function Task6MetricsPanel() {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="flex items-center gap-1 px-3 pt-2 pb-1.5 border-b border-slate-800/60 shrink-0 flex-wrap">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-2.5 py-1 rounded-md text-micro font-bold transition-colors ${
-              tab === t.id
-                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-        <span className="ml-auto text-nano font-mono text-slate-500">Epoch {epochInt}</span>
-      </div>
+      {!hideTabControls && (
+        <div className="flex items-center gap-1 px-3 pt-2 pb-1.5 border-b border-slate-800/60 shrink-0 flex-wrap">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-2.5 py-1 rounded-md text-micro font-bold transition-colors ${
+                tab === t.id
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+          <span className="ml-auto text-nano font-mono text-slate-500">Epoch {epochInt}</span>
+        </div>
+      )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar p-3">
         {tab === 'overview' && <OverviewTab snapshots={snapshots} snap={snap} />}
         {tab === 'comparison' && <ComparisonTab snap={snap} />}
         {tab === 'invalidity' && <InvalidityTab snap={snap} />}
@@ -112,11 +115,11 @@ function OverviewTab({ snapshots, snap }) {
       <div className="flex-1 min-h-[220px]">
         <ResponsiveContainer width="100%" height={240}>
           <LineChart data={lossHistory} margin={{ top: 10, right: 10, bottom: 0, left: -10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 10 }} />
             <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
             <Tooltip
-              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 6, fontSize: 11 }}
+              contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 6, fontSize: 11 }}
               labelStyle={{ color: '#94a3b8' }}
             />
             <Legend wrapperStyle={{ fontSize: 10, color: '#94a3b8' }} />
@@ -172,7 +175,7 @@ function HistBlock({ title, metric }) {
           <XAxis dataKey="bin" tick={{ fill: '#94a3b8', fontSize: 9 }} />
           <YAxis tick={{ fill: '#94a3b8', fontSize: 9 }} />
           <Tooltip
-            contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 6, fontSize: 10 }}
+            contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 6, fontSize: 10 }}
             labelStyle={{ color: '#94a3b8' }}
           />
           <Bar dataKey="source" fill="#64748b" name="Source" />

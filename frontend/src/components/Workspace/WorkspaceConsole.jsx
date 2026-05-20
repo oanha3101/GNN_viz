@@ -269,8 +269,8 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
     ? 'h-full min-h-[720px]'
     : 'fixed inset-0 z-[94] bg-slate-950/90 backdrop-blur-sm p-6'
   const shellInnerClass = isPage
-    ? 'flex h-full w-full overflow-hidden rounded-[28px] border border-slate-700/50 bg-[#071120] shadow-2xl'
-    : 'mx-auto flex h-full max-w-6xl overflow-hidden rounded-[28px] border border-slate-700/50 bg-[#071120] shadow-2xl'
+    ? 'flex h-full w-full overflow-hidden rounded-[28px] border border-slate-700/50 bg-deep shadow-2xl'
+    : 'mx-auto flex h-full max-w-6xl overflow-hidden rounded-[28px] border border-slate-700/50 bg-deep shadow-2xl'
 
   return (
     <div className={shellOuterClass}>

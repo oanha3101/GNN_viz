@@ -34,7 +34,7 @@ function formatFailureTag(tag) {
   }
 }
 
-export default function ReadoutMonitor({ forcedFocus = null }) {
+export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell = null }) {
   const hoveredGraphId = useGNNStore((state) => state.hoveredGraphId)
   const setHoveredGraph = useGNNStore((state) => state.setHoveredGraph)
   const selectedNodeId = useGNNStore((state) => state.selectedNodeId)
@@ -87,6 +87,7 @@ export default function ReadoutMonitor({ forcedFocus = null }) {
     graphIds: descriptors.map((item) => item.originalGraphId),
   }
   const resolvedFocus = forcedFocus || activeFocus.id
+  const resolvedSelectedCell = forcedSelectedCell ?? selectedCell
   const resolvedBucket = focusBuckets.find((bucket) => bucket.id === resolvedFocus) || activeFocus
 
   const focusDescriptors = useMemo(() => {
@@ -96,11 +97,11 @@ export default function ReadoutMonitor({ forcedFocus = null }) {
   }, [resolvedBucket, descriptors])
 
   const scopedDescriptors = useMemo(() => {
-    if (!selectedCell) return focusDescriptors
+    if (!resolvedSelectedCell) return focusDescriptors
     return focusDescriptors.filter((descriptorItem) => (
-      descriptorItem.predicted === selectedCell.pred && descriptorItem.groundTruth === selectedCell.gt
+      descriptorItem.predicted === resolvedSelectedCell.pred && descriptorItem.groundTruth === resolvedSelectedCell.gt
     ))
-  }, [focusDescriptors, selectedCell])
+  }, [focusDescriptors, resolvedSelectedCell])
 
   const descriptor = useMemo(
     () => (
@@ -163,7 +164,7 @@ export default function ReadoutMonitor({ forcedFocus = null }) {
     return colorMap
   }, [graph, currSnap])
 
-  if (activeGraphId === null || snapshots.length === 0) {
+  if (snapshots.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4 bg-slate-950">
         <p className="text-center leading-relaxed">
@@ -175,7 +176,17 @@ export default function ReadoutMonitor({ forcedFocus = null }) {
     )
   }
 
-  if (!graph) return null
+  if (!graph) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4 bg-slate-950">
+        <p className="text-center leading-relaxed">
+          No graph matches the active readout slice.
+          <br />
+          Try a broader focus or clear the confusion cell.
+        </p>
+      </div>
+    )
+  }
 
   const gtLabel = graphClassNames[graph.groundTruth] || `Class ${graph.groundTruth}`
   const predLabel = graph.predicted != null

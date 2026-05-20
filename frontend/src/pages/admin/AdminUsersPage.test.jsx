@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminUsersPage from './AdminUsersPage'
 
@@ -12,64 +12,68 @@ function jsonResponse(payload) {
   }
 }
 
+function getDialog(name) {
+  return screen.getByRole('complementary')
+}
+
 describe('AdminUsersPage', () => {
   beforeEach(() => {
     vi.stubGlobal('confirm', vi.fn(() => true))
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({
-          items: [
-            {
-              id: 7,
-              username: 'alice',
-              email: 'alice@example.com',
-              full_name: 'Alice Nguyen',
-              organization: 'Graph Lab',
-              job_title: 'Researcher',
-              bio: 'Builds graph tooling.',
-              github_url: 'https://github.com/alice',
-              location: 'Da Nang',
-              profile_image: 'https://example.com/alice.png',
-              role: 'researcher',
-              is_active: true,
-              created_at: '2026-05-13T00:00:00Z',
-            },
-          ],
-        }))
+        items: [
+          {
+            id: 7,
+            username: 'alice',
+            email: 'alice@example.com',
+            full_name: 'Alice Nguyen',
+            organization: 'Graph Lab',
+            job_title: 'Researcher',
+            bio: 'Builds graph tooling.',
+            github_url: 'https://github.com/alice',
+            location: 'Da Nang',
+            profile_image: 'https://example.com/alice.png',
+            role: 'researcher',
+            is_active: true,
+            created_at: '2026-05-13T00:00:00Z',
+          },
+        ],
+      }))
       .mockResolvedValueOnce(jsonResponse({
-          id: 7,
-          username: 'alice',
-          email: 'alice@example.com',
-          full_name: 'Alice Nguyen',
-          organization: 'Updated Lab',
-          job_title: 'Staff Researcher',
-          bio: 'Updated bio',
-          github_url: 'https://github.com/alice',
-          location: 'Hue',
-          profile_image: 'https://example.com/alice-updated.png',
-          role: 'viewer',
-          is_active: false,
-          created_at: '2026-05-13T00:00:00Z',
-        }))
+        id: 7,
+        username: 'alice',
+        email: 'alice@example.com',
+        full_name: 'Alice Nguyen',
+        organization: 'Updated Lab',
+        job_title: 'Staff Researcher',
+        bio: 'Updated bio',
+        github_url: 'https://github.com/alice',
+        location: 'Hue',
+        profile_image: 'https://example.com/alice-updated.png',
+        role: 'viewer',
+        is_active: false,
+        created_at: '2026-05-13T00:00:00Z',
+      }))
       .mockResolvedValueOnce(jsonResponse({
-          items: [
-            {
-              id: 7,
-              username: 'alice',
-              email: 'alice@example.com',
-              full_name: 'Alice Nguyen',
-              organization: 'Updated Lab',
-              job_title: 'Staff Researcher',
-              bio: 'Updated bio',
-              github_url: 'https://github.com/alice',
-              location: 'Hue',
-              profile_image: 'https://example.com/alice-updated.png',
-              role: 'viewer',
-              is_active: false,
-              created_at: '2026-05-13T00:00:00Z',
-            },
-          ],
-        }))
+        items: [
+          {
+            id: 7,
+            username: 'alice',
+            email: 'alice@example.com',
+            full_name: 'Alice Nguyen',
+            organization: 'Updated Lab',
+            job_title: 'Staff Researcher',
+            bio: 'Updated bio',
+            github_url: 'https://github.com/alice',
+            location: 'Hue',
+            profile_image: 'https://example.com/alice-updated.png',
+            role: 'viewer',
+            is_active: false,
+            created_at: '2026-05-13T00:00:00Z',
+          },
+        ],
+      }))
   })
 
   it('saves role and active status changes', async () => {
@@ -83,27 +87,28 @@ describe('AdminUsersPage', () => {
       expect.any(Object)
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /^edit$/i }))
-    fireEvent.change(screen.getByPlaceholderText('Organization'), {
+    fireEvent.click(screen.getByRole('button', { name: /edit user/i }))
+    const dialog = getDialog()
+    fireEvent.change(within(dialog).getByLabelText(/^organization$/i), {
       target: { value: 'Updated Lab' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Job title'), {
+    fireEvent.change(within(dialog).getByLabelText(/^job title$/i), {
       target: { value: 'Staff Researcher' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Location'), {
+    fireEvent.change(within(dialog).getByLabelText(/^location$/i), {
       target: { value: 'Hue' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Avatar URL or data URL'), {
+    fireEvent.change(within(dialog).getByLabelText(/^avatar url$/i), {
       target: { value: 'https://example.com/alice-updated.png' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Bio'), {
+    fireEvent.change(within(dialog).getByLabelText(/^bio$/i), {
       target: { value: 'Updated bio' },
     })
-    fireEvent.change(screen.getByDisplayValue('researcher'), {
+    fireEvent.change(within(dialog).getByLabelText(/^role$/i), {
       target: { value: 'viewer' },
     })
-    fireEvent.click(screen.getByLabelText(/^active$/i))
-    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+    fireEvent.click(within(dialog).getByLabelText(/^active$/i))
+    fireEvent.click(within(dialog).getByRole('button', { name: /save changes/i }))
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -132,24 +137,24 @@ describe('AdminUsersPage', () => {
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({
-          items: [
-            {
-              id: 9,
-              username: 'bob',
-              email: 'bob@example.com',
-              role: 'viewer',
-              is_active: true,
-              created_at: '2026-05-13T00:00:00Z',
-            },
-          ],
-        }))
+        items: [
+          {
+            id: 9,
+            username: 'bob',
+            email: 'bob@example.com',
+            role: 'viewer',
+            is_active: true,
+            created_at: '2026-05-13T00:00:00Z',
+          },
+        ],
+      }))
       .mockResolvedValueOnce(jsonResponse({
-          status: 'deleted',
-          id: 9,
-        }))
+        status: 'deleted',
+        id: 9,
+      }))
       .mockResolvedValueOnce(jsonResponse({
-          items: [],
-        }))
+        items: [],
+      }))
 
     render(<AdminUsersPage />)
 
@@ -161,7 +166,7 @@ describe('AdminUsersPage', () => {
       expect.any(Object)
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+    fireEvent.click(screen.getByRole('button', { name: /delete user/i }))
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -215,42 +220,43 @@ describe('AdminUsersPage', () => {
       )
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /create user/i }))
+    fireEvent.click(screen.getByRole('button', { name: /new user/i }))
 
-    fireEvent.change(screen.getByPlaceholderText('Email'), {
+    const dialog = getDialog()
+    fireEvent.change(within(dialog).getByLabelText(/^email/i), {
       target: { value: 'newbie@example.com' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Username'), {
+    fireEvent.change(within(dialog).getByLabelText(/^username/i), {
       target: { value: 'newbie' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Full name'), {
+    fireEvent.change(within(dialog).getByLabelText(/^full name$/i), {
       target: { value: 'New User' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Password'), {
+    fireEvent.change(within(dialog).getByLabelText(/^password/i), {
       target: { value: 'password123' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Organization'), {
+    fireEvent.change(within(dialog).getByLabelText(/^organization$/i), {
       target: { value: 'New Org' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Job title'), {
+    fireEvent.change(within(dialog).getByLabelText(/^job title$/i), {
       target: { value: 'Analyst' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Location'), {
+    fireEvent.change(within(dialog).getByLabelText(/^location$/i), {
       target: { value: 'HCMC' },
     })
-    fireEvent.change(screen.getByPlaceholderText('GitHub URL'), {
+    fireEvent.change(within(dialog).getByLabelText(/^github url$/i), {
       target: { value: 'https://github.com/newbie' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Avatar URL or data URL'), {
+    fireEvent.change(within(dialog).getByLabelText(/^avatar url$/i), {
       target: { value: 'https://example.com/newbie.png' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Bio'), {
+    fireEvent.change(within(dialog).getByLabelText(/^bio$/i), {
       target: { value: 'New user bio' },
     })
-    fireEvent.change(screen.getAllByDisplayValue('researcher')[0], {
+    fireEvent.change(within(dialog).getByLabelText(/^role$/i), {
       target: { value: 'viewer' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /add user/i }))
+    fireEvent.click(within(dialog).getByRole('button', { name: /create user/i }))
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(

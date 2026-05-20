@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
+import ThemeToggle from '../components/ui/ThemeToggle'
 
 const APP_NAV_ITEMS = [
   { to: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -106,9 +107,9 @@ export default function AppLayout() {
   const titleMeta = TITLES[location.pathname]
 
   return (
-    <div className="user-shell min-h-screen bg-abyss text-starlight selection:bg-accent-amethyst/30">
-      <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
-        <aside className="app-sidebar">
+    <div className="user-shell min-h-screen bg-abyss text-starlight selection:bg-accent-amethyst/30 print:bg-white print:text-slate-900">
+      <div className="grid min-h-screen lg:grid-cols-[280px_1fr] print:block print:min-h-0">
+        <aside className="app-sidebar print:hidden">
           <div className="relative z-10 flex h-full flex-col px-5 py-6">
             <div className="mb-8 flex items-center gap-3">
               <div className="app-logo-icon">
@@ -126,9 +127,7 @@ export default function AppLayout() {
               ))}
             </nav>
 
-            <div className="flex-1" />
-
-            <div className="space-y-3 border-t border-line-subtle pt-5">
+            <div className="mt-4 space-y-3 border-t border-line-subtle pt-4">
               <UserBadge user={user} navigate={navigate} />
 
               <div className="flex flex-col gap-2">
@@ -158,25 +157,34 @@ export default function AppLayout() {
           </div>
         </aside>
 
-        <div className="relative flex min-h-screen flex-col overflow-hidden">
-          <div className="user-shell-backdrop pointer-events-none absolute inset-0" />
+        <div className="relative flex min-h-screen flex-col overflow-hidden print:min-h-0 print:overflow-visible">
+          <div className="user-shell-backdrop pointer-events-none absolute inset-0 print:hidden" />
 
           {titleMeta ? (
-            <header className="app-header">
-              <div className="flex items-center gap-2">
-                <Sparkles size={12} className="text-moonlight" />
-                <span className="text-micro font-semibold uppercase tracking-ultra text-moonlight">
-                  {titleMeta.eyebrow}
-                </span>
+            <header className="app-header flex items-start justify-between gap-4 print:hidden">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles size={12} className="text-amethyst" />
+                  <span className="text-micro font-semibold uppercase tracking-ultra text-twilight">
+                    {titleMeta.eyebrow}
+                  </span>
+                </div>
+                <h1 className="mt-2 text-[2rem] font-bold tracking-tight text-white-star">
+                  {titleMeta.title}
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-twilight">
+                  {titleMeta.description}
+                </p>
               </div>
-              <h1 className="mt-2 text-[2rem] font-black tracking-tight text-white-star">
-                {titleMeta.title}
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-twilight">
-                {titleMeta.description}
-              </p>
+              <div className="shrink-0">
+                <ThemeToggle />
+              </div>
             </header>
-          ) : null}
+          ) : (
+            <div className="flex justify-end px-6 pt-6">
+              <ThemeToggle />
+            </div>
+          )}
 
           <main className="relative z-10 flex-1 overflow-auto p-6">
             <div className="min-h-[calc(100vh-10rem)]">

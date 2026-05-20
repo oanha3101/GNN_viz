@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   BarChart3,
   BookOpen,
   Brain,
   CheckCircle2,
+  Download,
+  Eye,
   FileText,
   Filter,
   Loader2,
@@ -59,10 +62,11 @@ function FilterSelect({ label, value, onChange, options }) {
   )
 }
 
-function RunChip({ selected, onClick, children }) {
+function RunChip({ selected, onClick, children, ...rest }) {
   return (
     <button
       onClick={onClick}
+      {...rest}
       className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all ${
         selected
           ? 'border-aurora-blue/40 bg-aurora-blue/12 text-aurora-blue'
@@ -151,6 +155,7 @@ function downloadTextFile(filename, content, type) {
 }
 
 export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
+  const navigate = useNavigate()
   const setTask = useGNNStore((s) => s.setTask)
   const setHyperparams = useGNNStore((s) => s.setHyperparams)
   const setGraphData = useGNNStore((s) => s.setGraphData)
@@ -436,6 +441,26 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
     setTrainMask,
   ])
 
+  // View / Download PDF Book — load experiment then navigate to /app/lab/analysis/report.
+  // Optionally trigger print() after the page settles.
+  const handlePdfBookOpen = useCallback(async (expId, { autoPrint = false } = {}) => {
+    setActionKey(autoPrint ? `download-${expId}` : `view-${expId}`)
+    try {
+      await handleReplayLoad(expId)
+      navigate('/app/lab/analysis/report')
+      if (autoPrint) {
+        // Wait a moment so React mounts the report tree + Plotly initializes.
+        setTimeout(() => {
+          try { window.print() } catch (e) { /* user cancelled or unsupported */ }
+        }, 1200)
+      }
+    } catch (err) {
+      setError(err)
+    } finally {
+      setActionKey(null)
+    }
+  }, [handleReplayLoad, navigate])
+
   const handleSaveMetadata = useCallback(async (nextIsBest = selectedDetail?.is_best) => {
     if (!selectedExperimentId) return
     setSaveLoading(true)
@@ -656,7 +681,7 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <RunChip selected={selectedCompareIds.includes(exp.id)} onClick={(event) => {
+                            <RunChip data-testid={`experiment-compare-toggle-${exp.id}`} selected={selectedCompareIds.includes(exp.id)} onClick={(event) => {
                               event.stopPropagation()
                               handleCompareToggle(exp.id)
                             }}
@@ -664,6 +689,7 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                               {selectedCompareIds.includes(exp.id) ? 'Selected' : 'Compare'}
                             </RunChip>
                             <button
+                              data-testid={`card-load-replay-${exp.id}`}
                               onClick={(event) => {
                                 event.stopPropagation()
                                 handleReplayLoad(exp.id)
@@ -672,6 +698,28 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                               title="Load replay"
                             >
                               {actionKey === `replay-${exp.id}` ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
+                            </button>
+                            <button
+                              data-testid={`card-view-pdf-${exp.id}`}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handlePdfBookOpen(exp.id, { autoPrint: false })
+                              }}
+                              className="rounded-xl border border-amethyst/25 bg-amethyst/10 p-2.5 text-amethyst hover:bg-amethyst/20 transition-all hover:scale-105 active:scale-95"
+                              title="View PDF Book"
+                            >
+                              {actionKey === `view-${exp.id}` ? <Loader2 size={15} className="animate-spin" /> : <Eye size={15} />}
+                            </button>
+                            <button
+                              data-testid={`card-download-pdf-${exp.id}`}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handlePdfBookOpen(exp.id, { autoPrint: true })
+                              }}
+                              className="rounded-xl border border-aurora-green/25 bg-aurora-green/10 p-2.5 text-aurora-green hover:bg-aurora-green/20 transition-all hover:scale-105 active:scale-95"
+                              title="Download PDF Book"
+                            >
+                              {actionKey === `download-${exp.id}` ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
                             </button>
                             <button
                               onClick={(event) => {
@@ -744,6 +792,7 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                 <Brain size={13} /> AI Analyst
               </button>
               <button
+                data-testid="tab-compare"
                 onClick={() => setRightTab('compare')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   rightTab === 'compare'
@@ -867,10 +916,25 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                         {saveLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save changes
                       </button>
                       <button
+                        data-testid="detail-load-replay"
                         onClick={() => handleReplayLoad(selectedDetail.id)}
                         className="btn-nebula inline-flex items-center gap-2 px-5 py-2.5 text-sm border-line-subtle hover:border-accent-amethyst transition-all hover:scale-[1.02] active:scale-95"
                       >
                         <Play size={16} /> Load replay
+                      </button>
+                      <button
+                        data-testid="detail-view-pdf"
+                        onClick={() => handlePdfBookOpen(selectedDetail.id, { autoPrint: false })}
+                        className="btn-nebula inline-flex items-center gap-2 px-5 py-2.5 text-sm border-line-subtle hover:border-accent-amethyst transition-all hover:scale-[1.02] active:scale-95"
+                      >
+                        {actionKey === `view-${selectedDetail.id}` ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />} View PDF Book
+                      </button>
+                      <button
+                        data-testid="detail-download-pdf"
+                        onClick={() => handlePdfBookOpen(selectedDetail.id, { autoPrint: true })}
+                        className="btn-nebula inline-flex items-center gap-2 px-5 py-2.5 text-sm border-line-subtle hover:border-aurora-green transition-all hover:scale-[1.02] active:scale-95"
+                      >
+                        {actionKey === `download-${selectedDetail.id}` ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Download PDF
                       </button>
                     </div>
                   </motion.div>

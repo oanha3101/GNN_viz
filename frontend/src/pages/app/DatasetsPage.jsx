@@ -1,4 +1,5 @@
-import { AlertCircle, CheckCircle2, Database, PencilLine, Plus, Save, Sparkles, Trash2, Upload, X } from 'lucide-react'
+import { AlertCircle, Database, PencilLine, Plus, Save, Sparkles, Trash2, Upload, X } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import DataInputView from '../../components/UploadPanel/DataInputView'
 import EmptyState from '../../components/primitives/EmptyState'
@@ -8,7 +9,6 @@ import useAuthStore from '../../store/authStore'
 import useGNNStore from '../../store/useGNNStore'
 import { apiJson, normalizeCollectionPayload } from '../../utils/api'
 import { AdminPagination } from '../admin/AdminListControls'
-import { SectionCard, SelectionButton } from '../shared/PageBlocks'
 
 export default function DatasetsPage() {
   const user = useAuthStore((s) => s.user)
@@ -343,658 +343,500 @@ export default function DatasetsPage() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="workspace-info-grid">
-        <div className="workspace-info-item">
-          <span className="workspace-info-label">Pending Upload</span>
-          <strong>{hasUploadReady ? 'Ready to attach' : 'No upload yet'}</strong>
-        </div>
-        <div className="workspace-info-item">
-          <span className="workspace-info-label">Selected Dataset</span>
-          <strong>{currentDetail?.dataset?.name || 'Nothing selected yet'}</strong>
-        </div>
-        <div className="workspace-info-item">
-          <span className="workspace-info-label">Active Version</span>
-          <strong>
-            {activeDatasetVersionId
-              ? currentDetail?.versions?.find((version) => version.id === activeDatasetVersionId)?.lifecycle || 'Selected'
-              : 'No active version'}
-          </strong>
-        </div>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(320px,380px)_minmax(0,1fr)]">
-        <SectionCard
-          title="Pending Upload"
-          subtitle={
-            hasUploadReady
-              ? 'Drag this upload onto a dataset card on the right, or turn it into a brand-new dataset.'
-              : 'Bring one payload into the workspace here. Once it exists, you can drop it onto any dataset beside it.'
-          }
-          className="h-fit"
-          actions={
-            <button
-              type="button"
-              onClick={handleOpenUploader}
-              className="btn-nebula inline-flex items-center gap-2 text-xs"
-            >
-              <Upload size={13} /> Open uploader
+    <div className="space-y-6">
+      {/* Hero */}
+      <section className="surface-card p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="surface-eyebrow">Dataset Library</div>
+            <h2 className="surface-title">Datasets ({datasets.length})</h2>
+            <p className="surface-sub">
+              Governed dataset records and their version timeline. Pick the one that should travel to Lab.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setIsUploaderOpen((v) => !v)} className="surface-action">
+              <Upload size={13} /> {isUploaderOpen ? 'Hide uploader' : 'Open uploader'}
             </button>
-          }
-        >
-          <div className="space-y-4">
-            <UploadSummary
-              uploadedFilePath={uploadedFilePath}
-              uploadMetadata={uploadMetadata}
-              isUploadMode
-              draggable={hasUploadReady}
-              isDragging={draggingUpload}
-              onDragStart={handleUploadDragStart}
-              onDragEnd={handleUploadDragEnd}
-            />
+            <button type="button" onClick={() => setIsCreateOpen(true)} className="primary-cta inline-flex items-center gap-2">
+              <Plus size={14} /> New dataset
+            </button>
+          </div>
+        </div>
 
-            {hasUploadReady ? (
-              <InlineCallout
-                tone={selectedDatasetId ? 'ok' : 'neutral'}
-                title={selectedDatasetId ? 'Drop it on the right, or attach it directly' : 'Choose a dataset on the right'}
-                copy={
-                  selectedDatasetId
-                    ? 'Dataset cards on the right are drop targets. If you already know the destination, use the button below.'
-                    : 'After you pick a dataset from the library, you can either drop the upload onto that card or create a new dataset from it.'
-                }
-              />
-            ) : (
-              <InlineCallout
-                tone="neutral"
-                title="Nothing is waiting in intake"
-                copy="Open the uploader when you want to bring in a new payload. Until then, the library on the right is only for browsing records and versions."
-              />
-            )}
-
-            {hasUploadReady && selectedDatasetId ? (
-              <div className="workspace-create-banner">
-                <div>
-                  <div className="text-sm font-semibold text-white-star">Quick attach</div>
-                  <div className="mt-1 text-xs leading-6 text-twilight">
-                    Attach this pending upload straight into the currently selected dataset.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCreateVersionFromUpload}
-                  disabled={versionSubmitting}
-                  className="btn-galaxy inline-flex items-center gap-2 text-xs disabled:opacity-50"
-                >
-                  <Upload size={14} /> {versionSubmitting ? 'Attaching...' : 'Attach to selected'}
-                </button>
+        {hasUploadReady ? (
+          <div className="ds-upload-banner mt-4">
+            <div className="ds-upload-icon"><Upload size={14} /></div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-fg">Pending upload ready</div>
+              <div className="mt-0.5 text-xs text-fg-muted">
+                <span className="font-mono text-primary">{uploadedFilePath}</span> · {uploadMetadata?.num_nodes ?? '?'} nodes · {uploadMetadata?.num_edges ?? '?'} edges
               </div>
-            ) : null}
-
-            <div className="workspace-create-banner">
-              <div>
-                <div className="text-sm font-semibold text-white-star">Create a dataset record</div>
-                <div className="mt-1 text-xs leading-6 text-twilight">
-                  Use this when the upload belongs in a brand-new dataset instead of an existing one.
-                </div>
-              </div>
+            </div>
+            {selectedDatasetId ? (
               <button
                 type="button"
-                onClick={() => setIsCreateOpen((prev) => !prev)}
-                className="btn-galaxy inline-flex items-center gap-2"
+                onClick={handleCreateVersionFromUpload}
+                disabled={versionSubmitting}
+                className="primary-cta disabled:opacity-50"
               >
-                <Plus size={14} /> {isCreateOpen ? 'Close form' : 'Create dataset'}
+                {versionSubmitting ? 'Attaching...' : 'Attach to selected'}
               </button>
-            </div>
-
-            {isCreateOpen ? (
-              <div className="workspace-edit-card space-y-3">
-                <div className="workspace-edit-banner">
-                  <Sparkles size={13} />
-                  {intakeMode === 'upload' ? 'Create a dataset from the pending upload' : 'Create an empty dataset container first'}
-                </div>
-                <div className="grid gap-2 md:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => setIntakeMode('upload')}
-                    className={`rounded-2xl border px-4 py-3 text-left transition-all ${
-                      intakeMode === 'upload'
-                        ? 'border-amethyst/30 bg-amethyst/[0.12] text-moonlight'
-                        : 'border-line-default bg-deep text-twilight hover:border-line-active'
-                    }`}
-                  >
-                    <div className="text-sm font-semibold">From pending upload</div>
-                    <div className="mt-1 text-xs leading-5">
-                      Create the dataset and make the current upload become version 1 right away.
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIntakeMode('record')}
-                    className={`rounded-2xl border px-4 py-3 text-left transition-all ${
-                      intakeMode === 'record'
-                        ? 'border-amethyst/30 bg-amethyst/[0.12] text-moonlight'
-                        : 'border-line-default bg-deep text-twilight hover:border-line-active'
-                    }`}
-                  >
-                    <div className="text-sm font-semibold">Empty container first</div>
-                    <div className="mt-1 text-xs leading-5">
-                      Register the dataset name now and attach real versions later when you are ready.
-                    </div>
-                  </button>
-                </div>
-                <input
-                  value={form.name}
-                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                  placeholder={datasetName || 'Dataset name'}
-                  className="input-cosmic w-full"
-                />
-                <textarea
-                  value={form.description}
-                  onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                  placeholder="Dataset description"
-                  rows={4}
-                  className="input-cosmic w-full resize-none"
-                />
-                {intakeMode === 'upload' && !hasUploadReady ? (
-                  <InlineCallout
-                    tone="warn"
-                    title="No pending upload attached"
-                    copy="Open the uploader first if you want this new dataset to start with a real trainable payload in version 1."
-                  />
-                ) : null}
-                <div className="workspace-inline-actions">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForm({ name: '', description: '' })
-                      setIsCreateOpen(false)
-                    }}
-                    className="btn-ghost inline-flex items-center gap-2"
-                  >
-                    <X size={14} /> Cancel
-                  </button>
-                  <button
-                    type="button"
-                    disabled={submitting || (intakeMode === 'upload' && !hasUploadReady)}
-                    onClick={handleCreateDataset}
-                    className="btn-galaxy inline-flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <Plus size={14} /> {submitting ? 'Creating...' : intakeMode === 'upload' ? 'Create dataset from upload' : 'Create empty dataset'}
-                  </button>
-                </div>
-              </div>
             ) : null}
           </div>
-        </SectionCard>
+        ) : null}
+      </section>
 
-        <SectionCard
-          title="Dataset Library"
-          subtitle="Starter samples are pinned first. Choose a dataset below, then attach new uploads or activate the exact version you want Lab to use."
-        >
-          {datasets.length ? (
-            <div className="space-y-5">
-              <div className={`rounded-2xl border px-4 py-3 transition-all ${
-                draggingUpload
-                  ? 'border-aurora-cyan/30 bg-aurora-cyan/[0.10] text-moonlight'
-                  : 'border-line-default bg-deep text-twilight'
-              }`}>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-shadow">
-                  Dataset targets
-                </div>
-                <div className="mt-2 text-xs leading-6">
-                  {hasUploadReady
-                    ? draggingUpload
-                      ? 'Release the pending upload over any dataset card below.'
-                      : 'Drag the pending upload from the left and drop it onto the dataset that should receive the new version.'
-                    : 'Choose a dataset first. When an upload exists, these cards become drop targets.'}
-                </div>
-              </div>
-
-              <div className="custom-scrollbar flex gap-3 overflow-x-auto pb-2">
-                {datasets.map((dataset) => {
-                  const isSelected = selectedDatasetId === dataset.id
-                  const versionCount = datasetDetails[dataset.id]?.versions?.length
-                  const isSample = Boolean(dataset.is_sample)
-                  const recommendedTask = dataset.recommended_task_label || dataset.current_version_summary?.task_profile_name || null
-                  return (
+      {/* Master-Detail */}
+      {datasets.length === 0 ? (
+        <EmptyState
+          icon={<Database size={26} />}
+          title="No datasets yet"
+          description="Open the uploader first to import a graph, then either create a new dataset from it or attach it as a new version."
+          actionLabel="Open uploader"
+          onAction={handleOpenUploader}
+        />
+      ) : (
+        <div className="grid gap-5 xl:grid-cols-[minmax(300px,340px)_minmax(0,1fr)]">
+          {/* LEFT: list */}
+          <aside className="surface-card overflow-hidden">
+            <div className="border-b border-line-subtle p-4">
+              <div className="surface-eyebrow">Library</div>
+              <div className="mt-1 text-sm font-bold text-fg">{datasets.length} dataset{datasets.length === 1 ? '' : 's'}</div>
+            </div>
+            <ul className="ds-list custom-scrollbar">
+              {datasets.map((dataset) => {
+                const isSelected = dataset.id === selectedDatasetId
+                const versionCount = dataset.version_count ?? (dataset.id === selectedDatasetId ? currentDetail?.versions?.length : null)
+                const isActive = dataset.id === activeDatasetId
+                return (
+                  <li key={dataset.id}>
                     <button
-                      key={dataset.id}
                       type="button"
                       onClick={() => setSelectedDatasetId(dataset.id)}
-                      onDragOver={(event) => void handleDatasetDragOver(event, dataset.id)}
+                      onDragOver={(event) => handleDatasetDragOver(event, dataset.id)}
                       onDragLeave={() => handleDatasetDragLeave(dataset.id)}
-                      onDrop={(event) => void handleDatasetDrop(event, dataset.id)}
-                      className={`min-w-[240px] max-w-[280px] flex-1 overflow-hidden rounded-2xl border px-4 py-4 text-left transition-all ${
-                        isSelected
-                          ? 'border-amethyst/30 bg-amethyst/[0.12] text-moonlight glow-violet-sm'
-                          : dropTargetDatasetId === dataset.id
-                            ? 'border-aurora-cyan/30 bg-aurora-cyan/[0.10] text-moonlight'
-                            : 'border-line-default bg-deep text-twilight hover:border-line-active'
-                      }`}
+                      onDrop={(event) => handleDatasetDrop(event, dataset.id)}
+                      className={`ds-list-item ${isSelected ? 'ds-list-item-active' : ''} ${dropTargetDatasetId === dataset.id ? 'ds-list-item-drop' : ''}`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            {isSample ? (
-                              <span className="rounded-full border border-aurora-cyan/20 bg-aurora-cyan/[0.08] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-aurora-cyan">
-                                Starter sample
-                              </span>
-                            ) : null}
-                            {recommendedTask ? (
-                              <span className="rounded-full border border-line-default bg-deep px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-shadow">
-                                {recommendedTask}
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="truncate text-sm font-semibold">{dataset.name}</div>
-                          <div className="mt-1 line-clamp-2 text-xs leading-5 text-twilight">
-                            {dataset.description || 'No description yet.'}
-                          </div>
-                        </div>
-                        <span className="rounded-full border border-line-default bg-deep px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-shadow">
-                          {versionCount ?? dataset.versions_count ?? '-'} v
+                      <span className="ds-list-icon"><Database size={14} /></span>
+                      <span className="min-w-0 flex-1 text-left">
+                        <span className="block truncate text-sm font-semibold text-fg">{dataset.name}</span>
+                        <span className="mt-0.5 flex items-center gap-2 text-[11px] text-fg-muted">
+                          <span>#{dataset.owner_id ?? 'system'}</span>
+                          {versionCount != null ? (
+                            <span className="ds-list-chip">v{versionCount}</span>
+                          ) : null}
+                          {isActive ? <span className="ds-list-active">Active</span> : null}
                         </span>
-                      </div>
-                      <div className="mt-4 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.12em]">
-                        <span className="text-text-shadow">
-                          {dropTargetDatasetId === dataset.id ? 'Drop upload here' : isSelected ? 'Selected dataset' : 'Dataset record'}
-                        </span>
-                        {isSelected ? <span className="text-moonlight">Open</span> : null}
-                      </div>
+                      </span>
                     </button>
-                  )
-                })}
-              </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </aside>
 
-              {currentDetail ? (
-                <div className="min-w-0 space-y-4">
-                  <div className="glass-card p-5">
-                    <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
-                      <div className="min-w-0 flex-1">
-                        {editingDatasetId === currentDetail.dataset.id ? (
-                          <div className="space-y-3">
-                            <div className="workspace-edit-banner">
-                              <PencilLine size={13} />
-                              Editing dataset record
-                            </div>
-                            <input
-                              value={currentDatasetDraft?.name || ''}
-                              onChange={(event) =>
-                                setDatasetDrafts((prev) => ({
-                                  ...prev,
-                                  [currentDetail.dataset.id]: {
-                                    ...(prev[currentDetail.dataset.id] || {}),
-                                    name: event.target.value,
-                                  },
-                                }))
-                              }
-                              className="input-cosmic w-full"
-                              placeholder="Dataset name"
-                            />
-                            <textarea
-                              value={currentDatasetDraft?.description || ''}
-                              onChange={(event) =>
-                                setDatasetDrafts((prev) => ({
-                                  ...prev,
-                                  [currentDetail.dataset.id]: {
-                                    ...(prev[currentDetail.dataset.id] || {}),
-                                    description: event.target.value,
-                                  },
-                                }))
-                              }
-                              rows={3}
-                              className="input-cosmic w-full resize-none"
-                              placeholder="Dataset description"
-                            />
-                          </div>
-                        ) : (
-                          <>
-                            <div className="text-lg font-semibold text-white-star">{selectedDatasetRow?.name}</div>
-                            <div className="mt-2 max-w-3xl text-sm leading-6 text-twilight">
-                              {selectedDatasetRow?.description || currentDetail.dataset.description || 'No description yet.'}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 2xl:max-w-[360px] 2xl:justify-end">
-                        {editingDatasetId === currentDetail.dataset.id ? (
-                          <>
-                            <label className="admin-checkbox-chip">
-                              <input
-                                type="checkbox"
-                                checked={Boolean(currentDatasetDraft?.is_public)}
-                                onChange={(event) =>
-                                  setDatasetDrafts((prev) => ({
-                                    ...prev,
-                                    [currentDetail.dataset.id]: {
-                                      ...(prev[currentDetail.dataset.id] || {}),
-                                      is_public: event.target.checked,
-                                    },
-                                  }))
-                                }
-                              />
-                              Public
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => cancelDatasetEdit(currentDetail.dataset)}
-                              className="btn-ghost inline-flex items-center gap-2 text-xs"
-                            >
-                              <X size={13} />
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateDataset(currentDetail.dataset)}
-                              disabled={busyAction === `save-${currentDetail.dataset.id}`}
-                              className="btn-galaxy inline-flex items-center gap-2 text-xs disabled:opacity-50"
-                            >
-                              <Save size={13} />
-                              {busyAction === `save-${currentDetail.dataset.id}` ? 'Saving...' : 'Save'}
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            {hasUploadReady ? (
-                              <button
-                                type="button"
-                                onClick={handleCreateVersionFromUpload}
-                                disabled={versionSubmitting}
-                                className="btn-nebula inline-flex items-center gap-2 text-xs disabled:opacity-50"
-                              >
-                                <Upload size={13} />
-                                {versionSubmitting ? 'Attaching...' : 'Attach upload'}
-                              </button>
-                            ) : null}
-                            {canManageSelectedDataset ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => openDatasetEdit(currentDetail.dataset)}
-                                  className="btn-ghost inline-flex items-center gap-2 text-xs"
-                                >
-                                  <PencilLine size={13} />
-                                  Edit record
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteDataset(currentDetail.dataset)}
-                                  disabled={busyAction === `delete-${currentDetail.dataset.id}`}
-                                  className="rounded-lg border border-aurora-rose/20 bg-aurora-rose/[0.08] px-3 py-2 text-xs font-semibold text-aurora-rose transition-all hover:bg-aurora-rose/[0.15] disabled:opacity-50"
-                                >
-                                  <Trash2 size={13} className="mr-2 inline-block" />
-                                  {busyAction === `delete-${currentDetail.dataset.id}` ? 'Deleting...' : 'Delete'}
-                                </button>
-                              </>
-                            ) : null}
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="workspace-info-grid mt-4">
-                      <div className="workspace-info-item">
-                        <span className="workspace-info-label">Owner</span>
-                        <strong>{currentDetail.dataset.owner_id || 'system'}</strong>
-                      </div>
-                      <div className="workspace-info-item">
-                        <span className="workspace-info-label">Versions</span>
-                        <strong>{currentDetail.versions.length}</strong>
-                      </div>
-                      <div className="workspace-info-item">
-                        <span className="workspace-info-label">Recommended Task</span>
-                        <strong>{selectedRecommendedTask || 'No recommendation yet'}</strong>
-                      </div>
-                      <div className="workspace-info-item">
-                        <span className="workspace-info-label">Dataset Type</span>
-                        <strong>{selectedSampleCatalog?.is_starter_sample ? 'Starter sample' : 'Workspace dataset'}</strong>
-                      </div>
-                    </div>
-
-                    {selectedSampleCatalog?.note ? (
-                      <div className="mt-4 rounded-xl border border-line-default bg-deep px-4 py-3 text-sm leading-6 text-twilight">
-                        <span className="mr-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-text-shadow">Sample note</span>
-                        {selectedSampleCatalog.note}
-                      </div>
-                    ) : null}
-
-                    <div className="mt-4">
-                      {hasUploadReady ? (
-                        <InlineCallout
-                          tone="ok"
-                          title="A pending upload is ready"
-                          copy="If it belongs here, drop it onto this dataset card or use Attach upload. If not, leave this record alone and choose another card."
-                        />
-                      ) : (
-                        <InlineCallout
-                          tone="neutral"
-                          title="No pending upload attached"
-                          copy="That is fine. You can still review versions here, or open the uploader whenever you are ready to add more data."
-                        />
-                      )}
-                    </div>
-
-                    {error ? (
-                      <div className="mt-4 rounded-lg border border-aurora-rose/20 bg-aurora-rose/[0.08] px-3 py-2 text-xs text-aurora-rose">
-                        {error.message}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="text-sm font-semibold text-white-star">Versions</div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] uppercase tracking-[0.12em] text-text-shadow">Page size</span>
-                        <select
-                          value={versionPageSize}
-                          onChange={(event) => {
-                            setVersionPageSize(Number(event.target.value))
-                            setVersionPage(1)
-                          }}
-                          className="input-cosmic px-3 py-2 text-xs"
-                        >
-                          {[2, 4, 6, 8].map((option) => (
-                            <option key={option} value={option}>
-                              {option} / page
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    {visibleVersions.map((version) => {
-                      const hasPayload = Boolean(version.processed_blob_key)
-                      const taskProfileName = version.summary_json?.task_profile_name || null
-                      const canSelect =
-                        hasPayload && (
-                          version.lifecycle === 'published' ||
-                          currentDetail.dataset.owner_id === user?.id ||
-                          user?.role === 'admin'
-                        )
-                      const isActive = activeDatasetVersionId === version.id
-
-                      return (
-                        <div
-                          key={version.id}
-                          className={`workspace-record-card ${isActive ? 'border-amethyst/25 glow-violet-sm' : ''}`}
-                        >
-                          <div className="workspace-version-card">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <div className="text-base font-semibold text-white-star">
-                                  Version {version.version}
-                                </div>
-                                <span className="rounded-full border border-line-default bg-deep px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-twilight">
-                                  {version.lifecycle}
-                                </span>
-                                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${
-                                  hasPayload
-                                    ? 'border-aurora-green/20 bg-aurora-green/[0.08] text-aurora-green'
-                                    : 'border-aurora-amber/20 bg-aurora-amber/[0.08] text-aurora-amber'
-                                }`}>
-                                  {hasPayload ? 'Ready to train' : 'Metadata only'}
-                                </span>
-                              </div>
-                              <div className="mt-3 workspace-version-meta">
-                                <div className="workspace-info-item">
-                                  <span className="workspace-info-label">Created</span>
-                                  <strong>{version.created_at || 'n/a'}</strong>
-                                </div>
-                                <div className="workspace-info-item">
-                                  <span className="workspace-info-label">Schema</span>
-                                  <strong>{version.schema_version}</strong>
-                                </div>
-                                <div className="workspace-info-item">
-                                  <span className="workspace-info-label">Initial Profile</span>
-                                  <strong>{taskProfileName || 'Not specified'}</strong>
-                                </div>
-                                {version.published_at ? (
-                                  <div className="workspace-info-item">
-                                    <span className="workspace-info-label">Published</span>
-                                    <strong>{version.published_at}</strong>
-                                  </div>
-                                ) : null}
-                              </div>
-                            </div>
-                            <div className="workspace-version-side">
-                              <SelectionButton
-                                active={isActive}
-                                disabled={!canSelect}
-                                onClick={() =>
-                                  canSelect &&
-                                  applyDatasetVersionContext(currentDetail.dataset, version)
-                                }
-                              />
-                              <div className="workspace-version-actions">
-                                {version.lifecycle !== 'published' ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handlePublishVersion(currentDetail.dataset.id, version.id)}
-                                    className="rounded-lg border border-aurora-green/20 bg-aurora-green/[0.08] px-3 py-2 text-xs font-semibold text-aurora-green transition-all hover:bg-aurora-green/[0.15]"
-                                  >
-                                    Publish
-                                  </button>
-                                ) : null}
-                                {version.lifecycle !== 'deprecated' ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeprecateVersion(currentDetail.dataset.id, version.id)}
-                                    className="rounded-lg border border-aurora-amber/20 bg-aurora-amber/[0.08] px-3 py-2 text-xs font-semibold text-aurora-amber transition-all hover:bg-aurora-amber/[0.15]"
-                                  >
-                                    Deprecate
-                                  </button>
-                                ) : null}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                    {versionTotal > versionPageSize ? (
-                      <AdminPagination
-                        page={safeVersionPage}
-                        pageSize={versionPageSize}
-                        total={versionTotal}
-                        onPageChange={setVersionPage}
-                      />
-                    ) : null}
-                  </div>
-                </div>
-              ) : (
+          {/* RIGHT: detail */}
+          <section className="surface-card overflow-hidden">
+            {!currentDetail ? (
+              <div className="p-8">
                 <EmptyState
-                  icon={<Database size={30} />}
+                  icon={<Database size={26} />}
                   title="Select a dataset"
-                  description="The right column will show the selected dataset record and every version inside it."
+                  description="Pick one from the library to see its versions and lifecycle."
                 />
-              )}
-            </div>
-          ) : (
-            <EmptyState
-              icon={<Database size={30} />}
-              title="No datasets yet"
-              description="Open the uploader first or create an empty dataset record, then add versions when you are ready."
-            />
-          )}
-        </SectionCard>
-      </div>
-      {isUploaderOpen ? <DataInputView onClose={() => { void handleCloseUploader() }} /> : null}
-    </div>
-  )
-}
-
-function UploadSummary({
-  uploadedFilePath,
-  uploadMetadata,
-  isUploadMode = false,
-  draggable = false,
-  isDragging = false,
-  onDragStart,
-  onDragEnd,
-}) {
-  return (
-    <div
-      draggable={draggable}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      className={`glass-card p-4 ${draggable ? 'cursor-grab active:cursor-grabbing' : ''} ${isDragging ? 'ring-1 ring-aurora-cyan/40 opacity-85' : ''}`}
-    >
-      <div className="text-micro uppercase tracking-ultra text-text-shadow">Pending upload</div>
-      {uploadedFilePath ? (
-        <div className="mt-3 space-y-1 text-sm text-starlight">
-          <div className="text-xs uppercase tracking-[0.12em] text-text-shadow">File source</div>
-          <div><span className="break-all font-mono text-aurora-cyan text-xs">{uploadedFilePath}</span></div>
-          <div className="text-twilight">
-            Nodes: {uploadMetadata?.num_nodes ?? '?'} | Edges: {uploadMetadata?.num_edges ?? '?'} | Features: {uploadMetadata?.num_features ?? '?'}
-          </div>
-          {uploadMetadata?.task_profile_name ? (
-            <div className="text-twilight">
-              Initial profile: <span className="text-white-star">{uploadMetadata.task_profile_name}</span>
-            </div>
-          ) : null}
-          {draggable ? (
-            <div className="pt-2 text-[11px] uppercase tracking-[0.12em] text-aurora-cyan">
-              Drag this upload onto a dataset to attach it as a new version
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <div className="mt-3 text-xs text-text-shadow">
-          {isUploadMode
-            ? 'There is no pending upload attached right now. Open the uploader when you want to bring one payload into the workspace.'
-            : 'No current upload metadata. That is okay because this mode only creates a metadata record.'}
+              </div>
+            ) : (
+              <DatasetDetailPane
+                detail={currentDetail}
+                draft={currentDatasetDraft}
+                setDatasetDrafts={setDatasetDrafts}
+                isEditing={editingDatasetId === currentDetail.dataset.id}
+                onEdit={() => openDatasetEdit(currentDetail.dataset)}
+                onCancelEdit={() => cancelDatasetEdit(currentDetail.dataset)}
+                onSave={() => handleUpdateDataset(currentDetail.dataset)}
+                onDelete={() => handleDeleteDataset(currentDetail.dataset)}
+                canManage={canManageSelectedDataset}
+                busyAction={busyAction}
+                activeDatasetVersionId={activeDatasetVersionId}
+                onSelectVersion={(version) => applyDatasetVersionContext(currentDetail.dataset, version)}
+                onPublish={(versionId) => handlePublishVersion(currentDetail.dataset.id, versionId)}
+                onDeprecate={(versionId) => handleDeprecateVersion(currentDetail.dataset.id, versionId)}
+                onOpenInLab={() => setIsUploaderOpen((v) => !v)}
+                versions={visibleVersions}
+                versionTotal={versionTotal}
+                versionPage={safeVersionPage}
+                versionTotalPages={versionTotalPages}
+                versionPageSize={versionPageSize}
+                setVersionPage={setVersionPage}
+                setVersionPageSize={setVersionPageSize}
+                error={error}
+                isUploaderOpen={isUploaderOpen}
+                onCloseUploader={() => { void handleCloseUploader() }}
+              />
+            )}
+          </section>
         </div>
       )}
+
+      {/* Create dataset modal */}
+      <AnimatePresence>
+        {isCreateOpen ? (
+          <DatasetCreateModal
+            open={isCreateOpen}
+            onClose={() => setIsCreateOpen(false)}
+            form={form}
+            setForm={setForm}
+            intakeMode={intakeMode}
+            setIntakeMode={setIntakeMode}
+            hasUploadReady={hasUploadReady}
+            uploadedFilePath={uploadedFilePath}
+            uploadMetadata={uploadMetadata}
+            submitting={submitting}
+            onSubmit={handleCreateDataset}
+          />
+        ) : null}
+      </AnimatePresence>
     </div>
   )
 }
 
-function InlineCallout({ tone = 'neutral', title, copy }) {
-  const styles = {
-    ok: {
-      wrap: 'border-aurora-green/20 bg-aurora-green/[0.08] text-aurora-green',
-      icon: <CheckCircle2 size={14} />,
-    },
-    warn: {
-      wrap: 'border-aurora-amber/20 bg-aurora-amber/[0.08] text-aurora-amber',
-      icon: <AlertCircle size={14} />,
-    },
-    neutral: {
-      wrap: 'border-line-default bg-deep text-twilight',
-      icon: <Database size={14} />,
-    },
-  }
+function DatasetDetailPane({
+  detail,
+  draft,
+  setDatasetDrafts,
+  isEditing,
+  onEdit,
+  onCancelEdit,
+  onSave,
+  onDelete,
+  canManage,
+  busyAction,
+  activeDatasetVersionId,
+  onSelectVersion,
+  onPublish,
+  onDeprecate,
+  onOpenInLab,
+  versions,
+  versionTotal,
+  versionPage,
+  versionTotalPages,
+  versionPageSize,
+  setVersionPage,
+  setVersionPageSize,
+  error,
+  isUploaderOpen,
+  onCloseUploader,
+}) {
+  const dataset = detail.dataset
+  const allVersions = detail.versions || []
+  const currentVersion = allVersions.find((v) => v.id === activeDatasetVersionId) || allVersions[0] || null
 
-  const style = styles[tone] || styles.neutral
+  const stats = [
+    { label: 'Versions', value: allVersions.length },
+    { label: 'Active', value: currentVersion ? `v${currentVersion.version}` : '—' },
+    { label: 'Lifecycle', value: currentVersion?.lifecycle || '—' },
+    { label: 'Owner', value: `#${dataset.owner_id ?? 'system'}` },
+  ]
+
+  const isSaving = busyAction === `save-${dataset.id}`
+  const isDeleting = busyAction === `delete-${dataset.id}`
 
   return (
-    <div className={`rounded-2xl border px-4 py-3 ${style.wrap}`}>
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 shrink-0">{style.icon}</div>
-        <div>
-          <div className="text-sm font-semibold">{title}</div>
-          <div className="mt-1 text-xs leading-6">{copy}</div>
+    <div className="space-y-5 p-5">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {!isEditing ? (
+            <>
+              <div className="surface-eyebrow">Dataset detail</div>
+              <h3 className="ds-title">{dataset.name}</h3>
+              <p className="surface-sub mt-1">{dataset.description || 'No description yet.'}</p>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <label className="modal-field">
+                <span className="modal-field-label">Name</span>
+                <input
+                  value={draft?.name || ''}
+                  onChange={(event) => setDatasetDrafts((prev) => ({ ...prev, [dataset.id]: { ...prev[dataset.id], name: event.target.value } }))}
+                  className="modal-input"
+                />
+              </label>
+              <label className="modal-field">
+                <span className="modal-field-label">Description</span>
+                <textarea
+                  value={draft?.description || ''}
+                  onChange={(event) => setDatasetDrafts((prev) => ({ ...prev, [dataset.id]: { ...prev[dataset.id], description: event.target.value } }))}
+                  rows={2}
+                  className="modal-textarea"
+                />
+              </label>
+              <label className="modal-toggle">
+                <input
+                  type="checkbox"
+                  checked={!!draft?.is_public}
+                  onChange={(event) => setDatasetDrafts((prev) => ({ ...prev, [dataset.id]: { ...prev[dataset.id], is_public: event.target.checked } }))}
+                />
+                <span className="modal-toggle-track" />
+                <span className="modal-field-label">{draft?.is_public ? 'Public' : 'Private'}</span>
+              </label>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {!isEditing ? (
+            <>
+              {canManage ? (
+                <button type="button" onClick={onEdit} className="project-action-icon" aria-label="Edit dataset">
+                  <PencilLine size={14} />
+                </button>
+              ) : null}
+              {canManage ? (
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  disabled={isDeleting}
+                  className="project-action-icon project-action-danger disabled:opacity-50"
+                  aria-label="Delete dataset"
+                >
+                  <Trash2 size={14} />
+                </button>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={onCancelEdit} className="modal-btn-ghost">Cancel</button>
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={isSaving}
+                className="modal-btn-primary disabled:opacity-50"
+              >
+                <Save size={13} /> {isSaving ? 'Saving...' : 'Save'}
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Stats */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <div key={stat.label} className="ds-stat">
+            <div className="ds-stat-label">{stat.label}</div>
+            <div className="ds-stat-value">{stat.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Version timeline */}
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="ds-section-title">Version timeline ({versionTotal})</h4>
+          <button type="button" onClick={onOpenInLab} className="surface-action">
+            <Upload size={12} /> Add new version
+          </button>
+        </div>
+        {versions.length === 0 ? (
+          <EmptyState
+            icon={<Database size={22} />}
+            title="No versions yet"
+            description="Open the uploader to create the first version of this dataset."
+            className="mt-3"
+          />
+        ) : (
+          <ol className="ds-timeline mt-4">
+            {versions.map((version) => {
+              const isActiveVersion = activeDatasetVersionId === version.id
+              return (
+                <li key={version.id} className={`ds-timeline-row ${isActiveVersion ? 'is-active' : ''}`}>
+                  <span className="ds-timeline-dot" />
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="ds-version-num">v{version.version}</span>
+                      <span className={`ds-lifecycle ds-lifecycle-${version.lifecycle}`}>{version.lifecycle}</span>
+                      {isActiveVersion ? <span className="ds-active-pill">Active</span> : null}
+                      <span className="text-[11px] text-fg-faint">
+                        {version.created_at ? new Date(version.created_at).toLocaleString() : '—'}
+                      </span>
+                    </div>
+                    {version.processed_blob_key ? (
+                      <div className="mt-1 truncate font-mono text-[11px] text-fg-muted">
+                        {version.processed_blob_key}
+                      </div>
+                    ) : null}
+                    {version.summary_json ? (
+                      <div className="mt-1 text-[11px] text-fg-muted">
+                        Nodes: {version.summary_json.num_nodes ?? '?'} · Edges: {version.summary_json.num_edges ?? '?'} · Features: {version.summary_json.num_features ?? '?'}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSelectVersion(version)}
+                      disabled={isActiveVersion}
+                      className={`pager-btn ${isActiveVersion ? 'pager-btn-active' : ''}`}
+                    >
+                      {isActiveVersion ? 'Active' : 'Set active'}
+                    </button>
+                    {canManage && version.lifecycle !== 'published' ? (
+                      <button type="button" onClick={() => onPublish(version.id)} className="pager-btn">
+                        Publish
+                      </button>
+                    ) : null}
+                    {canManage && version.lifecycle === 'published' ? (
+                      <button type="button" onClick={() => onDeprecate(version.id)} className="pager-btn">
+                        Deprecate
+                      </button>
+                    ) : null}
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        )}
+
+        {versionTotalPages > 1 ? (
+          <AdminPagination
+            page={versionPage}
+            totalPages={versionTotalPages}
+            pageSize={versionPageSize}
+            onPageChange={setVersionPage}
+            onPageSizeChange={setVersionPageSize}
+            className="mt-4"
+          />
+        ) : null}
+      </div>
+
+      {/* Inline uploader (was modal) */}
+      {isUploaderOpen ? (
+        <div className="border-t border-line-subtle pt-5">
+          <div className="flex items-center justify-between">
+            <h4 className="ds-section-title">Add a version (uploader)</h4>
+            <button type="button" onClick={onCloseUploader} className="surface-action">
+              Close
+            </button>
+          </div>
+          <div className="mt-3">
+            <DataInputView onClose={onCloseUploader} variant="inline" />
+          </div>
+        </div>
+      ) : null}
+
+      {error ? <div className="text-sm text-rose-500">{error.message}</div> : null}
     </div>
   )
 }
+
+function DatasetCreateModal({
+  open,
+  onClose,
+  form,
+  setForm,
+  intakeMode,
+  setIntakeMode,
+  hasUploadReady,
+  uploadedFilePath,
+  uploadMetadata,
+  submitting,
+  onSubmit,
+}) {
+  if (!open) return null
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="modal-backdrop"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 12 }}
+        className="modal-card"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="modal-eyebrow">New dataset</div>
+            <h3 className="modal-title">Create dataset</h3>
+          </div>
+          <button type="button" onClick={onClose} className="modal-close" aria-label="Close">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="mt-5 space-y-4">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setIntakeMode('upload')}
+              disabled={!hasUploadReady}
+              className={`ds-intake ${intakeMode === 'upload' ? 'ds-intake-active' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <Sparkles size={14} />
+              <div>
+                <div className="text-sm font-semibold">From pending upload</div>
+                <div className="mt-0.5 text-xs">Create dataset + version 1 from current upload</div>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIntakeMode('record')}
+              className={`ds-intake ${intakeMode === 'record' ? 'ds-intake-active' : ''}`}
+            >
+              <Database size={14} />
+              <div>
+                <div className="text-sm font-semibold">Empty container</div>
+                <div className="mt-0.5 text-xs">Create metadata record, add versions later</div>
+              </div>
+            </button>
+          </div>
+          <label className="modal-field">
+            <span className="modal-field-label">Dataset name</span>
+            <input
+              value={form.name}
+              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              placeholder="e.g. Cora citation network"
+              className="modal-input"
+            />
+          </label>
+          <label className="modal-field">
+            <span className="modal-field-label">Description</span>
+            <textarea
+              value={form.description}
+              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+              rows={2}
+              className="modal-textarea"
+              placeholder="What is this dataset?"
+            />
+          </label>
+          {intakeMode === 'upload' && hasUploadReady ? (
+            <div className="ds-upload-preview">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-fg-faint">Will attach as v1</div>
+              <div className="mt-1 truncate font-mono text-xs text-primary">{uploadedFilePath}</div>
+              <div className="mt-1 text-[11px] text-fg-muted">
+                Nodes: {uploadMetadata?.num_nodes ?? '?'} · Edges: {uploadMetadata?.num_edges ?? '?'} · Features: {uploadMetadata?.num_features ?? '?'}
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <div className="modal-actions">
+          <button type="button" onClick={onClose} className="modal-btn-ghost">Cancel</button>
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={submitting}
+            className="modal-btn-primary disabled:opacity-50"
+          >
+            {submitting ? 'Creating...' : 'Create dataset'}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+

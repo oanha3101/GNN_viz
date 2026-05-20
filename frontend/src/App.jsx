@@ -4,9 +4,12 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import AdminLayout from './layouts/AdminLayout'
 import AppLayout from './layouts/AppLayout'
 import PublicAuthLayout from './layouts/PublicAuthLayout'
+import PublicLayout from './layouts/PublicLayout'
 import useAuthStore from './store/authStore'
 import { getDefaultPathForUser, isAdminUser } from './utils/appRoutes'
 
+const LandingPage = lazy(() => import('./pages/public/LandingPage'))
+const AboutPage = lazy(() => import('./pages/public/AboutPage'))
 const AuthPage = lazy(() => import('./pages/AuthPage'))
 const ExperimentsPage = lazy(() => import('./pages/ExperimentsPage'))
 const LabShell = lazy(() => import('./LabShell'))
@@ -26,10 +29,10 @@ const AdminAuditPage = lazy(() => import('./pages/admin/AdminAuditPage'))
 
 function FullscreenLoader() {
   return (
-    <div className="min-h-screen bg-[#0a0514] text-[#f1f0ff] flex items-center justify-center">
-      <div className="inline-flex items-center gap-3 rounded-2xl border border-[rgba(168,85,247,0.15)] bg-[#0f0a1e]/70 px-5 py-4 text-sm text-[#a5a0d0]">
-        <Loader2 size={16} className="animate-spin text-[#a855f7]" />
-        Dang khoi tao shell san pham...
+    <div className="min-h-screen bg-abyss text-starlight flex items-center justify-center">
+      <div className="inline-flex items-center gap-3 rounded-2xl border border-line-subtle bg-deep px-5 py-4 text-sm text-moonlight shadow-card">
+        <Loader2 size={16} className="animate-spin text-amethyst" />
+        Initializing workspace…
       </div>
     </div>
   )
@@ -38,9 +41,9 @@ function FullscreenLoader() {
 function RouteLoader() {
   return (
     <div className="min-h-[320px] flex items-center justify-center">
-      <div className="inline-flex items-center gap-3 rounded-2xl border border-[rgba(168,85,247,0.15)] bg-[#0f0a1e]/70 px-5 py-4 text-sm text-[#a5a0d0]">
-        <Loader2 size={16} className="animate-spin text-[#a855f7]" />
-        Dang tai route...
+      <div className="inline-flex items-center gap-3 rounded-2xl border border-line-subtle bg-deep px-5 py-4 text-sm text-moonlight">
+        <Loader2 size={16} className="animate-spin text-amethyst" />
+        Loading…
       </div>
     </div>
   )
@@ -91,6 +94,11 @@ export default function App() {
         </Route>
       </Route>
 
+      <Route element={<PublicLayout />}>
+        <Route path="/about" element={<LazyRoute><AboutPage /></LazyRoute>} />
+        <Route path="/welcome" element={<LazyRoute><LandingPage /></LazyRoute>} />
+      </Route>
+
       <Route element={<AppGuard user={user} />}>
         <Route path="/app" element={<AppLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
@@ -120,7 +128,18 @@ export default function App() {
         </Route>
       </Route>
 
-      <Route path="/" element={<Navigate to={getDefaultPathForUser(user)} replace />} />
+      <Route element={<PublicLayout />}>
+        <Route
+          path="/"
+          element={
+            user ? (
+              <Navigate to={getDefaultPathForUser(user)} replace />
+            ) : (
+              <LazyRoute><LandingPage /></LazyRoute>
+            )
+          }
+        />
+      </Route>
       <Route path="*" element={<Navigate to={getDefaultPathForUser(user)} replace />} />
     </Routes>
     </>

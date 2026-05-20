@@ -206,36 +206,33 @@ export default function TaskTopology5() {
     const sId = typeof s === 'object' ? s.id : s
     const tId = typeof t === 'object' ? t.id : t
     const key = `${Math.min(sId, tId)}-${Math.max(sId, tId)}`
-    const score = animRef.current.proximityMap[key]
-    let color = 'rgba(255,255,255,0.15)'
-    let width = 1.5
-    let alpha = 0.2
 
-    // Attention overlay: amber glow by attention weight
+    // Task 5 default: edges are STRUCTURAL only — a neutral gray skeleton.
+    // The story is told by NODE color/ring (embedding cluster + preservation),
+    // not by per-edge probability (that is Task 3 — Link Prediction).
+    let color = 'rgba(148, 163, 184, 0.28)'
+    let width = 1
+    let alpha = 0.55
+
+    // Model-specific signature overlays still highlight edges when explicitly enabled.
     if (overlayMode === 'attention') {
       if (attentionMap) {
         const w = attentionMap.get(key) ?? 0
         if (w > 0.05) {
-          color = `rgba(251, 191, 36, ${0.3 + w * 0.7})`
+          color = `rgba(251, 191, 36, ${0.35 + w * 0.65})`
           width = 1 + w * 5
-          alpha = 0.4 + w * 0.6
+          alpha = 0.45 + w * 0.55
         } else {
-          color = 'rgba(91, 86, 137, 0.1)'
-          width = 0.8
-          alpha = 0.1
+          color = 'rgba(148, 163, 184, 0.18)'
+          width = 0.9
+          alpha = 0.4
         }
-      }
-    } else {
-      if (score !== undefined) {
-        color = proximityToColor(score)
-        width = 1.5 + score * 4
-        alpha = 0.6 + score * 0.4
       }
     }
 
     if (selectedNodeId !== null) {
-      if (sId !== selectedNodeId && tId !== selectedNodeId) alpha = 0.05
-      else { alpha = Math.max(alpha, 0.4); width *= 1.5 }
+      if (sId !== selectedNodeId && tId !== selectedNodeId) alpha = 0.08
+      else { alpha = Math.max(alpha, 0.55); width *= 1.6 }
     }
     ctx.beginPath()
     ctx.moveTo(s.x, s.y)
@@ -309,14 +306,27 @@ export default function TaskTopology5() {
     ctx.arc(node.x, node.y, r, 0, 2 * Math.PI)
     ctx.fillStyle = color
     ctx.fill()
-    // Robustness overlay: border green (robust) / orange (fragile)
-    let strokeColor = isSelected ? '#ffffff' : 'rgba(255,255,255,0.3)'
-    let strokeWidth = Math.max(isSelected ? 1.5 : 0.2, 0.8 / globalScale)
+    // Default ring: per-node kNN preservation — green (well-preserved) ↔
+    // amber ↔ rose (collapsed in embedding). This is THE embedding signal,
+    // not edge probability (which is Task 3).
+    let strokeColor = isSelected ? '#0ea5e9' : 'rgba(148,163,184,0.55)'
+    let strokeWidth = Math.max(isSelected ? 2 : 0.6, 1 / globalScale)
     if (overlayMode === 'robustness') {
       const robustness = animRef.current.snap?.sage_robustness
       if (robustness != null) {
         strokeColor = robustness > 0.8 ? '#22c55e' : robustness > 0.5 ? '#eab308' : '#ef4444'
         strokeWidth = 2.5
+      }
+    } else if (overlayMode !== 'attention') {
+      const knnRaw = animRef.current.snap?.per_node_knn_preservation
+      let knnScore
+      if (Array.isArray(knnRaw)) knnScore = knnRaw[node.id]
+      else if (knnRaw && typeof knnRaw === 'object') knnScore = knnRaw[String(node.id)] ?? knnRaw[node.id]
+      if (typeof knnScore === 'number' && Number.isFinite(knnScore)) {
+        if (knnScore > 0.7) strokeColor = isSelected ? '#0ea5e9' : 'rgba(34,197,94,0.85)'
+        else if (knnScore >= 0.4) strokeColor = isSelected ? '#0ea5e9' : 'rgba(245,158,11,0.85)'
+        else strokeColor = isSelected ? '#0ea5e9' : 'rgba(244,63,94,0.85)'
+        strokeWidth = isSelected ? 2.5 : 2
       }
     }
     ctx.strokeStyle = strokeColor
@@ -390,13 +400,19 @@ export default function TaskTopology5() {
 
           <NodeHoverCard />
 
-          {/* Proximity Legend */}
-          <div className="absolute bottom-3 left-3 bg-black/40 backdrop-blur-md rounded-xl px-3 py-2 border border-white/10 z-10 pointer-events-none shadow-lg">
-            <div className="text-[9px] text-twilight uppercase tracking-widest font-bold mb-1.5">Embedding Proximity</div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-cyan-400 font-bold">Gần</span>
-              <div className="w-16 h-1.5 rounded-full bg-gradient-to-r from-cyan-400 via-yellow-500 to-red-500 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
-              <span className="text-[10px] text-red-400 font-bold">Xa</span>
+          {/* Embedding-cluster legend (replaces former Task-3-style 'proximity' edge legend) */}
+          <div className="absolute bottom-3 left-3 bg-white/85 dark:bg-black/55 backdrop-blur-md rounded-xl px-3 py-2 border border-slate-300/60 dark:border-white/10 z-10 pointer-events-none shadow-lg">
+            <div className="text-[9px] text-slate-500 dark:text-twilight uppercase tracking-widest font-bold mb-1.5">
+              Node color = {hasLabels ? 'Class label' : 'Embedding cluster'}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {Array.from({ length: Math.min(graphMeta?.num_classes || 4, 6) }, (_, c) => (
+                <div key={c} className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CLASS_COLORS[c % CLASS_COLORS.length] }} />
+                  <span className="text-[9px] text-slate-700 dark:text-slate-300 font-bold">{c}</span>
+                </div>
+              ))}
+              <span className="text-[9px] text-slate-500 dark:text-twilight ml-1">· ring = kNN preservation</span>
             </div>
           </div>
 

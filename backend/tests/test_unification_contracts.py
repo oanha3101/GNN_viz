@@ -2,14 +2,14 @@ import pytest
 import asyncio
 import torch
 from torch_geometric.data import Data
-from backend.schemas.ws import validate_snapshot, SNAPSHOT_MODELS
-from backend.tasks.node_classification import run_node_classification
-from backend.tasks.graph_classification import run_graph_classification
-from backend.tasks.link_prediction import run_link_prediction
-from backend.tasks.community_detection import run_community_detection
-from backend.tasks.graph_embedding import run_graph_embedding
-from backend.tasks.graph_generation import run_graph_generation
-from backend.models.gcn import GCNModel
+from schemas.ws import validate_snapshot, SNAPSHOT_MODELS
+from tasks.node_classification import run_node_classification
+from tasks.graph_classification import run_graph_classification
+from tasks.link_prediction import run_link_prediction
+from tasks.community_detection import run_community_detection
+from tasks.graph_embedding import run_graph_embedding
+from tasks.graph_generation import run_graph_generation
+from models.gcn import GCNModel
 
 # ─── Mocking ──────────────────────────────────────────────────────────────────
 
@@ -90,7 +90,7 @@ def test_graph_embedding_contract(mock_node_data):
     
     assert len(snapshots) > 0
     validate_snapshot(5, snapshots[0])
-    assert isinstance(snapshots[0]['per_node_knn_preservation'], list)
+    assert isinstance(snapshots[0]['per_node_knn_preservation'], dict)
 
 def test_graph_generation_contract(mock_node_data):
     config = {'epochs': 2, 'lr': 0.01, 'hidden': 16}

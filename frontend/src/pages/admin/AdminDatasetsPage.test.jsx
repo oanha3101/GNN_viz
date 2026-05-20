@@ -1,13 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminDatasetsPage from './AdminDatasetsPage'
 
 function jsonResponse(payload) {
   return {
     ok: true,
-    headers: {
-      get: () => 'application/json',
-    },
+    headers: { get: () => 'application/json' },
     json: async () => payload,
   }
 }
@@ -27,11 +25,7 @@ describe('AdminDatasetsPage', () => {
           current_version_id: 1,
           created_at: '2026-05-14T00:00:00Z',
         },
-        version: {
-          id: 1,
-          version: 1,
-          lifecycle: 'draft',
-        },
+        version: { id: 1, version: 1, lifecycle: 'draft' },
       }))
       .mockResolvedValueOnce(jsonResponse({
         items: [
@@ -41,11 +35,7 @@ describe('AdminDatasetsPage', () => {
             slug: 'citations',
             description: 'Citation graph',
             is_public: true,
-            current_version: {
-              id: 1,
-              version: 1,
-              lifecycle: 'draft',
-            },
+            current_version: { id: 1, version: 1, lifecycle: 'draft' },
             version_count: 1,
             usage_count: 0,
             created_at: '2026-05-14T00:00:00Z',
@@ -64,15 +54,16 @@ describe('AdminDatasetsPage', () => {
       )
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /create dataset/i }))
-    fireEvent.change(screen.getByPlaceholderText('Dataset name'), {
+    fireEvent.click(screen.getByRole('button', { name: /new dataset/i }))
+    const dialog = screen.getByRole('complementary')
+    fireEvent.change(within(dialog).getByLabelText(/^name/i), {
       target: { value: 'Citations' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Dataset description'), {
+    fireEvent.change(within(dialog).getByLabelText(/^description$/i), {
       target: { value: 'Citation graph' },
     })
-    fireEvent.click(screen.getByLabelText(/public/i))
-    fireEvent.click(screen.getByRole('button', { name: /^create dataset$/i }))
+    fireEvent.click(within(dialog).getByLabelText(/public dataset/i))
+    fireEvent.click(within(dialog).getByRole('button', { name: /^create dataset$/i }))
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(

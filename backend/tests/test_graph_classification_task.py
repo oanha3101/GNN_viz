@@ -10,7 +10,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tasks.graph_classification import (
     GraphClassifier,
     build_class_weight_tensor,
+    build_graph_calibration,
     compute_graph_classification_loss,
+    drop_edge_index,
     split_graph_dataset,
 )
 
@@ -87,3 +89,40 @@ def test_graph_classifier_mean_pooling_reduces_size_shortcut():
     assert out.shape == (2, 2)
     assert graph_embeddings.shape == (2, 8)
     assert alpha.shape[0] == 6
+
+
+def test_graph_classifier_attention_sum_readout_preserves_motif_scale():
+    model = GraphClassifier(in_channels=2, hidden=8, num_classes=2, pool_type='attention_sum')
+    x = torch.randn(6, 2)
+    edge_index = torch.tensor([[0, 1, 1, 2, 3, 4, 4, 5], [1, 0, 2, 1, 4, 3, 5, 4]], dtype=torch.long)
+    batch = torch.tensor([0, 0, 0, 1, 1, 1], dtype=torch.long)
+
+    out, graph_embeddings, alpha = model(x, edge_index, batch)
+
+    assert out.shape == (2, 2)
+    assert graph_embeddings.shape == (2, 8)
+    assert torch.allclose(alpha[batch == 0].sum(), torch.tensor(1.0), atol=1e-5)
+    assert torch.allclose(alpha[batch == 1].sum(), torch.tensor(1.0), atol=1e-5)
+
+
+def test_graph_calibration_reports_brier_and_high_conf_wrong_rate():
+    calibration = build_graph_calibration(
+        confidences=[0.95, 0.82, 0.62, 0.51],
+        correctness=[0, 1, 0, 1],
+        probabilities=[[0.95, 0.05], [0.18, 0.82], [0.38, 0.62], [0.51, 0.49]],
+        ground_truth=[1, 1, 0, 0],
+    )
+
+    assert calibration["ece"] >= 0
+    assert calibration["brier"] > 0
+    assert calibration["high_conf_wrong_rate"] == 0.25
+
+
+def test_drop_edge_index_keeps_shape_and_is_noop_when_disabled():
+    edge_index = torch.tensor([[0, 1, 1, 2], [1, 0, 2, 1]], dtype=torch.long)
+
+    assert torch.equal(drop_edge_index(edge_index, 0.0, training=True), edge_index)
+    dropped = drop_edge_index(edge_index, 0.5, training=True, seed=7)
+
+    assert dropped.shape[0] == 2
+    assert dropped.shape[1] >= 1

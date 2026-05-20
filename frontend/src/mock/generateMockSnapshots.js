@@ -768,40 +768,51 @@ export function generateTask5Mock(numNodes = 40, numEpochs = 80) {
     if (seededRand(i * 701) < 0.2) addEdge(i, seededRandInt(i * 1013, 0, i - 1))
   }
 
-  // Starting positions
+  // Starting positions (wider initial spread so early epochs show chaos)
   const startPos = Array.from({ length: numNodes }, (_, i) => [
-    (seededRand(i * 41) - 0.5) * 8, (seededRand(i * 73) - 0.5) * 8,
+    (seededRand(i * 41) - 0.5) * 12, (seededRand(i * 73) - 0.5) * 12,
   ])
 
-  // Cluster centers based on labels
+  // Cluster centers based on labels — pushed further apart so classes are visibly distinct
   const clusterCenters = Array.from({ length: numClasses }, (_, c) => [
-    Math.cos(c * 2 * Math.PI / numClasses) * 5,
-    Math.sin(c * 2 * Math.PI / numClasses) * 5,
+    Math.cos(c * 2 * Math.PI / numClasses) * 7,
+    Math.sin(c * 2 * Math.PI / numClasses) * 7,
   ])
+
+  // Each node also has a stable per-node offset inside its cluster so we
+  // never get a degenerate "all 40 nodes overlap exactly at 4 centers" look.
+  const nodeOffsets = Array.from({ length: numNodes }, (_, i) => {
+    const angle = seededRand(i * 211) * Math.PI * 2
+    const radius = 0.6 + seededRand(i * 311) * 1.6
+    return [Math.cos(angle) * radius, Math.sin(angle) * radius]
+  })
 
   const snapshots = []
   for (let epoch = 0; epoch < numEpochs; epoch++) {
     const progress = Math.pow(epoch / numEpochs, 0.6)
 
-    // PCA-like embeddings
+    // PCA-like embeddings — converge toward (cluster_center + per-node_offset)
+    // so each node keeps a unique position inside its cluster blob.
     const embeddings = Array.from({ length: numNodes }, (_, i) => {
       const label = nodeLabels[i]
-      const cx = clusterCenters[label][0]
-      const cy = clusterCenters[label][1]
-      const jx = (seededRand(i * 229 + epoch) - 0.5) * (2 * (1 - progress) + 0.3)
-      const jy = (seededRand(i * 317 + epoch) - 0.5) * (2 * (1 - progress) + 0.3)
-      return [lerp(startPos[i][0], cx, progress) + jx, lerp(startPos[i][1], cy, progress) + jy]
+      const targetX = clusterCenters[label][0] + nodeOffsets[i][0]
+      const targetY = clusterCenters[label][1] + nodeOffsets[i][1]
+      const jx = (seededRand(i * 229 + epoch) - 0.5) * (2 * (1 - progress) + 0.4)
+      const jy = (seededRand(i * 317 + epoch) - 0.5) * (2 * (1 - progress) + 0.4)
+      return [lerp(startPos[i][0], targetX, progress) + jx, lerp(startPos[i][1], targetY, progress) + jy]
     })
 
-    // t-SNE (slightly rotated version)
+    // t-SNE (rotated and slightly compressed; same per-node offsets)
     const tsne = Array.from({ length: numNodes }, (_, i) => {
       const label = nodeLabels[i]
       const angle = label * (2 * Math.PI / numClasses) + Math.PI / 6
-      const radius = 4 * progress
-      const jx = (seededRand(i * 401 + epoch) - 0.5) * (1.5 * (1 - progress) + 0.2)
-      const jy = (seededRand(i * 509 + epoch) - 0.5) * (1.5 * (1 - progress) + 0.2)
-      return [lerp(startPos[i][0], Math.cos(angle) * radius, progress) + jx,
-              lerp(startPos[i][1], Math.sin(angle) * radius, progress) + jy]
+      const radius = 5 * progress
+      const targetX = Math.cos(angle) * radius + nodeOffsets[i][0] * 0.9
+      const targetY = Math.sin(angle) * radius + nodeOffsets[i][1] * 0.9
+      const jx = (seededRand(i * 401 + epoch) - 0.5) * (1.5 * (1 - progress) + 0.25)
+      const jy = (seededRand(i * 509 + epoch) - 0.5) * (1.5 * (1 - progress) + 0.25)
+      return [lerp(startPos[i][0], targetX, progress) + jx,
+              lerp(startPos[i][1], targetY, progress) + jy]
     })
 
     // Metrics

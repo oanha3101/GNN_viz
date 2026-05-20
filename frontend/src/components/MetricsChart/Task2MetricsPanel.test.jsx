@@ -22,9 +22,18 @@ const playerState = {
         { class_id: 1, support: 1, precision: 0.5, recall: 0.0, f1: 0.0, mean_confidence: 0.62 },
       ],
       graph_calibration: { ece: 0.21, bins: [] },
+      readout_quality: { mean_entropy: 0.515, diffuse_share: 0.5, concentrated_share: 0.5 },
+      trust_profile: {
+        brier: 0.28,
+        high_conf_wrong_rate: 0.5,
+        shortcut_risk_score: 0.42,
+        readout_diffuse_share: 0.5,
+        calibration_temperature: 1.4,
+      },
       structural_bias_signals: {
         confidence_vs_density: 0.42,
         confidence_vs_num_nodes: 0.38,
+        shortcut_risk_score: 0.42,
       },
     },
     {
@@ -45,9 +54,18 @@ const playerState = {
         { class_id: 1, support: 1, precision: 1, recall: 1, f1: 1, mean_confidence: 0.67 },
       ],
       graph_calibration: { ece: 0.12, bins: [] },
+      readout_quality: { mean_entropy: 0.52, diffuse_share: 0.5, concentrated_share: 0.5 },
+      trust_profile: {
+        brier: 0.18,
+        high_conf_wrong_rate: 0,
+        shortcut_risk_score: 0.35,
+        readout_diffuse_share: 0.5,
+        calibration_temperature: 1.2,
+      },
       structural_bias_signals: {
         confidence_vs_density: 0.35,
         confidence_vs_num_nodes: 0.28,
+        shortcut_risk_score: 0.35,
       },
       macro_f1: 0.74,
       balanced_accuracy: 0.71,
@@ -154,6 +172,18 @@ describe('Task2MetricsPanel', () => {
     expect(screen.getByText(/Hard cases below are scoped to this cell/i)).toBeInTheDocument()
   })
 
+  it('renders batch heatmap cells with svg fills for PDF export', () => {
+    render(<Task2MetricsPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Failures' }))
+    const fills = screen
+      .getAllByTestId('task2-batch-heatmap-tile')
+      .map((tile) => tile.querySelector('rect')?.getAttribute('fill'))
+
+    expect(fills).toContain('#86efac')
+    expect(fills).toContain('#fca5a5')
+  })
+
   it('surfaces calibration and per-class metrics in the overview', () => {
     render(<Task2MetricsPanel />)
 
@@ -169,6 +199,15 @@ describe('Task2MetricsPanel', () => {
     expect(screen.getByText('Class collapse')).toBeInTheDocument()
     expect(screen.getByText('Calibration')).toBeInTheDocument()
     expect(screen.getAllByText('Shortcut bias').length).toBeGreaterThan(0)
+  })
+
+  it('surfaces the Task 2 trust profile in the overview', () => {
+    render(<Task2MetricsPanel />)
+
+    expect(screen.getByText('Trust profile')).toBeInTheDocument()
+    expect(screen.getByText('High-conf wrong')).toBeInTheDocument()
+    expect(screen.getByText('Brier')).toBeInTheDocument()
+    expect(screen.getByText('Readout diffuse')).toBeInTheDocument()
   })
 
   it('shows best epoch suggestion guidance in the overview', () => {

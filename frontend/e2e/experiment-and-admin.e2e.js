@@ -12,7 +12,7 @@ async function registerViaUi(page, { email, username, password, fullName }) {
   await page.getByLabel('Full name').fill(fullName)
   await page.getByLabel('Username').fill(username)
   await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: /tao tai khoan|create/i }).click()
+  await page.locator('.auth-submit').click()
   await page.waitForURL(/\/app\/dashboard$/, { timeout: 15000 })
 }
 
@@ -20,7 +20,7 @@ async function loginViaUi(page, { username, password }) {
   await page.goto('/login')
   await page.getByLabel('Username').fill(username)
   await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: /dang nhap va vao workspace/i }).click()
+  await page.locator('.auth-submit').click()
   await page.waitForURL(/\/(app\/dashboard|admin\/overview)$/, { timeout: 15000 })
 }
 
@@ -142,7 +142,7 @@ async function saveExperiment(request, token, context, sessionId, { title, accur
 }
 
 function comparePanel(page) {
-  return page.locator('section').filter({ has: page.getByText('Compare Runs') }).first()
+  return page.locator('section').filter({ has: page.getByText(/metrics comparison/i) }).first()
 }
 
 test.describe('Experiment hub and admin operational flows', () => {
@@ -191,14 +191,14 @@ test.describe('Experiment hub and admin operational flows', () => {
     })
 
     await page.goto('/app/experiments')
-    await expect(page.getByRole('heading', { name: /experiment hub/i })).toBeVisible()
+    await expect(page.getByText(/experiment hub/i).first()).toBeVisible()
 
     await page.getByText(experimentATitle, { exact: true }).click()
-    await expect(page.getByText(/Replay endpoint:/)).toBeVisible()
-    await expect(page.getByText(/Primary metric:/)).toBeVisible()
+    await expect(page.getByText(/result metrics/i).first()).toBeVisible()
+    await expect(page.getByText(/primary metric/i).first()).toBeVisible()
 
     await page.locator('textarea').fill('Updated through browser E2E')
-    await page.getByRole('button', { name: /notes/i }).click()
+    await page.getByRole('button', { name: /save changes/i }).click()
     await expect(page.locator('div').filter({ hasText: /^Updated through browser E2E$/ }).first()).toBeVisible()
 
     const jsonDownloadPromise = page.waitForEvent('download')
@@ -213,11 +213,12 @@ test.describe('Experiment hub and admin operational flows', () => {
 
     await page.getByTestId(`experiment-compare-toggle-${experimentA.id}`).click()
     await page.getByTestId(`experiment-compare-toggle-${experimentB.id}`).click()
-    await comparePanel(page).getByRole('button', { name: /so sanh|so sánh/i }).click()
+    await page.getByTestId('tab-compare').click()
+    await comparePanel(page).getByRole('button', { name: /compare metrics/i }).click()
     await expect(comparePanel(page).getByText(experimentATitle, { exact: true }).first()).toBeVisible()
     await expect(comparePanel(page).getByText(experimentBTitle, { exact: true }).first()).toBeVisible()
 
-    await page.getByRole('button', { name: /load replay/i }).click()
+    await page.getByTestId('detail-load-replay').click()
     await expect(page).toHaveURL(/\/app\/lab$/)
     await expect(page.getByText('Ready')).toBeVisible()
   })

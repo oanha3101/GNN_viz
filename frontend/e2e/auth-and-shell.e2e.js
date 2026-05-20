@@ -12,7 +12,7 @@ async function registerViaUi(page, { email, username, password, fullName }) {
   await page.getByLabel('Full name').fill(fullName)
   await page.getByLabel('Username').fill(username)
   await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: /tao tai khoan|create/i }).click()
+  await page.locator('.auth-submit').click()
   await page.waitForURL(/\/app\/dashboard$/, { timeout: 15000 })
 }
 
@@ -20,7 +20,7 @@ async function loginViaUi(page, { username, password }) {
   await page.goto('/login')
   await page.getByLabel('Username').fill(username)
   await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: /dang nhap va vao workspace/i }).click()
+  await page.locator('.auth-submit').click()
   await page.waitForURL(/\/(app\/dashboard|admin\/overview)$/, { timeout: 15000 })
 }
 
@@ -44,10 +44,13 @@ async function apiJson(request, path, { method = 'GET', token, data } = {}) {
 }
 
 test.describe('Auth-first shell flows', () => {
-  test('redirects anonymous users to /login', async ({ page }) => {
+  test('anonymous users see the public landing page and can reach /login', async ({ page }) => {
     await page.goto('/')
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole('link', { name: /sign in/i }).first()).toBeVisible()
+    await page.getByRole('link', { name: /sign in/i }).first().click()
     await expect(page).toHaveURL(/\/login$/)
-    await expect(page.getByRole('heading', { name: /vao dung shell theo role/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /graph work, grounded/i })).toBeVisible()
   })
 
   test('researcher can create governed context and admin can inspect the resulting experiment', async ({ page, request }) => {
@@ -78,17 +81,20 @@ test.describe('Auth-first shell flows', () => {
     await expect(page.getByRole('heading', { name: /research dashboard/i })).toBeVisible()
 
     await page.goto('/app/projects')
+    await page.getByRole('button', { name: /create project/i }).first().click()
     await page.getByPlaceholder('Project title').fill(projectTitle)
     await page.getByPlaceholder('Short description').fill('Phase 1 governed project')
-    await page.getByRole('button', { name: /^Create$/ }).click()
+    await page.getByRole('button', { name: /create project/i }).click()
     await expect(page.getByText(projectTitle)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Active' })).toBeVisible()
 
     await page.goto('/app/datasets')
-    await page.getByPlaceholder('Dataset name').fill(datasetName)
+    await page.getByRole('button', { name: /create dataset/i }).first().click()
+    await page.getByPlaceholder(/dataset name/i).first().fill(datasetName)
     await page.getByPlaceholder('Dataset description').fill('Phase 1 governed dataset')
-    await page.getByRole('button', { name: /create dataset/i }).click()
-    await expect(page.getByRole('button', { name: datasetName })).toBeVisible()
+    await page.getByRole('button', { name: /create.*dataset/i }).last().click()
+    await expect(page.getByText(datasetName)).toBeVisible()
+    await page.getByRole('button', { name: datasetName }).click()
     await page.getByRole('button', { name: 'Publish' }).click()
     await expect(page.getByText(/v1/i)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Active' })).toBeVisible()
@@ -165,7 +171,7 @@ test.describe('Auth-first shell flows', () => {
     await expect(page.getByText(experimentTitle)).toBeVisible()
 
     await page.goto('/app/experiments')
-    await expect(page.getByRole('heading', { name: /experiment hub/i })).toBeVisible()
+    await expect(page.getByText(/experiment hub/i).first()).toBeVisible()
     await expect(page.getByText(experimentTitle)).toBeVisible()
   })
 })

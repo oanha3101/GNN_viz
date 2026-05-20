@@ -32,12 +32,13 @@ const TABS = [
   { id: 'insights', label: 'Insights' },
 ]
 
-export default function Task1MetricsPanel() {
+export default function Task1MetricsPanel({ forcedTab = null, hideTabControls = false }) {
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const graphData = useGNNStore((s) => s.graphData)
   const setSelectedNode = useGNNStore((s) => s.setSelectedNode)
   const selectedNodeId = useGNNStore((s) => s.selectedNodeId)
   const [tab, setTab] = useState('overview')
+  const activeTab = forcedTab || tab
 
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
   const snap = snapshots[epochInt]
@@ -76,35 +77,37 @@ export default function Task1MetricsPanel() {
         <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
           <span>Polished for readability only, without adding heavier charts or runtime effects.</span>
           <span className="rounded-full border border-slate-700/70 bg-slate-900/70 px-2.5 py-1 font-semibold text-slate-300">
-            Active view: {TABS.find((t) => t.id === tab)?.label}
+            Active view: {TABS.find((t) => t.id === activeTab)?.label}
           </span>
         </div>
       )}
     >
       <div className="flex h-full flex-col gap-3 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`rounded-full border px-3 py-1.5 text-nano font-bold uppercase tracking-ultra transition-colors ${
-                tab === t.id
-                  ? 'border-cyan-400/35 bg-cyan-500/12 text-cyan-300 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]'
-                  : 'border-slate-800/70 bg-slate-900/55 text-slate-500 hover:border-slate-700 hover:text-slate-300'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        {!hideTabControls && (
+          <div className="flex flex-wrap items-center gap-2">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`rounded-full border px-3 py-1.5 text-nano font-bold uppercase tracking-ultra transition-colors ${
+                  activeTab === t.id
+                    ? 'border-cyan-400/35 bg-cyan-500/12 text-cyan-300 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]'
+                    : 'border-slate-800/70 bg-slate-900/55 text-slate-500 hover:border-slate-700 hover:text-slate-300'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="min-h-0 flex-1">
-          {tab === 'overview' && <OverviewTab snapshots={snapshots} epochInt={epochInt} snap={snap} graphData={graphData} />}
-          {tab === 'confusion' && (
+          {activeTab === 'overview' && <OverviewTab snapshots={snapshots} epochInt={epochInt} snap={snap} graphData={graphData} />}
+          {activeTab === 'confusion' && (
             <ConfusionTab snap={snap} graphData={graphData} onPick={setSelectedNode} snapshots={snapshots} epochInt={epochInt} />
           )}
-          {tab === 'homophily' && <HomophilyTab snap={snap} onPick={setSelectedNode} />}
-          {tab === 'insights' && (
+          {activeTab === 'homophily' && <HomophilyTab snap={snap} onPick={setSelectedNode} />}
+          {activeTab === 'insights' && (
             <InsightsTab
               snap={snap}
               snapshots={snapshots}
@@ -173,12 +176,12 @@ function OverviewTab({ snapshots, epochInt, snap, graphData }) {
         <div className="h-[220px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={series}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
               <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 9 }} />
               <YAxis yAxisId="loss" tick={{ fill: '#94a3b8', fontSize: 9 }} domain={[0, 'auto']} />
               <YAxis yAxisId="acc" orientation="right" tick={{ fill: '#94a3b8', fontSize: 9 }} domain={[0, 100]} />
               <Tooltip
-                contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+                contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
                 itemStyle={{ color: '#e2e8f0' }}
                 labelStyle={{ color: '#94a3b8' }}
               />
@@ -499,7 +502,7 @@ function HomophilyTab({ snap, onPick }) {
       <div className="flex-1 min-h-[200px] rounded-xl border border-slate-800/60 bg-slate-950/45 p-2">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis
               dataKey="ratio"
               type="number"
@@ -516,7 +519,7 @@ function HomophilyTab({ snap, onPick }) {
               label={{ value: 'correct', fill: '#94a3b8', fontSize: 9, angle: -90, dx: -8 }}
             />
             <Tooltip
-              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+              contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
               itemStyle={{ color: '#e2e8f0' }}
               labelStyle={{ color: '#94a3b8' }}
             />
@@ -586,11 +589,11 @@ function DiagnosticsTab({ snap, snapshots, graphData }) {
                     <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
                 <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 9 }} />
                 <YAxis tick={{ fill: '#94a3b8', fontSize: 9 }} domain={[0, 1]} />
                 <Tooltip
-                  contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+                  contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
                   itemStyle={{ color: '#e2e8f0' }}
                   labelStyle={{ color: '#94a3b8' }}
                 />
@@ -610,11 +613,11 @@ function DiagnosticsTab({ snap, snapshots, graphData }) {
           <div className="h-[150px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={distData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
                 <XAxis dataKey="cls" tick={{ fill: '#94a3b8', fontSize: 9 }} />
                 <YAxis tick={{ fill: '#94a3b8', fontSize: 9 }} />
                 <Tooltip
-                  contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+                  contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
                   itemStyle={{ color: '#e2e8f0' }}
                   labelStyle={{ color: '#94a3b8' }}
                 />
@@ -777,11 +780,11 @@ function Task1ModelCompare({ currentSnapshot }) {
           <div className="h-[200px] rounded-xl border border-slate-800/60 bg-slate-950/45 p-2">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={series} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
                 <XAxis dataKey="epoch" tick={{ fill: '#94a3b8', fontSize: 9 }} />
                 <YAxis domain={[0, 1]} tick={{ fill: '#94a3b8', fontSize: 9 }} />
                 <Tooltip
-                  contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+                  contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
                   itemStyle={{ color: '#e2e8f0' }}
                   labelStyle={{ color: '#94a3b8' }}
                   formatter={(value) => [`${((value || 0) * 100).toFixed(1)}%`, 'Primary score']}

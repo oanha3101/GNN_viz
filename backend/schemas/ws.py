@@ -120,6 +120,12 @@ class SnapshotTask2(BaseModel):
     graph_per_class_metrics: List[Dict[str, Any]] = Field(default_factory=list)
     graph_calibration: Dict[str, Any] = Field(default_factory=dict)
     structural_bias_signals: Dict[str, Any] = Field(default_factory=dict)
+    readout_quality: Dict[str, Any] = Field(default_factory=dict)
+    trust_profile: Dict[str, Any] = Field(default_factory=dict)
+    macro_f1: Optional[float] = None
+    balanced_accuracy: Optional[float] = None
+    median_margin: Optional[float] = None
+    calibration_temperature: Optional[float] = None
     train_loss: float
     val_loss: float
     train_acc: float

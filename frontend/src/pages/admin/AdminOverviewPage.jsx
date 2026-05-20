@@ -125,7 +125,7 @@ export default function AdminOverviewPage() {
         <div className="glass-card p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="text-micro font-semibold uppercase tracking-ultra text-aurora-amber">Control Tower</div>
+              <div className="text-micro font-semibold uppercase tracking-ultra admin-eyebrow">Control Tower</div>
               <h2 className="mt-2 text-2xl font-black text-white-star">Platform Pulse</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-twilight">
                 A visual read on workspace footprint, execution pressure, and whether the admin stack is ready for the next round of training traffic.
@@ -272,10 +272,10 @@ export default function AdminOverviewPage() {
               </ResponsiveContainer>
             </ChartShell>
             <div className="grid gap-3 sm:grid-cols-2">
-              <SummaryTile icon={Archive} label="Blob Objects" value={summary?.blob_object_count ?? 0} tone="text-aurora-amber" />
-              <SummaryTile icon={TriangleAlert} label="Blob Orphans" value={summary?.blob_orphan_count ?? 0} tone="text-aurora-rose" />
-              <SummaryTile icon={Database} label="Dataset Versions" value={summary?.dataset_versions ?? 0} tone="text-aurora-cyan" />
-              <SummaryTile icon={ShieldCheck} label="Audit 7 Days" value={summary?.recent_audit_events ?? 0} tone="text-moonlight" />
+              <SummaryTile icon={Archive} label="Blob Objects" value={summary?.blob_object_count ?? 0} tone="text-amber-500 dark:text-amber-300" />
+              <SummaryTile icon={TriangleAlert} label="Blob Orphans" value={summary?.blob_orphan_count ?? 0} tone="text-rose-500 dark:text-rose-300" />
+              <SummaryTile icon={Database} label="Dataset Versions" value={summary?.dataset_versions ?? 0} tone="text-cyan-600 dark:text-cyan-300" />
+              <SummaryTile icon={ShieldCheck} label="Audit 7 Days" value={summary?.recent_audit_events ?? 0} tone="text-indigo-600 dark:text-indigo-300" />
             </div>
           </div>
         </ChartCard>
@@ -297,7 +297,7 @@ function ChartCard({ title, subtitle, footer, children }) {
 
 function ChartShell({ height, children }) {
   return (
-    <div className="glass-card bg-deep/70 p-3" style={{ height }}>
+    <div className="admin-chart-shell p-3" style={{ height }}>
       {children}
     </div>
   )
@@ -305,16 +305,16 @@ function ChartShell({ height, children }) {
 
 function MiniSignal({ icon: Icon, label, value, status }) {
   return (
-    <div className="rounded-lg border border-line-subtle bg-deep/70 p-3">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-ultra text-text-shadow">
+    <div className="admin-signal-tile">
+      <div className="admin-signal-label">
         <Icon size={13} />
         {label}
       </div>
       <div className="mt-2 flex items-center gap-2">
         {status !== undefined ? (
-          <span className={`h-2 w-2 rounded-full ${status ? 'bg-aurora-green' : 'bg-aurora-rose'}`} />
+          <span className={`h-2 w-2 rounded-full ${status ? 'bg-emerald-400' : 'bg-rose-400'}`} />
         ) : null}
-        <span className="text-sm font-semibold text-white-star">{value}</span>
+        <span className="admin-signal-value">{value}</span>
       </div>
     </div>
   )
@@ -322,25 +322,25 @@ function MiniSignal({ icon: Icon, label, value, status }) {
 
 function LegendTile({ icon: Icon, label, value, color }) {
   return (
-    <div className="rounded-lg border border-line-subtle bg-deep/70 p-3">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-ultra text-text-shadow">
+    <div className="admin-signal-tile">
+      <div className="admin-signal-label">
         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
         <Icon size={12} />
         {label}
       </div>
-      <div className="mt-2 text-lg font-bold text-white-star">{value}</div>
+      <div className="admin-signal-value-lg">{value}</div>
     </div>
   )
 }
 
-function SummaryTile({ icon: Icon, label, value, tone = 'text-white-star' }) {
+function SummaryTile({ icon: Icon, label, value, tone = '' }) {
   return (
-    <div className="rounded-lg border border-line-subtle bg-deep/70 p-3">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-ultra text-text-shadow">
+    <div className="admin-signal-tile">
+      <div className="admin-signal-label">
         <Icon size={12} />
         {label}
       </div>
-      <div className={`mt-2 text-lg font-bold ${tone}`}>{value}</div>
+      <div className={`admin-signal-value-lg ${tone}`}>{value}</div>
     </div>
   )
 }

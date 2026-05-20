@@ -26,7 +26,7 @@ const MetricsChart = lazy(() => import('./components/MetricsChart/MetricsChart')
 
 function PanelLoader({ label = 'Dang tai panel...' }) {
   return (
-    <div className="flex h-full min-h-[180px] items-center justify-center text-[11px] font-bold uppercase tracking-[0.18em] text-[#5b5689]">
+    <div className="flex h-full min-h-[180px] items-center justify-center text-[11px] font-bold uppercase tracking-[0.18em] text-twilight">
       {label}
     </div>
   )
@@ -37,12 +37,12 @@ function PanelHeading({ title, subtitle, align = 'left' }) {
   // stretches over the Task 2 grid cards below.
   return (
     <div className={`absolute top-3 ${align === 'right' ? 'right-3' : 'left-3'} z-10 pointer-events-none w-fit max-w-[calc(100%-1.5rem)] rounded-lg border border-white/5 bg-panel-soft/70 backdrop-blur-xl px-3 py-1.5 flex items-center gap-2`}>
-      <div className="w-1.5 h-1.5 rounded-full bg-[#a855f7] shadow-[0_0_6px_#a855f7]" />
-      <span className="text-micro uppercase font-black tracking-ultra text-[#f1f0ff]/90 leading-none">{title}</span>
+      <div className="w-1.5 h-1.5 rounded-full bg-amethyst shadow-[0_0_6px_#a855f7]" />
+      <span className="text-micro uppercase font-black tracking-ultra text-starlight/90 leading-none">{title}</span>
       {subtitle && (
         <>
           <div className="w-px h-3 bg-white/10" />
-          <span className="text-nano text-[#a5a0d0] font-bold uppercase tracking-wide leading-none">{subtitle}</span>
+          <span className="text-nano text-moonlight font-bold uppercase tracking-wide leading-none">{subtitle}</span>
         </>
       )}
     </div>
@@ -161,6 +161,7 @@ function LabShell() {
   const setConfigOpen = useGNNStore((s) => s.setConfigOpen)
   const setTask = useGNNStore((s) => s.setTask)
   const setHyperparams = useGNNStore((s) => s.setHyperparams)
+  const hyperparams = useGNNStore((s) => s.hyperparams)
   const setActiveProjectContext = useGNNStore((s) => s.setActiveProjectContext)
   const setActiveDatasetContext = useGNNStore((s) => s.setActiveDatasetContext)
   const setUploadedFilePath = useGNNStore((s) => s.setUploadedFilePath)
@@ -341,24 +342,24 @@ function LabShell() {
   const trainLoss = snapshot ? snapshot.train_loss.toFixed(3) : '--'
 
   return (
-    <div className="app-shell h-screen flex flex-col bg-[#0a0514] text-[#a5a0d0] overflow-hidden">
+    <div className="app-shell h-screen flex flex-col bg-abyss text-moonlight overflow-hidden">
       {/* ═══ Header ═══ */}
-      <header className="h-14 flex items-center justify-between px-5 border-b border-[rgba(168,85,247,0.08)] bg-[#0f0a1e]/80 backdrop-blur-xl z-50 shrink-0">
+      <header className="h-14 flex items-center justify-between px-5 border-b border-line-subtle bg-deep/80 backdrop-blur-xl z-50 shrink-0">
         <div className="flex items-center gap-5">
           {(() => {
             const datasetName = useGNNStore(s => s.datasetName)
             return (
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#a855f7] to-[#6366f1] flex items-center justify-center shadow-lg shadow-[rgba(168,85,247,0.2)]">
-                  <Network size={18} className="text-[#f1f0ff]" />
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amethyst to-amethyst/70 flex items-center justify-center shadow-md ring-1 ring-line-default">
+                  <Network size={18} className="text-starlight" />
                 </div>
                 <div>
-                  <h1 className="text-sm font-black tracking-[0.15em] text-[#f1f0ff]">GNN-INSIGHT</h1>
-                  <div className="text-[9px] text-[#a855f7]/80 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                  <h1 className="text-sm font-black tracking-[0.15em] text-starlight">GNN-INSIGHT</h1>
+                  <div className="text-[9px] text-amethyst/80 font-bold uppercase tracking-widest flex items-center gap-1.5">
                     <span className={`status-dot ${isTraining ? 'status-dot-training' : trainingDone ? 'status-dot-live' : 'status-dot-idle'}`} />
                     {isTraining ? 'Training...' : trainingDone ? 'Ready' : 'Standby'}
                     {datasetName && (
-                      <span className="ml-2 text-[#5b5689] lowercase normal-case flex items-center gap-1">
+                      <span className="ml-2 text-twilight lowercase normal-case flex items-center gap-1">
                         <span className="w-1 h-1 rounded-full bg-slate-700" />
                         {datasetName}
                       </span>
@@ -368,7 +369,7 @@ function LabShell() {
               </div>
             )
           })()}
-          <div className="h-6 w-px bg-[#2a1f45]" />
+          <div className="h-6 w-px bg-line-default" />
           <div className="flex items-center gap-2">
             <InductiveDemo />
           </div>
@@ -376,38 +377,57 @@ function LabShell() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/app/dashboard')}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border bg-[#150e2a]/50 text-[#a5a0d0] border-[#2a1f45] hover:border-[rgba(168,85,247,0.3)]"
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border bg-nebula/50 text-moonlight border-line-default hover:border-line-active"
           >
             <span>{user ? user.username : 'Anonymous'}</span>
-            <span className="text-[#5b5689]">•</span>
+            <span className="text-twilight">•</span>
             <span>{activeProjectName || (activeProjectId ? `Project #${activeProjectId}` : 'No Project')}</span>
-            <span className="text-[#5b5689]">•</span>
+            <span className="text-twilight">•</span>
             <span>{activeDatasetVersionName || (activeDatasetVersionId ? `Version #${activeDatasetVersionId}` : 'No Version')}</span>
           </button>
           <button
             onClick={() => setRightPanelOpen(!rightPanelOpen)}
-            className={`p-2 rounded-lg transition-all border ${rightPanelOpen ? 'bg-[#2a1f45] text-[#a855f7] border-[#2a1f45]' : 'bg-[#150e2a]/50 text-[#5b5689] border-[rgba(168,85,247,0.1)]'}`}
+            className={`p-2 rounded-lg transition-all border ${rightPanelOpen ? 'bg-line-default text-amethyst border-line-default' : 'bg-nebula/50 text-twilight border-line-subtle'}`}
             title={rightPanelOpen ? 'Hide Analysis' : 'Show Analysis'}
           >
             {rightPanelOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
           </button>
           {snapshots.length > 0 && (
-            <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-[#150e2a]/50 border border-[rgba(168,85,247,0.08)]">
+            <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-nebula/50 border border-line-subtle">
               <div className="flex flex-col items-center">
-                <span className="text-[7px] uppercase text-[#5b5689] font-bold">Accuracy</span>
-                <span className="text-[10px] font-mono text-[#a855f7] font-bold">{valAcc}%</span>
+                <span className="text-[7px] uppercase text-twilight font-bold">Accuracy</span>
+                <span className="text-[10px] font-mono text-amethyst font-bold">{valAcc}%</span>
               </div>
-              <div className="w-px h-4 bg-[#2a1f45]" />
+              <div className="w-px h-4 bg-line-default" />
               <div className="flex flex-col items-center">
-                <span className="text-[7px] uppercase text-[#5b5689] font-bold">Loss</span>
+                <span className="text-[7px] uppercase text-twilight font-bold">Loss</span>
                 <span className="text-[10px] font-mono text-[#fbbf24] font-bold">{trainLoss}</span>
               </div>
+              {hyperparams ? (
+                <>
+                  <div className="w-px h-4 bg-line-default" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[7px] uppercase text-twilight font-bold">Epochs</span>
+                    <span className="text-[10px] font-mono text-starlight font-bold">{hyperparams.epochs}</span>
+                  </div>
+                  <div className="w-px h-4 bg-line-default" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[7px] uppercase text-twilight font-bold">LR</span>
+                    <span className="text-[10px] font-mono text-starlight font-bold">{hyperparams.lr}</span>
+                  </div>
+                  <div className="w-px h-4 bg-line-default" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[7px] uppercase text-twilight font-bold">Hidden</span>
+                    <span className="text-[10px] font-mono text-starlight font-bold">{hyperparams.hidden}</span>
+                  </div>
+                </>
+              ) : null}
             </div>
           )}
-          <div className="h-6 w-px bg-[#2a1f45]" />
+          <div className="h-6 w-px bg-line-default" />
           <button
             onClick={() => setMockMode(!mockMode)}
-            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border flex items-center gap-1.5 ${mockMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-[#2a1f45] text-[#5b5689] border-[#2a1f45]'}`}
+            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border flex items-center gap-1.5 ${mockMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-line-default text-twilight border-line-default'}`}
           >
             {mockMode ? <FlaskConical size={12} /> : <Plug size={12} />}
             {mockMode ? 'Mock Mode' : 'Live Data'}
@@ -416,7 +436,7 @@ function LabShell() {
       </header>
 
       {/* ═══ Main Workspace ═══ */}
-      <main className="flex-1 flex overflow-hidden relative bg-[#0a0514] min-h-0">
+      <main className="flex-1 flex overflow-hidden relative bg-abyss min-h-0">
         {/* Floating Sidebar Overlay */}
         <div className={`absolute left-0 top-0 bottom-0 z-40 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'w-[64px]' : 'w-[240px]'}`}>
           <LeftSidebar
@@ -446,11 +466,20 @@ function LabShell() {
             rightPanelOpen={rightPanelOpen}
             leftContent={
               <div className="w-full h-full relative overflow-visible bg-transparent">
-                <PanelHeading title={TASK_LABELS[selectedTask]} subtitle="Network Topology & Signal Flow" />
+                <PanelHeading
+                  title={TASK_LABELS[selectedTask]}
+                  subtitle={
+                    selectedTask === 5
+                      ? 'Graph Skeleton · node color = embedding cluster, ring = kNN preservation'
+                      : selectedTask === 3
+                      ? 'Edge Probability · color encodes predicted link strength'
+                      : 'Network Topology & Signal Flow'
+                  }
+                />
                 <button
                   type="button"
                   onClick={() => navigate('/app/lab/analysis/structure')}
-                  className="absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-panel-soft/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#d9d6ff] backdrop-blur-xl transition-colors hover:border-[rgba(168,85,247,0.25)] hover:text-white"
+                  className="absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-panel-soft/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-starlight backdrop-blur-xl transition-colors hover:border-line-active hover:text-white"
                 >
                   <ExternalLink size={12} />
                   Open capture view
@@ -465,23 +494,23 @@ function LabShell() {
           rightContent={
             <VerticalResizable
               topContent={
-                <div className="h-full flex flex-col bg-[#0f0a1e] overflow-hidden">
-                  <div className="flex items-center gap-1 p-2 bg-[#150e2a]/40 border-b border-[rgba(168,85,247,0.08)] shrink-0">
+                <div className="h-full flex flex-col bg-deep overflow-hidden">
+                  <div className="flex items-center gap-1 p-2 bg-nebula/40 border-b border-line-subtle shrink-0">
                     <button
                       onClick={() => setActiveRightTab('embedding')}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeRightTab === 'embedding' ? 'bg-[#2a1f45] text-[#a855f7] shadow-sm' : 'text-[#5b5689] hover:text-[#a5a0d0]'}`}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeRightTab === 'embedding' ? 'bg-line-default text-amethyst shadow-sm' : 'text-twilight hover:text-moonlight'}`}
                     >
                       <Globe2 size={12} /> Latent Space
                     </button>
                     <button
                       onClick={() => setActiveRightTab('metrics')}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeRightTab === 'metrics' ? 'bg-[#2a1f45] text-[#a855f7] shadow-sm' : 'text-[#5b5689] hover:text-[#a5a0d0]'}`}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeRightTab === 'metrics' ? 'bg-line-default text-amethyst shadow-sm' : 'text-twilight hover:text-moonlight'}`}
                     >
                       <BarChart3 size={12} /> Performance
                     </button>
                     <button
                       onClick={() => navigate(`/app/lab/analysis/${activeRightTab === 'embedding' ? 'latent' : 'metrics'}`)}
-                      className="rounded-md px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-[#8f88bc] transition-all hover:bg-[#24193d] hover:text-[#e6e3ff]"
+                      className="rounded-md px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-twilight transition-all hover:bg-nebula hover:text-starlight"
                       title="Open this panel in a capture-friendly view"
                     >
                       Open
@@ -509,10 +538,10 @@ function LabShell() {
                 </div>
               }
               bottomContent={
-                <div className="h-full bg-[#0f0a1e] border-t border-[rgba(168,85,247,0.08)] overflow-hidden flex flex-col">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-[#150e2a]/40 border-b border-[rgba(168,85,247,0.06)] shrink-0">
-                    <Network size={12} className="text-[#a855f7]" />
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#a5a0d0]">Inspector</span>
+                <div className="h-full bg-deep border-t border-line-subtle overflow-hidden flex flex-col">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-nebula/40 border-b border-line-subtle shrink-0">
+                    <Network size={12} className="text-amethyst" />
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-moonlight">Inspector</span>
                   </div>
                   <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
                     <ErrorBoundary>
@@ -536,13 +565,13 @@ function LabShell() {
       </main>
 
       {/* ═══ Footer Controls ═══ */}
-      <footer className="h-20 bg-[#0f0a1e]/90 backdrop-blur-xl border-t border-[rgba(168,85,247,0.08)] px-6 flex items-center gap-6 z-50 shrink-0">
+      <footer className="h-20 bg-deep/90 backdrop-blur-xl border-t border-line-subtle px-6 flex items-center gap-6 z-50 shrink-0">
         <div className="flex-1">
           <Suspense fallback={<PanelLoader label="Dang tai player..." />}>
             <Player />
           </Suspense>
         </div>
-        <div className="w-px h-10 bg-[#2a1f45]" />
+        <div className="w-px h-10 bg-line-default" />
         <div className="w-[300px]">
           <Suspense fallback={<PanelLoader label="Dang tai controls..." />}>
             <TrainingControls />

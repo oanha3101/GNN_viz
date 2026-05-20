@@ -227,16 +227,21 @@ export function drawTask1Node(node, ctx, globalScale, config) {
   // Labeling only on tiny showcase graphs or direct focus
   if (showNodeLabels || isSelected || isHovered) {
     const fontSize = showcaseMode
-      ? clamp(size * 0.78, 8, Math.max(12 / Math.sqrt(globalScale), 8))
-      : clamp(size * 0.7, 7, Math.max(10 / Math.sqrt(globalScale), 7))
-    ctx.font = `700 ${fontSize}px Inter, "JetBrains Mono", sans-serif`
+      ? clamp(size * 0.85, 9, Math.max(13 / Math.sqrt(globalScale), 9))
+      : clamp(size * 0.78, 8, Math.max(11 / Math.sqrt(globalScale), 8))
+    const label = `${node.id}`
+    ctx.font = `800 ${fontSize}px Inter, "JetBrains Mono", sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillStyle = showcaseMode ? '#e9f2ff' : '#ffffff'
-    ctx.shadowColor = 'rgba(0,0,0,0.55)'
-    ctx.shadowBlur = showcaseMode ? 6 : 3
-    ctx.fillText(`${node.id}`, drawX, drawY)
-    ctx.shadowBlur = 0
+    // Dark outline first (gives a clean stroke around white glyph),
+    // then white fill on top — readable on every node color.
+    ctx.lineWidth = Math.max(2.4, fontSize * 0.32)
+    ctx.lineJoin = 'round'
+    ctx.miterLimit = 2
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)'
+    ctx.strokeText(label, drawX, drawY)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText(label, drawX, drawY)
   }
 
   if (isHovered || isSelected) {

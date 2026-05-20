@@ -106,7 +106,11 @@ function MiniGraphPopup({ descriptor, currSnap, position }) {
   )
 }
 
-export default function EmbeddingView({ forcedTask2ColorMode = null, hideTask2Toolbar = false }) {
+export default function EmbeddingView({
+  forcedTask2ColorMode = null,
+  forcedTask2SelectedCell = null,
+  hideTask2Toolbar = false,
+}) {
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const selectedTask = useGNNStore((state) => state.selectedTask)
   const selectedNodeId = useGNNStore((state) => state.selectedNodeId)
@@ -118,6 +122,7 @@ export default function EmbeddingView({ forcedTask2ColorMode = null, hideTask2To
   const setGraphColorMode = useGNNStore((state) => state.setTask2EmbeddingColorMode)
   const selectedCell = useGNNStore((state) => state.task2SelectedCell)
   const activeGraphColorMode = forcedTask2ColorMode || graphColorMode
+  const resolvedSelectedCell = forcedTask2SelectedCell ?? selectedCell
 
   const [showTrajectory, setShowTrajectory] = useState(false)
   const [popupPos, setPopupPos] = useState(null)
@@ -210,8 +215,8 @@ export default function EmbeddingView({ forcedTask2ColorMode = null, hideTask2To
         correct: currSnap.graph_correct?.[index] ?? null,
         entropy: currSnap.attention_entropy?.[index] ?? 0,
       }))
-      const selectedCellSet = selectedCell
-        ? new Set(descriptors.filter((descriptor) => descriptor.predicted === selectedCell.pred && descriptor.groundTruth === selectedCell.gt).map((descriptor) => descriptor.originalGraphId))
+      const selectedCellSet = resolvedSelectedCell
+        ? new Set(descriptors.filter((descriptor) => descriptor.predicted === resolvedSelectedCell.pred && descriptor.groundTruth === resolvedSelectedCell.gt).map((descriptor) => descriptor.originalGraphId))
         : null
       const colors = descriptors.map((descriptor) => colorByMode(descriptor, activeGraphColorMode))
       const sizes = descriptors.map((descriptor) => {
@@ -319,7 +324,7 @@ export default function EmbeddingView({ forcedTask2ColorMode = null, hideTask2To
 
     if (trajectoryTrace) traces.push(trajectoryTrace)
     return traces
-  }, [currSnap, selectedNodeId, selectedTask, taskData, trajectoryTrace, activeGraphColorMode, selectedCell, indexedGraphs, task2Descriptors])
+  }, [currSnap, selectedNodeId, selectedTask, taskData, trajectoryTrace, activeGraphColorMode, resolvedSelectedCell, indexedGraphs, task2Descriptors])
 
   const silhouetteScore = useMemo(() => {
     const snapToUse = selectedTask === 2
@@ -420,7 +425,7 @@ export default function EmbeddingView({ forcedTask2ColorMode = null, hideTask2To
   }
 
   return (
-    <div ref={plotContainerRef} className="w-full h-full relative bg-[#020617]/40">
+    <div ref={plotContainerRef} className="w-full h-full relative bg-abyss/40">
       {selectedTask === 2 && !hideTask2Toolbar && (
         <div className="absolute left-2 top-2 z-10 flex items-center gap-2 rounded-xl border border-slate-800/70 bg-slate-950/80 px-2 py-1 text-[10px] font-semibold text-slate-300">
           <span className="uppercase tracking-ultra text-slate-500">Color</span>

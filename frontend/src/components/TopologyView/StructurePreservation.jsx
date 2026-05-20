@@ -107,11 +107,11 @@ export default function StructurePreservation() {
       <div className="flex-1 min-h-[80px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={historyData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis dataKey="epoch" tick={{ fill: '#475569', fontSize: 8 }} />
             <YAxis domain={[0, 100]} tick={{ fill: '#475569', fontSize: 8 }} unit="%" />
             <Tooltip
-              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+              contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
               labelStyle={{ color: '#94a3b8' }}
               formatter={(val, name) => [`${val.toFixed(1)}%`, name]}
             />
@@ -126,11 +126,11 @@ export default function StructurePreservation() {
       <div className="min-h-[60px] mt-1">
         <ResponsiveContainer width="100%" height={60}>
           <LineChart data={historyData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis dataKey="epoch" tick={false} />
             <YAxis domain={lossRange} tick={{ fill: '#475569', fontSize: 7 }} width={35} />
             <Tooltip
-              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+              contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
               formatter={(val) => [val.toFixed(4), 'Recon Loss']}
             />
             <Line type="monotone" dataKey="loss" stroke="#f97316" strokeWidth={2} dot={false} name="Reconstruction Loss" />

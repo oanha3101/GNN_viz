@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from api.routers.auth import require_admin_user
+from api.routers.auth import require_admin_user, _bcrypt_safe
 from database import get_db
 from models.sql_models import User
 from services import admin_service
@@ -114,7 +114,7 @@ def create_user(
     return admin_service.create_user(
         db,
         payload=payload.model_dump(),
-        password_hash=pwd_context.hash(payload.password),
+        password_hash=pwd_context.hash(_bcrypt_safe(payload.password)),
         admin=admin,
     )
 
@@ -303,6 +303,14 @@ def retry_admin_session(
     admin: Optional[User] = Depends(require_admin_user),
 ):
     return admin_service.retry_session(db, session_id=session_id, admin=admin)
+
+
+@router.delete("/sessions")
+def delete_all_admin_sessions(
+    db: Session = Depends(get_db),
+    admin: Optional[User] = Depends(require_admin_user),
+):
+    return admin_service.delete_all_terminal_sessions(db, admin=admin)
 
 
 @router.delete("/sessions/{session_id}")

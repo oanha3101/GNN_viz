@@ -129,6 +129,8 @@ function matchesCell(descriptor, selectedCell) {
 export default function TaskTopology2({
   forcedGallerySort = null,
   forcedFocus = null,
+  forcedSelectedCell = null,
+  forcedClassFilter = null,
   hideGalleryControls = false,
   showFullCollection = false,
   showGalleryOnly = false,
@@ -185,7 +187,10 @@ export default function TaskTopology2({
     () => buildTask2FocusBuckets({ snapshot: snap, graphs: indexedGraphs }),
     [snap, indexedGraphs]
   )
-  const activeFocus = focusBuckets.find((bucket) => bucket.id === focusMode) || focusBuckets[0] || {
+  const resolvedFocusId = forcedFocus || focusMode
+  const resolvedClassFilter = forcedClassFilter ?? classFilter
+  const resolvedSelectedCell = forcedSelectedCell ?? selectedCell
+  const activeFocus = focusBuckets.find((bucket) => bucket.id === resolvedFocusId) || focusBuckets[0] || {
     id: 'all',
     label: 'All',
     description: 'Entire graph collection.',
@@ -199,9 +204,9 @@ export default function TaskTopology2({
   }, [activeFocus, descriptors])
 
   const filteredDescriptors = useMemo(() => {
-    if (classFilter === 'all') return focusDescriptors
-    return focusDescriptors.filter((descriptor) => descriptor.groundTruth === Number(classFilter))
-  }, [classFilter, focusDescriptors])
+    if (resolvedClassFilter === 'all') return focusDescriptors
+    return focusDescriptors.filter((descriptor) => descriptor.groundTruth === Number(resolvedClassFilter))
+  }, [focusDescriptors, resolvedClassFilter])
 
   const activeGallerySort = forcedGallerySort || gallerySort
 
@@ -211,8 +216,8 @@ export default function TaskTopology2({
   )
 
   const selectedCellMatches = useMemo(
-    () => sortedDescriptors.filter((descriptor) => matchesCell(descriptor, selectedCell)),
-    [sortedDescriptors, selectedCell]
+    () => sortedDescriptors.filter((descriptor) => matchesCell(descriptor, resolvedSelectedCell)),
+    [resolvedSelectedCell, sortedDescriptors]
   )
 
   const pageSize = Math.max(8, cols * 6)
@@ -225,12 +230,6 @@ export default function TaskTopology2({
   )
 
   useEffect(() => {
-    if (forcedFocus && forcedFocus !== focusMode) {
-      setFocusMode(forcedFocus)
-    }
-  }, [forcedFocus, focusMode, setFocusMode])
-
-  useEffect(() => {
     if (showFullCollection) return undefined
     setPage((current) => Math.min(Math.max(current, 1), totalPages))
     return undefined
@@ -240,7 +239,7 @@ export default function TaskTopology2({
     if (showFullCollection) return undefined
     setPage(1)
     return undefined
-  }, [showFullCollection, focusMode, gallerySort, classFilter, selectedCell, graphs.length])
+  }, [showFullCollection, resolvedFocusId, activeGallerySort, resolvedClassFilter, resolvedSelectedCell, graphs.length])
 
   const selectedGraph = useMemo(
     () => {
@@ -377,7 +376,7 @@ export default function TaskTopology2({
                 <span>{activeFocus.label}</span>
               </div>
               <div className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                {selectedCell
+                {resolvedSelectedCell
                   ? `${selectedCellMatches.length} graphs match the active confusion cell. The rest stay visible so you can keep structural context.`
                   : activeFocus.description}
               </div>
@@ -438,7 +437,7 @@ export default function TaskTopology2({
               <label className="flex items-center gap-2 text-[11px] text-slate-400">
                 <span className="uppercase tracking-ultra text-slate-500">GT class</span>
                 <select
-                  value={classFilter}
+                  value={resolvedClassFilter}
                   onChange={(event) => setClassFilter(event.target.value === 'all' ? 'all' : Number(event.target.value))}
                   className="rounded-md border border-slate-800/70 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
                 >
@@ -456,15 +455,36 @@ export default function TaskTopology2({
 
         <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
           {pagedDescriptors.map((descriptor) => {
-            const matched = matchesCell(descriptor, selectedCell)
+            const matched = matchesCell(descriptor, resolvedSelectedCell)
             const confidence = descriptor.confidence || 0
             const selected = descriptor.originalGraphId === selectedNodeId
             const predictionLabel = descriptor.predicted != null
               ? labelForClass(descriptor.predicted)
               : 'Pending'
-            const quickTone = descriptor.correct === 1
-              ? 'border-emerald-500/30 hover:border-emerald-500/60'
-              : 'border-red-500/30 hover:border-red-500/60'
+            const isWrong = descriptor.correct !== 1
+            const isDanger = isWrong && confidence >= 0.85
+            const isUncertain = !isWrong && confidence < 0.55
+            const statusLabel = isDanger
+              ? 'Danger'
+              : isWrong
+                ? 'Wrong'
+                : isUncertain
+                  ? 'Uncertain'
+                  : 'Correct'
+            const quickTone = isDanger
+              ? 'border-rose-500/70 hover:border-rose-400 shadow-[0_0_18px_-6px_rgba(244,63,94,0.55)]'
+              : isWrong
+                ? 'border-amber-500/40 hover:border-amber-400/70'
+                : isUncertain
+                  ? 'border-slate-500/30 hover:border-slate-400/60'
+                  : 'border-emerald-500/30 hover:border-emerald-500/60'
+            const statusBadgeTone = isDanger
+              ? 'bg-rose-500/15 text-rose-300 border border-rose-500/40'
+              : isWrong
+                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                : isUncertain
+                  ? 'bg-slate-500/15 text-slate-300 border border-slate-500/30'
+                  : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
 
             return (
               <button
@@ -476,6 +496,7 @@ export default function TaskTopology2({
                     ? 'ring-2 ring-cyan-500/35 bg-slate-900/70'
                     : `bg-slate-900/40 ${quickTone}`
                 } ${matched ? 'opacity-100' : 'opacity-45'}`}
+                title={`G#${descriptor.originalGraphId} \u2014 ${statusLabel} (conf ${(confidence * 100).toFixed(0)}%)`}
               >
                 <div className="h-28 p-3 relative">
                   <MiniGraphSVG
@@ -521,7 +542,9 @@ export default function TaskTopology2({
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-slate-500">Status</span>
-                      <span>{descriptor.correct === 1 ? 'Correct' : 'Wrong'}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${statusBadgeTone}`}>
+                        {statusLabel}
+                      </span>
                     </div>
                   </div>
 

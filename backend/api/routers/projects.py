@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -46,10 +46,21 @@ def create_project(
 
 @router.get("")
 def list_projects(
+    search: Optional[str] = Query(default=None),
+    visibility: Optional[str] = Query(default=None, pattern="^(public|private)?$"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=12, ge=1, le=100),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_optional_user),
 ):
-    return project_service.list_projects(db, user)
+    return project_service.list_projects(
+        db,
+        user,
+        search=search,
+        visibility=visibility,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/{project_id}")
@@ -74,3 +85,12 @@ def update_project(
         payload.model_dump(exclude_unset=True),
         user,
     )
+
+
+@router.delete("/{project_id}")
+def delete_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    return project_service.delete_project(db, project_id, user)

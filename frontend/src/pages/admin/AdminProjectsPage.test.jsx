@@ -1,13 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminProjectsPage from './AdminProjectsPage'
 
 function jsonResponse(payload) {
   return {
     ok: true,
-    headers: {
-      get: () => 'application/json',
-    },
+    headers: { get: () => 'application/json' },
     json: async () => payload,
   }
 }
@@ -55,21 +53,22 @@ describe('AdminProjectsPage', () => {
       )
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /create project/i }))
-    fireEvent.change(screen.getByPlaceholderText('Project title'), {
+    fireEvent.click(screen.getByRole('button', { name: /new project/i }))
+    const dialog = screen.getByRole('complementary')
+    fireEvent.change(within(dialog).getByLabelText(/^title/i), {
       target: { value: 'Project One' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Project description'), {
+    fireEvent.change(within(dialog).getByLabelText(/^description$/i), {
       target: { value: 'Created from admin' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Task type'), {
+    fireEvent.change(within(dialog).getByLabelText(/^task type$/i), {
       target: { value: '2' },
     })
-    fireEvent.change(screen.getByPlaceholderText('Model type'), {
+    fireEvent.change(within(dialog).getByLabelText(/^model type$/i), {
       target: { value: 'GAT' },
     })
-    fireEvent.click(screen.getByLabelText(/public/i))
-    fireEvent.click(screen.getByRole('button', { name: /^create project$/i }))
+    fireEvent.click(within(dialog).getByLabelText(/public project/i))
+    fireEvent.click(within(dialog).getByRole('button', { name: /^create project$/i }))
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(

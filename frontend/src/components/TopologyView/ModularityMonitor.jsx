@@ -77,11 +77,11 @@ export default function ModularityMonitor() {
                 <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis dataKey="epoch" tick={{ fill: '#475569', fontSize: 8 }} />
             <YAxis domain={[-0.1, 1]} tick={{ fill: '#475569', fontSize: 8 }} />
             <Tooltip
-              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+              contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
               labelStyle={{ color: '#94a3b8' }}
             />
             <ReferenceLine y={0.4} stroke="#22c55e" strokeDasharray="3 3" strokeOpacity={0.4} />

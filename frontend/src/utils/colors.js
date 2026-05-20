@@ -34,6 +34,22 @@ export const CLASS_NAMES = [
   'Probabilistic Methods', 'Reinforcement Learning', 'Rule Learning', 'Theory',
 ]
 
+export const COMMUNITY_COLORS = [
+  '#6366f1', // indigo
+  '#ec4899', // pink
+  '#14b8a6', // teal
+  '#f59e0b', // amber
+  '#8b5cf6', // violet
+  '#06b6d4', // cyan
+  '#ef4444', // red
+  '#10b981', // emerald
+]
+
+export function getCommunityColor(idx) {
+  if (idx == null || isNaN(idx)) return '#94a3b8'
+  return COMMUNITY_COLORS[idx % COMMUNITY_COLORS.length]
+}
+
 export const MODEL_COLORS = {
   GCN: '#9333ea',   // amethyst
   GAT: '#818cf8',   // aurora-blue

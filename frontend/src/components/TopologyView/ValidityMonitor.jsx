@@ -57,7 +57,7 @@ export default function ValidityMonitor() {
   }
 
   return (
-    <div className="h-full flex flex-col p-4 text-xs overflow-auto bg-slate-950 custom-scrollbar">
+    <div className="h-full flex flex-col p-4 text-xs overflow-y-auto overflow-x-hidden bg-abyss custom-scrollbar">
       <h3 className="text-micro font-black text-slate-400 uppercase tracking-ultra mb-4">
         Generation Quality
       </h3>
@@ -90,11 +90,11 @@ export default function ValidityMonitor() {
                 <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis dataKey="epoch" tick={{ fill: '#475569', fontSize: 8 }} />
             <YAxis domain={[0, 100]} tick={{ fill: '#475569', fontSize: 8 }} unit="%" />
             <Tooltip
-              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 10 }}
+              contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
               labelStyle={{ color: '#94a3b8' }}
               formatter={(val) => `${val.toFixed(1)}%`}
             />

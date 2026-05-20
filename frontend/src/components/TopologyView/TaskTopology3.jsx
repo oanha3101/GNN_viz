@@ -372,12 +372,12 @@ export default function TaskTopology3() {
     ctx.restore()
   }, [groundTruth, selectedNodeId, commonNeighbors, showNodes, hoveredLink, showBulkNodeLabels])
 
-  if (!activeGraphData) return <div className="w-full h-full bg-[#0a0514] flex items-center justify-center text-[#5b5689] text-[10px] uppercase font-black">Loading...</div>
+  if (!activeGraphData) return <div className="w-full h-full bg-abyss flex items-center justify-center text-twilight text-[10px] uppercase font-black">Loading...</div>
 
   const auc = snapshots[Math.floor(currentEpochFloat)]?.auc || 0.5
 
   return (
-    <div ref={containerRef} className="w-full h-full relative bg-[#0a0514] overflow-hidden">
+    <div ref={containerRef} className="w-full h-full relative bg-abyss overflow-hidden">
       <ForceGraph2D
         ref={fgRef}
         graphData={activeGraphData}
@@ -416,18 +416,18 @@ export default function TaskTopology3() {
                 <defs><linearGradient id="aucGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#f43f5e" /><stop offset="50%" stopColor="#a855f7" /><stop offset="100%" stopColor="#34d399" /></linearGradient></defs>
             </svg>
         </div>
-        <div className="bg-[#0f0a1e]/90 backdrop-blur-xl rounded-2xl px-4 py-2 border border-[rgba(168,85,247,0.1)] shadow-2xl flex flex-col items-center min-w-[100px]">
-          <span className="text-[8px] text-[#5b5689] uppercase font-black tracking-widest mb-1">Model AUC</span>
+        <div className="bg-deep/90 backdrop-blur-xl rounded-2xl px-4 py-2 border border-line-subtle shadow-2xl flex flex-col items-center min-w-[100px]">
+          <span className="text-[8px] text-twilight uppercase font-black tracking-widest mb-1">Model AUC</span>
           <span className={`text-2xl font-black font-mono leading-none ${auc > 0.85 ? 'text-[#34d399]' : auc > 0.7 ? 'text-[#fbbf24]' : 'text-[#f43f5e]'}`}>{auc.toFixed(3)}</span>
         </div>
       </div>
 
       <div className="absolute top-4 right-4 z-20 flex gap-2">
-        <button onClick={() => setShowNodes(!showNodes)} className={`px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border transition-all ${showNodes ? 'bg-[#0f0a1e]/90 border-[#2a1f45] text-[#a5a0d0] hover:text-[#f1f0ff]' : 'bg-[rgba(99,102,241,0.15)] border-[#6366f1] text-[#a5a3ef]'}`}>Nodes</button>
+        <button onClick={() => setShowNodes(!showNodes)} className={`px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border transition-all ${showNodes ? 'bg-deep/90 border-line-default text-moonlight hover:text-starlight' : 'bg-amethyst/15 border-amethyst text-amethyst'}`}>Nodes</button>
         <button
           onClick={() => fitView(600, 60)}
           title="Fit to view (F)"
-          className="px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border bg-[#0f0a1e]/80 border-[#2a1f45] text-[#a5a0d0] hover:text-[#f1f0ff] hover:border-[rgba(168,85,247,0.3)] transition-all"
+          className="px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border bg-deep/80 border-line-default text-moonlight hover:text-starlight hover:border-line-active transition-all"
         >
           Fit
         </button>
