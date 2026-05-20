@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
+import ThemeToggle from '../components/ui/ThemeToggle'
 
 const APP_NAV_ITEMS = [
   { to: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -162,21 +163,30 @@ export default function AppLayout() {
           <div className="user-shell-backdrop pointer-events-none absolute inset-0" />
 
           {titleMeta ? (
-            <header className="app-header">
-              <div className="flex items-center gap-2">
-                <Sparkles size={12} className="text-moonlight" />
-                <span className="text-micro font-semibold uppercase tracking-ultra text-moonlight">
-                  {titleMeta.eyebrow}
-                </span>
+            <header className="app-header flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles size={12} className="text-amethyst" />
+                  <span className="text-micro font-semibold uppercase tracking-ultra text-twilight">
+                    {titleMeta.eyebrow}
+                  </span>
+                </div>
+                <h1 className="mt-2 text-[2rem] font-bold tracking-tight text-white-star">
+                  {titleMeta.title}
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-twilight">
+                  {titleMeta.description}
+                </p>
               </div>
-              <h1 className="mt-2 text-[2rem] font-black tracking-tight text-white-star">
-                {titleMeta.title}
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-twilight">
-                {titleMeta.description}
-              </p>
+              <div className="shrink-0">
+                <ThemeToggle />
+              </div>
             </header>
-          ) : null}
+          ) : (
+            <div className="flex justify-end px-6 pt-6">
+              <ThemeToggle />
+            </div>
+          )}
 
           <main className="relative z-10 flex-1 overflow-auto p-6">
             <div className="min-h-[calc(100vh-10rem)]">

@@ -1,7 +1,7 @@
 import { Activity, ArrowRight, Database, FileClock, FolderKanban, LogOut, Moon, Shield, Sparkles, SunMedium, Users } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
+import { useTheme } from '../contexts/ThemeContext'
 
 const ADMIN_NAV_ITEMS = [
   { to: '/admin/overview', label: 'Overview', icon: Shield },
@@ -78,15 +78,7 @@ export default function AdminLayout() {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const titleMeta = TITLES[location.pathname] || TITLES['/admin/overview']
-  const [theme, setTheme] = useState(() => {
-    if (typeof window === 'undefined') return 'dark'
-    return window.localStorage.getItem('gnnAdminTheme') || 'dark'
-  })
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem('gnnAdminTheme', theme)
-  }, [theme])
+  const { theme, toggleTheme } = useTheme()
 
   return (
     <div className={`admin-shell admin-theme-${theme} min-h-screen bg-abyss text-starlight`}>
@@ -130,7 +122,7 @@ export default function AdminLayout() {
               </div>
               <button
                 type="button"
-                onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+                onClick={() => toggleTheme()}
                 className="admin-theme-toggle"
                 aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                 title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -279,7 +271,7 @@ export default function AdminLayout() {
               </div>
               <button
                 type="button"
-                onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+                onClick={() => toggleTheme()}
                 className="admin-theme-toggle admin-theme-toggle-header"
               >
                 {theme === 'dark' ? <SunMedium size={14} /> : <Moon size={14} />}
