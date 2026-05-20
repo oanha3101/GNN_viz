@@ -6,23 +6,13 @@ from pydantic import BaseModel
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from api.routers.auth import require_admin_user
+from api.routers.auth import require_admin_user, _bcrypt_safe
 from database import get_db
 from models.sql_models import User
 from services import admin_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def _bcrypt_safe(password: str) -> str:
-    """Truncate to bcrypt's 72-byte cap so newer bcrypt builds don't raise."""
-    if password is None:
-        return ""
-    encoded = password.encode("utf-8")
-    if len(encoded) <= 72:
-        return password
-    return encoded[:72].decode("utf-8", errors="ignore")
 
 
 class RoleUpdateRequest(BaseModel):

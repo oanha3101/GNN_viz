@@ -35,8 +35,10 @@ class GraphClassifier(torch.nn.Module):
             self.conv1 = GCNConv(in_channels, hidden)
             self.conv2 = GCNConv(hidden, hidden)
 
-        self.norm1 = torch.nn.LayerNorm(hidden)
+        conv1_out = hidden * heads if model_type == 'GAT' else hidden
+        self.norm1 = torch.nn.LayerNorm(conv1_out)
         self.norm2 = torch.nn.LayerNorm(hidden)
+        self.skip_proj = torch.nn.Linear(conv1_out, hidden) if conv1_out != hidden else None
 
         # Gated readout gives the UI a more faithful motif-level signal than a
         # single linear gate while staying cheap enough for realtime playback.
@@ -58,7 +60,8 @@ class GraphClassifier(torch.nn.Module):
 
         h2 = self.conv2(h1, edge_index)
         h2 = self.norm2(h2)
-        h2 = h2 + h1
+        h1_skip = self.skip_proj(h1) if self.skip_proj is not None else h1
+        h2 = h2 + h1_skip
         x = F.elu(h2) if self.model_type == 'GAT' else F.relu(h2)
         node_embeddings = x
 

@@ -38,7 +38,7 @@ except ImportError:
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def _bcrypt_safe(password: str) -> str:
+def _bcrypt_safe(password: Optional[str]) -> str:
     """Truncate to bcrypt's 72-byte cap so newer bcrypt builds don't raise."""
     if password is None:
         return ""
@@ -46,6 +46,8 @@ def _bcrypt_safe(password: str) -> str:
     if len(encoded) <= 72:
         return password
     return encoded[:72].decode("utf-8", errors="ignore")
+
+
 security = HTTPBearer(auto_error=False)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
