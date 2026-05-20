@@ -161,6 +161,7 @@ function LabShell() {
   const setConfigOpen = useGNNStore((s) => s.setConfigOpen)
   const setTask = useGNNStore((s) => s.setTask)
   const setHyperparams = useGNNStore((s) => s.setHyperparams)
+  const hyperparams = useGNNStore((s) => s.hyperparams)
   const setActiveProjectContext = useGNNStore((s) => s.setActiveProjectContext)
   const setActiveDatasetContext = useGNNStore((s) => s.setActiveDatasetContext)
   const setUploadedFilePath = useGNNStore((s) => s.setUploadedFilePath)
@@ -402,6 +403,25 @@ function LabShell() {
                 <span className="text-[7px] uppercase text-twilight font-bold">Loss</span>
                 <span className="text-[10px] font-mono text-[#fbbf24] font-bold">{trainLoss}</span>
               </div>
+              {hyperparams ? (
+                <>
+                  <div className="w-px h-4 bg-line-default" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[7px] uppercase text-twilight font-bold">Epochs</span>
+                    <span className="text-[10px] font-mono text-starlight font-bold">{hyperparams.epochs}</span>
+                  </div>
+                  <div className="w-px h-4 bg-line-default" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[7px] uppercase text-twilight font-bold">LR</span>
+                    <span className="text-[10px] font-mono text-starlight font-bold">{hyperparams.lr}</span>
+                  </div>
+                  <div className="w-px h-4 bg-line-default" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[7px] uppercase text-twilight font-bold">Hidden</span>
+                    <span className="text-[10px] font-mono text-starlight font-bold">{hyperparams.hidden}</span>
+                  </div>
+                </>
+              ) : null}
             </div>
           )}
           <div className="h-6 w-px bg-line-default" />

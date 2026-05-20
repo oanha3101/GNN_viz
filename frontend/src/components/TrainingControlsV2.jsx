@@ -409,55 +409,35 @@ export default function TrainingControlsV2() {
         </button>
       </div>
 
-      <div className="flex items-center gap-2">
-        {isTraining ? (
-          <div className="flex-1 flex flex-col gap-1">
-             <div className="h-1.5 w-full rounded-full bg-black/40 border border-white/5 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-amethyst via-indigo-500 to-aurora-blue transition-[width] duration-150"
-                  style={{ width: `${trainingProgress * 100}%` }}
-                />
-              </div>
-              <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-tighter">
-                <span className="text-twilight flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Progress</span>
-                <span className="text-amethyst font-mono">{Math.round(trainingProgress * 100)}%</span>
-              </div>
+      {isTraining ? (
+        <div className="flex flex-col gap-1">
+          <div className="h-1.5 w-full rounded-full bg-black/40 border border-white/5 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-amethyst via-indigo-500 to-aurora-blue transition-[width] duration-150"
+              style={{ width: `${trainingProgress * 100}%` }}
+            />
           </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-between px-3 py-1.5 rounded-lg border border-white/5 bg-black/20 backdrop-blur-sm">
-            <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">Epochs</span>
-              <span className="text-[10px] font-mono text-starlight">{hyperparams.epochs}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">LR</span>
-              <span className="text-[10px] font-mono text-starlight">{hyperparams.lr}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[8px] uppercase text-twilight font-bold tracking-widest">Hidden</span>
-              <span className="text-[10px] font-mono text-starlight">{hyperparams.hidden}</span>
-            </div>
+          <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-tighter">
+            <span className="text-twilight flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Progress</span>
+            <span className="text-amethyst font-mono">{Math.round(trainingProgress * 100)}%</span>
           </div>
-        )}
-      </div>
-
-      {!isTraining && trainingDone ? (
-        <div className={`rounded-xl border px-3 py-2 ${
-          saveState === 'saved'
-            ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
-            : 'border-aurora-amber/20 bg-aurora-amber/10 text-aurora-amber'
-        }`}>
-          <div className="text-[10px] font-semibold">
-            {saveState === 'saved'
-              ? 'This run has been saved to Experiment Hub.'
-              : 'Training is complete. Save Experiment is now ready.'}
-          </div>
+        </div>
+      ) : trainingDone ? (
+        <div className="flex items-center justify-between gap-2">
+          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+            saveState === 'saved'
+              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+              : 'border-aurora-amber/30 bg-aurora-amber/10 text-aurora-amber'
+          }`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            {saveState === 'saved' ? 'Saved to Hub' : 'Ready to save'}
+          </span>
           <button
             type="button"
             onClick={openPdfBook}
-            className="mt-2 inline-flex items-center rounded-lg border border-white/10 bg-black/15 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-starlight transition-colors hover:bg-white/10"
+            className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-starlight transition-colors hover:bg-white/10"
           >
-            Open PDF Book
+            PDF Book
           </button>
         </div>
       ) : null}
