@@ -274,7 +274,7 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                 # ── Explainability Data ─────────────────────────────────────────
 
                 # 1. Per-node kNN preservation score (array indexed by node id)
-                'per_node_knn_preservation': [0.0] * num_nodes,
+                'per_node_knn_preservation': {str(i): 0.0 for i in range(num_nodes)},
 
                 # 2. Per-edge reconstruction error
                 'per_edge_reconstruction_error': [],  # [{source, target, error, correct}]
@@ -302,16 +302,16 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                 if k_actual > 0:
                     knn = NearestNeighbors(n_neighbors=k_actual + 1).fit(z_np)
                     _, indices = knn.kneighbors(z_np[sample_indices])
-                    per_node_scores = [0.0] * num_nodes
+                    per_node_scores = {str(i): 0.0 for i in range(num_nodes)}
                     for i, idx in enumerate(sample_indices):
                         graph_neighbors = adj_sets[idx]
                         if not graph_neighbors:
-                            per_node_scores[idx] = 0.0
+                            per_node_scores[str(idx)] = 0.0
                             continue
                         emb_neighbors = set(indices[i, 1:])
                         intersection = graph_neighbors.intersection(emb_neighbors)
                         score = len(intersection) / min(k_actual, len(graph_neighbors))
-                        per_node_scores[idx] = float(score)
+                        per_node_scores[str(idx)] = float(score)
                     snapshot['per_node_knn_preservation'] = per_node_scores
             except Exception as e:
                 print(f"Per-node kNN preservation failed: {e}")
