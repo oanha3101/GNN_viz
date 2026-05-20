@@ -466,7 +466,16 @@ function LabShell() {
             rightPanelOpen={rightPanelOpen}
             leftContent={
               <div className="w-full h-full relative overflow-visible bg-transparent">
-                <PanelHeading title={TASK_LABELS[selectedTask]} subtitle="Network Topology & Signal Flow" />
+                <PanelHeading
+                  title={TASK_LABELS[selectedTask]}
+                  subtitle={
+                    selectedTask === 5
+                      ? 'Graph Skeleton · node color = embedding cluster, ring = kNN preservation'
+                      : selectedTask === 3
+                      ? 'Edge Probability · color encodes predicted link strength'
+                      : 'Network Topology & Signal Flow'
+                  }
+                />
                 <button
                   type="button"
                   onClick={() => navigate('/app/lab/analysis/structure')}
