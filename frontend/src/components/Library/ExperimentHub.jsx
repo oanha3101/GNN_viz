@@ -59,10 +59,11 @@ function FilterSelect({ label, value, onChange, options }) {
   )
 }
 
-function RunChip({ selected, onClick, children }) {
+function RunChip({ selected, onClick, children, ...rest }) {
   return (
     <button
       onClick={onClick}
+      {...rest}
       className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all ${
         selected
           ? 'border-aurora-blue/40 bg-aurora-blue/12 text-aurora-blue'
@@ -656,7 +657,7 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <RunChip selected={selectedCompareIds.includes(exp.id)} onClick={(event) => {
+                            <RunChip data-testid={`experiment-compare-toggle-${exp.id}`} selected={selectedCompareIds.includes(exp.id)} onClick={(event) => {
                               event.stopPropagation()
                               handleCompareToggle(exp.id)
                             }}
@@ -664,6 +665,7 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                               {selectedCompareIds.includes(exp.id) ? 'Selected' : 'Compare'}
                             </RunChip>
                             <button
+                              data-testid={`card-load-replay-${exp.id}`}
                               onClick={(event) => {
                                 event.stopPropagation()
                                 handleReplayLoad(exp.id)
@@ -744,6 +746,7 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                 <Brain size={13} /> AI Analyst
               </button>
               <button
+                data-testid="tab-compare"
                 onClick={() => setRightTab('compare')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   rightTab === 'compare'
@@ -867,6 +870,7 @@ export default function ExperimentHub({ isOpen, onClose, variant = 'modal' }) {
                         {saveLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save changes
                       </button>
                       <button
+                        data-testid="detail-load-replay"
                         onClick={() => handleReplayLoad(selectedDetail.id)}
                         className="btn-nebula inline-flex items-center gap-2 px-5 py-2.5 text-sm border-line-subtle hover:border-accent-amethyst transition-all hover:scale-[1.02] active:scale-95"
                       >
