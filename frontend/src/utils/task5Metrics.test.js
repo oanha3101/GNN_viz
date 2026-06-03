@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import {
   topKOutliers,
+  normalizeOutlierScores,
+  getNodeKnnScore,
+  getNodeOutlierScore,
+  buildNodeEmbeddingDiagnostics,
   buildNormHistogram,
   computeIsotropy,
   buildKnnScatter,
@@ -38,6 +42,56 @@ describe('topKOutliers', () => {
     expect(out.map((r) => r.id)).toEqual([7, 4])
     expect(out[0].score).toBeCloseTo(0.9)
     expect(out[0].isOutlier).toBe(true)
+  })
+})
+
+describe('Task 5 node diagnostics helpers', () => {
+  it('normalizes backend and mock outlier score payloads', () => {
+    expect(normalizeOutlierScores([0.4, 0.7])).toEqual([
+      { id: 0, node_id: 0, score: 0.4, avg_distance_to_neighbors: 0.4 },
+      { id: 1, node_id: 1, score: 0.7, avg_distance_to_neighbors: 0.7 },
+    ])
+
+    expect(normalizeOutlierScores([
+      { node_id: '4', avg_distance_to_neighbors: 0.9, is_outlier: true },
+    ])).toEqual([
+      {
+        id: 4,
+        node_id: 4,
+        score: 0.9,
+        avg_distance_to_neighbors: 0.9,
+        isOutlier: true,
+        is_outlier: true,
+      },
+    ])
+  })
+
+  it('reads per-node kNN scores from arrays and backend maps', () => {
+    expect(getNodeKnnScore([0.1, 0.8], 1)).toBe(0.8)
+    expect(getNodeKnnScore({ 2: 0.65 }, 2)).toBe(0.65)
+    expect(getNodeKnnScore({}, 99, 0)).toBe(0)
+  })
+
+  it('builds node-level embedding diagnostics', () => {
+    const rows = buildNodeEmbeddingDiagnostics({
+      graphData: { nodes: [{ id: 0, degree: 2 }, { id: 1, degree: 4 }] },
+      snap: {
+        embedding_norms: [1.5, 0.5],
+        per_node_knn_preservation: { 0: 0.25, 1: 0.9 },
+        outlier_scores: [{ node_id: 0, avg_distance_to_neighbors: 0.8, is_outlier: true }],
+      },
+    })
+
+    expect(rows[0]).toMatchObject({
+      id: 0,
+      degree: 2,
+      norm: 1.5,
+      knn: 0.25,
+      outlierScore: 0.8,
+      isOutlier: true,
+    })
+    expect(rows[1].knn).toBe(0.9)
+    expect(getNodeOutlierScore([{ node_id: 0, avg_distance_to_neighbors: 0.8 }], 0)).toBe(0.8)
   })
 })
 

@@ -10,8 +10,10 @@ import {
   GitBranch,
   Globe2,
   IdCard,
+  Languages,
   Link as LinkIcon,
   MapPin,
+  Palette,
   Save,
   Sparkles,
   Upload,
@@ -21,6 +23,10 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import LoadingState from '../../components/primitives/LoadingState'
+import LanguageSwitcher from '../../components/ui/LanguageSwitcher'
+import ThemeToggle from '../../components/ui/ThemeToggle'
+import { useLanguage } from '../../contexts/LanguageContext'
+import { useToast } from '../../components/ui/ToastProvider'
 import useAuthStore from '../../store/authStore'
 
 const EMPTY_FORM = {
@@ -44,12 +50,12 @@ const initialsFor = (form) => {
   return source.slice(0, 2).toUpperCase()
 }
 
-const fmtDate = (value) => {
-  if (!value) return '\u2014'
+const fmtDate = (value, locale) => {
+  if (!value) return '—'
   try {
-    return new Date(value).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+    return new Date(value).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })
   } catch {
-    return '\u2014'
+    return '—'
   }
 }
 
@@ -58,6 +64,9 @@ export default function ProfilePage() {
   const updateProfile = useAuthStore((s) => s.updateProfile)
   const loading = useAuthStore((s) => s.loading)
   const authError = useAuthStore((s) => s.error)
+  const { t, lang } = useLanguage()
+  const toast = useToast()
+  const dateLocale = lang === 'vi' ? 'vi-VN' : 'en-US'
 
   const [form, setForm] = useState(EMPTY_FORM)
   const [savedMessage, setSavedMessage] = useState('')
@@ -100,7 +109,7 @@ export default function ProfilePage() {
   )
 
   if (!user) {
-    return <LoadingState title="Loading profile..." className="min-h-[480px]" />
+    return <LoadingState title={t('profile.loading')} className="min-h-[480px]" />
   }
 
   const handleSubmit = async (event) => {
@@ -109,7 +118,8 @@ export default function ProfilePage() {
     setLocalError('')
     try {
       await updateProfile(form)
-      setSavedMessage('Profile updated.')
+      setSavedMessage(t('profile.saved'))
+      toast?.showToast(t('profile.saved'), { type: 'success' })
     } catch (err) {
       setLocalError(err.message)
     }
@@ -129,11 +139,11 @@ export default function ProfilePage() {
     const file = event.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      setLocalError('Please choose an image file for the avatar.')
+      setLocalError(t('profile.invalid_image'))
       return
     }
     if (file.size > 2 * 1024 * 1024) {
-      setLocalError('Avatar image should be smaller than 2 MB.')
+      setLocalError(t('profile.image_too_large'))
       return
     }
     const reader = new FileReader()
@@ -145,7 +155,7 @@ export default function ProfilePage() {
     event.target.value = ''
   }
 
-  const displayName = form.full_name || form.username || 'Unnamed'
+  const displayName = form.full_name || form.username || t('profile.unnamed')
   const initials = initialsFor(form)
   const githubHandle = (form.github_url || '').replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\/$/, '')
 
@@ -170,7 +180,7 @@ export default function ProfilePage() {
               type="button"
               onClick={handleAvatarPick}
               className="group relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-line-subtle/60 bg-deep/60 shadow-[0_18px_36px_-18px_rgba(0,0,0,0.45)] transition-transform hover:scale-[1.02]"
-              title="Change avatar"
+              title={t('profile.change_avatar')}
             >
               {form.profile_image ? (
                 <img src={form.profile_image} alt={displayName} className="h-full w-full object-cover" />
@@ -180,7 +190,7 @@ export default function ProfilePage() {
                 </span>
               )}
               <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/55 py-1 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-opacity group-hover:opacity-100">
-                <Camera size={11} /> Change
+                <Camera size={11} /> {t('common.change')}
               </span>
             </button>
 
@@ -188,7 +198,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-2">
                 <h1 className="truncate text-2xl font-bold text-white-star">{displayName}</h1>
                 <span className="inline-flex items-center gap-1 rounded-full border border-rose-400/30 bg-rose-500/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-300">
-                  <BadgeCheck size={11} /> {user.role || 'member'}
+                  <BadgeCheck size={11} /> {user.role || t('profile.role_member').toLowerCase()}
                 </span>
               </div>
               <div className="mt-1 flex items-center gap-2 text-xs text-text-shadow">
@@ -201,16 +211,16 @@ export default function ProfilePage() {
                 <p className="mt-2 max-w-xl truncate text-xs leading-5 text-text-shadow">{form.bio}</p>
               ) : (
                 <p className="mt-2 max-w-xl text-xs italic leading-5 text-text-shadow/70">
-                  Add a short bio so collaborators know what you research.
+                  {t('profile.bio_empty')}
                 </p>
               )}
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <HeroPill icon={Calendar} label="Joined" value={fmtDate(user.created_at)} />
-            <HeroPill icon={MapPin} label="Location" value={form.location || 'Not set'} />
-            <HeroPill icon={Building2} label="Org" value={form.organization || 'Not set'} />
+            <HeroPill icon={Calendar} label={t('profile.joined')} value={fmtDate(user.created_at, dateLocale)} />
+            <HeroPill icon={MapPin} label={t('profile.location')} value={form.location || t('common.not_set')} />
+            <HeroPill icon={Building2} label={t('profile.org')} value={form.organization || t('common.not_set')} />
           </div>
         </div>
       </section>
@@ -223,17 +233,17 @@ export default function ProfilePage() {
             <header className="flex items-center justify-between border-b border-line-subtle/40 pb-3">
               <div className="flex items-center gap-2">
                 <Sparkles size={14} className="text-amethyst" />
-                <h2 className="text-sm font-bold text-white-star">Account snapshot</h2>
+                <h2 className="text-sm font-bold text-white-star">{t('profile.account_snapshot')}</h2>
               </div>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-twilight">read-only</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-twilight">{t('profile.read_only')}</span>
             </header>
             <dl className="mt-3 space-y-2.5 text-xs">
-              <SnapshotRow icon={IdCard} label="User ID" value={`#${user.id ?? '-'}`} mono />
-              <SnapshotRow icon={UserRound} label="Username" value={form.username || '\u2014'} mono />
-              <SnapshotRow icon={AtSign} label="Email" value={form.email || '\u2014'} />
-              <SnapshotRow icon={BadgeCheck} label="Role" value={user.role || 'member'} />
-              <SnapshotRow icon={Calendar} label="Joined" value={fmtDate(user.created_at)} />
-              <SnapshotRow icon={Calendar} label="Updated" value={fmtDate(user.updated_at)} />
+              <SnapshotRow icon={IdCard} label={t('profile.user_id')} value={`#${user.id ?? '-'}`} mono />
+              <SnapshotRow icon={UserRound} label={t('profile.username')} value={form.username || '—'} mono />
+              <SnapshotRow icon={AtSign} label={t('profile.email')} value={form.email || '—'} />
+              <SnapshotRow icon={BadgeCheck} label={t('profile.role')} value={user.role || t('profile.role_member').toLowerCase()} />
+              <SnapshotRow icon={Calendar} label={t('profile.joined')} value={fmtDate(user.created_at, dateLocale)} />
+              <SnapshotRow icon={Calendar} label={t('profile.updated')} value={fmtDate(user.updated_at, dateLocale)} />
             </dl>
           </section>
 
@@ -242,7 +252,7 @@ export default function ProfilePage() {
             <header className="flex items-center justify-between border-b border-line-subtle/40 pb-3">
               <div className="flex items-center gap-2">
                 <Camera size={14} className="text-amethyst" />
-                <h2 className="text-sm font-bold text-white-star">Avatar</h2>
+                <h2 className="text-sm font-bold text-white-star">{t('profile.avatar')}</h2>
               </div>
               {form.profile_image ? (
                 <button
@@ -250,7 +260,7 @@ export default function ProfilePage() {
                   onClick={() => setForm((prev) => ({ ...prev, profile_image: '' }))}
                   className="inline-flex items-center gap-1 rounded-md border border-line-subtle/45 bg-deep/40 px-2 py-1 text-[10px] font-semibold text-text-shadow hover:text-aurora-rose"
                 >
-                  <X size={11} /> Remove
+                  <X size={11} /> {t('common.remove')}
                 </button>
               ) : null}
             </header>
@@ -263,15 +273,15 @@ export default function ProfilePage() {
                 )}
               </div>
               <div className="min-w-0 text-xs text-text-shadow">
-                <p className="font-semibold text-white-star">Drop a PNG or JPG</p>
-                <p>Max 2 MB. Or paste a URL below.</p>
+                <p className="font-semibold text-white-star">{t('profile.drop_image')}</p>
+                <p>{t('profile.avatar_hint')}</p>
                 <button
                   type="button"
                   onClick={handleAvatarPick}
                   className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-amethyst hover:underline"
                 >
                   <Upload size={11} />
-                  Choose file
+                  {t('profile.choose_file')}
                 </button>
               </div>
             </div>
@@ -282,7 +292,7 @@ export default function ProfilePage() {
             <section className="rounded-2xl border border-line-subtle/50 bg-deep/50 p-4">
               <header className="flex items-center gap-2 border-b border-line-subtle/40 pb-3">
                 <Globe2 size={14} className="text-amethyst" />
-                <h2 className="text-sm font-bold text-white-star">Public links</h2>
+                <h2 className="text-sm font-bold text-white-star">{t('profile.public_links')}</h2>
               </header>
               <ul className="mt-3 space-y-2 text-xs">
                 {form.github_url ? (
@@ -318,26 +328,53 @@ export default function ProfilePage() {
 
         {/* Edit form ------------------------------------------------------ */}
         <div className="space-y-4">
+          {/* Display preferences (language + theme) ----------------------- */}
+          <FormSection
+            icon={Palette}
+            title={t('profile.preferences')}
+            subtitle={t('profile.preferences_subtitle')}
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-text-shadow">
+                  <Languages size={13} />
+                  <span>{t('profile.language')}</span>
+                </div>
+                <LanguageSwitcher />
+                <p className="mt-2 text-[11px] leading-4 text-text-shadow/80">
+                  {t('profile.language_subtitle')}
+                </p>
+              </div>
+              <div>
+                <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-text-shadow">
+                  <Palette size={13} />
+                  <span>{t('common.settings')}</span>
+                </div>
+                <ThemeToggle />
+              </div>
+            </div>
+          </FormSection>
+
           <FormSection
             icon={User}
-            title="Identity"
-            subtitle="The name and handle collaborators will see across the workspace."
+            title={t('profile.identity')}
+            subtitle={t('profile.identity_subtitle')}
           >
             <div className="grid gap-3 md:grid-cols-2">
               <Field
-                label="Full name"
+                label={t('profile.full_name')}
                 value={form.full_name}
                 onChange={(value) => setForm((prev) => ({ ...prev, full_name: value }))}
                 icon={<UserRound size={13} />}
               />
               <Field
-                label="Username"
+                label={t('profile.username')}
                 value={form.username}
                 onChange={(value) => setForm((prev) => ({ ...prev, username: value }))}
                 icon={<AtSign size={13} />}
               />
               <Field
-                label="Email"
+                label={t('profile.email')}
                 type="email"
                 value={form.email}
                 onChange={(value) => setForm((prev) => ({ ...prev, email: value }))}
@@ -346,34 +383,34 @@ export default function ProfilePage() {
               />
             </div>
             <FieldTextArea
-              label="Bio"
+              label={t('profile.bio')}
               value={form.bio}
               onChange={(value) => setForm((prev) => ({ ...prev, bio: value }))}
               rows={3}
-              placeholder="A short note about your research focus."
+              placeholder={t('profile.bio_placeholder')}
             />
           </FormSection>
 
           <FormSection
             icon={BriefcaseBusiness}
-            title="Workplace"
-            subtitle="Helps reviewers and admins understand your context."
+            title={t('profile.workplace')}
+            subtitle={t('profile.workplace_subtitle')}
           >
             <div className="grid gap-3 md:grid-cols-2">
               <Field
-                label="Organization"
+                label={t('profile.organization')}
                 value={form.organization}
                 onChange={(value) => setForm((prev) => ({ ...prev, organization: value }))}
                 icon={<Building2 size={13} />}
               />
               <Field
-                label="Job title"
+                label={t('profile.job_title')}
                 value={form.job_title}
                 onChange={(value) => setForm((prev) => ({ ...prev, job_title: value }))}
                 icon={<BriefcaseBusiness size={13} />}
               />
               <Field
-                label="Location"
+                label={t('profile.location')}
                 value={form.location}
                 onChange={(value) => setForm((prev) => ({ ...prev, location: value }))}
                 icon={<MapPin size={13} />}
@@ -384,23 +421,23 @@ export default function ProfilePage() {
 
           <FormSection
             icon={LinkIcon}
-            title="Online presence"
-            subtitle="Optional links surfaced on your public profile."
+            title={t('profile.online_presence')}
+            subtitle={t('profile.online_subtitle')}
           >
             <div className="grid gap-3 md:grid-cols-2">
               <Field
-                label="GitHub URL"
+                label={t('profile.github_url')}
                 value={form.github_url}
                 onChange={(value) => setForm((prev) => ({ ...prev, github_url: value }))}
                 icon={<GitBranch size={13} />}
-                placeholder="https://github.com/handle"
+                placeholder={t('profile.github_placeholder')}
               />
               <Field
-                label="Avatar URL"
+                label={t('profile.avatar_url')}
                 value={form.profile_image}
                 onChange={(value) => setForm((prev) => ({ ...prev, profile_image: value }))}
                 icon={<Camera size={13} />}
-                placeholder="Optional image URL"
+                placeholder={t('profile.avatar_url_placeholder')}
               />
             </div>
           </FormSection>
@@ -425,13 +462,13 @@ export default function ProfilePage() {
         className={`pointer-events-none sticky bottom-3 z-30 flex justify-end transition-opacity ${isDirty ? 'opacity-100' : 'opacity-0'}`}
       >
         <div className="pointer-events-auto flex items-center gap-3 rounded-xl border border-line-subtle/55 bg-deep/85 px-3 py-2 shadow-[0_18px_42px_-18px_rgba(0,0,0,0.45)] backdrop-blur-md">
-          <span className="text-xs font-semibold text-text-shadow">Unsaved changes</span>
+          <span className="text-xs font-semibold text-text-shadow">{t('common.unsaved_changes')}</span>
           <button
             type="button"
             onClick={handleReset}
             className="inline-flex items-center gap-1 rounded-lg border border-line-subtle/45 bg-deep/55 px-3 py-1.5 text-xs font-semibold text-text-shadow hover:text-white-star"
           >
-            Discard
+            {t('common.discard')}
           </button>
           <button
             type="submit"
@@ -439,7 +476,7 @@ export default function ProfilePage() {
             className="btn-galaxy inline-flex items-center gap-2 disabled:opacity-50"
           >
             <Save size={13} />
-            {loading ? 'Saving...' : 'Save profile'}
+            {loading ? t('common.saving') : t('profile.save_profile')}
           </button>
         </div>
       </div>

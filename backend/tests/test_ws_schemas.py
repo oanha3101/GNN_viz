@@ -106,6 +106,25 @@ def task3_snapshot_data():
         "test_edge_common_neighbors": [
             {"source": 0, "target": 1, "is_positive": True, "common_neighbors": 3, "embedding_distance": 0.5},
         ],
+        "edge_structure_features": [
+            {
+                "idx": 0,
+                "source": 0,
+                "target": 1,
+                "is_positive": True,
+                "degree_source": 4,
+                "degree_target": 5,
+                "common_neighbors": 3,
+                "shortest_path": 2,
+                "neighbor_jaccard": 0.5,
+                "embedding_distance": 0.5,
+                "embedding_similarity": 0.67,
+                "structural_equivalence": 0.75,
+                "local_clustering_source": 0.25,
+                "local_clustering_target": 0.4,
+                "same_ground_truth_label": True,
+            },
+        ],
         "embeddings_2d": [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]],
         "knn_preservation": 0.65,
         "train_loss": 0.28,
@@ -143,7 +162,21 @@ def task4_snapshot_data():
         "community_sizes": [2, 2, 2],
         "linkage_matrix": None,
         "nmi_score": 0.75,
+        "primary_metric_name": "modularity_q",
+        "primary_metric_value": 0.42,
+        "quality_metric": "modularity_q",
+        "quality_score": 0.42,
+        "best_epoch": 20,
+        "best_quality_score": 0.61,
+        "is_best_epoch": True,
+        "stability_drop": 0.03,
+        "model_stability_status": "stable",
         "community_transitions": {"0->1": 2},
+        "mean_silhouette": 0.4,
+        "mean_cluster_confidence": 0.55,
+        "bridge_ratio": 0.5,
+        "largest_community_ratio": 0.34,
+        "empty_community_count": 0,
         "train_loss": 0.55,
         "val_acc": 0.42,
     }
@@ -163,6 +196,10 @@ def task5_snapshot_data():
         "proximity_scores": [
             {"source": 0, "target": 1, "score": 0.85},
         ],
+        "primary_metric_name": "knn_preservation",
+        "primary_metric_value": 0.72,
+        "quality_metric": "knn_preservation",
+        "quality_score": 0.72,
         "per_node_knn_preservation": {"0": 0.8, "1": 0.6},
         "per_edge_reconstruction_error": [
             {"source": 0, "target": 1, "reconstruction_score": 0.9, "error": 0.1, "is_correct": True},
@@ -332,6 +369,8 @@ class TestSnapshotTask4:
         snap = SnapshotTask4(**task4_snapshot_data)
         assert snap.epoch == 20
         assert snap.modularity_q == 0.42
+        assert snap.primary_metric_name == "modularity_q"
+        assert snap.primary_metric_value == 0.42
         assert len(snap.per_community_metrics) == 3
 
     def test_community_transitions(self, task4_snapshot_data):
@@ -345,6 +384,8 @@ class TestSnapshotTask5:
         assert snap.epoch == 15
         assert snap.link_recon_auc == 0.88
         assert snap.isotropy_score == 0.65
+        assert snap.primary_metric_name == "knn_preservation"
+        assert snap.primary_metric_value == 0.72
 
     def test_outlier_scores(self, task5_snapshot_data):
         snap = SnapshotTask5(**task5_snapshot_data)
@@ -385,6 +426,7 @@ class TestValidateSnapshot:
     def test_task4_valid(self, task4_snapshot_data):
         result = validate_snapshot(4, task4_snapshot_data)
         assert result["modularity_q"] == 0.42
+        assert result["bridge_ratio"] == 0.5
 
     def test_task5_valid(self, task5_snapshot_data):
         result = validate_snapshot(5, task5_snapshot_data)

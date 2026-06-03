@@ -36,8 +36,11 @@ describe('buildHoverSummary', () => {
 
   it('handles Task 4 (Community Detection)', () => {
     const snapshot = {
-      community_ids: [10, 20],
-      bridge_nodes: [1]
+      node_predictions_aligned: [10, 20],
+      bridge_nodes: [false, true],
+      bridge_strength: [0, 0.8],
+      silhouette_scores: [0.3, 0.45],
+      cluster_confidence: [0.7, 0.9],
     }
     
     const result0 = buildHoverSummary(4, 0, snapshot, mockGraphData, null)
@@ -45,5 +48,7 @@ describe('buildHoverSummary', () => {
 
     const result1 = buildHoverSummary(4, 1, snapshot, mockGraphData, null)
     expect(result1.chips).toContainEqual({ label: 'Role', value: 'Bridge', tone: 'amber' })
+    expect(result1.rows).toContainEqual({ label: 'Bridge Strength', value: '80.0%' })
+    expect(result1.rows).toContainEqual({ label: 'Confidence', value: '90.0%' })
   })
 })

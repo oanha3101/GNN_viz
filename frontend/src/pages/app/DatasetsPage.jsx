@@ -7,10 +7,12 @@ import ErrorState from '../../components/primitives/ErrorState'
 import LoadingState from '../../components/primitives/LoadingState'
 import useAuthStore from '../../store/authStore'
 import useGNNStore from '../../store/useGNNStore'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { apiJson, normalizeCollectionPayload } from '../../utils/api'
 import { AdminPagination } from '../admin/AdminListControls'
 
 export default function DatasetsPage() {
+  const { t } = useLanguage()
   const user = useAuthStore((s) => s.user)
   const activeDatasetId = useGNNStore((s) => s.activeDatasetId)
   const activeDatasetVersionId = useGNNStore((s) => s.activeDatasetVersionId)
@@ -238,7 +240,7 @@ export default function DatasetsPage() {
   }, [datasetDrafts, loadDatasetDetail, loadDatasets])
 
   const handleDeleteDataset = useCallback(async (dataset) => {
-    const confirmed = window.confirm(`Delete dataset "${dataset.name}"?`)
+    const confirmed = window.confirm(t('datasets.delete_confirm', { name: dataset.name }))
     if (!confirmed) return
 
     try {
@@ -272,7 +274,7 @@ export default function DatasetsPage() {
     } finally {
       setBusyAction(null)
     }
-  }, [activeDatasetId, datasets, loadDatasetDetail, loadDatasets, setActiveDatasetContext, setDatasetName, setTaskConfig, setUploadMetadata, setUploadedFilePath])
+  }, [activeDatasetId, datasets, loadDatasetDetail, loadDatasets, setActiveDatasetContext, setDatasetName, setTaskConfig, setUploadMetadata, setUploadedFilePath, t])
 
   const selectedDatasetRow = useMemo(
     () => datasets.find((item) => item.id === selectedDatasetId) || null,
@@ -335,11 +337,11 @@ export default function DatasetsPage() {
   }, [handleAttachUploadToDataset, hasUploadReady])
 
   if (loading) {
-    return <LoadingState title="Loading datasets..." className="min-h-[480px]" />
+    return <LoadingState title={t('datasets.loading')} className="min-h-[480px]" />
   }
 
   if (error && datasets.length === 0) {
-    return <ErrorState title="Could not load datasets" error={error} onRetry={loadDatasets} className="min-h-[480px]" />
+    return <ErrorState title={t('datasets.load_error')} error={error} onRetry={loadDatasets} className="min-h-[480px]" />
   }
 
   return (
@@ -348,18 +350,18 @@ export default function DatasetsPage() {
       <section className="surface-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="surface-eyebrow">Dataset Library</div>
-            <h2 className="surface-title">Datasets ({datasets.length})</h2>
+            <div className="surface-eyebrow">{t('datasets.library_eyebrow')}</div>
+            <h2 className="surface-title">{t('datasets.page_title_count', { n: datasets.length })}</h2>
             <p className="surface-sub">
-              Governed dataset records and their version timeline. Pick the one that should travel to Lab.
+              {t('datasets.page_sub')}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => setIsUploaderOpen((v) => !v)} className="surface-action">
-              <Upload size={13} /> {isUploaderOpen ? 'Hide uploader' : 'Open uploader'}
+              <Upload size={13} /> {isUploaderOpen ? t('datasets.hide_uploader') : t('datasets.open_uploader')}
             </button>
             <button type="button" onClick={() => setIsCreateOpen(true)} className="primary-cta inline-flex items-center gap-2">
-              <Plus size={14} /> New dataset
+              <Plus size={14} /> {t('datasets.new_dataset')}
             </button>
           </div>
         </div>
@@ -368,9 +370,9 @@ export default function DatasetsPage() {
           <div className="ds-upload-banner mt-4">
             <div className="ds-upload-icon"><Upload size={14} /></div>
             <div className="flex-1">
-              <div className="text-sm font-semibold text-fg">Pending upload ready</div>
+              <div className="text-sm font-semibold text-fg">{t('datasets.pending_upload_ready')}</div>
               <div className="mt-0.5 text-xs text-fg-muted">
-                <span className="font-mono text-primary">{uploadedFilePath}</span> · {uploadMetadata?.num_nodes ?? '?'} nodes · {uploadMetadata?.num_edges ?? '?'} edges
+                <span className="font-mono text-primary">{uploadedFilePath}</span> · {uploadMetadata?.num_nodes ?? '?'} {t('datasets.nodes_short')} · {uploadMetadata?.num_edges ?? '?'} {t('datasets.edges_short')}
               </div>
             </div>
             {selectedDatasetId ? (
@@ -380,7 +382,7 @@ export default function DatasetsPage() {
                 disabled={versionSubmitting}
                 className="primary-cta disabled:opacity-50"
               >
-                {versionSubmitting ? 'Attaching...' : 'Attach to selected'}
+                {versionSubmitting ? t('datasets.attaching') : t('datasets.attach_to_selected')}
               </button>
             ) : null}
           </div>
@@ -391,9 +393,9 @@ export default function DatasetsPage() {
       {datasets.length === 0 ? (
         <EmptyState
           icon={<Database size={26} />}
-          title="No datasets yet"
-          description="Open the uploader first to import a graph, then either create a new dataset from it or attach it as a new version."
-          actionLabel="Open uploader"
+          title={t('datasets.no_datasets_title')}
+          description={t('datasets.no_datasets_desc')}
+          actionLabel={t('datasets.open_uploader')}
           onAction={handleOpenUploader}
         />
       ) : (
@@ -401,8 +403,8 @@ export default function DatasetsPage() {
           {/* LEFT: list */}
           <aside className="surface-card overflow-hidden">
             <div className="border-b border-line-subtle p-4">
-              <div className="surface-eyebrow">Library</div>
-              <div className="mt-1 text-sm font-bold text-fg">{datasets.length} dataset{datasets.length === 1 ? '' : 's'}</div>
+              <div className="surface-eyebrow">{t('datasets.library')}</div>
+              <div className="mt-1 text-sm font-bold text-fg">{t('datasets.dataset_count', { n: datasets.length })}</div>
             </div>
             <ul className="ds-list custom-scrollbar">
               {datasets.map((dataset) => {
@@ -427,7 +429,7 @@ export default function DatasetsPage() {
                           {versionCount != null ? (
                             <span className="ds-list-chip">v{versionCount}</span>
                           ) : null}
-                          {isActive ? <span className="ds-list-active">Active</span> : null}
+                          {isActive ? <span className="ds-list-active">{t('datasets.active')}</span> : null}
                         </span>
                       </span>
                     </button>
@@ -443,8 +445,8 @@ export default function DatasetsPage() {
               <div className="p-8">
                 <EmptyState
                   icon={<Database size={26} />}
-                  title="Select a dataset"
-                  description="Pick one from the library to see its versions and lifecycle."
+                  title={t('datasets.select_dataset_title')}
+                  description={t('datasets.select_dataset_desc')}
                 />
               </div>
             ) : (
@@ -474,6 +476,7 @@ export default function DatasetsPage() {
                 error={error}
                 isUploaderOpen={isUploaderOpen}
                 onCloseUploader={() => { void handleCloseUploader() }}
+                t={t}
               />
             )}
           </section>
@@ -495,6 +498,7 @@ export default function DatasetsPage() {
             uploadMetadata={uploadMetadata}
             submitting={submitting}
             onSubmit={handleCreateDataset}
+            t={t}
           />
         ) : null}
       </AnimatePresence>
@@ -528,16 +532,24 @@ function DatasetDetailPane({
   error,
   isUploaderOpen,
   onCloseUploader,
+  t,
 }) {
   const dataset = detail.dataset
   const allVersions = detail.versions || []
   const currentVersion = allVersions.find((v) => v.id === activeDatasetVersionId) || allVersions[0] || null
 
+  const lifecycleLabel = (lc) => {
+    if (!lc) return '—'
+    const key = `datasets.lifecycle_${lc}`
+    const v = t(key)
+    return v === key ? lc : v
+  }
+
   const stats = [
-    { label: 'Versions', value: allVersions.length },
-    { label: 'Active', value: currentVersion ? `v${currentVersion.version}` : '—' },
-    { label: 'Lifecycle', value: currentVersion?.lifecycle || '—' },
-    { label: 'Owner', value: `#${dataset.owner_id ?? 'system'}` },
+    { label: t('datasets.stat_versions'), value: allVersions.length },
+    { label: t('datasets.stat_active'), value: currentVersion ? `v${currentVersion.version}` : '—' },
+    { label: t('datasets.stat_lifecycle'), value: lifecycleLabel(currentVersion?.lifecycle) },
+    { label: t('datasets.stat_owner'), value: `#${dataset.owner_id ?? 'system'}` },
   ]
 
   const isSaving = busyAction === `save-${dataset.id}`
@@ -550,14 +562,14 @@ function DatasetDetailPane({
         <div className="min-w-0 flex-1">
           {!isEditing ? (
             <>
-              <div className="surface-eyebrow">Dataset detail</div>
+              <div className="surface-eyebrow">{t('datasets.dataset_detail')}</div>
               <h3 className="ds-title">{dataset.name}</h3>
-              <p className="surface-sub mt-1">{dataset.description || 'No description yet.'}</p>
+              <p className="surface-sub mt-1">{dataset.description || t('datasets.no_description')}</p>
             </>
           ) : (
             <div className="space-y-3">
               <label className="modal-field">
-                <span className="modal-field-label">Name</span>
+                <span className="modal-field-label">{t('datasets.form_name')}</span>
                 <input
                   value={draft?.name || ''}
                   onChange={(event) => setDatasetDrafts((prev) => ({ ...prev, [dataset.id]: { ...prev[dataset.id], name: event.target.value } }))}
@@ -565,7 +577,7 @@ function DatasetDetailPane({
                 />
               </label>
               <label className="modal-field">
-                <span className="modal-field-label">Description</span>
+                <span className="modal-field-label">{t('datasets.form_description')}</span>
                 <textarea
                   value={draft?.description || ''}
                   onChange={(event) => setDatasetDrafts((prev) => ({ ...prev, [dataset.id]: { ...prev[dataset.id], description: event.target.value } }))}
@@ -580,7 +592,7 @@ function DatasetDetailPane({
                   onChange={(event) => setDatasetDrafts((prev) => ({ ...prev, [dataset.id]: { ...prev[dataset.id], is_public: event.target.checked } }))}
                 />
                 <span className="modal-toggle-track" />
-                <span className="modal-field-label">{draft?.is_public ? 'Public' : 'Private'}</span>
+                <span className="modal-field-label">{draft?.is_public ? t('datasets.is_public') : t('datasets.is_private')}</span>
               </label>
             </div>
           )}
@@ -589,7 +601,7 @@ function DatasetDetailPane({
           {!isEditing ? (
             <>
               {canManage ? (
-                <button type="button" onClick={onEdit} className="project-action-icon" aria-label="Edit dataset">
+                <button type="button" onClick={onEdit} className="project-action-icon" aria-label={t('datasets.edit_dataset')}>
                   <PencilLine size={14} />
                 </button>
               ) : null}
@@ -599,7 +611,7 @@ function DatasetDetailPane({
                   onClick={onDelete}
                   disabled={isDeleting}
                   className="project-action-icon project-action-danger disabled:opacity-50"
-                  aria-label="Delete dataset"
+                  aria-label={t('datasets.delete_dataset')}
                 >
                   <Trash2 size={14} />
                 </button>
@@ -607,14 +619,14 @@ function DatasetDetailPane({
             </>
           ) : (
             <>
-              <button type="button" onClick={onCancelEdit} className="modal-btn-ghost">Cancel</button>
+              <button type="button" onClick={onCancelEdit} className="modal-btn-ghost">{t('datasets.cancel')}</button>
               <button
                 type="button"
                 onClick={onSave}
                 disabled={isSaving}
                 className="modal-btn-primary disabled:opacity-50"
               >
-                <Save size={13} /> {isSaving ? 'Saving...' : 'Save'}
+                <Save size={13} /> {isSaving ? t('datasets.saving') : t('datasets.save')}
               </button>
             </>
           )}
@@ -634,16 +646,16 @@ function DatasetDetailPane({
       {/* Version timeline */}
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="ds-section-title">Version timeline ({versionTotal})</h4>
+          <h4 className="ds-section-title">{t('datasets.version_timeline', { n: versionTotal })}</h4>
           <button type="button" onClick={onOpenInLab} className="surface-action">
-            <Upload size={12} /> Add new version
+            <Upload size={12} /> {t('datasets.add_new_version')}
           </button>
         </div>
         {versions.length === 0 ? (
           <EmptyState
             icon={<Database size={22} />}
-            title="No versions yet"
-            description="Open the uploader to create the first version of this dataset."
+            title={t('datasets.no_versions_title')}
+            description={t('datasets.no_versions_desc')}
             className="mt-3"
           />
         ) : (
@@ -656,8 +668,8 @@ function DatasetDetailPane({
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="ds-version-num">v{version.version}</span>
-                      <span className={`ds-lifecycle ds-lifecycle-${version.lifecycle}`}>{version.lifecycle}</span>
-                      {isActiveVersion ? <span className="ds-active-pill">Active</span> : null}
+                      <span className={`ds-lifecycle ds-lifecycle-${version.lifecycle}`}>{lifecycleLabel(version.lifecycle)}</span>
+                      {isActiveVersion ? <span className="ds-active-pill">{t('datasets.active')}</span> : null}
                       <span className="text-[11px] text-fg-faint">
                         {version.created_at ? new Date(version.created_at).toLocaleString() : '—'}
                       </span>
@@ -669,7 +681,11 @@ function DatasetDetailPane({
                     ) : null}
                     {version.summary_json ? (
                       <div className="mt-1 text-[11px] text-fg-muted">
-                        Nodes: {version.summary_json.num_nodes ?? '?'} · Edges: {version.summary_json.num_edges ?? '?'} · Features: {version.summary_json.num_features ?? '?'}
+                        {t('datasets.version_meta', {
+                          nodes: version.summary_json.num_nodes ?? '?',
+                          edges: version.summary_json.num_edges ?? '?',
+                          features: version.summary_json.num_features ?? '?',
+                        })}
                       </div>
                     ) : null}
                   </div>
@@ -680,16 +696,16 @@ function DatasetDetailPane({
                       disabled={isActiveVersion}
                       className={`pager-btn ${isActiveVersion ? 'pager-btn-active' : ''}`}
                     >
-                      {isActiveVersion ? 'Active' : 'Set active'}
+                      {isActiveVersion ? t('datasets.active') : t('datasets.set_active')}
                     </button>
                     {canManage && version.lifecycle !== 'published' ? (
                       <button type="button" onClick={() => onPublish(version.id)} className="pager-btn">
-                        Publish
+                        {t('datasets.publish')}
                       </button>
                     ) : null}
                     {canManage && version.lifecycle === 'published' ? (
                       <button type="button" onClick={() => onDeprecate(version.id)} className="pager-btn">
-                        Deprecate
+                        {t('datasets.deprecate')}
                       </button>
                     ) : null}
                   </div>
@@ -715,9 +731,9 @@ function DatasetDetailPane({
       {isUploaderOpen ? (
         <div className="border-t border-line-subtle pt-5">
           <div className="flex items-center justify-between">
-            <h4 className="ds-section-title">Add a version (uploader)</h4>
+            <h4 className="ds-section-title">{t('datasets.uploader_section')}</h4>
             <button type="button" onClick={onCloseUploader} className="surface-action">
-              Close
+              {t('datasets.close')}
             </button>
           </div>
           <div className="mt-3">
@@ -743,6 +759,7 @@ function DatasetCreateModal({
   uploadMetadata,
   submitting,
   onSubmit,
+  t,
 }) {
   if (!open) return null
   return (
@@ -762,10 +779,10 @@ function DatasetCreateModal({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="modal-eyebrow">New dataset</div>
-            <h3 className="modal-title">Create dataset</h3>
+            <div className="modal-eyebrow">{t('datasets.create_modal_eyebrow')}</div>
+            <h3 className="modal-title">{t('datasets.create_dataset')}</h3>
           </div>
-          <button type="button" onClick={onClose} className="modal-close" aria-label="Close">
+          <button type="button" onClick={onClose} className="modal-close" aria-label={t('datasets.close')}>
             <X size={16} />
           </button>
         </div>
@@ -779,8 +796,8 @@ function DatasetCreateModal({
             >
               <Sparkles size={14} />
               <div>
-                <div className="text-sm font-semibold">From pending upload</div>
-                <div className="mt-0.5 text-xs">Create dataset + version 1 from current upload</div>
+                <div className="text-sm font-semibold">{t('datasets.intake_from_upload_title')}</div>
+                <div className="mt-0.5 text-xs">{t('datasets.intake_from_upload_desc')}</div>
               </div>
             </button>
             <button
@@ -790,49 +807,53 @@ function DatasetCreateModal({
             >
               <Database size={14} />
               <div>
-                <div className="text-sm font-semibold">Empty container</div>
-                <div className="mt-0.5 text-xs">Create metadata record, add versions later</div>
+                <div className="text-sm font-semibold">{t('datasets.intake_empty_title')}</div>
+                <div className="mt-0.5 text-xs">{t('datasets.intake_empty_desc')}</div>
               </div>
             </button>
           </div>
           <label className="modal-field">
-            <span className="modal-field-label">Dataset name</span>
+            <span className="modal-field-label">{t('datasets.form_name')}</span>
             <input
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              placeholder="e.g. Cora citation network"
+              placeholder={t('datasets.form_name_placeholder')}
               className="modal-input"
             />
           </label>
           <label className="modal-field">
-            <span className="modal-field-label">Description</span>
+            <span className="modal-field-label">{t('datasets.form_description')}</span>
             <textarea
               value={form.description}
               onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
               rows={2}
               className="modal-textarea"
-              placeholder="What is this dataset?"
+              placeholder={t('datasets.form_description_placeholder')}
             />
           </label>
           {intakeMode === 'upload' && hasUploadReady ? (
             <div className="ds-upload-preview">
-              <div className="text-[10px] uppercase tracking-[0.18em] text-fg-faint">Will attach as v1</div>
+              <div className="text-[10px] uppercase tracking-[0.18em] text-fg-faint">{t('datasets.will_attach_v1')}</div>
               <div className="mt-1 truncate font-mono text-xs text-primary">{uploadedFilePath}</div>
               <div className="mt-1 text-[11px] text-fg-muted">
-                Nodes: {uploadMetadata?.num_nodes ?? '?'} · Edges: {uploadMetadata?.num_edges ?? '?'} · Features: {uploadMetadata?.num_features ?? '?'}
+                {t('datasets.version_meta', {
+                  nodes: uploadMetadata?.num_nodes ?? '?',
+                  edges: uploadMetadata?.num_edges ?? '?',
+                  features: uploadMetadata?.num_features ?? '?',
+                })}
               </div>
             </div>
           ) : null}
         </div>
         <div className="modal-actions">
-          <button type="button" onClick={onClose} className="modal-btn-ghost">Cancel</button>
+          <button type="button" onClick={onClose} className="modal-btn-ghost">{t('datasets.cancel')}</button>
           <button
             type="button"
             onClick={onSubmit}
             disabled={submitting}
             className="modal-btn-primary disabled:opacity-50"
           >
-            {submitting ? 'Creating...' : 'Create dataset'}
+            {submitting ? t('datasets.creating') : t('datasets.create_dataset')}
           </button>
         </div>
       </motion.div>

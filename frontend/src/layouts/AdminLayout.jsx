@@ -2,62 +2,32 @@ import { Activity, ArrowRight, Database, FileClock, FolderKanban, LogOut, Moon, 
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import { useTheme } from '../contexts/ThemeContext'
+import { useLanguage } from '../contexts/LanguageContext'
+import LanguageSwitcher from '../components/ui/LanguageSwitcher'
 
 const ADMIN_NAV_ITEMS = [
-  { to: '/admin/overview', label: 'Overview', icon: Shield },
-  { to: '/admin/users', label: 'Users', icon: Users },
-  { to: '/admin/projects', label: 'Projects', icon: FolderKanban },
-  { to: '/admin/datasets', label: 'Datasets', icon: Database },
-  { to: '/admin/experiments', label: 'Experiments', icon: FolderKanban },
-  { to: '/admin/sessions', label: 'Sessions', icon: Activity },
-  { to: '/admin/retention', label: 'Retention', icon: Shield },
-  { to: '/admin/audit', label: 'Audit', icon: FileClock },
+  { to: '/admin/overview', key: 'admin.overview', icon: Shield },
+  { to: '/admin/users', key: 'admin.users', icon: Users },
+  { to: '/admin/projects', key: 'admin.projects', icon: FolderKanban },
+  { to: '/admin/datasets', key: 'admin.datasets', icon: Database },
+  { to: '/admin/experiments', key: 'admin.experiments', icon: FolderKanban },
+  { to: '/admin/sessions', key: 'admin.sessions', icon: Activity },
+  { to: '/admin/retention', key: 'admin.retention', icon: Shield },
+  { to: '/admin/audit', key: 'admin.audit', icon: FileClock },
 ]
 
-const TITLES = {
-  '/admin/overview': {
-    eyebrow: 'Admin',
-    title: 'System Overview',
-    description: 'Monitor platform health, storage pressure, and recent operational activity.',
-  },
-  '/admin/users': {
-    eyebrow: 'Admin',
-    title: 'User Management',
-    description: 'Review accounts, adjust roles, and govern who can train or mutate data.',
-  },
-  '/admin/projects': {
-    eyebrow: 'Admin',
-    title: 'Project Governance',
-    description: 'Review project containers, visibility, and whether runs are still attached to them.',
-  },
-  '/admin/datasets': {
-    eyebrow: 'Admin',
-    title: 'Dataset Governance',
-    description: 'Track version usage, visibility, and lifecycle across the workspace.',
-  },
-  '/admin/experiments': {
-    eyebrow: 'Admin',
-    title: 'Experiment Governance',
-    description: 'Inspect run quality, retention state, and experiment-level metadata.',
-  },
-  '/admin/sessions': {
-    eyebrow: 'Admin',
-    title: 'Session Monitor',
-    description: 'Stop, retry, and inspect live or failed training sessions from one shell.',
-  },
-  '/admin/retention': {
-    eyebrow: 'Admin',
-    title: 'Retention Monitor',
-    description: 'Preview and apply compaction policy before Mongo growth becomes a problem.',
-  },
-  '/admin/audit': {
-    eyebrow: 'Admin',
-    title: 'Audit Activity',
-    description: 'Read the operational trail for auth, governance, retention, and admin actions.',
-  },
+const TITLE_KEYS = {
+  '/admin/overview': 'admin.headers.overview',
+  '/admin/users': 'admin.headers.users',
+  '/admin/projects': 'admin.headers.projects',
+  '/admin/datasets': 'admin.headers.datasets',
+  '/admin/experiments': 'admin.headers.experiments',
+  '/admin/sessions': 'admin.headers.sessions',
+  '/admin/retention': 'admin.headers.retention',
+  '/admin/audit': 'admin.headers.audit',
 }
 
-function AdminNavLink({ item }) {
+function AdminNavLink({ item, t }) {
   const Icon = item.icon
   return (
     <NavLink
@@ -67,7 +37,7 @@ function AdminNavLink({ item }) {
       }
     >
       <Icon size={15} />
-      <span className="font-medium">{item.label}</span>
+      <span className="font-medium">{t(item.key)}</span>
     </NavLink>
   )
 }
@@ -77,8 +47,14 @@ export default function AdminLayout() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
-  const titleMeta = TITLES[location.pathname] || TITLES['/admin/overview']
   const { theme, toggleTheme } = useTheme()
+  const { t } = useLanguage()
+  const titleKey = TITLE_KEYS[location.pathname] || TITLE_KEYS['/admin/overview']
+  const titleMeta = {
+    eyebrow: t(`${titleKey}.eyebrow`),
+    title: t(`${titleKey}.title`),
+    description: t(`${titleKey}.description`),
+  }
 
   return (
     <div className={`admin-shell admin-theme-${theme} min-h-screen bg-abyss text-starlight`}>
@@ -116,16 +92,16 @@ export default function AdminLayout() {
                   <Shield size={16} className="text-white" />
                 </div>
                 <div>
-                  <div className="admin-brand-title text-[11px] font-bold uppercase tracking-[0.2em]">Admin Shell</div>
-                  <div className="admin-brand-subtitle text-[9px] text-text-shadow">Operational control</div>
+                  <div className="admin-brand-title text-[11px] font-bold uppercase tracking-[0.2em]">{t('admin.brand_title')}</div>
+                  <div className="admin-brand-subtitle text-[9px] text-text-shadow">{t('admin.brand_subtitle')}</div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => toggleTheme()}
                 className="admin-theme-toggle"
-                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                aria-label={theme === 'dark' ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
+                title={theme === 'dark' ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
               >
                 {theme === 'dark' ? <SunMedium size={14} /> : <Moon size={14} />}
               </button>
@@ -134,7 +110,7 @@ export default function AdminLayout() {
             {/* Nav */}
             <nav className="admin-scrollbar mt-6 space-y-1 overflow-y-auto pr-1">
               {ADMIN_NAV_ITEMS.map((item) => (
-                <AdminNavLink key={item.to} item={item} />
+                <AdminNavLink key={item.to} item={item} t={t} />
               ))}
             </nav>
 
@@ -147,12 +123,16 @@ export default function AdminLayout() {
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-semibold text-white-star truncate">{user?.username || 'Admin'}</div>
-                  <div className="text-[10px] text-text-shadow truncate">{user?.email || 'No email'}</div>
+                  <div className="text-xs font-semibold text-white-star truncate">{user?.username || t('nav.admin')}</div>
+                  <div className="text-[10px] text-text-shadow truncate">{user?.email || t('admin.no_email')}</div>
                 </div>
                 <span className="app-role-tag admin-role-tag">
                   {user?.role || 'admin'}
                 </span>
+              </div>
+
+              <div className="pt-1">
+                <LanguageSwitcher size="sm" className="w-full justify-center" />
               </div>
 
               <div className="space-y-1">
@@ -160,7 +140,7 @@ export default function AdminLayout() {
                   onClick={() => navigate('/app/dashboard')}
                   className="app-action-btn admin-action-btn"
                 >
-                  <ArrowRight size={13} /> Research Shell
+                  <ArrowRight size={13} /> {t('admin.research_shell')}
                 </button>
                 <button
                   onClick={() => {
@@ -169,7 +149,7 @@ export default function AdminLayout() {
                   }}
                   className="app-action-btn app-action-btn-logout"
                 >
-                  <LogOut size={13} /> Log out
+                  <LogOut size={13} /> {t('nav.logout')}
                 </button>
               </div>
             </div>
@@ -275,7 +255,7 @@ export default function AdminLayout() {
                 className="admin-theme-toggle admin-theme-toggle-header"
               >
                 {theme === 'dark' ? <SunMedium size={14} /> : <Moon size={14} />}
-                <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+                <span>{theme === 'dark' ? t('theme.light_mode') : t('theme.dark_mode')}</span>
               </button>
             </div>
           </header>

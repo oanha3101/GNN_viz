@@ -162,6 +162,10 @@ describe('LabShell run management navigation', () => {
     gnnState.activeDatasetVersionId = 31
     gnnState.activeDatasetVersionName = 'Dataset v1'
     gnnState.datasetName = 'cora'
+    gnnState.selectedTask = 1
+    playerState.snapshots = []
+    playerState.currentEpoch = 0
+    playerState.trainingDone = false
   })
 
   it('routes library actions to /app/experiments without mounting legacy library modals', async () => {
@@ -205,11 +209,53 @@ describe('LabShell run management navigation', () => {
       expect(screen.getByText('topology-view')).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mở' }))
 
     await waitFor(() => {
       expect(screen.getByText('analysis-page')).toBeInTheDocument()
       expect(screen.getByTestId('location')).toHaveTextContent('/app/lab/analysis/latent')
     })
+  })
+
+  it('labels task 4 header quality as modularity instead of accuracy', async () => {
+    gnnState.selectedTask = 4
+    playerState.snapshots = [{
+      epoch: 26,
+      train_loss: 1.157,
+      val_acc: 0.381,
+      modularity_q: 0.381,
+      primary_metric_value: 0.381,
+    }]
+
+    renderLab()
+
+    await waitFor(() => {
+      expect(screen.getByText('task-topology-4')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Modularity Q')).toBeInTheDocument()
+    expect(screen.getByText('0.381')).toBeInTheDocument()
+    expect(screen.queryByText('38.1%')).not.toBeInTheDocument()
+  })
+
+  it('labels task 5 header quality as kNN preservation instead of generic accuracy', async () => {
+    gnnState.selectedTask = 5
+    playerState.snapshots = [{
+      epoch: 12,
+      train_loss: 0.24,
+      val_acc: 0.91,
+      knn_preservation: 0.73,
+      primary_metric_value: 0.73,
+    }]
+
+    renderLab()
+
+    await waitFor(() => {
+      expect(screen.getByText('task-topology-5')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('kNN Preserve')).toBeInTheDocument()
+    expect(screen.getByText('73.0%')).toBeInTheDocument()
+    expect(screen.queryByText('91.0%')).not.toBeInTheDocument()
   })
 })

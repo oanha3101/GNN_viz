@@ -17,6 +17,7 @@ import {
 import ErrorState from '../../components/primitives/ErrorState'
 import LoadingState from '../../components/primitives/LoadingState'
 import { apiJson } from '../../utils/api'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { SectionCard, StatCard } from '../shared/PageBlocks'
 
 const CHART_COLORS = [
@@ -29,6 +30,7 @@ const CHART_COLORS = [
 ]
 
 export default function AdminOverviewPage() {
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [summary, setSummary] = useState(null)
@@ -69,51 +71,51 @@ export default function AdminOverviewPage() {
   const entityMix = useMemo(() => {
     if (!summary) return []
     return [
-      { name: 'Users', value: summary.users ?? 0, fill: CHART_COLORS[0] },
-      { name: 'Projects', value: summary.projects ?? 0, fill: CHART_COLORS[1] },
-      { name: 'Datasets', value: summary.datasets ?? 0, fill: CHART_COLORS[2] },
-      { name: 'Experiments', value: summary.experiments ?? 0, fill: CHART_COLORS[3] },
-      { name: 'Sessions', value: summary.training_sessions ?? 0, fill: CHART_COLORS[4] },
+      { name: t('admin.users'), value: summary.users ?? 0, fill: CHART_COLORS[0] },
+      { name: t('admin.projects'), value: summary.projects ?? 0, fill: CHART_COLORS[1] },
+      { name: t('admin.datasets_label'), value: summary.datasets ?? 0, fill: CHART_COLORS[2] },
+      { name: t('admin.experiments'), value: summary.experiments ?? 0, fill: CHART_COLORS[3] },
+      { name: t('admin.sessions'), value: summary.training_sessions ?? 0, fill: CHART_COLORS[4] },
     ]
-  }, [summary])
+  }, [summary, t])
 
   const riskBars = useMemo(() => {
     if (!summary) return []
     return [
-      { name: 'Active', value: summary.active_sessions ?? 0, fill: 'var(--admin-chart-4)' },
-      { name: 'Failed 7d', value: summary.failed_sessions_recent ?? 0, fill: 'var(--admin-chart-5)' },
-      { name: 'Compacted', value: summary.retention_compacted_runs ?? 0, fill: 'var(--admin-chart-2)' },
-      { name: 'Audit 7d', value: summary.recent_audit_events ?? 0, fill: 'var(--admin-chart-3)' },
-      { name: 'Blob Orphans', value: summary.blob_orphan_count ?? 0, fill: 'var(--admin-chart-6)' },
+      { name: t('admin.active_label'), value: summary.active_sessions ?? 0, fill: 'var(--admin-chart-4)' },
+      { name: t('admin.failed_label'), value: summary.failed_sessions_recent ?? 0, fill: 'var(--admin-chart-5)' },
+      { name: t('admin.compacted_label'), value: summary.retention_compacted_runs ?? 0, fill: 'var(--admin-chart-2)' },
+      { name: t('admin.audit_label'), value: summary.recent_audit_events ?? 0, fill: 'var(--admin-chart-3)' },
+      { name: t('admin.orphan_label'), value: summary.blob_orphan_count ?? 0, fill: 'var(--admin-chart-6)' },
     ]
-  }, [summary])
+  }, [summary, t])
 
   const topologyArea = useMemo(() => {
     if (!summary) return []
     return [
-      { name: 'Datasets', count: summary.datasets ?? 0 },
-      { name: 'Versions', count: summary.dataset_versions ?? 0 },
-      { name: 'Experiments', count: summary.experiments ?? 0 },
-      { name: 'Sessions', count: summary.training_sessions ?? 0 },
-      { name: 'Blobs', count: summary.blob_object_count ?? 0 },
+      { name: t('admin.datasets_label'), count: summary.datasets ?? 0 },
+      { name: t('admin.dataset_versions'), count: summary.dataset_versions ?? 0 },
+      { name: t('admin.experiments'), count: summary.experiments ?? 0 },
+      { name: t('admin.sessions'), count: summary.training_sessions ?? 0 },
+      { name: t('admin.blob_objects'), count: summary.blob_object_count ?? 0 },
     ]
-  }, [summary])
+  }, [summary, t])
 
   const serviceDonut = useMemo(() => {
     if (!summary) return []
     const onlineCount = [summary.mongo_available, summary.redis_available].filter(Boolean).length
     return [
-      { name: 'Online', value: onlineCount, fill: 'var(--admin-chart-4)' },
-      { name: 'Needs Attention', value: 2 - onlineCount, fill: 'var(--admin-chart-5)' },
+      { name: t('admin.online'), value: onlineCount, fill: 'var(--admin-chart-4)' },
+      { name: t('admin.needs_attention'), value: 2 - onlineCount, fill: 'var(--admin-chart-5)' },
     ]
-  }, [summary])
+  }, [summary, t])
 
   if (loading) {
-    return <LoadingState title="Loading admin summary..." className="min-h-[480px]" />
+    return <LoadingState title={t('admin.loading_summary')} className="min-h-[480px]" />
   }
 
   if (error) {
-    return <ErrorState title="Could not load admin summary" error={error} onRetry={load} className="min-h-[480px]" />
+    return <ErrorState title={t('admin.load_summary_error')} error={error} onRetry={load} className="min-h-[480px]" />
   }
 
   const pressureScore = (summary?.active_sessions ?? 0) + (summary?.failed_sessions_recent ?? 0) + (summary?.blob_orphan_count ?? 0)
@@ -125,41 +127,41 @@ export default function AdminOverviewPage() {
         <div className="glass-card p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="text-micro font-semibold uppercase tracking-ultra admin-eyebrow">Control Tower</div>
-              <h2 className="mt-2 text-2xl font-black text-white-star">Platform Pulse</h2>
+              <div className="text-micro font-semibold uppercase tracking-ultra admin-eyebrow">{t('admin.control_tower')}</div>
+              <h2 className="mt-2 text-2xl font-black text-white-star">{t('admin.platform_pulse')}</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-twilight">
-                A visual read on workspace footprint, execution pressure, and whether the admin stack is ready for the next round of training traffic.
+                {t('admin.platform_pulse_desc')}
               </p>
             </div>
             <div className="grid min-w-[220px] gap-3 sm:grid-cols-2">
-              <MiniSignal icon={ShieldCheck} label="Mongo" value={summary?.mongo_available ? 'Online' : 'Offline'} status={summary?.mongo_available} />
-              <MiniSignal icon={RadioTower} label="Redis" value={summary?.redis_available ? 'Online' : 'Offline'} status={summary?.redis_available} />
-              <MiniSignal icon={HardDrive} label="Blob Store" value={summary?.blob_provider || 'local'} />
-              <MiniSignal icon={TriangleAlert} label="Pressure" value={pressureScore === 0 ? 'Calm' : pressureScore < 6 ? 'Watch' : 'Hot'} status={pressureScore < 6} />
+              <MiniSignal icon={ShieldCheck} label={t('admin.mongo')} value={summary?.mongo_available ? t('admin.online') : t('admin.offline')} status={summary?.mongo_available} />
+              <MiniSignal icon={RadioTower} label={t('admin.redis')} value={summary?.redis_available ? t('admin.online') : t('admin.offline')} status={summary?.redis_available} />
+              <MiniSignal icon={HardDrive} label={t('admin.blob_store')} value={summary?.blob_provider || 'local'} />
+              <MiniSignal icon={TriangleAlert} label={t('admin.pressure')} value={pressureScore === 0 ? t('admin.calm') : pressureScore < 6 ? t('admin.watch') : t('admin.hot')} status={pressureScore < 6} />
             </div>
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Users" value={summary?.users ?? 0} />
-            <StatCard label="Projects" value={summary?.projects ?? 0} tone="emerald" />
-            <StatCard label="Experiments" value={summary?.experiments ?? 0} tone="blue" />
-            <StatCard label="Sessions" value={summary?.training_sessions ?? 0} tone="amber" />
+            <StatCard label={t('admin.users')} value={summary?.users ?? 0} />
+            <StatCard label={t('admin.projects')} value={summary?.projects ?? 0} tone="emerald" />
+            <StatCard label={t('admin.experiments')} value={summary?.experiments ?? 0} tone="blue" />
+            <StatCard label={t('admin.sessions')} value={summary?.training_sessions ?? 0} tone="amber" />
           </div>
         </div>
 
         <div className="grid gap-4">
-          <StatCard label="Active Sessions" value={summary?.active_sessions ?? 0} tone="emerald" />
-          <StatCard label="Failed 7 Days" value={summary?.failed_sessions_recent ?? 0} tone="red" />
-          <StatCard label="Compacted Runs" value={summary?.retention_compacted_runs ?? 0} tone="amber" />
-          <StatCard label="Operational Pressure" value={pressureScore} tone={pressureTone} />
+          <StatCard label={t('admin.active_sessions')} value={summary?.active_sessions ?? 0} tone="emerald" />
+          <StatCard label={t('admin.failed_7d')} value={summary?.failed_sessions_recent ?? 0} tone="red" />
+          <StatCard label={t('admin.compacted_runs')} value={summary?.retention_compacted_runs ?? 0} tone="amber" />
+          <StatCard label={t('admin.operational_pressure')} value={pressureScore} tone={pressureTone} />
         </div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <ChartCard
-          title="Workspace Composition"
-          subtitle="A doughnut split of the objects currently living inside the admin surface."
-          footer="Good for spotting whether the system is mostly people, data, or execution heavy right now."
+          title={t('admin.workspace_composition')}
+          subtitle={t('admin.workspace_composition_sub')}
+          footer={t('admin.workspace_composition_footer')}
         >
           <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
             <ChartShell height={260}>
@@ -185,16 +187,16 @@ export default function AdminOverviewPage() {
             </ChartShell>
             <div className="grid gap-3 sm:grid-cols-2">
               {entityMix.map((item) => (
-                <LegendTile key={item.name} label={item.name} value={item.value} color={item.fill} icon={item.name === 'Users' ? Users : item.name === 'Datasets' ? Database : item.name === 'Projects' ? GitBranch : Activity} />
+                <LegendTile key={item.name} label={item.name} value={item.value} color={item.fill} icon={item.name === t('admin.users') ? Users : item.name === t('admin.datasets_label') ? Database : item.name === t('admin.projects') ? GitBranch : Activity} />
               ))}
             </div>
           </div>
         </ChartCard>
 
         <ChartCard
-          title="Execution Risk Surface"
-          subtitle="Bar view of the operational hotspots that usually need intervention first."
-          footer="Failed jobs and orphaned blobs are the fastest signals that the workspace needs cleanup or follow-up."
+          title={t('admin.execution_risk')}
+          subtitle={t('admin.execution_risk_sub')}
+          footer={t('admin.execution_risk_footer')}
         >
           <ChartShell height={320}>
             <ResponsiveContainer width="100%" height="100%">
@@ -216,9 +218,9 @@ export default function AdminOverviewPage() {
 
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <ChartCard
-          title="Operational Summary"
-          subtitle="A softer area profile of how data assets and run assets are stacking up."
-          footer="This gives the page a trend-like read even when the source data is a single snapshot."
+          title={t('admin.operational_summary')}
+          subtitle={t('admin.operational_summary_sub')}
+          footer={t('admin.operational_summary_footer')}
         >
           <ChartShell height={300}>
             <ResponsiveContainer width="100%" height="100%">
@@ -246,9 +248,9 @@ export default function AdminOverviewPage() {
         </ChartCard>
 
         <ChartCard
-          title="Infrastructure Surface"
-          subtitle="Readiness of runtime dependencies plus storage inventory that sits underneath the lab."
-          footer="Use this block to decide whether the next problem is application-level or infrastructure-level."
+          title={t('admin.infrastructure_surface')}
+          subtitle={t('admin.infrastructure_surface_sub')}
+          footer={t('admin.infrastructure_surface_footer')}
         >
           <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
             <ChartShell height={250}>
@@ -267,15 +269,15 @@ export default function AdminOverviewPage() {
                       <Cell key={entry.name} fill={entry.fill} />
                     ))}
                   </Pie>
-                  <Tooltip content={<OverviewTooltip suffix=" services" />} />
+                  <Tooltip content={<OverviewTooltip suffix={t('admin.services_suffix')} />} />
                 </PieChart>
               </ResponsiveContainer>
             </ChartShell>
             <div className="grid gap-3 sm:grid-cols-2">
-              <SummaryTile icon={Archive} label="Blob Objects" value={summary?.blob_object_count ?? 0} tone="text-amber-500 dark:text-amber-300" />
-              <SummaryTile icon={TriangleAlert} label="Blob Orphans" value={summary?.blob_orphan_count ?? 0} tone="text-rose-500 dark:text-rose-300" />
-              <SummaryTile icon={Database} label="Dataset Versions" value={summary?.dataset_versions ?? 0} tone="text-cyan-600 dark:text-cyan-300" />
-              <SummaryTile icon={ShieldCheck} label="Audit 7 Days" value={summary?.recent_audit_events ?? 0} tone="text-indigo-600 dark:text-indigo-300" />
+              <SummaryTile icon={Archive} label={t('admin.blob_objects')} value={summary?.blob_object_count ?? 0} tone="text-amber-500 dark:text-amber-300" />
+              <SummaryTile icon={TriangleAlert} label={t('admin.blob_orphans')} value={summary?.blob_orphan_count ?? 0} tone="text-rose-500 dark:text-rose-300" />
+              <SummaryTile icon={Database} label={t('admin.dataset_versions')} value={summary?.dataset_versions ?? 0} tone="text-cyan-600 dark:text-cyan-300" />
+              <SummaryTile icon={ShieldCheck} label={t('admin.audit_7d')} value={summary?.recent_audit_events ?? 0} tone="text-indigo-600 dark:text-indigo-300" />
             </div>
           </div>
         </ChartCard>

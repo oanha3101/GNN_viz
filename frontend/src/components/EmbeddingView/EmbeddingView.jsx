@@ -1,10 +1,12 @@
 import { useMemo, useRef, useEffect, useCallback, useState } from 'react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import { useLanguage } from '../../contexts/LanguageContext'
 import LazyPlot from '../primitives/LazyPlot'
 import { getClassColor } from '../../utils/colors'
 import { easeInOutCubic, interpolateSnapshots } from '../../engine/interpolate'
 import { buildTask2GraphDescriptors } from '../../utils/task2Metrics'
+import { localizeTask2Element } from '../../utils/task2ReportI18n'
 
 function getSpreadStats(points = []) {
   if (!points.length) {
@@ -110,7 +112,10 @@ export default function EmbeddingView({
   forcedTask2ColorMode = null,
   forcedTask2SelectedCell = null,
   hideTask2Toolbar = false,
+  reportMode = false,
 }) {
+  const { lang } = useLanguage()
+  const reportLang = lang
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const selectedTask = useGNNStore((state) => state.selectedTask)
   const selectedNodeId = useGNNStore((state) => state.selectedNodeId)
@@ -218,6 +223,25 @@ export default function EmbeddingView({
       const selectedCellSet = resolvedSelectedCell
         ? new Set(descriptors.filter((descriptor) => descriptor.predicted === resolvedSelectedCell.pred && descriptor.groundTruth === resolvedSelectedCell.gt).map((descriptor) => descriptor.originalGraphId))
         : null
+      const reportLabelSet = new Set()
+      if (reportMode) {
+        const priority = [...descriptors]
+          .filter((descriptor) => (
+            selectedCellSet?.has(descriptor.originalGraphId)
+            || descriptor.correct === 0
+            || descriptor.failureTag === 'overconfident_miss'
+            || descriptor.structuralOutlier
+          ))
+          .sort((a, b) => {
+            if (a.correct !== b.correct) return a.correct ? 1 : -1
+            if ((a.failureTag === 'overconfident_miss') !== (b.failureTag === 'overconfident_miss')) {
+              return a.failureTag === 'overconfident_miss' ? -1 : 1
+            }
+            return (a.margin ?? 1) - (b.margin ?? 1)
+          })
+          .slice(0, 12)
+        priority.forEach((descriptor) => reportLabelSet.add(descriptor.originalGraphId))
+      }
       const colors = descriptors.map((descriptor) => colorByMode(descriptor, activeGraphColorMode))
       const sizes = descriptors.map((descriptor) => {
         const selected = descriptor.originalGraphId === selectedNodeId
@@ -233,7 +257,11 @@ export default function EmbeddingView({
         mode: 'markers+text',
         x,
         y,
-        text: descriptors.map((descriptor) => `G${descriptor.originalGraphId}`),
+        text: descriptors.map((descriptor) => (
+          !reportMode || reportLabelSet.has(descriptor.originalGraphId)
+            ? `G${descriptor.originalGraphId}`
+            : ''
+        )),
         textposition: 'top center',
         textfont: { family: 'monospace', size: 9, color: '#94a3b8' },
         marker: {
@@ -324,7 +352,7 @@ export default function EmbeddingView({
 
     if (trajectoryTrace) traces.push(trajectoryTrace)
     return traces
-  }, [currSnap, selectedNodeId, selectedTask, taskData, trajectoryTrace, activeGraphColorMode, resolvedSelectedCell, indexedGraphs, task2Descriptors])
+  }, [currSnap, selectedNodeId, selectedTask, taskData, trajectoryTrace, activeGraphColorMode, resolvedSelectedCell, indexedGraphs, task2Descriptors, reportMode])
 
   const silhouetteScore = useMemo(() => {
     const snapToUse = selectedTask === 2
@@ -420,6 +448,31 @@ export default function EmbeddingView({
     return getSpreadStats(currSnap?.embeddings_2d || [])
   }, [currSnap, selectedTask])
 
+  useEffect(() => {
+    if (reportLang !== 'vi' || !plotContainerRef.current || selectedTask !== 2) return undefined
+    let timeoutId = null
+    const rafId = window.requestAnimationFrame(() => {
+      timeoutId = window.setTimeout(() => {
+        if (plotContainerRef.current) {
+          localizeTask2Element(plotContainerRef.current, reportLang)
+        }
+      }, 80)
+    })
+    return () => {
+      window.cancelAnimationFrame(rafId)
+      if (timeoutId) window.clearTimeout(timeoutId)
+    }
+  }, [
+    reportMode,
+    reportLang,
+    selectedTask,
+    currentEpochFloat,
+    activeGraphColorMode,
+    resolvedSelectedCell?.pred,
+    resolvedSelectedCell?.gt,
+    plotData?.length,
+  ])
+
   if (!plotData) {
     return <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-950/20 animate-pulse text-[10px] uppercase font-black tracking-widest">Awaiting Latent...</div>
   }
@@ -502,7 +555,14 @@ export default function EmbeddingView({
         </span>
       </div>
 
-      {hoveredDescriptor && popupPos && (
+      {selectedTask === 2 && reportMode && (
+        <div className="absolute bottom-3 right-3 max-w-[260px] rounded-lg border border-white/10 bg-slate-950/85 px-3 py-2 text-[9px] leading-4 text-slate-300 pointer-events-none">
+          <div className="font-black uppercase tracking-widest text-slate-500">Legend</div>
+          <div>Color mode: {activeGraphColorMode}. Labels mark hard cases, weak-class misses, or structural outliers only.</div>
+        </div>
+      )}
+
+      {hoveredDescriptor && popupPos && !reportMode && (
         <MiniGraphPopup descriptor={hoveredDescriptor} currSnap={currSnap} position={popupPos} />
       )}
     </div>

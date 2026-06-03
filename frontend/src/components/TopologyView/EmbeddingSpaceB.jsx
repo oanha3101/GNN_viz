@@ -3,6 +3,7 @@ import usePlayerStore from '../../store/playerStore'
 import useGNNStore from '../../store/useGNNStore'
 import LazyPlot from '../primitives/LazyPlot'
 import { CLASS_COLORS } from '../../utils/colors'
+import { getNodeKnnScore, normalizeOutlierScores } from '../../utils/task5Metrics'
 
 function computeAxisRange(values, paddingRatio = 0.12, minSpan = 0.5) {
   if (!values?.length) return [-1, 1]
@@ -39,8 +40,11 @@ export default function EmbeddingSpaceB() {
   
   const selectedNodeId = useGNNStore(s => s.selectedNodeId)
   const setSelectedNode = useGNNStore(s => s.setSelectedNode)
+  const task5SelectedNodeIds = useGNNStore(s => s.task5SelectedNodeIds)
+  const setTask5SelectedNodeIds = useGNNStore(s => s.setTask5SelectedNodeIds)
 
   const [projMode, setProjMode] = useState('pca')
+  const [colorMode, setColorMode] = useState('cluster')
   const [showTrajectory, setShowTrajectory] = useState(false)
   const plotContainerRef = useRef(null)
 
@@ -50,6 +54,22 @@ export default function EmbeddingSpaceB() {
   const hasLabels = graphMeta?.has_labels || false
   const numClasses = graphMeta?.num_classes || 0
   const totalNodes = graphMeta?.num_nodes || graphData?.nodes?.length || 0
+  const brushedNodeSet = useMemo(
+    () => new Set((task5SelectedNodeIds || []).map((id) => Number(id))),
+    [task5SelectedNodeIds],
+  )
+  const outlierMap = useMemo(() => {
+    const rows = normalizeOutlierScores(snap?.outlier_scores)
+    return new Map(rows.map((row) => [row.id, row]))
+  }, [snap?.outlier_scores])
+  const maxNorm = useMemo(() => {
+    const norms = snap?.embedding_norms || []
+    return Math.max(1e-6, ...norms.filter(Number.isFinite))
+  }, [snap?.embedding_norms])
+  const maxOutlier = useMemo(() => {
+    const scores = Array.from(outlierMap.values()).map((row) => row.score).filter(Number.isFinite)
+    return Math.max(1e-6, ...scores)
+  }, [outlierMap])
 
   // Get current points based on projection mode
   const rawPoints = useMemo(() => {
@@ -123,6 +143,23 @@ export default function EmbeddingSpaceB() {
     const colors = displayPoints.map((_, i) => {
       const realIdx = sampleIndices ? sampleIndices[i] : i
       const pred = predictions[realIdx]
+      if (colorMode === 'knn') {
+        const knn = getNodeKnnScore(snap?.per_node_knn_preservation, realIdx, null)
+        if (knn == null) return '#64748b'
+        if (knn > 0.7) return '#22c55e'
+        if (knn >= 0.4) return '#f59e0b'
+        return '#f43f5e'
+      }
+      if (colorMode === 'outlier') {
+        const score = outlierMap.get(realIdx)?.score ?? 0
+        const t = Math.max(0, Math.min(1, score / maxOutlier))
+        return t > 0.66 ? '#ef4444' : t > 0.33 ? '#f59e0b' : '#22d3ee'
+      }
+      if (colorMode === 'norm') {
+        const norm = snap?.embedding_norms?.[realIdx] ?? 0
+        const t = Math.max(0, Math.min(1, norm / maxNorm))
+        return t > 0.66 ? '#a855f7' : t > 0.33 ? '#6366f1' : '#22d3ee'
+      }
       if (hasLabels && numClasses > 1) {
         const gt = graphData?.nodes?.[realIdx]?.groundTruth ?? pred
         return CLASS_COLORS[gt % CLASS_COLORS.length] || '#94a3b8'
@@ -132,7 +169,7 @@ export default function EmbeddingSpaceB() {
 
     const sizes = displayPoints.map((_, i) => {
       const realIdx = sampleIndices ? sampleIndices[i] : i
-      return realIdx === selectedNodeId ? 14 : 10
+      return realIdx === selectedNodeId ? 15 : brushedNodeSet.has(realIdx) ? 13 : 10
     })
 
     const traces = [{
@@ -143,18 +180,27 @@ export default function EmbeddingSpaceB() {
         line: { 
           color: displayPoints.map((_, i) => {
             const realIdx = sampleIndices ? sampleIndices[i] : i
-            return realIdx === selectedNodeId ? '#0ea5e9' : 'rgba(15,23,42,0.35)'
+            return realIdx === selectedNodeId ? '#0ea5e9' : brushedNodeSet.has(realIdx) ? '#f59e0b' : 'rgba(15,23,42,0.35)'
           }), 
           width: displayPoints.map((_, i) => {
             const realIdx = sampleIndices ? sampleIndices[i] : i
-            return realIdx === selectedNodeId ? 2.5 : 0.6
+            return realIdx === selectedNodeId ? 2.5 : brushedNodeSet.has(realIdx) ? 2 : 0.6
           })
         },
       },
       text: displayPoints.map((_, i) => {
         const realIdx = sampleIndices ? sampleIndices[i] : i
         const pred = predictions[realIdx]
-        return `Node ${realIdx} | ${hasLabels ? 'Class' : 'Cluster'} ${pred ?? '?'}`
+        const knn = getNodeKnnScore(snap?.per_node_knn_preservation, realIdx, null)
+        const norm = snap?.embedding_norms?.[realIdx]
+        const outlier = outlierMap.get(realIdx)
+        return [
+          `Node ${realIdx}`,
+          `${hasLabels ? 'Class' : 'Cluster'} ${pred ?? '?'}`,
+          `kNN ${knn == null ? '-' : knn.toFixed(3)}`,
+          `Norm ${Number.isFinite(norm) ? norm.toFixed(3) : '-'}`,
+          `Outlier ${outlier ? outlier.score.toFixed(3) : '-'}`,
+        ].join(' | ')
       }),
       hoverinfo: 'text',
     }]
@@ -202,7 +248,21 @@ export default function EmbeddingSpaceB() {
 
     if (trajectoryTrace) traces.push(...trajectoryTrace)
     return traces
-  }, [displayPoints, snap, sampleIndices, hasLabels, numClasses, graphData, trajectoryTrace])
+  }, [
+    brushedNodeSet,
+    colorMode,
+    displayPoints,
+    graphData,
+    hasLabels,
+    maxNorm,
+    maxOutlier,
+    numClasses,
+    outlierMap,
+    sampleIndices,
+    selectedNodeId,
+    snap,
+    trajectoryTrace,
+  ])
 
   // Axis config
   const axisConfig = useMemo(() => {
@@ -250,9 +310,9 @@ export default function EmbeddingSpaceB() {
           },
           margin: { l: 12, r: 12, t: 48, b: 28 },
           transition: { duration: 60, easing: 'linear' },
-          uirevision: `task5-${projMode}`,
+          uirevision: `task5-${projMode}-${colorMode}`,
           showlegend: false,
-          dragmode: 'pan',
+          dragmode: 'select',
         }}
         style={{ width: '100%', height: '100%' }}
         useResizeHandler
@@ -264,13 +324,22 @@ export default function EmbeddingSpaceB() {
               const pointIdx = pt.pointIndex
               const realIdx = sampleIndices ? sampleIndices[pointIdx] : pointIdx
               setSelectedNode(realIdx)
+              setTask5SelectedNodeIds([realIdx])
             }
           }
+        }}
+        onSelected={(data) => {
+          const ids = (data?.points || [])
+            .filter((pt) => pt.curveNumber === 0)
+            .map((pt) => sampleIndices ? sampleIndices[pt.pointIndex] : pt.pointIndex)
+            .filter((id) => Number.isFinite(id))
+          setTask5SelectedNodeIds(ids)
+          if (ids.length) setSelectedNode(ids[0])
         }}
       />
 
       {/* PCA / t-SNE Toggle */}
-      <div className="absolute top-8 left-2 z-10 flex gap-1">
+      <div className="absolute top-8 left-2 z-10 flex flex-wrap gap-1 max-w-[calc(100%-7rem)]">
         {['pca', 'tsne'].map(mode => (
           <button key={mode}
             onClick={() => setProjMode(mode)}
@@ -292,6 +361,32 @@ export default function EmbeddingSpaceB() {
         >
           Trail
         </button>
+        {[
+          ['cluster', hasLabels ? 'Label' : 'Cluster'],
+          ['knn', 'kNN'],
+          ['outlier', 'Outlier'],
+          ['norm', 'Norm'],
+        ].map(([mode, label]) => (
+          <button
+            key={mode}
+            onClick={() => setColorMode(mode)}
+            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all border ${
+              colorMode === mode
+                ? 'bg-violet-500/20 text-violet-300 border-violet-500/40'
+                : 'bg-slate-800/90 text-slate-500 border-slate-700/50 hover:text-slate-300'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+        {task5SelectedNodeIds?.length > 0 && (
+          <button
+            onClick={() => setTask5SelectedNodeIds([])}
+            className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-950/90 text-amber-300 border border-amber-500/40"
+          >
+            Clear {task5SelectedNodeIds.length}
+          </button>
+        )}
       </div>
 
       {/* Isotropy Badge */}

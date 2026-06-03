@@ -287,6 +287,10 @@ async def run_graph_embedding(config, data, model_type, websocket, stop_flag, sn
                 'isotropy_score': isotropy,
                 'reconstruction_loss': float(avg_loss),
                 'proximity_scores': proximity_scores[:500],  # cap for WS payload
+                'primary_metric_name': 'knn_preservation',
+                'primary_metric_value': float(knn_pres),
+                'quality_metric': 'knn_preservation',
+                'quality_score': float(knn_pres),
 
                 # ── Explainability Data ─────────────────────────────────────────
 

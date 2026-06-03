@@ -40,11 +40,16 @@ export default function TaskTopology5() {
   const sizeMode = numNodes >= 5000 ? 'too_large' : numNodes >= 500 ? 'subsample' : 'full'
   const hasLabels = graphMeta?.has_labels || (rawGraphData?.nodes?.[0]?.groundTruth !== undefined)
   const selectedNodeId = useGNNStore(s => s.selectedNodeId)
+  const task5SelectedNodeIds = useGNNStore(s => s.task5SelectedNodeIds)
   const setSelectedNode = useGNNStore(s => s.setSelectedNode)
   const setHoveredNode = useGNNStore(s => s.setHoveredNode)
   const outlierPulseIdx = useGNNStore(s => s.outlierPulseIdx)
   const setOutlierPulse = useGNNStore(s => s.setOutlierPulse)
   const selectedModel = useGNNStore(s => s.selectedModel)
+  const brushedNodeSet = useMemo(
+    () => new Set((task5SelectedNodeIds || []).map((id) => Number(id))),
+    [task5SelectedNodeIds],
+  )
   // Auto-derive overlay from selectedModel (selected in LeftSidebar)
   const overlayMode = selectedModel === 'GAT' ? 'attention' : selectedModel === 'GCN' ? 'smoothness' : selectedModel === 'SAGE' ? 'robustness' : 'none'
   const attentionMap = useMemo(() => {
@@ -280,8 +285,10 @@ export default function TaskTopology5() {
       else if (pred !== undefined && pred > 0) color = CLASS_COLORS[pred % CLASS_COLORS.length] || color
     }
     const isSelected = selectedNodeId === node.id
+    const isBrushed = brushedNodeSet.has(Number(node.id))
     const isPulsing = outlierPulseIdx === node.id
-    const isDimmed = selectedNodeId !== null && !isSelected
+    const hasBrush = brushedNodeSet.size > 0
+    const isDimmed = (selectedNodeId !== null && !isSelected) || (hasBrush && !isBrushed && !isSelected)
     ctx.globalAlpha = isDimmed ? 0.2 : 1.0
 
     // Pulsing ring for focused outlier
@@ -309,8 +316,8 @@ export default function TaskTopology5() {
     // Default ring: per-node kNN preservation — green (well-preserved) ↔
     // amber ↔ rose (collapsed in embedding). This is THE embedding signal,
     // not edge probability (which is Task 3).
-    let strokeColor = isSelected ? '#0ea5e9' : 'rgba(148,163,184,0.55)'
-    let strokeWidth = Math.max(isSelected ? 2 : 0.6, 1 / globalScale)
+    let strokeColor = isSelected ? '#0ea5e9' : isBrushed ? '#f59e0b' : 'rgba(148,163,184,0.55)'
+    let strokeWidth = Math.max(isSelected ? 2 : isBrushed ? 2.4 : 0.6, 1 / globalScale)
     if (overlayMode === 'robustness') {
       const robustness = animRef.current.snap?.sage_robustness
       if (robustness != null) {
@@ -323,10 +330,10 @@ export default function TaskTopology5() {
       if (Array.isArray(knnRaw)) knnScore = knnRaw[node.id]
       else if (knnRaw && typeof knnRaw === 'object') knnScore = knnRaw[String(node.id)] ?? knnRaw[node.id]
       if (typeof knnScore === 'number' && Number.isFinite(knnScore)) {
-        if (knnScore > 0.7) strokeColor = isSelected ? '#0ea5e9' : 'rgba(34,197,94,0.85)'
-        else if (knnScore >= 0.4) strokeColor = isSelected ? '#0ea5e9' : 'rgba(245,158,11,0.85)'
-        else strokeColor = isSelected ? '#0ea5e9' : 'rgba(244,63,94,0.85)'
-        strokeWidth = isSelected ? 2.5 : 2
+        if (knnScore > 0.7) strokeColor = isSelected ? '#0ea5e9' : isBrushed ? '#f59e0b' : 'rgba(34,197,94,0.85)'
+        else if (knnScore >= 0.4) strokeColor = isSelected ? '#0ea5e9' : isBrushed ? '#f59e0b' : 'rgba(245,158,11,0.85)'
+        else strokeColor = isSelected ? '#0ea5e9' : isBrushed ? '#f59e0b' : 'rgba(244,63,94,0.85)'
+        strokeWidth = isSelected ? 2.5 : isBrushed ? 2.6 : 2
       }
     }
     ctx.strokeStyle = strokeColor
@@ -336,6 +343,7 @@ export default function TaskTopology5() {
     const fontSize = Math.max(4, 10 / Math.pow(globalScale, 0.5))
     const shouldShowLabel =
       isSelected ||
+      isBrushed ||
       globalScale > 1.8 ||
       (numNodes <= 220 && globalScale > 1.15) ||
       (numNodes <= 700 && r > fontSize * 0.95)
@@ -348,7 +356,7 @@ export default function TaskTopology5() {
       ctx.fillText(`${node.id}`, node.x, node.y)
     }
     ctx.globalAlpha = 1.0
-  }, [hasLabels, numNodes, outlierPulseIdx, overlayMode, pulseTick, selectedNodeId, showAnomalies])
+  }, [brushedNodeSet, hasLabels, numNodes, outlierPulseIdx, overlayMode, pulseTick, selectedNodeId, showAnomalies])
 
   return (
     <div ref={containerRef} className="w-full h-full relative bg-transparent overflow-hidden rounded-2xl">
@@ -428,6 +436,11 @@ export default function TaskTopology5() {
 
           {/* Controls */}
           <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+            {task5SelectedNodeIds?.length > 0 && (
+              <div className="bg-amber-500/15 border border-amber-500/40 rounded-lg px-3 py-1.5 text-[10px] font-bold text-amber-300 backdrop-blur-md shadow-lg">
+                BRUSH {task5SelectedNodeIds.length}
+              </div>
+            )}
             <button
               onClick={() => setShowAnomalies(v => !v)}
               className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border shadow-lg ${showAnomalies ? 'bg-amber-500/20 border-amber-500/50 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'bg-black/40 border-white/10 text-starlight hover:bg-white/10 hover:text-white backdrop-blur-md'}`}

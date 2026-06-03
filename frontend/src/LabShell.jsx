@@ -9,6 +9,7 @@ import LeftSidebar from './components/Shell/LeftSidebar'
 import InductiveDemo from './components/TopologyView/InductiveDemo'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import useAuthStore from './store/authStore'
+import { useLanguage } from './contexts/LanguageContext'
 import { AUTH_TOKEN_KEY } from './utils/api'
 import {
   TopologyRouter,
@@ -24,7 +25,7 @@ const ConfigPanel = lazy(() => import('./components/ConfigPanel/ConfigPanel'))
 const TrainingReport = lazy(() => import('./components/TrainingReport'))
 const MetricsChart = lazy(() => import('./components/MetricsChart/MetricsChart'))
 
-function PanelLoader({ label = 'Dang tai panel...' }) {
+function PanelLoader({ label }) {
   return (
     <div className="flex h-full min-h-[180px] items-center justify-center text-[11px] font-bold uppercase tracking-[0.18em] text-twilight">
       {label}
@@ -50,6 +51,43 @@ function PanelHeading({ title, subtitle, align = 'left' }) {
 }
 
 // ─── Custom horizontal drag-resize ──────────────────
+function formatMetricValue(value, digits = 1, suffix = '') {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return '--'
+  return `${numeric.toFixed(digits)}${suffix}`
+}
+
+function getHeaderPrimaryMetric(selectedTask, snapshot, t) {
+  if (selectedTask === 4) {
+    return {
+      label: 'Modularity Q',
+      value: formatMetricValue(
+        snapshot?.primary_metric_value ?? snapshot?.quality_score ?? snapshot?.modularity_q ?? snapshot?.val_acc,
+        3,
+      ),
+      className: 'text-[#f59e0b]',
+    }
+  }
+
+  if (selectedTask === 5) {
+    return {
+      label: 'kNN Preserve',
+      value: formatMetricValue(
+        Number(snapshot?.primary_metric_value ?? snapshot?.quality_score ?? snapshot?.knn_preservation) * 100,
+        1,
+        '%',
+      ),
+      className: 'text-cyan-300',
+    }
+  }
+
+  return {
+    label: t('lab.panel_acc'),
+    value: formatMetricValue(Number(snapshot?.val_acc) * 100, 1, '%'),
+    className: 'text-amethyst',
+  }
+}
+
 function ResizableWorkspace({ rightPanelOpen, leftContent, rightContent }) {
   // Default width tuned for 1440×900: leaves ~1000px for the workspace so
   // Task 2 grid keeps 3+ columns without the user dragging the divider.
@@ -156,6 +194,7 @@ function VerticalResizable({ topContent, bottomContent }) {
 // ─── Main App ────────────────────────────────────────
 function LabShell() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const mockMode = useGNNStore((s) => s.mockMode)
   const setMockMode = useGNNStore((s) => s.setMockMode)
   const setConfigOpen = useGNNStore((s) => s.setConfigOpen)
@@ -338,8 +377,8 @@ function LabShell() {
     return () => window.removeEventListener('gnn:legacy-request-start-training', handler)
   }, [])
 
-  const valAcc = snapshot ? (snapshot.val_acc * 100).toFixed(1) : '--'
-  const trainLoss = snapshot ? snapshot.train_loss.toFixed(3) : '--'
+  const headerPrimaryMetric = getHeaderPrimaryMetric(selectedTask, snapshot, t)
+  const trainLoss = snapshot ? formatMetricValue(snapshot.train_loss, 3) : '--'
 
   return (
     <div className="app-shell h-screen flex flex-col bg-abyss text-moonlight overflow-hidden">
@@ -357,7 +396,7 @@ function LabShell() {
                   <h1 className="text-sm font-black tracking-[0.15em] text-starlight">GNN-INSIGHT</h1>
                   <div className="text-[9px] text-amethyst/80 font-bold uppercase tracking-widest flex items-center gap-1.5">
                     <span className={`status-dot ${isTraining ? 'status-dot-training' : trainingDone ? 'status-dot-live' : 'status-dot-idle'}`} />
-                    {isTraining ? 'Training...' : trainingDone ? 'Ready' : 'Standby'}
+                    {isTraining ? t('lab.status_training') : trainingDone ? t('lab.status_ready') : t('lab.status_standby')}
                     {datasetName && (
                       <span className="ml-2 text-twilight lowercase normal-case flex items-center gap-1">
                         <span className="w-1 h-1 rounded-full bg-slate-700" />
@@ -379,45 +418,47 @@ function LabShell() {
             onClick={() => navigate('/app/dashboard')}
             className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border bg-nebula/50 text-moonlight border-line-default hover:border-line-active"
           >
-            <span>{user ? user.username : 'Anonymous'}</span>
+            <span>{user ? user.username : t('lab.anonymous')}</span>
             <span className="text-twilight">•</span>
-            <span>{activeProjectName || (activeProjectId ? `Project #${activeProjectId}` : 'No Project')}</span>
+            <span>{activeProjectName || (activeProjectId ? `${t('nav.projects')} #${activeProjectId}` : t('lab.no_project'))}</span>
             <span className="text-twilight">•</span>
-            <span>{activeDatasetVersionName || (activeDatasetVersionId ? `Version #${activeDatasetVersionId}` : 'No Version')}</span>
+            <span>{activeDatasetVersionName || (activeDatasetVersionId ? `${t('experiments.version')} #${activeDatasetVersionId}` : t('lab.no_version'))}</span>
           </button>
           <button
             onClick={() => setRightPanelOpen(!rightPanelOpen)}
             className={`p-2 rounded-lg transition-all border ${rightPanelOpen ? 'bg-line-default text-amethyst border-line-default' : 'bg-nebula/50 text-twilight border-line-subtle'}`}
-            title={rightPanelOpen ? 'Hide Analysis' : 'Show Analysis'}
+            title={rightPanelOpen ? t('lab.hide_analysis') : t('lab.show_analysis')}
           >
             {rightPanelOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
           </button>
           {snapshots.length > 0 && (
             <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-nebula/50 border border-line-subtle">
               <div className="flex flex-col items-center">
-                <span className="text-[7px] uppercase text-twilight font-bold">Accuracy</span>
-                <span className="text-[10px] font-mono text-amethyst font-bold">{valAcc}%</span>
+                <span className="text-[7px] uppercase text-twilight font-bold">{headerPrimaryMetric.label}</span>
+                <span className={`text-[10px] font-mono font-bold ${headerPrimaryMetric.className}`}>
+                  {headerPrimaryMetric.value}
+                </span>
               </div>
               <div className="w-px h-4 bg-line-default" />
               <div className="flex flex-col items-center">
-                <span className="text-[7px] uppercase text-twilight font-bold">Loss</span>
+                <span className="text-[7px] uppercase text-twilight font-bold">{t('lab.panel_loss')}</span>
                 <span className="text-[10px] font-mono text-[#fbbf24] font-bold">{trainLoss}</span>
               </div>
               {hyperparams ? (
                 <>
                   <div className="w-px h-4 bg-line-default" />
                   <div className="flex flex-col items-center">
-                    <span className="text-[7px] uppercase text-twilight font-bold">Epochs</span>
+                    <span className="text-[7px] uppercase text-twilight font-bold">{t('lab.panel_epochs')}</span>
                     <span className="text-[10px] font-mono text-starlight font-bold">{hyperparams.epochs}</span>
                   </div>
                   <div className="w-px h-4 bg-line-default" />
                   <div className="flex flex-col items-center">
-                    <span className="text-[7px] uppercase text-twilight font-bold">LR</span>
+                    <span className="text-[7px] uppercase text-twilight font-bold">{t('lab.panel_lr')}</span>
                     <span className="text-[10px] font-mono text-starlight font-bold">{hyperparams.lr}</span>
                   </div>
                   <div className="w-px h-4 bg-line-default" />
                   <div className="flex flex-col items-center">
-                    <span className="text-[7px] uppercase text-twilight font-bold">Hidden</span>
+                    <span className="text-[7px] uppercase text-twilight font-bold">{t('lab.panel_hidden')}</span>
                     <span className="text-[10px] font-mono text-starlight font-bold">{hyperparams.hidden}</span>
                   </div>
                 </>
@@ -430,7 +471,7 @@ function LabShell() {
             className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border flex items-center gap-1.5 ${mockMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-line-default text-twilight border-line-default'}`}
           >
             {mockMode ? <FlaskConical size={12} /> : <Plug size={12} />}
-            {mockMode ? 'Mock Mode' : 'Live Data'}
+            {mockMode ? t('lab.mock_mode') : t('lab.live_data')}
           </button>
         </div>
       </header>
@@ -451,7 +492,7 @@ function LabShell() {
             onOpenConfig={() => setConfigOpen(true)}
             onOpenAdmin={() => navigate('/admin/overview')}
             onOpenWorkspace={() => navigate('/app/dashboard')}
-            libraryLabel="Experiment Hub"
+            libraryLabel={t('lab.experiment_hub')}
             showAdminButton={false}
             showWorkspaceButton={false}
           />
@@ -470,10 +511,10 @@ function LabShell() {
                   title={TASK_LABELS[selectedTask]}
                   subtitle={
                     selectedTask === 5
-                      ? 'Graph Skeleton · node color = embedding cluster, ring = kNN preservation'
+                      ? t('lab.topology_subtitle_t5')
                       : selectedTask === 3
-                      ? 'Edge Probability · color encodes predicted link strength'
-                      : 'Network Topology & Signal Flow'
+                      ? t('lab.topology_subtitle_t3')
+                      : t('lab.topology_subtitle_default')
                   }
                 />
                 <button
@@ -482,10 +523,10 @@ function LabShell() {
                   className="absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-panel-soft/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-starlight backdrop-blur-xl transition-colors hover:border-line-active hover:text-white"
                 >
                   <ExternalLink size={12} />
-                  Open capture view
+                  {t('lab.open_capture_view')}
                 </button>
                 <ErrorBoundary>
-                  <Suspense fallback={<PanelLoader label="Dang tai topology..." />}>
+                  <Suspense fallback={<PanelLoader label={t('lab.loading_topology')} />}>
                     <TopologyRouter />
                   </Suspense>
                 </ErrorBoundary>
@@ -500,27 +541,27 @@ function LabShell() {
                       onClick={() => setActiveRightTab('embedding')}
                       className={`flex-1 px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeRightTab === 'embedding' ? 'bg-line-default text-amethyst shadow-sm' : 'text-twilight hover:text-moonlight'}`}
                     >
-                      <Globe2 size={12} /> Latent Space
+                      <Globe2 size={12} /> {t('lab.latent_space')}
                     </button>
                     <button
                       onClick={() => setActiveRightTab('metrics')}
                       className={`flex-1 px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeRightTab === 'metrics' ? 'bg-line-default text-amethyst shadow-sm' : 'text-twilight hover:text-moonlight'}`}
                     >
-                      <BarChart3 size={12} /> Performance
+                      <BarChart3 size={12} /> {t('lab.performance')}
                     </button>
                     <button
                       onClick={() => navigate(`/app/lab/analysis/${activeRightTab === 'embedding' ? 'latent' : 'metrics'}`)}
                       className="rounded-md px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-twilight transition-all hover:bg-nebula hover:text-starlight"
-                      title="Open this panel in a capture-friendly view"
+                      title={t('lab.open_panel_capture')}
                     >
-                      Open
+                      {t('lab.open')}
                     </button>
                   </div>
                   <div className="flex-1 relative overflow-hidden min-h-0">
                     {activeRightTab === 'embedding' ? (
                       <div className="h-full">
                         <ErrorBoundary>
-                          <Suspense fallback={<PanelLoader label="Dang tai latent space..." />}>
+                          <Suspense fallback={<PanelLoader label={t('lab.loading_latent')} />}>
                             <EmbeddingRouter />
                           </Suspense>
                         </ErrorBoundary>
@@ -528,7 +569,7 @@ function LabShell() {
                     ) : (
                       <div className="h-full overflow-y-auto custom-scrollbar p-4 space-y-6">
                         <ErrorBoundary>
-                          <Suspense fallback={<PanelLoader label="Dang tai metrics..." />}>
+                          <Suspense fallback={<PanelLoader label={t('lab.loading_metrics')} />}>
                             <MetricsRouter />
                           </Suspense>
                         </ErrorBoundary>
@@ -541,11 +582,11 @@ function LabShell() {
                 <div className="h-full bg-deep border-t border-line-subtle overflow-hidden flex flex-col">
                   <div className="flex items-center gap-2 px-3 py-2 bg-nebula/40 border-b border-line-subtle shrink-0">
                     <Network size={12} className="text-amethyst" />
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-moonlight">Inspector</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-moonlight">{t('lab.inspector')}</span>
                   </div>
                   <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
                     <ErrorBoundary>
-                      <Suspense fallback={<PanelLoader label="Dang tai inspector..." />}>
+                      <Suspense fallback={<PanelLoader label={t('lab.loading_inspector')} />}>
                         <InfoRouter />
                       </Suspense>
                     </ErrorBoundary>
@@ -567,13 +608,13 @@ function LabShell() {
       {/* ═══ Footer Controls ═══ */}
       <footer className="h-20 bg-deep/90 backdrop-blur-xl border-t border-line-subtle px-6 flex items-center gap-6 z-50 shrink-0">
         <div className="flex-1">
-          <Suspense fallback={<PanelLoader label="Dang tai player..." />}>
+          <Suspense fallback={<PanelLoader label={t('lab.loading_player')} />}>
             <Player />
           </Suspense>
         </div>
         <div className="w-px h-10 bg-line-default" />
         <div className="w-[300px]">
-          <Suspense fallback={<PanelLoader label="Dang tai controls..." />}>
+          <Suspense fallback={<PanelLoader label={t('lab.loading_controls')} />}>
             <TrainingControls />
           </Suspense>
         </div>

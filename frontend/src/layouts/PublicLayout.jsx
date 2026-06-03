@@ -4,32 +4,29 @@ import { ArrowRight, GitBranch, Menu, Network, X } from 'lucide-react'
 import useAuthStore from '../store/authStore'
 import { getDefaultPathForUser } from '../utils/appRoutes'
 import ThemeToggle from '../components/ui/ThemeToggle'
+import LanguageSwitcher from '../components/ui/LanguageSwitcher'
+import { useLanguage } from '../contexts/LanguageContext'
 
-const NAV_LINKS = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/about', label: 'About' },
-]
-
-function Brand() {
+function Brand({ t }) {
   return (
     <Link to="/" className="flex items-center gap-2.5 group">
       <span className="app-logo-icon !h-9 !w-9">
         <Network size={18} className="text-white" />
       </span>
       <span className="flex flex-col leading-tight">
-        <span className="text-[14px] font-bold tracking-tight text-white-star">GNN Insight</span>
-        <span className="text-[10.5px] text-twilight tracking-wide">Graph research, premium</span>
+        <span className="text-[14px] font-bold tracking-tight text-white-star">{t('brand.title')}</span>
+        <span className="text-[10.5px] text-twilight tracking-wide">{t('public.brand_subtitle_short')}</span>
       </span>
     </Link>
   )
 }
 
-function MobileMenu({ open, onClose, user }) {
+function MobileMenu({ open, onClose, user, t, navLinks }) {
   if (!open) return null
   return (
     <div className="lg:hidden border-t border-line-subtle bg-deep/95 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-6 py-4 space-y-1">
-        {NAV_LINKS.map((item) => (
+        {navLinks.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -49,16 +46,16 @@ function MobileMenu({ open, onClose, user }) {
               className="btn-galaxy flex-1"
               onClick={onClose}
             >
-              Workspace
+              {t('public.workspace')}
               <ArrowRight size={14} />
             </Link>
           ) : (
             <>
               <Link to="/login" className="btn-ghost flex-1" onClick={onClose}>
-                Sign in
+                {t('public.sign_in')}
               </Link>
               <Link to="/register" className="btn-galaxy flex-1" onClick={onClose}>
-                Get started <ArrowRight size={14} />
+                {t('public.get_started')} <ArrowRight size={14} />
               </Link>
             </>
           )}
@@ -73,6 +70,12 @@ export default function PublicLayout() {
   const user = useAuthStore((s) => s.user)
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { t } = useLanguage()
+
+  const navLinks = [
+    { to: '/', label: t('public.nav_home'), end: true },
+    { to: '/about', label: t('public.nav_about') },
+  ]
 
   useEffect(() => {
     setMobileOpen(false)
@@ -91,9 +94,9 @@ export default function PublicLayout() {
     <div className="public-shell">
       <header className={`public-navbar ${scrolled ? 'is-scrolled' : ''}`}>
         <div className="mx-auto max-w-7xl px-6 py-3 flex items-center gap-6">
-          <Brand />
+          <Brand t={t} />
           <nav className="hidden lg:flex items-center gap-1 ml-2">
-            {NAV_LINKS.map((item) => (
+            {navLinks.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -116,21 +119,22 @@ export default function PublicLayout() {
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
+            <LanguageSwitcher variant="compact" />
             <ThemeToggle />
             {user ? (
               <Link
                 to={getDefaultPathForUser(user)}
                 className="btn-galaxy hidden sm:inline-flex"
               >
-                Open workspace <ArrowRight size={14} />
+                {t('public.open_workspace')} <ArrowRight size={14} />
               </Link>
             ) : (
               <>
                 <Link to="/login" className="hidden sm:inline-flex btn-ghost">
-                  Sign in
+                  {t('public.sign_in')}
                 </Link>
                 <Link to="/register" className="btn-galaxy hidden sm:inline-flex">
-                  Get started <ArrowRight size={14} />
+                  {t('public.get_started')} <ArrowRight size={14} />
                 </Link>
               </>
             )}
@@ -138,13 +142,13 @@ export default function PublicLayout() {
               type="button"
               onClick={() => setMobileOpen((v) => !v)}
               className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-full border border-line-default text-moonlight"
-              aria-label="Toggle menu"
+              aria-label={t('public.toggle_menu')}
             >
               {mobileOpen ? <X size={16} /> : <Menu size={16} />}
             </button>
           </div>
         </div>
-        <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} user={user} />
+        <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} user={user} t={t} navLinks={navLinks} />
       </header>
 
       <main className="public-section">
@@ -154,37 +158,36 @@ export default function PublicLayout() {
       <footer className="footer mt-24">
         <div className="mx-auto max-w-7xl px-6 py-12 grid gap-10 md:grid-cols-[1.4fr_repeat(3,_1fr)]">
           <div>
-            <Brand />
+            <Brand t={t} />
             <p className="mt-4 text-sm text-twilight max-w-sm leading-relaxed">
-              An internal platform for training, replaying, comparing, and governing
-              Graph Neural Network experiments — built for graph researchers.
+              {t('public.footer_about')}
             </p>
           </div>
           <div>
             <div className="text-xs font-semibold uppercase tracking-ultra text-text-shadow mb-3">
-              Product
+              {t('public.footer_product')}
             </div>
             <ul className="space-y-2 text-sm">
-              <li><Link to="/" className="hover:text-starlight transition-colors">Overview</Link></li>
-              <li><Link to="/about" className="hover:text-starlight transition-colors">About</Link></li>
-              <li><Link to="/login" className="hover:text-starlight transition-colors">Sign in</Link></li>
-              <li><Link to="/register" className="hover:text-starlight transition-colors">Get started</Link></li>
+              <li><Link to="/" className="hover:text-starlight transition-colors">{t('public.footer_overview')}</Link></li>
+              <li><Link to="/about" className="hover:text-starlight transition-colors">{t('public.nav_about')}</Link></li>
+              <li><Link to="/login" className="hover:text-starlight transition-colors">{t('public.sign_in')}</Link></li>
+              <li><Link to="/register" className="hover:text-starlight transition-colors">{t('public.get_started')}</Link></li>
             </ul>
           </div>
           <div>
             <div className="text-xs font-semibold uppercase tracking-ultra text-text-shadow mb-3">
-              Capabilities
+              {t('public.footer_capabilities')}
             </div>
             <ul className="space-y-2 text-sm">
-              <li>Six GNN task workflows</li>
-              <li>GraphSAGE · GCN · GAT</li>
-              <li>WebSocket epoch streaming</li>
-              <li>Replay &amp; compare runs</li>
+              <li>{t('public.footer_capabilities_1')}</li>
+              <li>{t('public.footer_capabilities_2')}</li>
+              <li>{t('public.footer_capabilities_3')}</li>
+              <li>{t('public.footer_capabilities_4')}</li>
             </ul>
           </div>
           <div>
             <div className="text-xs font-semibold uppercase tracking-ultra text-text-shadow mb-3">
-              Connect
+              {t('public.footer_connect')}
             </div>
             <ul className="space-y-2 text-sm">
               <li>
@@ -197,13 +200,13 @@ export default function PublicLayout() {
                   <GitBranch size={13} /> GitHub
                 </a>
               </li>
-              <li>Researcher · Admin · Viewer roles</li>
+              <li>{t('public.footer_roles')}</li>
             </ul>
           </div>
         </div>
         <div className="border-t border-line-subtle">
           <div className="mx-auto max-w-7xl px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-text-shadow">
-            <span>&copy; {new Date().getFullYear()} GNN Insight. Research-grade tooling.</span>
+            <span>{t('public.footer_copy', { year: new Date().getFullYear() })}</span>
             <span className="font-mono tracking-wide">v1.0</span>
           </div>
         </div>

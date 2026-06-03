@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import usePlayerStore from '../../store/playerStore'
 import useGNNStore from '../../store/useGNNStore'
+import { useLanguage } from '../../contexts/LanguageContext'
 import MetricsChart from './MetricsChart'
 import Task2ConfusionMatrix from './Task2ConfusionMatrix'
 import Task2HardCases from './Task2HardCases'
@@ -15,11 +16,21 @@ import {
   buildTask2GraphDescriptors,
   buildTask2NarrativeSummary,
   buildTask2ResearchSignals,
+  describeTask2ReadoutPattern,
   filterTask2DescriptorsByCell,
   filterTask2Snapshot,
+  formatTask2ClassLabel,
   sortTask2Descriptors,
   summarizeGraphCollection,
 } from '../../utils/task2Metrics'
+import {
+  translateTask2EpochSuggestion,
+  translateTask2FailureTagLabel,
+  translateTask2FocusBucket,
+  localizeTask2Element,
+  translateTask2ReportText,
+  translateTask2Signal,
+} from '../../utils/task2ReportI18n'
 
 function buildGraphClassNames(graphs = [], taskClassNames = []) {
   if (Array.isArray(taskClassNames) && taskClassNames.length) {
@@ -35,37 +46,36 @@ function buildGraphClassNames(graphs = [], taskClassNames = []) {
   return inferred.length ? inferred.map((classId) => `Class ${classId}`) : ['Class 0']
 }
 
-function formatFailureTag(tag) {
-  switch (tag) {
-    case 'overconfident_miss':
-      return 'Overconfident miss'
-    case 'diffuse_readout':
-      return 'Diffuse readout'
-    case 'structural_outlier':
-      return 'Structural outlier'
-    case 'boundary_case':
-      return 'Boundary case'
-    case 'stable_win':
-    default:
-      return 'Stable win'
-  }
-}
-
-function buildReadoutNarrative(descriptor) {
+function buildReadoutNarrative(descriptor, lang = 'en') {
   if (!descriptor) return ''
   if (descriptor.failureTag === 'overconfident_miss') {
-    return 'The classifier is confident, but it is anchoring on the wrong graph-level cue. Inspect the top contributing nodes before trusting the label.'
+    return lang === 'vi'
+      ? 'Bộ phân loại đang rất tự tin, nhưng lại bám vào tín hiệu mức đồ thị không đúng. Hãy kiểm tra các nút đóng góp lớn nhất trước khi tin vào nhãn.'
+      : 'The classifier is confident, but it is anchoring on the wrong graph-level cue. Inspect the top contributing nodes before trusting the label.'
   }
   if (descriptor.failureTag === 'diffuse_readout') {
-    return 'Attention is spread across many weak nodes, so the readout never consolidates around one decisive motif.'
+    return lang === 'vi'
+      ? 'Attention đang bị dàn trải trên nhiều nút yếu, nên readout không hội tụ quanh một motif quyết định rõ ràng.'
+      : 'Attention is spread across many weak nodes, so the readout never consolidates around one decisive motif.'
+  }
+  if (descriptor.entropyBucket === 'diffuse' && descriptor.readoutBucket === 'concentrated') {
+    return lang === 'vi'
+      ? 'Phân phối attention toàn cục đang loãng, nhưng một nhóm cục bộ nhỏ vẫn đóng góp phần lớn readout. Hãy đọc đây như một giải thích pha trộn, không phải motif lock sạch.'
+      : 'The global attention distribution is diffuse, but a small local set still contributes most of the readout. Treat this as a mixed explanation, not a clean motif lock.'
   }
   if (descriptor.failureTag === 'structural_outlier') {
-    return 'This graph is atypical for the collection. Treat it as a topology exception first, then judge the prediction.'
+    return lang === 'vi'
+      ? 'Đồ thị này là trường hợp lệch chuẩn so với collection. Hãy xem nó như một ngoại lệ topology trước khi phán xét dự đoán.'
+      : 'This graph is atypical for the collection. Treat it as a topology exception first, then judge the prediction.'
   }
   if (descriptor.failureTag === 'boundary_case') {
-    return 'This graph sits close to the decision boundary. Use it as a soft counterexample, not a stable win.'
+    return lang === 'vi'
+      ? 'Đồ thị này nằm sát ranh giới quyết định. Hãy xem nó như một phản ví dụ mềm, không phải ca thắng ổn định.'
+      : 'This graph sits close to the decision boundary. Use it as a soft counterexample, not a stable win.'
   }
-  return 'This graph is a stable reference example for the current motif family.'
+  return lang === 'vi'
+    ? 'Đồ thị này là một ví dụ tham chiếu ổn định cho họ motif hiện tại.'
+    : 'This graph is a stable reference example for the current motif family.'
 }
 
 const TABS = [
@@ -82,7 +92,12 @@ export default function Task2MetricsPanel({
   hideTabControls = false,
   hideFocusControls = false,
   disableAutoSelection = false,
+  reportMode = false,
+  reportLimit = 56,
 }) {
+  const { lang } = useLanguage()
+  const reportLang = lang
+  const isViReport = reportLang === 'vi'
   const { snapshots, currentEpochFloat, seekTo } = usePlayerStore()
   const taskData = useGNNStore((s) => s.taskData)
   const classNames = useGNNStore((s) => s.classNames)
@@ -137,6 +152,14 @@ export default function Task2MetricsPanel({
     description: 'Entire graph collection.',
     graphIds: indexedGraphs.map((graph) => graph.originalGraphId),
   }
+  const translatedFocusBuckets = useMemo(
+    () => focusBuckets.map((bucket) => translateTask2FocusBucket(bucket, reportLang)),
+    [focusBuckets, reportLang],
+  )
+  const translatedActiveFocus = useMemo(
+    () => translateTask2FocusBucket(activeFocus, reportLang),
+    [activeFocus, reportLang],
+  )
 
   useEffect(() => {
     if (forcedFocus) return
@@ -181,8 +204,8 @@ export default function Task2MetricsPanel({
     [snap, focusedDescriptors, graphClassNames, reliability]
   )
   const epochSuggestion = useMemo(
-    () => buildTask2BestEpochSuggestion(snapshots),
-    [snapshots]
+    () => translateTask2EpochSuggestion(buildTask2BestEpochSuggestion(snapshots), reportLang),
+    [snapshots, reportLang]
   )
   const focusStory = useMemo(
     () => buildTask2FocusStory({
@@ -192,6 +215,41 @@ export default function Task2MetricsPanel({
     }),
     [reliability, focusedDescriptors, graphClassNames]
   )
+  const translatedNarrative = useMemo(() => {
+    if (reportLang !== 'vi' || !narrative) return narrative
+    return {
+      ...narrative,
+      mainInsight: translateTask2ReportText(narrative.mainInsight, reportLang),
+      mainRisk: translateTask2ReportText(narrative.mainRisk, reportLang),
+      recommendedNextLens: translateTask2ReportText(narrative.recommendedNextLens, reportLang),
+    }
+  }, [narrative, reportLang])
+  const translatedResearchSignals = useMemo(() => {
+    if (reportLang !== 'vi' || !researchSignals) return researchSignals
+    return {
+      collapse: translateTask2Signal(researchSignals.collapse, reportLang),
+      calibration: translateTask2Signal(researchSignals.calibration, reportLang),
+      shortcut: translateTask2Signal(researchSignals.shortcut, reportLang),
+    }
+  }, [researchSignals, reportLang])
+  const translatedFocusStory = useMemo(() => {
+    if (reportLang !== 'vi' || !focusStory) return focusStory
+    return {
+      ...focusStory,
+      title: translateTask2ReportText(focusStory.title, reportLang),
+      summary: translateTask2ReportText(focusStory.summary, reportLang),
+      evidence: translateTask2ReportText(focusStory.evidence, reportLang),
+      recommendation: translateTask2ReportText(focusStory.recommendation, reportLang),
+    }
+  }, [focusStory, reportLang])
+  const translatedReliability = useMemo(() => {
+    if (reportLang !== 'vi' || !reliability) return reliability
+    return {
+      ...reliability,
+      readingGuide: translateTask2ReportText(reliability.readingGuide, reportLang),
+      warnings: (reliability.warnings || []).map((warning) => translateTask2ReportText(warning, reportLang)),
+    }
+  }, [reliability, reportLang])
   const groundTruth = useMemo(() => focusedDescriptors.map((descriptor) => descriptor.groundTruth), [focusedDescriptors])
   const currentAccuracy = useMemo(() => {
     if (!snap?.graph_correct?.length) return null
@@ -210,6 +268,7 @@ export default function Task2MetricsPanel({
   // button: user clears selectedNodeId → effect immediately re-selects the
   // featured graph → the gallery view is never shown.
   const didAutoSelectRef = useRef(false)
+  const panelRootRef = useRef(null)
   useEffect(() => {
     didAutoSelectRef.current = false
   }, [snapshots.length])
@@ -226,24 +285,47 @@ export default function Task2MetricsPanel({
     setSelectedNode(featuredDescriptor.originalGraphId)
   }, [disableAutoSelection, featuredDescriptor, focusedDescriptors, selectedNodeId, setSelectedNode])
 
+  useEffect(() => {
+    if (reportLang !== 'vi' || !panelRootRef.current) return undefined
+    const rafId = window.requestAnimationFrame(() => {
+      localizeTask2Element(panelRootRef.current, reportLang)
+    })
+    return () => window.cancelAnimationFrame(rafId)
+  }, [
+    reportMode,
+    reportLang,
+    tab,
+    epochInt,
+    selectedNodeId,
+    focusedDescriptors.length,
+    resolvedSelectedCell?.pred,
+    resolvedSelectedCell?.gt,
+    activeFocus.id,
+  ])
+
   if (!snapshots.length) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-2 p-6 text-slate-500">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-500/15 bg-cyan-500/8 text-base font-semibold text-cyan-300">
           T2
         </div>
-        <p className="text-sm font-semibold text-slate-300">Task 2 metrics will appear here</p>
+        <p className="text-sm font-semibold text-slate-300">{isViReport ? 'Chỉ số Task 2 sẽ hiện ở đây' : 'Task 2 metrics will appear here'}</p>
         <p className="max-w-xs text-center text-micro text-slate-500">
-          Start or replay a graph classification run to inspect collection-level failures, structure, and readout quality.
+          {isViReport
+            ? 'Hãy bắt đầu hoặc phát lại một lượt chạy phân loại đồ thị để kiểm tra lỗi ở mức collection, cấu trúc và chất lượng readout.'
+            : 'Start or replay a graph classification run to inspect collection-level failures, structure, and readout quality.'}
         </p>
       </div>
     )
   }
 
   return (
-    <Panel
-      title="Task 2 Lens"
-      subtitle={`Graph classification diagnostics for ${datasetName || 'the active collection'} across reliability, failures, structure, and readout behavior.`}
+    <div ref={panelRootRef} className="h-full">
+      <Panel
+      title={isViReport ? 'Lăng kính Task 2' : 'Task 2 Lens'}
+      subtitle={isViReport
+        ? `Chẩn đoán phân loại đồ thị cho ${datasetName || 'collection đang hoạt động'} qua độ tin cậy, lỗi, cấu trúc và hành vi readout.`
+        : `Graph classification diagnostics for ${datasetName || 'the active collection'} across reliability, failures, structure, and readout behavior.`}
       padding="none"
       className="border-line-subtle/35 bg-deep/45 shadow-none"
       actions={(
@@ -252,7 +334,7 @@ export default function Task2MetricsPanel({
             Epoch {epochInt}
           </div>
           <div className="rounded-full border border-slate-700/70 bg-slate-900/70 px-2.5 py-1 text-[11px] font-semibold text-slate-300">
-            {collectionSummary.totalGraphs} graphs
+            {collectionSummary.totalGraphs} {isViReport ? 'đồ thị' : 'graphs'}
           </div>
           {currentAccuracy != null && (
             <div className="rounded-full border border-emerald-500/20 bg-emerald-500/8 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
@@ -263,7 +345,7 @@ export default function Task2MetricsPanel({
       )}
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
-          <span>{reliability?.readingGuide}</span>
+          <span>{translatedReliability?.readingGuide}</span>
           <div className="flex flex-wrap items-center gap-2">
             {resolvedSelectedCell && !forcedSelectedCell && (
               <button
@@ -271,17 +353,17 @@ export default function Task2MetricsPanel({
                 onClick={() => setSelectedCell(null)}
                 className="rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 font-semibold text-cyan-200 transition-colors hover:bg-cyan-500/12"
               >
-                Cell {resolvedSelectedCell.pred} {'->'} {resolvedSelectedCell.gt}
+                {isViReport ? 'Ô' : 'Cell'} {resolvedSelectedCell.pred} {'->'} {resolvedSelectedCell.gt}
               </button>
             )}
             <span className="rounded-full border border-slate-700/70 bg-slate-900/70 px-2.5 py-1 font-semibold text-slate-300">
-              Focus: {activeFocus.label} ({focusedDescriptors.length})
+              {isViReport ? 'Lát cắt' : 'Focus'}: {translatedActiveFocus.label} ({focusedDescriptors.length})
             </span>
           </div>
         </div>
       )}
-    >
-      <div className="flex h-full flex-col gap-3 p-3">
+      >
+        <div className="flex h-full flex-col gap-3 p-3">
         {!hideTabControls && (
           <div className="flex flex-wrap items-center gap-2">
             {TABS.map((item) => (
@@ -303,7 +385,7 @@ export default function Task2MetricsPanel({
 
         {!hideFocusControls && (
           <FocusChipRow
-            buckets={focusBuckets}
+            buckets={translatedFocusBuckets}
             activeId={activeFocus.id}
             onChange={setFocus}
           />
@@ -314,13 +396,14 @@ export default function Task2MetricsPanel({
             <OverviewTab
               reliability={reliability}
               collectionSummary={collectionSummary}
-              focus={activeFocus}
+              focus={translatedActiveFocus}
               filteredCount={focusedDescriptors.length}
               graphClassNames={graphClassNames}
-              narrative={narrative}
-              researchSignals={researchSignals}
+              narrative={translatedNarrative}
+              researchSignals={translatedResearchSignals}
               epochSuggestion={epochSuggestion}
-              focusStory={focusStory}
+              focusStory={translatedFocusStory}
+              reportLang={reportLang}
               onJumpToEpoch={(epoch) => seekTo?.(epoch)}
               onJumpToWeakClass={() => {
                 setFocus('weak_class')
@@ -373,7 +456,7 @@ export default function Task2MetricsPanel({
           )}
           {tab === 'failures' && (
             <FailuresTab
-              snap={filteredSnap}
+              snap={snap}
               snapshots={snapshots}
               epochInt={epochInt}
               graphs={focusedDescriptors}
@@ -391,6 +474,9 @@ export default function Task2MetricsPanel({
                 setSelectedCell({ pred, gt })
               }}
               onSelect={setSelectedNode}
+              reportMode={reportMode}
+              reportLimit={reportLimit}
+              reportLang={reportLang}
             />
           )}
           {tab === 'structure' && (
@@ -399,8 +485,9 @@ export default function Task2MetricsPanel({
               graphs={focusedDescriptors}
               selectedId={selectedNodeId}
               onSelect={setSelectedNode}
-              focus={activeFocus}
+              focus={translatedActiveFocus}
               selectedCell={resolvedSelectedCell}
+              reportLang={reportLang}
             />
           )}
           {tab === 'readout' && (
@@ -408,11 +495,13 @@ export default function Task2MetricsPanel({
               graph={featuredDescriptor}
               classNames={graphClassNames}
               onSelect={setSelectedNode}
+              reportLang={reportLang}
             />
           )}
         </div>
-      </div>
-    </Panel>
+        </div>
+      </Panel>
+    </div>
   )
 }
 
@@ -897,44 +986,70 @@ function FailuresTab({
   selectedCell,
   onSelectCell,
   onSelect,
+  reportMode = false,
+  reportLimit = 56,
 }) {
+  const visibleGraphs = useMemo(
+    () => (reportMode ? sortTask2Descriptors(graphs, 'priority').slice(0, reportLimit) : graphs),
+    [graphs, reportLimit, reportMode],
+  )
+  const visibleSnap = useMemo(
+    () => filterTask2Snapshot(snap, visibleGraphs.map((graph) => graph.originalGraphId), visibleGraphs),
+    [snap, visibleGraphs],
+  )
+  const visibleGroundTruth = useMemo(
+    () => visibleGraphs.map((descriptor) => descriptor.groundTruth),
+    [visibleGraphs],
+  )
+  const visibleHardCases = useMemo(
+    () => (reportMode ? visibleGraphs : hardCaseGraphs),
+    [hardCaseGraphs, reportMode, visibleGraphs],
+  )
+
   if (!graphs.length) {
     return <EmptyState title="No graphs in this slice" description="Pick another focus chip to inspect a broader portion of the collection." />
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+    <div className={`flex min-h-0 flex-1 flex-col gap-3 ${reportMode ? 'overflow-hidden' : 'overflow-auto'}`}>
       {selectedCell && (
         <div className="rounded-2xl border border-cyan-500/15 bg-cyan-500/6 px-3 py-2 text-[11px] text-cyan-100">
-          Confusion cell active: predicted class {selectedCell.pred}, ground truth class {selectedCell.gt}. Hard cases below are scoped to this cell.
+          Confusion cell slice active: predicted class {selectedCell.pred}, ground truth class {selectedCell.gt}. Hard cases below are scoped to this cell; counts describe this slice, not overall accuracy.
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+      <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3 task2-report-card">
         <div className="mb-2">
           <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Batch heatmap</span>
           <p className="mt-1 text-[11px] text-slate-400">
-            Each row is a graph, each column is an epoch checkpoint. Use it to spot stubborn failures and late recoveries.
+            Each row is a graph, each column is an epoch checkpoint. {reportMode && graphs.length > visibleGraphs.length ? `Showing the top ${visibleGraphs.length} priority rows; full collection available in interactive view.` : 'Use it to spot stubborn failures and late recoveries.'}
           </p>
         </div>
         <BatchHeatmap
-          snap={snap}
+          snap={visibleSnap}
           snapshots={snapshots}
           epochInt={epochInt}
-          graphs={graphs}
+          graphs={visibleGraphs}
           selectedId={selectedId}
           onSelect={onSelect}
+          reportMode={reportMode}
         />
       </div>
 
       <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
         <div className="min-w-0 rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+          {selectedCell && (
+            <div className="mb-2 rounded-lg border border-cyan-500/15 bg-cyan-500/8 px-2 py-1 text-[10px] font-semibold uppercase tracking-ultra text-cyan-200">
+              Confusion matrix slice counts
+            </div>
+          )}
           <Task2ConfusionMatrix
-            predictions={snap?.graph_predictions}
-            groundTruth={groundTruth}
+            predictions={visibleSnap?.graph_predictions}
+            groundTruth={visibleGroundTruth}
             classNames={classNames}
             selectedCell={selectedCell}
             onSelectCell={onSelectCell}
+            scopeLabel={selectedCell ? 'Cell slice' : 'Focus slice'}
           />
         </div>
         <div className="min-w-0 rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
@@ -946,9 +1061,9 @@ function FailuresTab({
           </div>
           <Task2HardCases
             snap={snap}
-            graphs={hardCaseGraphs}
+            graphs={visibleHardCases}
             classNames={classNames}
-            k={10}
+            k={reportMode ? 8 : 10}
             selectedId={selectedId}
             onSelect={onSelect}
           />
@@ -1039,9 +1154,13 @@ function ReadoutTab({ graph, classNames, onSelect }) {
     return <EmptyState title="No graph selected" description="Pick a graph from the topology or hard-case list to inspect graph-level readout." />
   }
 
-  const gtLabel = classNames[graph.groundTruth] || `Class ${graph.groundTruth}`
-  const predLabel = graph.predicted != null ? (classNames[graph.predicted] || `Class ${graph.predicted}`) : 'Pending'
+  const gtLabel = formatTask2ClassLabel(classNames, graph.groundTruth, 'Unknown')
+  const predLabel = formatTask2ClassLabel(classNames, graph.predicted, 'Pending')
   const topContributors = graph.topContributors || []
+  const readoutPattern = graph.readoutPattern || describeTask2ReadoutPattern({
+    entropyBucket: graph.entropyBucket,
+    readoutBucket: graph.readoutBucket,
+  })
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
@@ -1089,7 +1208,7 @@ function ReadoutTab({ graph, classNames, onSelect }) {
             <TagChip label={formatFailureTag(graph.failureTag)} tone={graph.correct === 1 ? 'good' : 'bad'} />
             <TagChip label={graph.densityBucket} tone="info" />
             <TagChip label={graph.entropyBucket} tone="warn" />
-            <TagChip label={graph.readoutBucket} tone="good" />
+            <TagChip label={readoutPattern} tone="good" />
           </div>
         </div>
 
@@ -1109,7 +1228,7 @@ function ReadoutTab({ graph, classNames, onSelect }) {
           <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Readout concentration</div>
           <div className="mt-2 text-lg font-semibold text-slate-100">{(graph.readoutConcentration * 100).toFixed(0)}%</div>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-            The top-3 node contributions suggest a <span className="font-semibold text-slate-200">{graph.readoutBucket}</span> graph-level readout.
+            Top-k contribution is <span className="font-semibold text-slate-200">{graph.readoutBucket}</span>, while global entropy is <span className="font-semibold text-slate-200">{graph.entropyBucket}</span>. Pattern: <span className="font-semibold text-slate-200">{readoutPattern}</span>.
           </p>
           <div className="mt-3 space-y-2">
             {topContributors.length ? topContributors.map((item) => (
@@ -1134,7 +1253,7 @@ function ReadoutTab({ graph, classNames, onSelect }) {
   )
 }
 
-function BatchHeatmap({ snap, snapshots, epochInt, graphs, selectedId, onSelect }) {
+function BatchHeatmap({ snap, snapshots, epochInt, graphs, selectedId, onSelect, reportMode = false }) {
   const { heatmapRows, graphLabels, numGraphs } = useMemo(() => {
     if (!snapshots?.length) return { heatmapRows: [], graphLabels: [], numGraphs: 0 }
     const nG = snap?.graph_correct?.length || snapshots.find((item) => item.graph_correct)?.graph_correct?.length || 0
@@ -1167,11 +1286,11 @@ function BatchHeatmap({ snap, snapshots, epochInt, graphs, selectedId, onSelect 
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={`flex flex-col gap-2 ${reportMode ? 'task2-report-heatmap overflow-hidden' : ''}`}>
       <p className="text-nano text-slate-400 leading-relaxed">
         Each tile is one graph at one checkpoint. Green means correct, red means wrong.
       </p>
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className={`flex-1 min-h-0 ${reportMode ? 'overflow-hidden' : 'overflow-auto'}`}>
         <div className="inline-flex flex-col gap-0.5 min-w-max">
           <div className="flex gap-0.5 items-center">
             <div className="w-12 shrink-0" />

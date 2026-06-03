@@ -2,6 +2,11 @@ import { useMemo } from 'react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
 import { getClassColor, CLASS_NAMES } from '../../utils/colors'
+import {
+  getNodeKnnScore,
+  getNodeOutlierScore,
+  normalizeOutlierScores,
+} from '../../utils/task5Metrics'
 
 // Calculate L2 distance between two arrays
 const l2Distance = (a, b) => {
@@ -75,6 +80,13 @@ export default function Task5NodeInspector() {
   // Try to get class
   const gt = node?.groundTruth !== undefined ? node.groundTruth : null
   const pred = snap?.node_predictions?.[selectedNodeId]
+  const knnScore = getNodeKnnScore(snap?.per_node_knn_preservation, selectedNodeId, null)
+  const embeddingNorm = snap?.embedding_norms?.[selectedNodeId]
+  const outlierScore = getNodeOutlierScore(snap?.outlier_scores, selectedNodeId, null)
+  const outlierRow = normalizeOutlierScores(snap?.outlier_scores)
+    .find((entry) => entry.id === selectedNodeId)
+  const isOutlier = outlierRow?.isOutlier ?? false
+  const neighborOverlap = topEmbeddingNeighbors.filter((item) => topGraphNeighbors.includes(item.id)).length
   
   let gtColor = gt !== null ? getClassColor(gt) : '#475569'
   let predColor = pred !== undefined ? getClassColor(pred) : '#475569'
@@ -107,6 +119,28 @@ export default function Task5NodeInspector() {
           <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/30">
             <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">Epoch</span>
             <span className="text-slate-200 font-bold text-lg">{currentEpoch}</span>
+          </div>
+          <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/30">
+            <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">kNN Preserve</span>
+            <span className={`font-bold text-lg ${knnScore == null ? 'text-slate-500' : knnScore > 0.7 ? 'text-emerald-400' : knnScore >= 0.4 ? 'text-amber-400' : 'text-rose-400'}`}>
+              {knnScore == null ? '-' : `${(knnScore * 100).toFixed(0)}%`}
+            </span>
+          </div>
+          <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/30">
+            <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">Embed Norm</span>
+            <span className="text-cyan-300 font-bold text-lg">
+              {Number.isFinite(embeddingNorm) ? embeddingNorm.toFixed(2) : '-'}
+            </span>
+          </div>
+          <div className={`rounded-lg p-2 border ${isOutlier ? 'bg-red-950/30 border-red-500/30' : 'bg-slate-900/40 border-slate-800/30'}`}>
+            <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">Outlier</span>
+            <span className={`font-bold text-lg ${isOutlier ? 'text-red-400' : 'text-slate-200'}`}>
+              {outlierScore == null ? '-' : outlierScore.toFixed(3)}
+            </span>
+          </div>
+          <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/30">
+            <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">Overlap</span>
+            <span className="text-slate-200 font-bold text-lg">{neighborOverlap}/{topEmbeddingNeighbors.length || 5}</span>
           </div>
         </div>
 

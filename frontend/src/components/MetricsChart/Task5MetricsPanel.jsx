@@ -16,6 +16,7 @@ import {
 import usePlayerStore from '../../store/playerStore'
 import useGNNStore from '../../store/useGNNStore'
 import {
+  buildNodeEmbeddingDiagnostics,
   buildKnnScatter,
   buildNormHistogram,
   computeIsotropy,
@@ -210,39 +211,13 @@ function NeighborhoodTab({ snap, graphData, onNodeClick }) {
     ? points.reduce((sum, point) => sum + point.knn, 0) / points.length
     : 0
 
-  const norms = snap?.embedding_norms ?? []
-  const knnPres = snap?.per_node_knn_preservation ?? []
-  const outliers = snap?.outlier_scores ?? []
-
-  const outlierMap = useMemo(() => {
-    const map = new Map()
-    for (const entry of outliers) map.set(entry.node_id, entry)
-    return map
-  }, [outliers])
-
   const [sortBy, setSortBy] = useState('importance')
   const [sortDir, setSortDir] = useState(-1)
 
-  const rows = useMemo(() => {
-    if (!graphData?.nodes?.length) return []
-    return graphData.nodes.map((node) => {
-      const norm = norms[node.id] ?? 0
-      const knn = knnPres[node.id] ?? 0
-      const outlier = outlierMap.get(node.id)
-      const outlierScore = outlier?.avg_distance_to_neighbors ?? 0
-      const isOutlier = outlier?.is_outlier ?? false
-      const importance = norm * 0.4 + (1 - knn) * 0.3 + outlierScore * 0.3
-      return {
-        id: node.id,
-        degree: node.degree ?? 0,
-        norm,
-        knn,
-        outlierScore,
-        isOutlier,
-        importance,
-      }
-    })
-  }, [graphData, knnPres, norms, outlierMap])
+  const rows = useMemo(
+    () => buildNodeEmbeddingDiagnostics({ graphData, snap }),
+    [graphData, snap],
+  )
 
   const sortedRows = useMemo(() => {
     const key =

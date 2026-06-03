@@ -3848,4 +3848,53 @@ html.dark .project-vis-pill.is-public {
   .lab-report-section canvas {
     max-width: 100% !important;
   }
+
+  .lab-report-canvas-shell {
+    height: 760px !important;
+    min-height: 760px !important;
+    max-height: 760px !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+  }
+
+  .lab-report-canvas-shell *,
+  .topology-report-root,
+  .topology-report-root * {
+    overflow: hidden !important;
+  }
+
+  .task2-report-card,
+  .task2-report-card *,
+  .task2-report-heatmap,
+  .task2-report-heatmap * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    forced-color-adjust: none !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .task2-report-heatmap {
+    max-height: 390px !important;
+    overflow: hidden !important;
+  }
+
+  .lab-report-compact-viz {
+    height: 520px !important;
+    min-height: 520px !important;
+    max-height: 520px !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+  }
+
+  .lab-report-compact-viz * {
+    overflow: hidden !important;
+  }
+
+  .topology-report-root {
+    height: 740px !important;
+    min-height: 740px !important;
+    max-height: 740px !important;
+    background: #ffffff !important;
+  }
 }

@@ -22,6 +22,8 @@ import {
   buildTask2ResearchSignals,
   buildTask2BestEpochSuggestion,
   buildTask2FocusStory,
+  describeTask2ReadoutPattern,
+  formatTask2ClassLabel,
 } from './task2Metrics'
 
 describe('buildConfusionMatrix', () => {
@@ -97,6 +99,26 @@ describe('computeHardCases', () => {
     const hc = computeHardCases(snap, graphs, 10)
     const correctOnes = hc.filter((x) => x.correct)
     expect(correctOnes[0].margin).toBeLessThanOrEqual(correctOnes[1].margin)
+  })
+
+  it('uses local indexes when the snapshot was already filtered', () => {
+    const filteredGraphs = [
+      { originalGraphId: 91, sourceIndex: 91, groundTruth: 1, nodes: [1, 2], links: [] },
+    ]
+    const filteredSnap = {
+      graph_predictions: [0],
+      graph_confidences: [0.81],
+      confidence_margins: [0.04],
+    }
+
+    const hc = computeHardCases(filteredSnap, filteredGraphs, 1)
+
+    expect(hc[0]).toEqual(expect.objectContaining({
+      id: 91,
+      predicted: 0,
+      groundTruth: 1,
+      correct: false,
+    }))
   })
 })
 
@@ -250,6 +272,39 @@ describe('task 2 collection helpers', () => {
     expect(filtered.graph_predictions).toEqual([0, 2])
     expect(filtered.graph_correct).toEqual([0, 1])
     expect(filtered.node_contributions).toHaveLength(2)
+  })
+
+  it('filters graph-level snapshot arrays using sourceIndex for non-contiguous slices', () => {
+    const focusedGraphs = [
+      { originalGraphId: 91, sourceIndex: 2 },
+      { originalGraphId: 126, sourceIndex: 0 },
+    ]
+    const filtered = filterTask2Snapshot(
+      {
+        graph_predictions: [1, 1, 0],
+        graph_correct: [1, 0, 0],
+        node_contributions: [[0.9], [0.4], [0.2]],
+      },
+      [91, 126],
+      focusedGraphs,
+    )
+
+    expect(filtered.graph_predictions).toEqual([0, 1])
+    expect(filtered.graph_correct).toEqual([0, 1])
+    expect(filtered.node_contributions).toEqual([[0.2], [0.9]])
+  })
+
+  it('formats class labels without leaking Cundefined', () => {
+    expect(formatTask2ClassLabel(['C0', 'C1'], 1)).toBe('C1')
+    expect(formatTask2ClassLabel(['C0', 'C1'], undefined)).toBe('Unknown')
+    expect(formatTask2ClassLabel(['C0'], 4)).toBe('Class 4')
+  })
+
+  it('describes mixed readout entropy and top-k concentration honestly', () => {
+    expect(describeTask2ReadoutPattern({
+      entropyBucket: 'diffuse',
+      readoutBucket: 'concentrated',
+    })).toBe('diffuse global distribution with local top contributors')
   })
 
   it('builds task 2 graph descriptors with buckets and narrative tags', () => {

@@ -743,9 +743,27 @@ def analyze_dataset_topology(graph_payload: Dict, snapshots: List[Dict] = None) 
     if not graph_payload:
         return {"type": "unknown", "properties": {}}
 
-    graph_data = graph_payload.get("graph_data_json", {})
-    nodes = graph_data.get("nodes", [])
-    links = graph_data.get("links", [])
+    graph_data = graph_payload.get("graph_data_json", {}) if isinstance(graph_payload, dict) else {}
+    if not isinstance(graph_data, dict):
+        return {"type": "unknown", "properties": {}}
+
+    raw_nodes = graph_data.get("nodes", [])
+    raw_links = graph_data.get("links", [])
+
+    nodes = []
+    for idx, node in enumerate(raw_nodes if isinstance(raw_nodes, list) else []):
+        if isinstance(node, dict):
+            nodes.append(node)
+        else:
+            nodes.append({"id": idx, "label": node})
+
+    links = []
+    for link in raw_links if isinstance(raw_links, list) else []:
+        if isinstance(link, dict):
+            links.append(link)
+            continue
+        if isinstance(link, (list, tuple)) and len(link) >= 2:
+            links.append({"source": link[0], "target": link[1]})
 
     if not nodes:
         return {"type": "unknown", "properties": {}}
@@ -758,6 +776,12 @@ def analyze_dataset_topology(graph_payload: Dict, snapshots: List[Dict] = None) 
     for link in links:
         src = link.get("source", link.get("from", ""))
         tgt = link.get("target", link.get("to", ""))
+        if isinstance(src, dict):
+            src = src.get("id", src.get("index", ""))
+        if isinstance(tgt, dict):
+            tgt = tgt.get("id", tgt.get("index", ""))
+        if src == "" or tgt == "" or src is None or tgt is None:
+            continue
         degree_counter[src] += 1
         degree_counter[tgt] += 1
 

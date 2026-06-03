@@ -103,10 +103,12 @@ export function computeHardCases(snap, graphs = [], k = 10, options = {}) {
   const preds = snap.graph_predictions || []
   const confs = snap.graph_confidences || []
   const margins = snap.confidence_margins || computeMargins(snap.graph_probabilities || [])
+  const isFilteredSnapshot = preds.length === graphs.length
 
   const items = graphs.map((g, i) => {
     const sourceIndex = g?.sourceIndex ?? i
-    const pred = preds[sourceIndex]
+    const snapshotIndex = isFilteredSnapshot || sourceIndex >= preds.length ? i : sourceIndex
+    const pred = preds[snapshotIndex]
     const gt = g?.groundTruth
     const isWrong = pred != null && gt != null && pred !== gt
     return {
@@ -114,8 +116,8 @@ export function computeHardCases(snap, graphs = [], k = 10, options = {}) {
       sourceIndex,
       groundTruth: gt,
       predicted: pred,
-      confidence: confs[sourceIndex] ?? null,
-      margin: margins[sourceIndex] ?? 0,
+      confidence: confs[snapshotIndex] ?? null,
+      margin: margins[snapshotIndex] ?? 0,
       correct: !isWrong && pred != null,
       numNodes: g?.nodes?.length ?? g?.numNodes ?? 0,
       numEdges: g?.links?.length ?? g?.numEdges ?? 0,
@@ -260,6 +262,21 @@ export function bucketTask2ReadoutConcentration(value) {
   return 'diffuse'
 }
 
+export function formatTask2ClassLabel(classNames = [], classId, fallback = 'Unknown') {
+  if (!Number.isInteger(classId)) return fallback
+  return classNames?.[classId] || `Class ${classId}`
+}
+
+export function describeTask2ReadoutPattern({ entropyBucket = 'balanced', readoutBucket = 'mixed' } = {}) {
+  if (entropyBucket === 'diffuse' && readoutBucket === 'concentrated') {
+    return 'diffuse global distribution with local top contributors'
+  }
+  if (entropyBucket === 'diffuse') return 'diffuse global readout distribution'
+  if (readoutBucket === 'concentrated') return 'concentrated local contributors'
+  if (readoutBucket === 'diffuse') return 'low-concentration local contributors'
+  return 'mixed readout distribution'
+}
+
 export function computeTask2ReadoutConcentration(contributions = []) {
   const top = contributions
     .map((value, nodeId) => ({ nodeId, value: Math.max(0, Number(value) || 0) }))
@@ -384,6 +401,7 @@ export function buildTask2GraphDescriptors({ snapshot, graphs = [], classNames =
       clusteringBucket,
       readoutConcentration: readout.score,
       readoutBucket,
+      readoutPattern: describeTask2ReadoutPattern({ entropyBucket, readoutBucket }),
       motifSignature: describeTask2MotifSignature({
         densityBucket,
         clusteringBucket,
@@ -401,12 +419,8 @@ export function buildTask2GraphDescriptors({ snapshot, graphs = [], classNames =
       structuralOutlierScore,
       structuralOutlier,
       topContributors: readout.topContributors,
-      classLabel: Number.isInteger(groundTruth) && classNames?.[groundTruth]
-        ? classNames[groundTruth]
-        : null,
-      predictedLabel: Number.isInteger(predicted) && classNames?.[predicted]
-        ? classNames[predicted]
-        : null,
+      classLabel: formatTask2ClassLabel(classNames, groundTruth, null),
+      predictedLabel: formatTask2ClassLabel(classNames, predicted, null),
       correct,
     }
   })
@@ -983,11 +997,10 @@ export function filterTask2Snapshot(snapshot, graphIds = [], graphs = []) {
     .map((graphId) => indexLookup.get(graphId))
     .filter((value) => Number.isInteger(value))
 
-  const pick = (value) => (
-    Array.isArray(value) && value.length >= graphs.length
-      ? indices.map((index) => value[index])
-      : value
-  )
+  const pick = (value) => {
+    if (!Array.isArray(value) || indices.length === 0) return value
+    return indices.map((index) => value[index])
+  }
 
   return {
     ...snapshot,

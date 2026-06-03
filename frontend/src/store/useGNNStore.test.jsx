@@ -1,6 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const STORAGE_KEY = 'gnn_workspace_context'
+const playerStoreMock = vi.hoisted(() => ({
+  resetForTraining: vi.fn(),
+}))
+
+vi.mock('./playerStore', () => ({
+  default: {
+    getState: () => ({
+      resetForTraining: playerStoreMock.resetForTraining,
+    }),
+  },
+}))
 
 async function loadStore() {
   vi.resetModules()
@@ -11,6 +22,7 @@ async function loadStore() {
 describe('useGNNStore workspace persistence', () => {
   beforeEach(() => {
     localStorage.clear()
+    playerStoreMock.resetForTraining.mockClear()
     vi.resetModules()
   })
 
@@ -114,5 +126,40 @@ describe('useGNNStore workspace persistence', () => {
     expect(store.getState().task2ClassFilter).toBe('all')
     expect(store.getState().task2EmbeddingColorMode).toBe('predicted')
     expect(store.getState().task2SelectedCell).toBeNull()
+  })
+
+  it('clears completed playback when task or model changes', async () => {
+    const store = await loadStore()
+
+    store.getState().setTask(4)
+    expect(playerStoreMock.resetForTraining).toHaveBeenCalledTimes(1)
+    expect(store.getState().reportOpen).toBe(false)
+
+    store.getState().setModel('GAT')
+    expect(playerStoreMock.resetForTraining).toHaveBeenCalledTimes(2)
+    expect(store.getState().reportOpen).toBe(false)
+  })
+
+  it('clears Task 5 brushed nodes when task or model changes', async () => {
+    const store = await loadStore()
+
+    store.getState().setTask5SelectedNodeIds([1, '2', 'bad'])
+    expect(store.getState().task5SelectedNodeIds).toEqual([1, 2])
+
+    store.getState().setTask(5)
+    expect(store.getState().task5SelectedNodeIds).toEqual([])
+
+    store.getState().setTask5SelectedNodeIds([3, 4])
+    store.getState().setModel('SAGE')
+    expect(store.getState().task5SelectedNodeIds).toEqual([])
+  })
+
+  it('keeps playback untouched when reselecting the active task or model', async () => {
+    const store = await loadStore()
+
+    store.getState().setTask(1)
+    store.getState().setModel('GCN')
+
+    expect(playerStoreMock.resetForTraining).not.toHaveBeenCalled()
   })
 })

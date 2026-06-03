@@ -15,6 +15,7 @@ export function pairScores(scores, testEdges) {
       idx: i,
       score: scores[i] ?? 0,
       y: testEdges[i]?.exists ? 1 : 0,
+      exists: Boolean(testEdges[i]?.exists),
       source: testEdges[i]?.source ?? null,
       target: testEdges[i]?.target ?? null,
     })
@@ -130,4 +131,75 @@ export function accuracyAtThreshold(paired, threshold = 0.5) {
     if (pred === p.y) correct += 1
   }
   return correct / paired.length
+}
+
+export function precisionAtK(paired, k = 10) {
+  if (!paired?.length || k <= 0) return 0
+  const limit = Math.min(k, paired.length)
+  let truePositives = 0
+  for (let i = 0; i < limit; i += 1) {
+    if (paired[i].y === 1) truePositives += 1
+  }
+  return truePositives / limit
+}
+
+export function recallAtK(paired, k = 10) {
+  if (!paired?.length || k <= 0) return 0
+  const totalPositives = paired.filter((row) => row.y === 1).length
+  if (totalPositives === 0) return 0
+  const limit = Math.min(k, paired.length)
+  let truePositives = 0
+  for (let i = 0; i < limit; i += 1) {
+    if (paired[i].y === 1) truePositives += 1
+  }
+  return truePositives / totalPositives
+}
+
+export function hitsAtK(paired, k = 10) {
+  if (!paired?.length || k <= 0) return 0
+  const limit = Math.min(k, paired.length)
+  for (let i = 0; i < limit; i += 1) {
+    if (paired[i].y === 1) return 1
+  }
+  return 0
+}
+
+export function brierScore(paired) {
+  if (!paired?.length) return 0
+  const total = paired.reduce((sum, row) => sum + (row.score - row.y) ** 2, 0)
+  return total / paired.length
+}
+
+export function buildCalibrationBins(paired, bins = 5) {
+  const safeBins = Math.max(1, bins)
+  const rows = Array.from({ length: safeBins }, (_, idx) => ({
+    idx,
+    lo: idx / safeBins,
+    hi: (idx + 1) / safeBins,
+    label: `${(idx / safeBins).toFixed(1)}-${((idx + 1) / safeBins).toFixed(1)}`,
+    count: 0,
+    positives: 0,
+    avgConfidence: 0,
+    empiricalRate: 0,
+    gap: 0,
+  }))
+
+  for (const row of paired || []) {
+    const bucket = Math.min(safeBins - 1, Math.floor((row.score ?? 0) * safeBins))
+    rows[bucket].count += 1
+    rows[bucket].positives += row.y === 1 ? 1 : 0
+    rows[bucket].avgConfidence += row.score ?? 0
+  }
+
+  return rows.map((row) => {
+    if (row.count === 0) return row
+    const avgConfidence = row.avgConfidence / row.count
+    const empiricalRate = row.positives / row.count
+    return {
+      ...row,
+      avgConfidence,
+      empiricalRate,
+      gap: empiricalRate - avgConfidence,
+    }
+  })
 }

@@ -23,15 +23,16 @@ import {
 import ErrorState from '../../components/primitives/ErrorState'
 import LoadingState from '../../components/primitives/LoadingState'
 import useGNNStore from '../../store/useGNNStore'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { apiJson, normalizeCollectionPayload } from '../../utils/api'
 
 const TASK_META = {
-  1: { name: 'Node Classification', color: '#ef4444' },
-  2: { name: 'Graph Classification', color: '#f97316' },
-  3: { name: 'Link Prediction', color: '#eab308' },
-  4: { name: 'Community Detection', color: '#22c55e' },
-  5: { name: 'Graph Embedding', color: '#06b6d4' },
-  6: { name: 'Graph Generation', color: '#8b5cf6' },
+  1: { nameKey: 'tasks_meta.node_classification', color: '#ef4444' },
+  2: { nameKey: 'tasks_meta.graph_classification', color: '#f97316' },
+  3: { nameKey: 'tasks_meta.link_prediction', color: '#eab308' },
+  4: { nameKey: 'tasks_meta.community_detection', color: '#22c55e' },
+  5: { nameKey: 'tasks_meta.graph_embedding', color: '#06b6d4' },
+  6: { nameKey: 'tasks_meta.graph_generation', color: '#8b5cf6' },
 }
 
 const STATUS_COLOR = {
@@ -41,16 +42,16 @@ const STATUS_COLOR = {
   stopped: { bg: 'bg-slate-500/10', text: 'text-slate-600 dark:text-slate-400', dot: 'bg-slate-500' },
 }
 
-function formatRelativeTime(value) {
+function formatRelativeTime(value, t, locale) {
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
   const diff = (Date.now() - date.getTime()) / 1000
-  if (diff < 60) return 'just now'
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
-  return date.toLocaleDateString()
+  if (diff < 60) return t('dashboard.just_now')
+  if (diff < 3600) return t('dashboard.minutes_ago', { n: Math.floor(diff / 60) })
+  if (diff < 86400) return t('dashboard.hours_ago', { n: Math.floor(diff / 3600) })
+  if (diff < 604800) return t('dashboard.days_ago', { n: Math.floor(diff / 86400) })
+  return date.toLocaleDateString(locale)
 }
 
 function dayKey(date) {
@@ -146,6 +147,8 @@ function KpiCard({ label, value, delta, deltaTone = 'up', icon: Icon, accent, sp
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const { t, lang } = useLanguage()
+  const dateLocale = lang === 'vi' ? 'vi-VN' : 'en-US'
   const activeProjectId = useGNNStore((s) => s.activeProjectId)
   const activeProjectName = useGNNStore((s) => s.activeProjectName)
   const activeDatasetVersionId = useGNNStore((s) => s.activeDatasetVersionId)
@@ -224,17 +227,17 @@ export default function DashboardPage() {
     })
     const out = Object.entries(counts).map(([key, value]) => ({
       task: Number(key),
-      name: TASK_META[key]?.name || `Task ${key}`,
+      name: TASK_META[key]?.nameKey ? t(TASK_META[key].nameKey) : `Task ${key}`,
       value,
       color: TASK_META[key]?.color || '#94a3b8',
     }))
     return out.length ? out : Array.from({ length: 6 }, (_, i) => ({
       task: i + 1,
-      name: TASK_META[i + 1].name,
+      name: t(TASK_META[i + 1].nameKey),
       value: 1,
       color: TASK_META[i + 1].color,
     }))
-  }, [experiments])
+  }, [experiments, t])
 
   const recentExperiments = useMemo(() => {
     return [...experiments]
@@ -243,10 +246,10 @@ export default function DashboardPage() {
   }, [experiments])
 
   if (loading) {
-    return <LoadingState title="Loading workspace dashboard..." className="min-h-[480px]" />
+    return <LoadingState title={t('dashboard.loading_dashboard')} className="min-h-[480px]" />
   }
   if (error) {
-    return <ErrorState title="Could not load dashboard" error={error} onRetry={() => window.location.reload()} className="min-h-[480px]" />
+    return <ErrorState title={t('dashboard.load_error')} error={error} onRetry={() => window.location.reload()} className="min-h-[480px]" />
   }
 
   return (
@@ -254,7 +257,7 @@ export default function DashboardPage() {
       {/* KPI ROW */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          label="Projects"
+          label={t('dashboard.stat_projects')}
           value={stats.projects}
           delta={stats.projects > 0 ? `${stats.projects}` : null}
           icon={FolderKanban}
@@ -262,7 +265,7 @@ export default function DashboardPage() {
           spark={sparklines.projects}
         />
         <KpiCard
-          label="Datasets"
+          label={t('dashboard.stat_datasets')}
           value={stats.datasets}
           delta={stats.datasets > 0 ? `${stats.datasets}` : null}
           icon={Database}
@@ -270,7 +273,7 @@ export default function DashboardPage() {
           spark={sparklines.datasets}
         />
         <KpiCard
-          label="Experiments"
+          label={t('dashboard.stat_experiments')}
           value={stats.experiments}
           delta={stats.experiments > 0 ? `${stats.experiments}` : null}
           icon={FlaskConical}
@@ -278,7 +281,7 @@ export default function DashboardPage() {
           spark={sparklines.experiments}
         />
         <KpiCard
-          label="Avg Accuracy"
+          label={t('dashboard.avg_accuracy')}
           value={`${(stats.avgAccuracy * 100).toFixed(1)}%`}
           delta={stats.avgAccuracy > 0 ? `${(stats.avgAccuracy * 100).toFixed(0)}%` : null}
           icon={Gauge}
@@ -289,13 +292,13 @@ export default function DashboardPage() {
 
       {/* ACTIVITY CHART + DONUT */}
       <div className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
-        <ActivityChart series={activitySeries} totalRuns={stats.experiments} />
-        <TaskDonut distribution={taskDistribution} totalRuns={stats.experiments} />
+        <ActivityChart series={activitySeries} totalRuns={stats.experiments} t={t} />
+        <TaskDonut distribution={taskDistribution} totalRuns={stats.experiments} t={t} />
       </div>
 
       {/* RECENT + READINESS + QUICK ACTIONS */}
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <RecentExperiments items={recentExperiments} onOpen={() => navigate('/app/experiments')} />
+        <RecentExperiments items={recentExperiments} onOpen={() => navigate('/app/experiments')} t={t} dateLocale={dateLocale} />
         <div className="space-y-6">
           <ReadinessCard
             activeProjectId={activeProjectId}
@@ -304,27 +307,28 @@ export default function DashboardPage() {
             activeDatasetVersionName={activeDatasetVersionName}
             uploadedFilePath={uploadedFilePath}
             navigate={navigate}
+            t={t}
           />
-          <QuickActions navigate={navigate} />
+          <QuickActions navigate={navigate} t={t} />
         </div>
       </div>
     </div>
   )
 }
 
-function ActivityChart({ series, totalRuns }) {
+function ActivityChart({ series, totalRuns, t }) {
   const max = series.reduce((acc, d) => Math.max(acc, d.runs), 0)
   return (
     <section className="surface-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="surface-eyebrow">Training Activity</div>
-          <h3 className="surface-title">Runs over the last 7 days</h3>
-          <p className="surface-sub">Daily training experiments captured by the platform.</p>
+          <div className="surface-eyebrow">{t('dashboard.training_activity_eyebrow')}</div>
+          <h3 className="surface-title">{t('dashboard.training_activity_title')}</h3>
+          <p className="surface-sub">{t('dashboard.training_activity_sub')}</p>
         </div>
         <div className="text-right">
           <div className="text-3xl font-black text-fg">{totalRuns}</div>
-          <div className="text-[11px] uppercase tracking-[0.18em] text-fg-muted">total runs</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-fg-muted">{t('dashboard.total_runs')}</div>
         </div>
       </div>
       <div className="mt-5 h-56 w-full">
@@ -371,12 +375,12 @@ function ActivityChart({ series, totalRuns }) {
   )
 }
 
-function TaskDonut({ distribution, totalRuns }) {
+function TaskDonut({ distribution, totalRuns, t }) {
   return (
     <section className="surface-card p-5">
-      <div className="surface-eyebrow">Task Distribution</div>
-      <h3 className="surface-title">Where your runs land</h3>
-      <p className="surface-sub">Share of training runs per GNN task.</p>
+      <div className="surface-eyebrow">{t('dashboard.task_distribution_eyebrow')}</div>
+      <h3 className="surface-title">{t('dashboard.task_distribution_title')}</h3>
+      <p className="surface-sub">{t('dashboard.task_distribution_sub')}</p>
       <div className="mt-4 flex items-center gap-5">
         <div className="relative h-44 w-44 shrink-0">
           <ResponsiveContainer width="100%" height="100%">
@@ -408,7 +412,7 @@ function TaskDonut({ distribution, totalRuns }) {
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             <div className="text-2xl font-black text-fg">{totalRuns}</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-fg-faint">runs</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-fg-faint">{t('dashboard.runs')}</div>
           </div>
         </div>
         <ul className="flex-1 space-y-1.5">
@@ -427,43 +431,46 @@ function TaskDonut({ distribution, totalRuns }) {
   )
 }
 
-function RecentExperiments({ items, onOpen }) {
+function RecentExperiments({ items, onOpen, t, dateLocale }) {
   return (
     <section className="surface-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="surface-eyebrow">Recent Experiments</div>
-          <h3 className="surface-title">Latest training runs</h3>
-          <p className="surface-sub">Newest experiments in the workspace.</p>
+          <div className="surface-eyebrow">{t('dashboard.recent_eyebrow')}</div>
+          <h3 className="surface-title">{t('dashboard.recent_title')}</h3>
+          <p className="surface-sub">{t('dashboard.recent_sub')}</p>
         </div>
         <button type="button" onClick={onOpen} className="surface-action">
-          Open all <ArrowRight size={13} />
+          {t('dashboard.open_all')} <ArrowRight size={13} />
         </button>
       </div>
       {items.length === 0 ? (
         <div className="empty-state mt-5">
           <div className="empty-state-icon"><BookOpen size={20} /></div>
-          <div className="empty-state-title">No experiments yet</div>
-          <p className="empty-state-desc">Run a training session from Lab and it will appear here.</p>
+          <div className="empty-state-title">{t('dashboard.no_experiments')}</div>
+          <p className="empty-state-desc">{t('dashboard.no_experiments_desc')}</p>
         </div>
       ) : (
         <ul className="mt-4 divide-y divide-line-subtle">
           {items.map((exp) => {
             const status = STATUS_COLOR[exp.status] || STATUS_COLOR.completed
-            const task = TASK_META[exp.task_type] || { name: `Task ${exp.task_type}`, color: '#94a3b8' }
+            const taskMeta = TASK_META[exp.task_type]
+            const taskName = taskMeta ? t(taskMeta.nameKey) : `Task ${exp.task_type}`
+            const taskColor = taskMeta?.color || '#94a3b8'
             const accuracy = Number(exp.metrics_json?.summary?.final_accuracy ?? exp.metrics?.summary?.final_accuracy ?? 0)
+            const statusLabel = t(`status.${exp.status || 'completed'}`)
             return (
               <li key={exp.id} className="recent-row">
-                <div className="recent-row-task" style={{ background: task.color }}>
+                <div className="recent-row-task" style={{ background: taskColor }}>
                   <Network size={14} className="text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold text-fg">{exp.title || 'Untitled run'}</div>
+                  <div className="truncate text-sm font-semibold text-fg">{exp.title || t('dashboard.untitled_run')}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-fg-muted">
-                    <span className="recent-chip">{task.name}</span>
+                    <span className="recent-chip">{taskName}</span>
                     <span className="recent-chip">{exp.model_type || 'GCN'}</span>
                     <span className="text-fg-faint">·</span>
-                    <span>{formatRelativeTime(exp.created_at)}</span>
+                    <span>{formatRelativeTime(exp.created_at, t, dateLocale)}</span>
                   </div>
                 </div>
                 <div className="hidden flex-col items-end gap-1 sm:flex">
@@ -475,14 +482,14 @@ function RecentExperiments({ items, onOpen }) {
                       className="h-full rounded-full"
                       style={{
                         width: `${Math.min(100, accuracy * 100)}%`,
-                        background: task.color,
+                        background: taskColor,
                       }}
                     />
                   </div>
                 </div>
                 <span className={`recent-status ${status.bg} ${status.text}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-                  {exp.status || 'completed'}
+                  {statusLabel}
                 </span>
               </li>
             )
@@ -493,25 +500,25 @@ function RecentExperiments({ items, onOpen }) {
   )
 }
 
-function ReadinessCard({ activeProjectId, activeProjectName, activeDatasetVersionId, activeDatasetVersionName, uploadedFilePath, navigate }) {
+function ReadinessCard({ activeProjectId, activeProjectName, activeDatasetVersionId, activeDatasetVersionName, uploadedFilePath, navigate, t }) {
   const items = [
     {
       done: !!activeProjectId,
-      label: activeProjectName || (activeProjectId ? `Project #${activeProjectId}` : 'Select a project before training'),
+      label: activeProjectName || (activeProjectId ? `Project #${activeProjectId}` : t('dashboard.ck_select_project')),
       action: () => navigate('/app/projects'),
-      actionLabel: 'Projects',
+      actionLabel: t('nav.projects'),
     },
     {
       done: !!activeDatasetVersionId,
-      label: activeDatasetVersionName || (activeDatasetVersionId ? `Version #${activeDatasetVersionId}` : 'Select a dataset version'),
+      label: activeDatasetVersionName || (activeDatasetVersionId ? `Version #${activeDatasetVersionId}` : t('dashboard.ck_select_dataset')),
       action: () => navigate('/app/datasets'),
-      actionLabel: 'Datasets',
+      actionLabel: t('nav.datasets'),
     },
     {
       done: !!uploadedFilePath,
-      label: uploadedFilePath ? 'Upload metadata available' : 'Optional: attach upload metadata',
+      label: uploadedFilePath ? t('dashboard.ck_upload_done') : t('dashboard.ck_upload_meta'),
       action: () => navigate('/app/lab'),
-      actionLabel: 'Lab',
+      actionLabel: t('nav.lab'),
     },
   ]
   const completed = items.filter((it) => it.done).length
@@ -519,12 +526,12 @@ function ReadinessCard({ activeProjectId, activeProjectName, activeDatasetVersio
     <section className="surface-card p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="surface-eyebrow">Project Readiness</div>
-          <h3 className="surface-title">Pre-training checklist</h3>
+          <div className="surface-eyebrow">{t('dashboard.readiness_eyebrow')}</div>
+          <h3 className="surface-title">{t('dashboard.readiness_title')}</h3>
         </div>
         <div className="text-right">
           <div className="text-xl font-black text-fg">{completed}/{items.length}</div>
-          <div className="text-[10px] uppercase tracking-[0.18em] text-fg-faint">ready</div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-fg-faint">{t('dashboard.ready')}</div>
         </div>
       </div>
       <ul className="mt-4 space-y-2">
@@ -542,17 +549,17 @@ function ReadinessCard({ activeProjectId, activeProjectName, activeDatasetVersio
   )
 }
 
-function QuickActions({ navigate }) {
+function QuickActions({ navigate, t }) {
   const actions = [
-    { icon: FolderKanban, label: 'Projects', desc: 'Containers for runs', accent: 'rose', to: '/app/projects' },
-    { icon: Database, label: 'Datasets', desc: 'Manage data versions', accent: 'cyan', to: '/app/datasets' },
-    { icon: Cpu, label: 'Open Lab', desc: 'Train & visualize', accent: 'amber', to: '/app/lab' },
-    { icon: BookOpen, label: 'Experiments', desc: 'Compare past runs', accent: 'emerald', to: '/app/experiments' },
+    { icon: FolderKanban, label: t('nav.projects'), desc: t('dashboard.quick_projects_desc'), accent: 'rose', to: '/app/projects' },
+    { icon: Database, label: t('nav.datasets'), desc: t('dashboard.quick_datasets_desc'), accent: 'cyan', to: '/app/datasets' },
+    { icon: Cpu, label: t('dashboard.open_lab'), desc: t('dashboard.quick_lab_desc'), accent: 'amber', to: '/app/lab' },
+    { icon: BookOpen, label: t('nav.experiments'), desc: t('dashboard.quick_experiments_desc'), accent: 'emerald', to: '/app/experiments' },
   ]
   return (
     <section className="surface-card p-5">
-      <div className="surface-eyebrow">Quick Actions</div>
-      <h3 className="surface-title">Jump to workspace</h3>
+      <div className="surface-eyebrow">{t('dashboard.quick_eyebrow')}</div>
+      <h3 className="surface-title">{t('dashboard.quick_title')}</h3>
       <div className="mt-4 grid grid-cols-2 gap-3">
         {actions.map((a) => (
           <button

@@ -6,6 +6,7 @@ import AppLayout from './layouts/AppLayout'
 import PublicAuthLayout from './layouts/PublicAuthLayout'
 import PublicLayout from './layouts/PublicLayout'
 import useAuthStore from './store/authStore'
+import { useLanguage } from './contexts/LanguageContext'
 import { getDefaultPathForUser, isAdminUser } from './utils/appRoutes'
 
 const LandingPage = lazy(() => import('./pages/public/LandingPage'))
@@ -28,22 +29,24 @@ const AdminRetentionPage = lazy(() => import('./pages/admin/AdminRetentionPage')
 const AdminAuditPage = lazy(() => import('./pages/admin/AdminAuditPage'))
 
 function FullscreenLoader() {
+  const { t } = useLanguage()
   return (
     <div className="min-h-screen bg-abyss text-starlight flex items-center justify-center">
       <div className="inline-flex items-center gap-3 rounded-2xl border border-line-subtle bg-deep px-5 py-4 text-sm text-moonlight shadow-card">
         <Loader2 size={16} className="animate-spin text-amethyst" />
-        Initializing workspace…
+        {t('common.loading_workspace')}
       </div>
     </div>
   )
 }
 
 function RouteLoader() {
+  const { t } = useLanguage()
   return (
     <div className="min-h-[320px] flex items-center justify-center">
       <div className="inline-flex items-center gap-3 rounded-2xl border border-line-subtle bg-deep px-5 py-4 text-sm text-moonlight">
         <Loader2 size={16} className="animate-spin text-amethyst" />
-        Loading…
+        {t('common.loading')}
       </div>
     </div>
   )

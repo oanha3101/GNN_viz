@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { computeHardCases } from '../../utils/task2Metrics'
+import { computeHardCases, formatTask2ClassLabel } from '../../utils/task2Metrics'
 import EmptyState from '../primitives/EmptyState'
 
 /**
@@ -28,8 +28,8 @@ export default function Task2HardCases({
     )
   }
 
-  const names = classNames?.length ? classNames : null
-  const label = (c) => (names && names[c] != null ? names[c] : `C${c}`)
+  const names = classNames?.length ? classNames : []
+  const label = (c) => formatTask2ClassLabel(names, c, 'Unknown')
 
   return (
     <ul

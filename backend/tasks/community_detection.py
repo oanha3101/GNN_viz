@@ -4,6 +4,7 @@ GNN learns embeddings that maximize modularity.
 Nodes physically separate into "Islands" based on predicted communities.
 """
 import asyncio
+import random
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -55,15 +56,79 @@ def align_labels(prev_labels, curr_labels, num_communities):
         used.add(best_p)
     return [mapping.get(int(c), int(c)) for c in curr]
 
+def normalize_model_type(model_type):
+    key = str(model_type or 'GCN').upper().replace('-', '_')
+    if key in {'SAGE', 'GRAPHSAGE', 'GRAPH_SAGE'}:
+        return 'SAGE'
+    if key == 'GAT':
+        return 'GAT'
+    return 'GCN'
+
+
+def resolve_num_communities(config, num_nodes, fallback=4, community_gt=None):
+    configured = config.get('num_communities')
+    if configured is None and community_gt is not None:
+        unique_gt = {int(c) for c in community_gt if c is not None}
+        if unique_gt:
+            configured = len(unique_gt)
+    if configured is None:
+        configured = fallback
+    try:
+        value = int(configured)
+    except (TypeError, ValueError):
+        value = int(fallback)
+    return max(1, min(max(1, int(num_nodes)), value))
+
+
+def safe_mean(values, default=0.0):
+    finite = [float(v) for v in values if v is not None and np.isfinite(v)]
+    return float(np.mean(finite)) if finite else float(default)
+
+
+def set_task4_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+def task4_quality_score(modularity, mean_silhouette, stability, conductance, bridge_ratio):
+    silhouette_norm = max(0.0, min(1.0, (float(mean_silhouette) + 1.0) / 2.0))
+    modularity_norm = max(0.0, min(1.0, float(modularity)))
+    stability_norm = max(0.0, min(1.0, float(stability)))
+    conductance_norm = 1.0 - max(0.0, min(1.0, float(conductance)))
+    bridge_norm = 1.0 - max(0.0, min(1.0, float(bridge_ratio)))
+    return float(
+        modularity_norm * 0.35 +
+        silhouette_norm * 0.20 +
+        stability_norm * 0.20 +
+        conductance_norm * 0.15 +
+        bridge_norm * 0.10
+    )
+
+
+def task4_stability_status(stability, stability_drop, model_type):
+    if stability_drop > 0.12:
+        return 'unstable_drop'
+    if stability < 0.72:
+        return 'unstable'
+    if model_type == 'GAT' and stability < 0.82:
+        return 'attention_unsettled'
+    if model_type == 'SAGE' and stability < 0.82:
+        return 'sampling_variance'
+    return 'stable'
+
+
 class CommunityGNN(torch.nn.Module):
     def __init__(self, in_channels, hidden=64, out_channels=32, model_type='GCN', heads=4, dropout=0.2):
         super().__init__()
-        self.model_type = model_type
+        self.model_type = normalize_model_type(model_type)
         self.dropout = dropout
-        if model_type == 'GAT':
+        if self.model_type == 'GAT':
             self.conv1 = GATConv(in_channels, hidden, heads=heads, concat=True)
             self.conv2 = GATConv(hidden * heads, out_channels, heads=1, concat=False)
-        elif model_type == 'SAGE':
+        elif self.model_type == 'SAGE':
             self.conv1 = SAGEConv(in_channels, hidden)
             self.conv2 = SAGEConv(hidden, out_channels)
         else:
@@ -124,7 +189,15 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
     """
     epochs = config.get('epochs', 100)
     num_nodes = data.x.size(0)
-    num_communities = config.get('num_communities', num_communities)
+    model_type = normalize_model_type(model_type)
+    num_communities = resolve_num_communities(
+        config,
+        num_nodes,
+        fallback=num_communities,
+        community_gt=community_gt,
+    )
+    seed = int(config.get('seed', 42))
+    set_task4_seed(seed)
     
     # Generate a graph with community structure (Stochastic Block Model)
     # We'll use the existing data but treat it as unsupervised
@@ -144,7 +217,7 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
     
     # Send initial graph structure (include community GT if available)
     nodes_data = [{'id': i} for i in range(num_nodes)]
-    if community_gt:
+    if community_gt is not None:
         for i in range(min(num_nodes, len(community_gt))):
             nodes_data[i]['communityGT'] = community_gt[i]
     
@@ -162,6 +235,9 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
 
     epoch_snapshots = []
     prev_aligned_labels = None  # For label alignment between epochs
+    prev_cluster_centers = None
+    best_quality_score = float('-inf')
+    best_epoch = None
 
     for epoch in range(epochs):
         if stop_flag(): break
@@ -190,7 +266,16 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
             with torch.no_grad():
                 z_np = z_n.detach().cpu().numpy()
                 try:
-                    kmeans_tmp = KMeans(n_clusters=num_communities, n_init=5, random_state=42)
+                    init = prev_cluster_centers if (
+                        prev_cluster_centers is not None and
+                        np.asarray(prev_cluster_centers).shape == (num_communities, z_np.shape[1])
+                    ) else 'k-means++'
+                    kmeans_tmp = KMeans(
+                        n_clusters=num_communities,
+                        init=init,
+                        n_init=1 if not isinstance(init, str) else 10,
+                        random_state=seed + epoch,
+                    )
                     tmp_labels = kmeans_tmp.fit_predict(z_np)
                 except Exception:
                     tmp_labels = [0] * num_nodes
@@ -205,6 +290,14 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
             cohesion_loss /= max(1, num_communities)
 
         loss = pos_loss + neg_loss + 0.3 * cohesion_loss
+        if model_type == 'GCN':
+            smoothness_penalty = ((z_n[row] - z_n[col]) ** 2).sum(dim=1).mean()
+            loss = loss + 0.015 * smoothness_penalty
+        elif model_type == 'SAGE' and epoch > 3:
+            noise = torch.randn_like(data.x) * 0.04
+            z_noisy = F.normalize(model(data.x + noise, data.edge_index), p=2, dim=1)
+            consistency_loss = F.mse_loss(z_noisy, z_n.detach())
+            loss = loss + 0.02 * consistency_loss
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
@@ -217,8 +310,17 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                 z_norm = F.normalize(z_fresh, p=2, dim=1)
                 z_np = z_norm.cpu().numpy()
                 
-                # Use KMeans to find community islands in embedding space
-                kmeans = KMeans(n_clusters=num_communities, n_init=10)
+                # Use warm-started KMeans to find community islands in embedding space
+                kmeans_init = prev_cluster_centers if (
+                    prev_cluster_centers is not None and
+                    np.asarray(prev_cluster_centers).shape == (num_communities, z_np.shape[1])
+                ) else 'k-means++'
+                kmeans = KMeans(
+                    n_clusters=num_communities,
+                    init=kmeans_init,
+                    n_init=1 if not isinstance(kmeans_init, str) else 20,
+                    random_state=seed + epoch,
+                )
                 clusters_raw = kmeans.fit_predict(z_np)
 
                 # ── Label alignment (prevent KMeans ID swapping) ───────────────
@@ -228,6 +330,17 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
 
                 community_map = {i: int(clusters[i]) for i in range(num_nodes)}
                 q_score = calculate_modularity(G, community_map)
+                aligned_centers = []
+                for cid in range(num_communities):
+                    members = np.where(clusters == cid)[0]
+                    if len(members):
+                        aligned_centers.append(z_np[members].mean(axis=0))
+                    elif prev_cluster_centers is not None and len(prev_cluster_centers) > cid:
+                        aligned_centers.append(np.asarray(prev_cluster_centers[cid]))
+                    else:
+                        aligned_centers.append(kmeans.cluster_centers_[cid])
+                aligned_centers = np.asarray(aligned_centers, dtype=float)
+                prev_cluster_centers = aligned_centers
                 
                 # Detect bridge nodes (nodes with neighbors in different communities)
                 # Enhanced: bridge strength score (not just boolean)
@@ -297,7 +410,7 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                             'external_edges': 0,
                         })
 
-                avg_conductance = sum(conductances) / len(conductances) if conductances else 0.0
+                avg_conductance = safe_mean(conductances)
 
                 # ── Explainability Data ─────────────────────────────────────────
                 
@@ -338,11 +451,11 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                 cluster_confidence = []
                 for i in range(num_nodes):
                     node_embedding = z_np[i]
-                    assigned_center = kmeans.cluster_centers_[community_map[i]]
+                    assigned_center = aligned_centers[community_map[i]]
                     dist_to_assigned = np.linalg.norm(node_embedding - assigned_center)
                     
                     # Distance to nearest other center
-                    dists_to_others = [np.linalg.norm(node_embedding - kmeans.cluster_centers_[c]) 
+                    dists_to_others = [np.linalg.norm(node_embedding - aligned_centers[c]) 
                                       for c in range(num_communities) if c != community_map[i]]
                     dist_to_nearest_other = min(dists_to_others) if dists_to_others else dist_to_assigned
                     
@@ -352,9 +465,10 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                     else:
                         confidence = 0.0
                     cluster_confidence.append(float(confidence))
+                mean_cluster_confidence = safe_mean(cluster_confidence)
                 
                 # 3. KMeans centers for visualization
-                cluster_centers = kmeans.cluster_centers_.tolist()
+                cluster_centers = aligned_centers.tolist()
                 
                 # 4. Community stability (using aligned labels)
                 if epoch_snapshots:
@@ -364,6 +478,23 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                     stability_score = 1.0 - (nodes_changed / num_nodes)
                 else:
                     stability_score = 1.0
+
+                mean_silhouette = safe_mean(silhouette_scores)
+                bridge_ratio = float(sum(1 for flag in bridge_flags if flag) / max(1, num_nodes))
+                largest_community_ratio = float(max(community_sizes) / max(1, num_nodes)) if community_sizes else 0.0
+                empty_community_count = int(sum(1 for size in community_sizes if size == 0))
+                quality_composite = task4_quality_score(
+                    q_score,
+                    mean_silhouette,
+                    stability_score,
+                    avg_conductance,
+                    bridge_ratio,
+                )
+                prev_stability = epoch_snapshots[-1]['community_stability'] if epoch_snapshots else stability_score
+                stability_drop = max(0.0, float(prev_stability) - float(stability_score))
+                if quality_composite > best_quality_score:
+                    best_quality_score = quality_composite
+                    best_epoch = epoch
 
                 # ── A3: GCN Smoothness / Dirichlet Energy ─────────────────────
                 row_z, col_z = data.edge_index
@@ -392,7 +523,7 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                             z_noisy = model(data.x + noise, data.edge_index)
                             z_noisy_n = F.normalize(z_noisy, p=2, dim=1).cpu().numpy()
                         # Use nearest-center consistency instead of full KMeans
-                        centers_np = kmeans.cluster_centers_
+                        centers_np = aligned_centers
                         noisy_labels = np.array([
                             int(np.argmin([np.linalg.norm(z_noisy_n[i] - centers_np[c])
                                            for c in range(num_communities)]))
@@ -433,7 +564,7 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
 
             # NMI (Normalized Mutual Information) if ground truth available
             nmi_score = None
-            if community_gt and len(community_gt) == num_nodes:
+            if community_gt is not None and len(community_gt) == num_nodes:
                 try:
                     from sklearn.metrics import normalized_mutual_info_score
                     nmi_score = float(normalized_mutual_info_score(
@@ -457,8 +588,22 @@ async def run_community_detection(config, data, model_type, websocket, stop_flag
                 'modularity_q': q_score,
                 'conductance': avg_conductance,
                 'community_sizes': community_sizes,
+                'mean_silhouette': mean_silhouette,
+                'mean_cluster_confidence': mean_cluster_confidence,
+                'bridge_ratio': bridge_ratio,
+                'largest_community_ratio': largest_community_ratio,
+                'empty_community_count': empty_community_count,
                 'linkage_matrix': linkage_matrix,
                 'nmi_score': nmi_score,
+                'primary_metric_name': 'modularity_q',
+                'primary_metric_value': float(q_score),
+                'quality_metric': 'modularity_q',
+                'quality_score': float(q_score),
+                'best_epoch': best_epoch,
+                'best_quality_score': float(best_quality_score),
+                'is_best_epoch': bool(best_epoch == epoch),
+                'stability_drop': float(stability_drop),
+                'model_stability_status': task4_stability_status(stability_score, stability_drop, model_type),
                 # A3: GCN Smoothness
                 'dirichlet_energy': dirichlet_energy,
                 'local_smoothness': local_smoothness,

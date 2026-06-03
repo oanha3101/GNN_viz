@@ -20,7 +20,7 @@ export default function NodeHoverCard() {
   const snap = snapshots[currentEpoch] || null
 
   // Which node to prioritize: hovered or selected (if no hover)
-  const activeId = hoveredNodeId !== null ? hoveredNodeId : null
+  const activeId = hoveredNodeId !== null ? hoveredNodeId : selectedNodeId
 
   const summary = useMemo(() => {
     if (activeId === null) return null

@@ -50,14 +50,22 @@ than a true GraphSAGE generator.
 - Primary question: which nodes form communities?
 - Key views: community coloring, modularity, bridge nodes, stability, and
   community inspector.
+- Node-level evidence: clicking a node pins its community, confidence,
+  silhouette, bridge strength, cross-community neighbors, and migration history
+  in the inspector.
+- Report pages: overview, bridge nodes, stability heatmap, diagnostics, latent
+  space, and full topology are included in the printable analysis flow.
 - GraphSAGE-specific signal: neighborhood aggregation should make community
-  boundaries and bridge nodes easier to diagnose.
+  boundaries and bridge nodes easier to diagnose; the Task 4 topology uses this
+  as the migration-focused overlay.
 
 ## Task 5: Graph Embedding
 
 - Primary question: does the embedding preserve useful graph structure?
 - Key views: embedding quality overview, k-NN preservation, outliers,
   reconstruction AUC/loss, embedding norms, and isotropy.
+- Interaction: selecting or brushing nodes in the embedding space highlights
+  the same nodes in topology; outlier rows pulse the selected topology node.
 - Required data contract: `per_node_knn_preservation` may be an object map keyed
   by node id; `outlier_scores` may be object rows with `node_id`,
   `avg_distance_to_neighbors`, and `is_outlier`.

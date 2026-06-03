@@ -146,6 +146,24 @@ class TestEdgeCommonNeighbor(BaseModel):
     embedding_distance: float
 
 
+class EdgeStructureFeature(BaseModel):
+    idx: int
+    source: int
+    target: int
+    is_positive: bool
+    degree_source: int
+    degree_target: int
+    common_neighbors: int
+    shortest_path: Optional[int] = None
+    neighbor_jaccard: float
+    embedding_distance: float
+    embedding_similarity: float
+    structural_equivalence: float
+    local_clustering_source: float
+    local_clustering_target: float
+    same_ground_truth_label: Optional[bool] = None
+
+
 class TopKLink(BaseModel):
     source: int
     target: int
@@ -158,6 +176,7 @@ class SnapshotTask3(BaseModel):
     edge_scores: List[float]
     edge_classifications: List[EdgeClassification]
     test_edge_common_neighbors: List[TestEdgeCommonNeighbor]
+    edge_structure_features: List[EdgeStructureFeature] = Field(default_factory=list)
     embeddings_2d: List[List[float]]
     knn_preservation: float
     train_loss: float
@@ -197,8 +216,22 @@ class SnapshotTask4(BaseModel):
     modularity_q: float
     conductance: float
     community_sizes: List[int]
+    mean_silhouette: float = 0.0
+    mean_cluster_confidence: float = 0.0
+    bridge_ratio: float = 0.0
+    largest_community_ratio: float = 0.0
+    empty_community_count: int = 0
     linkage_matrix: Optional[List[List[float]]] = None
     nmi_score: Optional[float] = None
+    primary_metric_name: Optional[str] = None
+    primary_metric_value: Optional[float] = None
+    quality_metric: Optional[str] = None
+    quality_score: Optional[float] = None
+    best_epoch: Optional[int] = None
+    best_quality_score: Optional[float] = None
+    is_best_epoch: Optional[bool] = None
+    stability_drop: Optional[float] = None
+    model_stability_status: Optional[str] = None
     community_transitions: Dict[str, int] = Field(default_factory=dict)
     # A3: GCN Smoothness
     dirichlet_energy: Optional[float] = None
@@ -242,6 +275,10 @@ class SnapshotTask5(BaseModel):
     isotropy_score: float
     reconstruction_loss: float
     proximity_scores: List[ProximityScore] = Field(default_factory=list)
+    primary_metric_name: Optional[str] = None
+    primary_metric_value: Optional[float] = None
+    quality_metric: Optional[str] = None
+    quality_score: Optional[float] = None
     per_node_knn_preservation: Dict[str, float] = Field(default_factory=dict)
     per_edge_reconstruction_error: List[PerEdgeReconError] = Field(default_factory=list)
     embedding_norms: List[float] = Field(default_factory=list)

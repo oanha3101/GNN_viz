@@ -4,8 +4,13 @@ import {
   buildROCPoints,
   buildPRPoints,
   topKHardEdges,
+  brierScore,
+  buildCalibrationBins,
   buildScoreHistogram,
   accuracyAtThreshold,
+  hitsAtK,
+  precisionAtK,
+  recallAtK,
 } from './task3Metrics.js'
 
 const scores = [0.9, 0.2, 0.7, 0.1, 0.85, 0.4, 0.6, 0.05]
@@ -103,5 +108,38 @@ describe('accuracyAtThreshold', () => {
     const acc = accuracyAtThreshold(paired, 0.5)
     expect(acc).toBeGreaterThanOrEqual(0)
     expect(acc).toBeLessThanOrEqual(1)
+  })
+})
+
+describe('ranking helpers', () => {
+  it('computes precision, recall, and hits at k from sorted pairs', () => {
+    const paired = pairScores(scores, testEdges)
+    expect(precisionAtK(paired, 3)).toBeCloseTo(2 / 3, 6)
+    expect(recallAtK(paired, 3)).toBeCloseTo(0.5, 6)
+    expect(hitsAtK(paired, 1)).toBe(1)
+  })
+
+  it('returns zeros for degenerate inputs', () => {
+    expect(precisionAtK([], 3)).toBe(0)
+    expect(recallAtK([], 3)).toBe(0)
+    expect(hitsAtK([], 3)).toBe(0)
+  })
+})
+
+describe('calibration helpers', () => {
+  it('computes a bounded brier score', () => {
+    const paired = pairScores(scores, testEdges)
+    const value = brierScore(paired)
+    expect(value).toBeGreaterThanOrEqual(0)
+    expect(value).toBeLessThanOrEqual(1)
+  })
+
+  it('builds calibration bins whose counts match the input size', () => {
+    const paired = pairScores(scores, testEdges)
+    const bins = buildCalibrationBins(paired, 4)
+    expect(bins).toHaveLength(4)
+    const total = bins.reduce((sum, row) => sum + row.count, 0)
+    expect(total).toBe(paired.length)
+    expect(bins.some((row) => row.count > 0 && row.avgConfidence >= 0)).toBe(true)
   })
 })

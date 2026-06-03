@@ -13,21 +13,22 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useAuthStore from '../../store/authStore'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { apiUrl } from '../../utils/api'
 
 const PRIORITY_CONFIG = {
-  high: { color: '#ef4444', bg: 'bg-red-500/10', border: 'border-red-500/20', icon: AlertTriangle, label: 'High' },
-  moderate: { color: '#f59e0b', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: Target, label: 'Moderate' },
-  low: { color: '#22c55e', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: Lightbulb, label: 'Low' },
+  high: { color: '#ef4444', bg: 'bg-red-500/10', border: 'border-red-500/20', icon: AlertTriangle, labelKey: 'analyst.high' },
+  moderate: { color: '#f59e0b', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: Target, labelKey: 'analyst.moderate' },
+  low: { color: '#22c55e', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: Lightbulb, labelKey: 'analyst.low' },
 }
 
 const CATEGORY_CONFIG = {
-  architecture: { icon: Zap, color: '#a855f7' },
-  regularization: { icon: Target, color: '#3b82f6' },
-  optimization: { icon: TrendingUp, color: '#f59e0b' },
-  model_selection: { icon: CheckCircle2, color: '#22c55e' },
-  loss_function: { icon: Sparkles, color: '#ec4899' },
-  dataset: { icon: FileText, color: '#06b6d4' },
+  architecture: { icon: Zap, color: '#a855f7', labelKey: 'analyst.category_architecture' },
+  regularization: { icon: Target, color: '#3b82f6', labelKey: 'analyst.category_regularization' },
+  optimization: { icon: TrendingUp, color: '#f59e0b', labelKey: 'analyst.category_optimization' },
+  model_selection: { icon: CheckCircle2, color: '#22c55e', labelKey: 'analyst.category_model_selection' },
+  loss_function: { icon: Sparkles, color: '#ec4899', labelKey: 'analyst.category_loss_function' },
+  dataset: { icon: FileText, color: '#06b6d4', labelKey: 'analyst.category_dataset' },
 }
 
 /**
@@ -36,6 +37,7 @@ const CATEGORY_CONFIG = {
  */
 export default function RecommendationsPanel({ experimentId }) {
   const getAuthHeaders = useAuthStore((s) => s.getAuthHeaders)
+  const { t, lang } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [data, setData] = useState(null)
@@ -48,35 +50,35 @@ export default function RecommendationsPanel({ experimentId }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(apiUrl(`/experiments/${experimentId}/recommendations`), {
+      const res = await fetch(apiUrl(`/experiments/${experimentId}/recommendations?lang=${lang}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       })
       const text = await res.text()
       if (!res.ok) {
-        let detail = 'Failed to load recommendations'
+        let detail = t('analyst.load_failed')
         try { detail = JSON.parse(text).detail || detail } catch {}
         throw new Error(detail)
       }
       setData(JSON.parse(text))
     } catch (err) {
-      setError(err?.message || 'Failed to load recommendations')
+      setError(err?.message || t('analyst.load_failed'))
     } finally {
       setLoading(false)
     }
-  }, [experimentId, getAuthHeaders])
+  }, [experimentId, getAuthHeaders, t, lang])
 
   const fetchResearchNotes = useCallback(async () => {
     if (!experimentId) return
     setNotesLoading(true)
     try {
-      const res = await fetch(apiUrl(`/experiments/${experimentId}/research-notes`), {
+      const res = await fetch(apiUrl(`/experiments/${experimentId}/research-notes?lang=${lang}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       })
       const text = await res.text()
       if (!res.ok) {
-        let detail = 'Failed to generate research notes'
+        let detail = t('analyst.notes_failed')
         try { detail = JSON.parse(text).detail || detail } catch {}
         throw new Error(detail)
       }
@@ -86,7 +88,7 @@ export default function RecommendationsPanel({ experimentId }) {
     } finally {
       setNotesLoading(false)
     }
-  }, [experimentId, getAuthHeaders])
+  }, [experimentId, getAuthHeaders, t, lang])
 
   useEffect(() => {
     fetchData()
@@ -96,7 +98,7 @@ export default function RecommendationsPanel({ experimentId }) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 size={20} className="animate-spin text-purple-400" />
-        <span className="ml-2 text-sm text-slate-400">Analyzing experiment...</span>
+        <span className="ml-2 text-sm text-slate-400">{t('analyst.analyzing')}</span>
       </div>
     )
   }
@@ -104,7 +106,7 @@ export default function RecommendationsPanel({ experimentId }) {
   if (error) {
     return (
       <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-300">
-        <div className="font-semibold">Failed to load recommendations</div>
+        <div className="font-semibold">{t('analyst.load_failed')}</div>
         <div className="mt-1 text-red-200/90">{error}</div>
       </div>
     )
@@ -116,7 +118,7 @@ export default function RecommendationsPanel({ experimentId }) {
   const highRecs = recs.filter((r) => r.priority === 'high')
   const modRecs = recs.filter((r) => r.priority === 'moderate')
   const lowRecs = recs.filter((r) => r.priority === 'low')
-  const analystSource = data.source === 'llm' ? 'AI Analyst' : 'Heuristic Analyst'
+  const analystSource = data.source === 'llm' ? t('analyst.ai_analyst') : t('analyst.heuristic_analyst')
   const analystModel = data?.llm?.model
 
   return (
@@ -131,7 +133,7 @@ export default function RecommendationsPanel({ experimentId }) {
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
           }`}
         >
-          Recommendations
+          {t('analyst.recommendations')}
         </button>
         <button
           onClick={() => {
@@ -144,7 +146,7 @@ export default function RecommendationsPanel({ experimentId }) {
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
           }`}
         >
-          Research Notes
+          {t('analyst.research_notes')}
         </button>
       </div>
 
@@ -154,47 +156,47 @@ export default function RecommendationsPanel({ experimentId }) {
             {/* Summary */}
             <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-400 mb-2">
-                <Sparkles size={14} /> Analysis Summary
+                <Sparkles size={14} /> {t('analyst.analysis_summary')}
               </div>
               <div className="mb-2 text-[11px] text-slate-400">
-                Source: <span className="text-slate-200">{analystSource}</span>
+                {t('analyst.source')}: <span className="text-slate-200">{analystSource}</span>
                 {analystModel ? <span className="text-slate-500"> · {analystModel}</span> : null}
               </div>
               <p className="text-sm text-slate-200">{data.summary}</p>
               <div className="flex items-center gap-3 mt-3">
-                <PriorityBadge count={data.priority_counts?.high} priority="high" />
-                <PriorityBadge count={data.priority_counts?.moderate} priority="moderate" />
-                <PriorityBadge count={data.priority_counts?.low} priority="low" />
+                <PriorityBadge count={data.priority_counts?.high} priority="high" t={t} />
+                <PriorityBadge count={data.priority_counts?.moderate} priority="moderate" t={t} />
+                <PriorityBadge count={data.priority_counts?.low} priority="low" t={t} />
               </div>
             </div>
 
             {data.analyst_brief ? (
               <div className="grid gap-3 md:grid-cols-3">
-                <BriefBlock title="Key findings" items={data.analyst_brief.findings} />
-                <BriefBlock title="Main risks" items={data.analyst_brief.risks} />
-                <BriefBlock title="Next steps" items={data.analyst_brief.next_steps} />
+                <BriefBlock title={t('analyst.key_findings')} items={data.analyst_brief.findings} />
+                <BriefBlock title={t('analyst.main_risks')} items={data.analyst_brief.risks} />
+                <BriefBlock title={t('analyst.next_steps')} items={data.analyst_brief.next_steps} />
               </div>
             ) : null}
 
             {/* High Priority */}
             {highRecs.length > 0 && (
-              <RecommendationGroup title="High Priority" recs={highRecs} />
+              <RecommendationGroup title={t('analyst.high_priority')} recs={highRecs} t={t} />
             )}
 
             {/* Moderate Priority */}
             {modRecs.length > 0 && (
-              <RecommendationGroup title="Moderate Priority" recs={modRecs} />
+              <RecommendationGroup title={t('analyst.moderate_priority')} recs={modRecs} t={t} />
             )}
 
             {/* Low Priority */}
             {lowRecs.length > 0 && (
-              <RecommendationGroup title="Suggestions" recs={lowRecs} />
+              <RecommendationGroup title={t('analyst.suggestions')} recs={lowRecs} t={t} />
             )}
 
             {recs.length === 0 && (
               <div className="flex items-center gap-3 text-sm text-emerald-400 py-4">
                 <CheckCircle2 size={20} />
-                Training looks healthy — no major improvements needed.
+                {t('analyst.training_healthy')}
               </div>
             )}
           </motion.div>
@@ -203,12 +205,12 @@ export default function RecommendationsPanel({ experimentId }) {
             {notesLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 size={16} className="animate-spin text-purple-400" />
-                <span className="ml-2 text-sm text-slate-400">Generating research notes...</span>
+                <span className="ml-2 text-sm text-slate-400">{t('analyst.generating_notes')}</span>
               </div>
             ) : researchNotes ? (
-              <ResearchNotesDisplay notes={researchNotes} />
+              <ResearchNotesDisplay notes={researchNotes} t={t} />
             ) : (
-              <div className="text-sm text-slate-400 py-4">Failed to generate research notes.</div>
+              <div className="text-sm text-slate-400 py-4">{t('analyst.notes_failed')}</div>
             )}
           </motion.div>
         )}
@@ -217,35 +219,34 @@ export default function RecommendationsPanel({ experimentId }) {
   )
 }
 
-function PriorityBadge({ count, priority }) {
+function PriorityBadge({ count, priority, t }) {
   const config = PRIORITY_CONFIG[priority]
   if (!count) return null
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${config.bg}`}>
       <config.icon size={10} style={{ color: config.color }} />
-      <span style={{ color: config.color }}>{count} {config.label}</span>
+      <span style={{ color: config.color }}>{count} {t(config.labelKey)}</span>
     </span>
   )
 }
 
-function RecommendationGroup({ title, recs }) {
+function RecommendationGroup({ title, recs, t }) {
   return (
     <div>
       <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{title}</h4>
       <div className="space-y-2">
         {recs.map((rec, i) => (
-          <RecommendationCard key={i} rec={rec} index={i} />
+          <RecommendationCard key={i} rec={rec} index={i} t={t} />
         ))}
       </div>
     </div>
   )
 }
 
-function RecommendationCard({ rec, index }) {
+function RecommendationCard({ rec, index, t }) {
   const priorityConfig = PRIORITY_CONFIG[rec.priority] || PRIORITY_CONFIG.low
   const categoryConfig = CATEGORY_CONFIG[rec.category] || CATEGORY_CONFIG.dataset
   const CategoryIcon = categoryConfig.icon
-  const PriorityIcon = priorityConfig.icon
 
   return (
     <motion.div
@@ -263,10 +264,10 @@ function RecommendationCard({ rec, index }) {
             <h5 className="text-xs font-semibold text-slate-100">{rec.action}</h5>
             <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase"
               style={{ backgroundColor: `${priorityConfig.color}20`, color: priorityConfig.color }}>
-              {rec.priority}
+              {t(priorityConfig.labelKey)}
             </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
-              {rec.category?.replace(/_/g, ' ')}
+              {t(categoryConfig.labelKey)}
             </span>
           </div>
           <p className="text-[11px] text-slate-300 mt-1.5">{rec.reason}</p>
@@ -282,13 +283,13 @@ function RecommendationCard({ rec, index }) {
   )
 }
 
-function ResearchNotesDisplay({ notes }) {
+function ResearchNotesDisplay({ notes, t }) {
   const sections = notes?.sections || []
 
   return (
     <div className="space-y-3">
       <div className="text-[11px] text-slate-400">
-        Source: <span className="text-slate-200">{notes?.source === 'llm' ? 'AI Analyst' : 'Heuristic Analyst'}</span>
+        {t('analyst.source')}: <span className="text-slate-200">{notes?.source === 'llm' ? t('analyst.ai_analyst') : t('analyst.heuristic_analyst')}</span>
         {notes?.llm?.model ? <span className="text-slate-500"> · {notes.llm.model}</span> : null}
       </div>
       {sections.map((section, i) => (

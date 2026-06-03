@@ -11,33 +11,53 @@ import torch.nn.functional as F
 import networkx as nx
 from sklearn.decomposition import PCA
 from torch_geometric.data import Data, Batch
-from torch_geometric.nn import GCNConv, GATConv, SAGEConv, global_add_pool, global_mean_pool
+from torch_geometric.nn import GCNConv, GATConv, SAGEConv, GraphNorm, global_add_pool, global_mean_pool
 from utils.ws_msg import send_json_zipped
 
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Attention-based Graph Classification Model (Explainable)
 # ───────────────────────────────────────────────────────────────────────────────
+def normalize_task2_model_type(model_type):
+    mt = str(model_type or 'GCN').upper().replace('-', '_')
+    if mt in ('GRAPHSAGE', 'GRAPH_SAGE'):
+        return 'SAGE'
+    return mt
+
+
 class GraphClassifier(torch.nn.Module):
-    def __init__(self, in_channels=1, hidden=32, num_classes=2, model_type='GCN', heads=4, dropout=0.5, pool_type='attention_sum'):
+    def __init__(
+        self,
+        in_channels=1,
+        hidden=32,
+        num_classes=2,
+        model_type='GCN',
+        heads=4,
+        dropout=0.5,
+        pool_type='attention_sum',
+        attn_dropout=None,
+    ):
         super().__init__()
-        self.model_type = model_type
+        self.model_type = normalize_task2_model_type(model_type)
         self.dropout = dropout
         self.pool_type = pool_type
+        self.attn_dropout = dropout if attn_dropout is None else float(attn_dropout)
+        self.uses_graph_norm = self.model_type in ('GAT', 'SAGE')
 
-        if model_type == 'GAT':
-            self.conv1 = GATConv(in_channels, hidden, heads=heads, dropout=dropout)
-            self.conv2 = GATConv(hidden * heads, hidden, heads=1, concat=False, dropout=dropout)
-        elif model_type == 'SAGE':
+        if self.model_type == 'GAT':
+            self.conv1 = GATConv(in_channels, hidden, heads=heads, dropout=self.attn_dropout)
+            self.conv2 = GATConv(hidden * heads, hidden, heads=1, concat=False, dropout=self.attn_dropout)
+        elif self.model_type == 'SAGE':
             self.conv1 = SAGEConv(in_channels, hidden)
             self.conv2 = SAGEConv(hidden, hidden)
         else:
             self.conv1 = GCNConv(in_channels, hidden)
             self.conv2 = GCNConv(hidden, hidden)
 
-        conv1_out = hidden * heads if model_type == 'GAT' else hidden
-        self.norm1 = torch.nn.LayerNorm(conv1_out)
-        self.norm2 = torch.nn.LayerNorm(hidden)
+        conv1_out = hidden * heads if self.model_type == 'GAT' else hidden
+        self.norm1 = GraphNorm(conv1_out) if self.uses_graph_norm else torch.nn.LayerNorm(conv1_out)
+        self.norm2 = GraphNorm(hidden) if self.uses_graph_norm else torch.nn.LayerNorm(hidden)
+        self.input_skip_proj = torch.nn.Linear(in_channels, conv1_out) if self.model_type == 'GAT' else None
         self.skip_proj = torch.nn.Linear(conv1_out, hidden) if conv1_out != hidden else None
 
         # Gated readout gives the UI a more faithful motif-level signal than a
@@ -54,12 +74,14 @@ class GraphClassifier(torch.nn.Module):
 
     def forward(self, x, edge_index, batch):
         h1 = self.conv1(x, edge_index)
-        h1 = self.norm1(h1)
+        h1 = self.norm1(h1, batch) if self.uses_graph_norm else self.norm1(h1)
+        if self.input_skip_proj is not None:
+            h1 = h1 + self.input_skip_proj(x)
         h1 = F.elu(h1) if self.model_type == 'GAT' else F.relu(h1)
         h1 = F.dropout(h1, p=self.dropout, training=self.training)
 
         h2 = self.conv2(h1, edge_index)
-        h2 = self.norm2(h2)
+        h2 = self.norm2(h2, batch) if self.uses_graph_norm else self.norm2(h2)
         h1_skip = self.skip_proj(h1) if self.skip_proj is not None else h1
         h2 = h2 + h1_skip
         x = F.elu(h2) if self.model_type == 'GAT' else F.relu(h2)
@@ -170,26 +192,27 @@ def model_default_hyperparams(model_type: str) -> dict:
     These are calibrated so each model lands in the ~60–75% honest accuracy band
     on the synthetic ER vs. Barabási-Albert task without overfitting.
     """
-    mt = (model_type or 'GCN').upper()
+    mt = normalize_task2_model_type(model_type)
     if mt == 'GAT':
         return {
-            'hidden': 32,
+            'hidden': 48,
             'heads': 4,
-            'dropout': 0.6,
-            'lr': 7e-3,
-            'weight_decay': 5e-4,
+            'dropout': 0.35,
+            'attn_dropout': 0.25,
+            'lr': 3e-3,
+            'weight_decay': 1e-3,
             'epochs': 80,
-            'early_stop_patience': 20,
+            'early_stop_patience': 12,
         }
     if mt == 'SAGE':
         return {
-            'hidden': 32,
+            'hidden': 48,
             'heads': 1,
-            'dropout': 0.4,
-            'lr': 8e-3,
-            'weight_decay': 1e-4,
+            'dropout': 0.35,
+            'lr': 4e-3,
+            'weight_decay': 1e-3,
             'epochs': 80,
-            'early_stop_patience': 20,
+            'early_stop_patience': 8,
         }
     # GCN baseline
     return {
@@ -319,11 +342,44 @@ def build_classification_summary(predictions, ground_truth, confidences, num_cla
     }
 
 
-def tune_temperature(logits, targets):
-    """Coarse grid search — kept as fallback and for parity with old tests."""
+def compute_task2_selection_metrics(predictions, ground_truth, confidences=None, num_classes=None):
+    if num_classes is None:
+        max_label = max(list(predictions or [0]) + list(ground_truth or [0]))
+        num_classes = max(2, int(max_label) + 1)
+    if confidences is None:
+        confidences = [0.0] * len(ground_truth or [])
+    summary = build_classification_summary(predictions, ground_truth, confidences, num_classes)
+    accuracy = float(np.mean([int(pred == gt) for pred, gt in zip(predictions, ground_truth)])) if ground_truth else 0.0
+    macro_f1 = float(summary['macro_f1'])
+    balanced_accuracy = float(summary['balanced_accuracy'])
+    return {
+        'selection_metric': '0.5*macro_f1+0.5*balanced_accuracy',
+        'selection_score': float(0.5 * macro_f1 + 0.5 * balanced_accuracy),
+        'macro_f1': macro_f1,
+        'balanced_accuracy': balanced_accuracy,
+        'accuracy': accuracy,
+        'per_class': summary['per_class'],
+    }
+
+
+def _temperature_bounds(min_temp=0.8, max_temp=3.0):
+    lower = float(min_temp if min_temp is not None else 0.8)
+    upper = float(max_temp if max_temp is not None else 3.0)
+    if not math.isfinite(lower) or lower <= 0:
+        lower = 0.8
+    if not math.isfinite(upper) or upper < lower:
+        upper = max(lower, 3.0)
+    return lower, upper
+
+
+def tune_temperature(logits, targets, min_temp=0.8, max_temp=3.0):
+    """Coarse grid search kept as fallback and for parity with old tests."""
     if logits.numel() == 0 or targets.numel() == 0:
         return 1.0
-    candidates = torch.tensor([0.7, 0.85, 1.0, 1.15, 1.3, 1.5, 1.8, 2.2, 2.6, 3.0], dtype=logits.dtype, device=logits.device)
+    lower, upper = _temperature_bounds(min_temp, max_temp)
+    base_candidates = [0.8, 0.9, 1.0, 1.15, 1.2, 1.3, 1.5, 1.8, 2.2, 2.6, 3.0]
+    candidates = sorted({lower, upper, *[value for value in base_candidates if lower <= value <= upper]})
+    candidates = torch.tensor(candidates, dtype=logits.dtype, device=logits.device)
     best_temp = 1.0
     best_loss = None
     with torch.no_grad():
@@ -335,13 +391,14 @@ def tune_temperature(logits, targets):
     return best_temp
 
 
-def tune_temperature_lbfgs(logits, targets, max_iter=50, lr=0.05):
+def tune_temperature_lbfgs(logits, targets, max_iter=50, lr=0.05, min_temp=0.8, max_temp=3.0):
     """Optimize temperature with LBFGS for finer calibration.
 
     Falls back to the coarse grid if LBFGS cannot make progress.
     """
     if logits.numel() == 0 or targets.numel() == 0:
         return 1.0
+    lower, upper = _temperature_bounds(min_temp, max_temp)
     log_temp = torch.zeros(1, requires_grad=True)
     optimizer = torch.optim.LBFGS([log_temp], lr=lr, max_iter=max_iter, line_search_fn='strong_wolfe')
 
@@ -350,7 +407,7 @@ def tune_temperature_lbfgs(logits, targets, max_iter=50, lr=0.05):
 
     def _closure():
         optimizer.zero_grad()
-        temp = torch.exp(log_temp).clamp(min=0.25, max=10.0)
+        temp = torch.exp(log_temp).clamp(min=lower, max=upper)
         loss = F.cross_entropy(detached_logits / temp, detached_targets)
         loss.backward()
         return loss
@@ -358,15 +415,16 @@ def tune_temperature_lbfgs(logits, targets, max_iter=50, lr=0.05):
     try:
         optimizer.step(_closure)
     except Exception:
-        return tune_temperature(logits, targets)
-    temp = float(torch.exp(log_temp).clamp(min=0.25, max=10.0).item())
+        return tune_temperature(logits, targets, min_temp=lower, max_temp=upper)
+    temp = float(torch.exp(log_temp).clamp(min=lower, max=upper).item())
     if not math.isfinite(temp) or temp <= 0:
-        return tune_temperature(logits, targets)
+        return tune_temperature(logits, targets, min_temp=lower, max_temp=upper)
     return temp
 
 
-def apply_temperature(logits, temperature):
-    temp = max(0.5, float(temperature or 1.0))
+def apply_temperature(logits, temperature, min_temp=0.8, max_temp=3.0):
+    lower, upper = _temperature_bounds(min_temp, max_temp)
+    temp = max(lower, min(upper, float(temperature or 1.0)))
     return torch.softmax(logits / temp, dim=1)
 
 
@@ -451,6 +509,90 @@ def build_per_class_metrics(predictions, ground_truth, confidences, num_classes)
             'mean_confidence': float(np.mean(class_conf)) if class_conf else 0.0,
         })
     return rows
+
+
+def build_confusion_slice_counts(predictions, ground_truth, num_classes=None):
+    """Build explicit true-class by predicted-class counts for report slices."""
+    predictions = [int(value) for value in (predictions or [])]
+    ground_truth = [int(value) for value in (ground_truth or [])]
+    pairs = list(zip(predictions, ground_truth))
+    if num_classes is None:
+        observed = predictions + ground_truth
+        num_classes = (max(observed) + 1) if observed else 0
+    num_classes = int(max(0, num_classes))
+
+    matrix = [[0 for _ in range(num_classes)] for _ in range(num_classes)]
+    missed_to_by_class = [dict() for _ in range(num_classes)]
+    for pred, gt in pairs:
+        if 0 <= gt < num_classes and 0 <= pred < num_classes:
+            matrix[gt][pred] += 1
+            if pred != gt:
+                key = str(pred)
+                missed_to_by_class[gt][key] = missed_to_by_class[gt].get(key, 0) + 1
+
+    per_class = []
+    weak_class = None
+    for class_id in range(num_classes):
+        support = int(sum(matrix[class_id]))
+        predicted_count = int(sum(row[class_id] for row in matrix))
+        true_positive = int(matrix[class_id][class_id])
+        missed_count = int(max(0, support - true_positive))
+        recall = true_positive / support if support else 0.0
+        precision = true_positive / predicted_count if predicted_count else 0.0
+        row = {
+            'class_id': int(class_id),
+            'support': support,
+            'predicted_count': predicted_count,
+            'true_positive': true_positive,
+            'missed_count': missed_count,
+            'recall': float(recall),
+            'precision': float(precision),
+            'missed_to': missed_to_by_class[class_id],
+        }
+        per_class.append(row)
+        if support > 0 and (weak_class is None or recall < weak_class['recall']):
+            weak_class = row
+
+    return {
+        'orientation': 'rows=true_class, cols=predicted_class',
+        'num_classes': num_classes,
+        'matrix': matrix,
+        'per_class': per_class,
+        'weak_class': weak_class or {},
+    }
+
+
+def build_task2_best_checkpoint_payload(snapshot, state_dict=None):
+    """Package the best validation checkpoint without streaming raw weights."""
+    snapshot = snapshot or {}
+    predictions = snapshot.get('graph_predictions') or []
+    ground_truth = snapshot.get('graph_ground_truth') or snapshot.get('ground_truth') or []
+    num_classes = snapshot.get('num_classes')
+    if num_classes is None:
+        observed = [int(v) for v in predictions + ground_truth] if predictions or ground_truth else []
+        num_classes = (max(observed) + 1) if observed else 0
+    state_dict = state_dict or {}
+    weight_keys = list(state_dict.keys())
+
+    return {
+        'type': 'best_composite_checkpoint',
+        'best_epoch': int(snapshot.get('best_epoch', snapshot.get('epoch', 0)) or 0),
+        'snapshot_epoch': int(snapshot.get('epoch', 0) or 0),
+        'best_selection_metric': snapshot.get('best_selection_metric') or '0.5*macro_f1+0.5*balanced_accuracy',
+        'best_selection_score': float(snapshot.get('best_selection_score', snapshot.get('val_selection_score', 0.0)) or 0.0),
+        'best_macro_f1': float(snapshot.get('best_macro_f1', snapshot.get('val_macro_f1', 0.0)) or 0.0),
+        'best_balanced_accuracy': float(snapshot.get('best_balanced_accuracy', snapshot.get('val_balanced_accuracy', 0.0)) or 0.0),
+        'weights_saved': bool(weight_keys),
+        'weight_keys': weight_keys,
+        'confusion_slice_counts': build_confusion_slice_counts(predictions, ground_truth, num_classes),
+        'readout_attention': {
+            'attention_entropy': snapshot.get('attention_entropy') or [],
+            'node_contributions': snapshot.get('node_contributions') or [],
+            'readout_quality': snapshot.get('readout_quality') or {},
+        },
+        'model_hyperparams': snapshot.get('model_hyperparams') or {},
+        'snapshot': snapshot,
+    }
 
 
 def build_graph_calibration(confidences, correctness, bins=10, probabilities=None, ground_truth=None):
@@ -628,23 +770,31 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                       Each Data should have .x, .edge_index, .y (graph label).
                       If None, synthetic graphs are generated.
     """
-    model_type = config.get('model', 'GCN')
+    model_type = normalize_task2_model_type(config.get('model', 'GCN'))
     defaults = model_default_hyperparams(model_type)
 
     epochs = int(config.get('epochs', defaults['epochs']))
     split_seed = int(config.get('split_seed', 42))
     train_ratio = float(config.get('train_ratio', 0.6))
     val_ratio = float(config.get('val_ratio', 0.2))
+    is_gcn = (model_type or 'GCN').upper() == 'GCN'
+    is_gat = (model_type or 'GCN').upper() == 'GAT'
+    is_sage = (model_type or 'GCN').upper() == 'SAGE'
     pool_type = config.get('task2_pool', 'attention_sum')
-    use_class_weights = bool(config.get('task2_class_weighting', False))
+    use_class_weights = bool(config.get('task2_class_weighting', True if (is_gcn or is_gat or is_sage) else False))
     balanced_oversample = bool(config.get('task2_balanced_sampler', True))
-    focal_gamma = float(config.get('task2_focal_gamma', 1.0))
-    label_smoothing = float(config.get('task2_label_smoothing', 0.02))
+    focal_gamma = float(config.get('task2_focal_gamma', 2.0 if is_sage else 1.5 if (is_gcn or is_gat) else 1.0))
+    label_smoothing = float(config.get('task2_label_smoothing', 0.03 if is_gcn else 0.02))
     weight_decay = float(config.get('task2_weight_decay', config.get('weight_decay', defaults['weight_decay'])))
-    edge_dropout = float(config.get('task2_edge_dropout', 0.08))
-    readout_entropy_weight = float(config.get('task2_readout_entropy_weight', 0.02))
-    contrastive_weight = float(config.get('task2_density_contrastive_weight', 0.025))
+    if (is_gcn or is_gat or is_sage) and 'task2_weight_decay' not in config and 'weight_decay' not in config:
+        weight_decay = 1e-3
+    edge_dropout = float(config.get('task2_edge_dropout', 0.10 if is_gcn else 0.20 if is_gat else 0.15 if is_sage else 0.08))
+    readout_entropy_weight = float(config.get('task2_readout_entropy_weight', 0.01 if (is_gcn or is_gat or is_sage) else 0.02))
+    contrastive_weight = float(config.get('task2_density_contrastive_weight', 0.02 if is_gcn else 0.03 if is_gat else 0.02 if is_sage else 0.025))
+    attn_dropout = float(config.get('task2_attn_dropout', config.get('attn_dropout', defaults.get('attn_dropout', config.get('dropout', defaults['dropout'])))))
     early_stop_patience = int(config.get('task2_early_stop_patience', defaults['early_stop_patience']))
+    temperature_min = float(config.get('task2_temperature_min', 1.0 if is_sage else 0.8))
+    temperature_max = float(config.get('task2_temperature_max', 1.5 if is_sage else 3.0))
     danger_threshold = float(config.get('task2_danger_threshold', 0.85))
     uncertain_threshold = float(config.get('task2_uncertain_threshold', 0.55))
     use_lbfgs_calibration = bool(config.get('task2_lbfgs_calibration', True))
@@ -736,6 +886,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         heads=int(config.get('heads', defaults['heads'])),
         dropout=float(config.get('dropout', defaults['dropout'])),
         pool_type=pool_type,
+        attn_dropout=attn_dropout,
     )
     optimizer = torch.optim.Adam(
         model.parameters(),
@@ -800,9 +951,13 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
     effective_train_density = torch.tensor([_graph_density_from_data(g) for g in effective_train_graphs], dtype=torch.float)
 
     epoch_snapshots = []
-    best_val_acc = -1.0
-    best_val_epoch = 0
+    best_selection_score = -1.0
+    best_macro_f1 = 0.0
+    best_balanced_accuracy = 0.0
+    best_val_acc = 0.0
+    best_epoch = 0
     best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+    best_snapshot = None
     no_improve_epochs = 0
 
     for epoch in range(epochs):
@@ -847,17 +1002,17 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             # the TEST set never participates in any model selection step.
             try:
                 calibration_temperature = (
-                    tune_temperature_lbfgs(val_out, val_y)
+                    tune_temperature_lbfgs(val_out, val_y, min_temp=temperature_min, max_temp=temperature_max)
                     if use_lbfgs_calibration
-                    else tune_temperature(val_out, val_y)
+                    else tune_temperature(val_out, val_y, min_temp=temperature_min, max_temp=temperature_max)
                 )
             except Exception:
-                calibration_temperature = tune_temperature(val_out, val_y)
+                calibration_temperature = tune_temperature(val_out, val_y, min_temp=temperature_min, max_temp=temperature_max)
 
             # Probabilities WITHOUT and WITH calibration so the FE can surface
             # the gap honestly (overconfidence shows up as raw_conf >> calib_conf).
             all_probs_raw = torch.softmax(all_out, dim=1).tolist()
-            all_probs = apply_temperature(all_out, calibration_temperature).tolist()
+            all_probs = apply_temperature(all_out, calibration_temperature, min_temp=temperature_min, max_temp=temperature_max).tolist()
 
             # Compute calibrated confidence (max prob) — primary signal used elsewhere.
             confidences = [max(p) for p in all_probs]
@@ -880,13 +1035,26 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             test_acc = (test_pred == test_y).float().mean()
             train_acc = (train_pred == train_y).float().mean()
 
-            # Track best validation accuracy and snapshot weights for restoration
+            # Track best validation checkpoint by balanced research quality, not
+            # raw accuracy. This avoids rewarding class collapse on a noisy split.
             current_val_acc = float(val_acc.item())
-            if current_val_acc > best_val_acc + 1e-6:
+            val_selection = compute_task2_selection_metrics(
+                predictions=val_pred.tolist(),
+                ground_truth=val_y.tolist(),
+                confidences=torch.softmax(val_out, dim=1).max(dim=1).values.tolist(),
+                num_classes=num_classes,
+            )
+            current_selection_score = float(val_selection['selection_score'])
+            improved_this_epoch = False
+            if current_selection_score > best_selection_score + 1e-6:
+                best_selection_score = current_selection_score
+                best_macro_f1 = float(val_selection['macro_f1'])
+                best_balanced_accuracy = float(val_selection['balanced_accuracy'])
                 best_val_acc = current_val_acc
-                best_val_epoch = epoch
+                best_epoch = epoch
                 best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
                 no_improve_epochs = 0
+                improved_this_epoch = True
             else:
                 no_improve_epochs += 1
 
@@ -918,6 +1086,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             # Per-graph correctness (for BatchHeatmap)
             graph_truths = [g.y.item() for g in pyg_graphs]
             graph_correct = [int(all_pred[i] == graph_truths[i]) for i in range(len(pyg_graphs))]
+            confusion_slice_counts = build_confusion_slice_counts(all_pred, graph_truths, num_classes)
 
             # ── Explainability Data ─────────────────────────────────────────
             
@@ -1038,7 +1207,9 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         snapshot = {
             'epoch': epoch,
             'model_type': model_type,
+            'num_classes': int(num_classes),
             'graph_predictions': all_pred,
+            'graph_ground_truth': graph_truths,
             'graph_probabilities': graph_probabilities,
             'graph_probabilities_raw': all_probs_raw,
             'graph_confidences': confidences,
@@ -1058,6 +1229,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             'graph_embeddings_2d': emb_2d,
             'node_contributions': node_contributions,
             'graph_per_class_metrics': graph_per_class_metrics,
+            'confusion_slice_counts': confusion_slice_counts,
             'graph_calibration': graph_calibration,
             'structural_bias_signals': structural_bias_signals,
             'readout_quality': readout_quality,
@@ -1077,22 +1249,45 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             'train_acc': float(train_acc.item()),
             'val_acc': float(val_acc.item()),
             'test_acc': float(test_acc.item()),
+            'val_macro_f1': float(val_selection['macro_f1']),
+            'val_balanced_accuracy': float(val_selection['balanced_accuracy']),
+            'val_selection_score': float(current_selection_score),
+            'best_selection_metric': val_selection['selection_metric'],
+            'best_selection_score': float(best_selection_score),
+            'best_macro_f1': float(best_macro_f1),
+            'best_balanced_accuracy': float(best_balanced_accuracy),
+            'best_epoch': int(best_epoch),
             'best_val_acc': float(best_val_acc),
-            'best_val_epoch': int(best_val_epoch),
+            'best_val_epoch': int(best_epoch),
             'patience_remaining': max(0, early_stop_patience - no_improve_epochs),
             'early_stopped': False,
-            'is_best_so_far': bool(epoch == best_val_epoch),
+            'is_best_so_far': bool(improved_this_epoch),
             'model_hyperparams': {
                 'hidden': int(config.get('hidden', defaults['hidden'])),
                 'heads': int(config.get('heads', defaults['heads'])),
                 'dropout': float(config.get('dropout', defaults['dropout'])),
+                'attn_dropout': float(attn_dropout),
+                'task2_attn_dropout': float(attn_dropout),
                 'lr': float(config.get('lr', defaults['lr'])),
                 'weight_decay': float(weight_decay),
+                'pool_type': pool_type,
+                'task2_class_weighting': bool(use_class_weights),
+                'task2_balanced_sampler': bool(balanced_oversample),
+                'task2_focal_gamma': float(focal_gamma),
+                'task2_label_smoothing': float(label_smoothing),
+                'task2_edge_dropout': float(edge_dropout),
+                'task2_readout_entropy_weight': float(readout_entropy_weight),
+                'task2_density_contrastive_weight': float(contrastive_weight),
+                'task2_temperature_min': float(temperature_min),
+                'task2_temperature_max': float(temperature_max),
+                'selection_metric': val_selection['selection_metric'],
                 'epochs_target': int(epochs),
                 'early_stop_patience': int(early_stop_patience),
                 'split_ratio': [float(train_ratio), float(val_ratio), float(max(0.0, 1.0 - train_ratio - val_ratio))],
             },
         }
+        if improved_this_epoch:
+            best_snapshot = dict(snapshot)
         epoch_snapshots.append(snapshot)
         if snapshot_hook:
             await snapshot_hook(epoch, snapshot)
@@ -1130,12 +1325,12 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             final_train_logits, _, _ = model(train_batch.x, train_batch.edge_index, train_batch.batch)
 
             final_calib_temp = (
-                tune_temperature_lbfgs(final_val_logits, val_y)
+                tune_temperature_lbfgs(final_val_logits, val_y, min_temp=temperature_min, max_temp=temperature_max)
                 if use_lbfgs_calibration
-                else tune_temperature(final_val_logits, val_y)
+                else tune_temperature(final_val_logits, val_y, min_temp=temperature_min, max_temp=temperature_max)
             )
             final_probs_raw = torch.softmax(final_logits, dim=1).tolist()
-            final_probs_calib = apply_temperature(final_logits, final_calib_temp).tolist()
+            final_probs_calib = apply_temperature(final_logits, final_calib_temp, min_temp=temperature_min, max_temp=temperature_max).tolist()
             final_pred = final_logits.argmax(dim=1).tolist()
             final_graph_truths = [int(g.y.view(-1)[0].item()) for g in pyg_graphs]
             final_margins = []
@@ -1164,14 +1359,27 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             final_train_acc = float((final_train_logits.argmax(dim=1) == train_y).float().mean().item())
             final_val_acc = float((final_val_logits.argmax(dim=1) == val_y).float().mean().item())
             final_test_acc = float((final_test_logits.argmax(dim=1) == test_y).float().mean().item())
+            final_val_selection = compute_task2_selection_metrics(
+                predictions=final_val_logits.argmax(dim=1).tolist(),
+                ground_truth=val_y.tolist(),
+                confidences=torch.softmax(final_val_logits, dim=1).max(dim=1).values.tolist(),
+                num_classes=num_classes,
+            )
             final_mean_calib_conf = float(np.mean([row['calibrated_conf'] for row in final_inspector])) if final_inspector else 0.0
             final_mean_acc = float(np.mean(final_correct)) if final_correct else 0.0
 
             final_summary = {
                 'model_type': model_type,
-                'best_val_epoch': int(best_val_epoch),
+                'best_epoch': int(best_epoch),
+                'best_val_epoch': int(best_epoch),
+                'best_selection_metric': final_val_selection['selection_metric'],
+                'best_selection_score': float(best_selection_score),
+                'best_macro_f1': float(best_macro_f1),
+                'best_balanced_accuracy': float(best_balanced_accuracy),
                 'train_acc': final_train_acc,
                 'val_acc': final_val_acc,
+                'val_macro_f1': float(final_val_selection['macro_f1']),
+                'val_balanced_accuracy': float(final_val_selection['balanced_accuracy']),
                 'test_acc': final_test_acc,
                 'mean_raw_confidence': float(np.mean([row['raw_confidence'] for row in final_inspector])) if final_inspector else 0.0,
                 'mean_calibrated_confidence': final_mean_calib_conf,
@@ -1186,14 +1394,29 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                 'graph_predictions': final_pred,
                 'graph_confidences': [max(p) for p in final_probs_calib],
                 'graph_confidences_raw': [max(p) for p in final_probs_raw],
+                'graph_ground_truth': final_graph_truths,
                 'graph_correct': final_correct,
                 'graph_split': split_assignment,
+                'confusion_slice_counts': build_confusion_slice_counts(final_pred, final_graph_truths, num_classes),
                 'hyperparams': {
                     'hidden': int(config.get('hidden', defaults['hidden'])),
                     'heads': int(config.get('heads', defaults['heads'])),
                     'dropout': float(config.get('dropout', defaults['dropout'])),
+                    'attn_dropout': float(attn_dropout),
+                    'task2_attn_dropout': float(attn_dropout),
                     'lr': float(config.get('lr', defaults['lr'])),
                     'weight_decay': float(weight_decay),
+                    'pool_type': pool_type,
+                    'task2_class_weighting': bool(use_class_weights),
+                    'task2_balanced_sampler': bool(balanced_oversample),
+                    'task2_focal_gamma': float(focal_gamma),
+                    'task2_label_smoothing': float(label_smoothing),
+                    'task2_edge_dropout': float(edge_dropout),
+                    'task2_readout_entropy_weight': float(readout_entropy_weight),
+                    'task2_density_contrastive_weight': float(contrastive_weight),
+                    'task2_temperature_min': float(temperature_min),
+                    'task2_temperature_max': float(temperature_max),
+                    'selection_metric': final_val_selection['selection_metric'],
                     'epochs_completed': len(epoch_snapshots),
                     'epochs_target': int(epochs),
                     'early_stop_patience': int(early_stop_patience),
@@ -1207,6 +1430,15 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             await send_json_zipped(websocket, {
                 'type': 'task2_final_summary',
                 'data': final_summary,
+            })
+        except Exception:
+            pass
+
+    if best_snapshot is not None:
+        try:
+            await send_json_zipped(websocket, {
+                'type': 'task2_best_checkpoint',
+                'data': build_task2_best_checkpoint_payload(best_snapshot, best_state),
             })
         except Exception:
             pass

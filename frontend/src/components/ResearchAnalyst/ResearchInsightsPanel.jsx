@@ -22,6 +22,7 @@ import {
 } from 'recharts'
 import { motion, AnimatePresence } from 'framer-motion'
 import useAuthStore from '../../store/authStore'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { apiUrl, readApiResponse } from '../../utils/api'
 
 const COLORS = {
@@ -76,8 +77,95 @@ const DIAGNOSTIC_COLORS = {
   fragile: '#ef4444',
 }
 
+const ANALYST_COPY = {
+  en: {
+    showDetails: 'Show details',
+    hideDetails: 'Hide details',
+    less: 'Less',
+    moreMetrics: (count) => `+${count} more metrics`,
+    failurePatternMatrix: 'Failure Pattern Matrix',
+    noFailurePatterns: 'No significant failure patterns detected',
+    issueCount: (count) => `${count} ${count === 1 ? 'issue' : 'issues'}`,
+    datasetAwareRecommendations: 'Dataset-Aware Recommendations',
+    nodes: 'Nodes',
+    edges: 'Edges',
+    classes: 'Classes',
+    avgDegree: 'Avg Degree',
+    density: 'Density',
+    homophily: 'Homophily',
+    classBalance: 'Class Balance',
+    type: 'Type',
+    strengths: 'Strengths',
+    weaknesses: 'Weaknesses',
+    bestFor: 'Best For',
+    model: 'Model',
+  },
+  vi: {
+    showDetails: 'Xem chi tiết',
+    hideDetails: 'Ẩn chi tiết',
+    less: 'Thu gọn',
+    moreMetrics: (count) => `+${count} chỉ số nữa`,
+    failurePatternMatrix: 'Ma trận mẫu lỗi',
+    noFailurePatterns: 'Chưa phát hiện mẫu lỗi nghiêm trọng',
+    issueCount: (count) => `${count} vấn đề`,
+    datasetAwareRecommendations: 'Khuyến nghị theo cấu trúc dữ liệu',
+    nodes: 'Đỉnh',
+    edges: 'Cạnh',
+    classes: 'Lớp',
+    avgDegree: 'Bậc TB',
+    density: 'Mật độ',
+    homophily: 'Homophily',
+    classBalance: 'Cân bằng lớp',
+    type: 'Loại',
+    strengths: 'Điểm mạnh',
+    weaknesses: 'Điểm yếu',
+    bestFor: 'Phù hợp nhất',
+    model: 'Mô hình',
+  },
+}
+
 function getColor(label) {
   return DIAGNOSTIC_COLORS[label] || '#94a3b8'
+}
+
+function getAnalystCopy(lang) {
+  return lang === 'vi' ? ANALYST_COPY.vi : ANALYST_COPY.en
+}
+
+function formatMetricLabel(metric, lang) {
+  const labels = {
+    convergence_speed: lang === 'vi' ? 'Tốc độ hội tụ' : 'Convergence Speed',
+    stability_score: lang === 'vi' ? 'Độ ổn định' : 'Stability Score',
+    overfitting_risk: lang === 'vi' ? 'Rủi ro quá khớp' : 'Overfitting Risk',
+    over_smoothing_risk: lang === 'vi' ? 'Rủi ro over-smoothing' : 'Over-Smoothing Risk',
+    boundary_accuracy: lang === 'vi' ? 'Độ đúng vùng biên' : 'Boundary Accuracy',
+    prediction_entropy: lang === 'vi' ? 'Entropy dự đoán' : 'Prediction Entropy',
+    embedding_separation: lang === 'vi' ? 'Tách cụm embedding' : 'Embedding Separation',
+    attention_focus_score: lang === 'vi' ? 'Độ tập trung attention' : 'Attention Focus',
+  }
+  return labels[metric] || metric.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function formatDiagnosticValueLabel(label, lang) {
+  if (!label) return ''
+  const labelMap = {
+    strong: lang === 'vi' ? 'mạnh' : 'strong',
+    weak: lang === 'vi' ? 'yếu' : 'weak',
+    moderate: lang === 'vi' ? 'trung bình' : 'moderate',
+    unstable: lang === 'vi' ? 'không ổn định' : 'unstable',
+    overlapping: lang === 'vi' ? 'chồng lấp' : 'overlapping',
+    diffuse: lang === 'vi' ? 'loãng' : 'diffuse',
+    focused: lang === 'vi' ? 'tập trung' : 'focused',
+    robust: lang === 'vi' ? 'bền' : 'robust',
+    healthy: lang === 'vi' ? 'ổn' : 'healthy',
+    fast: lang === 'vi' ? 'nhanh' : 'fast',
+    moderate_fit: lang === 'vi' ? 'khớp vừa' : 'moderate fit',
+    mild_overfitting: lang === 'vi' ? 'quá khớp nhẹ' : 'mild overfitting',
+    moderate_smoothing: lang === 'vi' ? 'làm mượt vừa' : 'moderate smoothing',
+    mild_smoothing: lang === 'vi' ? 'làm mượt nhẹ' : 'mild smoothing',
+    highly_coherent: lang === 'vi' ? 'rất gắn kết' : 'highly coherent',
+  }
+  return labelMap[label] || label.replace(/_/g, ' ')
 }
 
 // ---------------------------------------------------------------------------
@@ -86,6 +174,7 @@ function getColor(label) {
 
 export default function ResearchInsightsPanel({ experimentIds, onClose }) {
   const getAuthHeaders = useAuthStore((s) => s.getAuthHeaders)
+  const { t, lang } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [data, setData] = useState(null)
@@ -96,7 +185,7 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(apiUrl('/experiments/compare-insights'), {
+      const res = await fetch(apiUrl(`/experiments/compare-insights?lang=${lang}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ experiment_ids: experimentIds }),
@@ -115,28 +204,27 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
     } finally {
       setLoading(false)
     }
-  }, [experimentIds, getAuthHeaders])
+  }, [experimentIds, getAuthHeaders, lang])
 
   useEffect(() => {
     fetchInsights()
   }, [fetchInsights])
 
   const tabs = [
-    { id: 'insights', label: 'AI Insights', icon: Brain },
-    { id: 'diagnostics', label: 'Diagnostics', icon: Target },
-    { id: 'failures', label: 'Failure Patterns', icon: AlertTriangle },
-    { id: 'dataset', label: 'Dataset Analysis', icon: GitCompare },
-    { id: 'models', label: 'Model Profiles', icon: Zap },
+    { id: 'insights', label: t('analyst.tab_insights'), icon: Brain },
+    { id: 'diagnostics', label: t('analyst.tab_diagnostics'), icon: Target },
+    { id: 'failures', label: t('analyst.tab_failures'), icon: AlertTriangle },
+    { id: 'dataset', label: t('analyst.tab_dataset'), icon: GitCompare },
+    { id: 'models', label: t('analyst.tab_models'), icon: Zap },
   ]
 
   if (!experimentIds || experimentIds.length < 2) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Brain size={48} className="text-slate-600 mb-4" />
-        <h3 className="text-lg font-semibold text-slate-200">AI Research Analyst</h3>
+        <h3 className="text-lg font-semibold text-slate-200">{t('analyst.ai_research_analyst')}</h3>
         <p className="text-sm text-slate-400 mt-2 max-w-md">
-          Select 2-4 experiments to compare, then the AI will analyze convergence, stability,
-          failure patterns, and dataset compatibility.
+          {t('analyst.ai_analyst_empty')}
         </p>
       </div>
     )
@@ -166,12 +254,12 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
           })}
           <div className="flex-1" />
           <div className="rounded-full border border-slate-800 bg-slate-950/60 px-3 py-1 text-[11px] font-medium text-slate-400">
-            {experimentIds.length} run{experimentIds.length > 1 ? 's' : ''} selected
+            {t('analyst.runs_selected', { n: experimentIds.length })}
           </div>
         </div>
         <div className="mt-3 flex items-center justify-between gap-3">
           <p className="text-xs leading-relaxed text-slate-500">
-            Cross-run analyst view for convergence, failure patterns, and dataset fit.
+            {t('analyst.cross_run_view')}
           </p>
         <button
           onClick={fetchInsights}
@@ -179,7 +267,7 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-slate-400 transition-all hover:bg-slate-800/50 hover:text-slate-200"
         >
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-          Refresh
+          {t('analyst.refresh')}
         </button>
         </div>
       </div>
@@ -189,7 +277,7 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 size={24} className="animate-spin text-purple-400" />
-            <span className="ml-3 text-sm text-slate-400">Analyzing experiments...</span>
+            <span className="ml-3 text-sm text-slate-400">{t('analyst.analyzing_experiments')}</span>
           </div>
         ) : error ? (
           <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-300">
@@ -197,11 +285,11 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
           </div>
         ) : data ? (
           <AnimatePresence mode="wait">
-            {activeTab === 'insights' && <InsightsTab key="insights" data={data} />}
-            {activeTab === 'diagnostics' && <DiagnosticsTab key="diagnostics" data={data} />}
-            {activeTab === 'failures' && <FailuresTab key="failures" data={data} />}
-            {activeTab === 'dataset' && <DatasetTab key="dataset" data={data} />}
-            {activeTab === 'models' && <ModelsTab key="models" data={data} />}
+            {activeTab === 'insights' && <InsightsTab key="insights" data={data} t={t} lang={lang} />}
+            {activeTab === 'diagnostics' && <DiagnosticsTab key="diagnostics" data={data} t={t} lang={lang} />}
+            {activeTab === 'failures' && <FailuresTab key="failures" data={data} t={t} lang={lang} />}
+            {activeTab === 'dataset' && <DatasetTab key="dataset" data={data} t={t} lang={lang} />}
+            {activeTab === 'models' && <ModelsTab key="models" data={data} t={t} lang={lang} />}
           </AnimatePresence>
         ) : null}
       </div>
@@ -214,7 +302,7 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
 // Insights Tab
 // ---------------------------------------------------------------------------
 
-function InsightsTab({ data }) {
+function InsightsTab({ data, t, lang }) {
   const insights = data?.insights?.insights || []
   const summary = data?.insights?.summary || ''
 
@@ -223,10 +311,10 @@ function InsightsTab({ data }) {
       {/* Narrative Summary */}
       <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-5">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-400 mb-3">
-          <Sparkles size={14} /> AI Analysis Summary
+          <Sparkles size={14} /> {t('analyst.ai_analysis_summary')}
         </div>
         <p className="text-sm text-slate-200 leading-relaxed">
-          {summary || 'The analyst is ready, but this comparison does not yet have enough signal for a strong narrative summary.'}
+          {summary || t('analyst.no_summary_yet')}
         </p>
       </div>
 
@@ -234,11 +322,11 @@ function InsightsTab({ data }) {
       <div className="grid gap-3">
         {insights.length ? (
           insights.map((insight, i) => (
-            <InsightCard key={i} insight={insight} index={i} />
+            <InsightCard key={i} insight={insight} index={i} t={t} lang={lang} />
           ))
         ) : (
           <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-400">
-            No comparison insights were generated for this set of runs yet.
+            {t('analyst.no_insights_yet')}
           </div>
         )}
       </div>
@@ -246,8 +334,9 @@ function InsightsTab({ data }) {
   )
 }
 
-function InsightCard({ insight, index }) {
+function InsightCard({ insight, index, t, lang }) {
   const [expanded, setExpanded] = useState(false)
+  const copy = getAnalystCopy(lang)
   const Icon = insight.type === 'convergence' ? TrendingUp
     : insight.type === 'stability' ? Target
     : insight.type === 'overfitting' ? AlertTriangle
@@ -275,7 +364,7 @@ function InsightCard({ insight, index }) {
             <h4 className="text-sm font-semibold text-slate-100">{insight.title}</h4>
             {insight.significance === 'high' && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-bold uppercase">
-                Key Finding
+                {t('analyst.key_finding')}
               </span>
             )}
           </div>
@@ -287,7 +376,7 @@ function InsightCard({ insight, index }) {
               className="flex items-center gap-1 mt-2 text-[11px] text-slate-400 hover:text-slate-200 transition-colors"
             >
               {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-              {expanded ? 'Hide details' : 'Show details'}
+              {expanded ? copy.hideDetails : copy.showDetails}
             </button>
           )}
 
@@ -328,7 +417,7 @@ function InsightCard({ insight, index }) {
 // Diagnostics Tab
 // ---------------------------------------------------------------------------
 
-function DiagnosticsTab({ data }) {
+function DiagnosticsTab({ data, t, lang }) {
   const modelDiags = data?.model_diagnostics || {}
   const modelNames = Object.keys(modelDiags)
 
@@ -339,7 +428,7 @@ function DiagnosticsTab({ data }) {
       'over_smoothing_risk', 'boundary_accuracy', 'prediction_entropy',
     ]
     return metrics.map((metric) => {
-      const row = { metric: metric.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }
+      const row = { metric: formatMetricLabel(metric, lang) }
       modelNames.forEach((model) => {
         const diag = modelDiags[model]?.diagnostics?.[metric]
         if (diag) {
@@ -368,7 +457,7 @@ function DiagnosticsTab({ data }) {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {/* Radar Comparison */}
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Model Comparison Radar</h4>
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{t('analyst.model_radar')}</h4>
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={radarData}>
@@ -400,7 +489,7 @@ function DiagnosticsTab({ data }) {
         {modelNames.map((model) => {
           const diag = modelDiags[model]?.diagnostics || {}
           return (
-            <DiagnosticCard key={model} model={model} diagnostics={diag} color={MODEL_COLORS[model]} />
+            <DiagnosticCard key={model} model={model} diagnostics={diag} color={MODEL_COLORS[model]} lang={lang} />
           )
         })}
       </div>
@@ -408,8 +497,9 @@ function DiagnosticsTab({ data }) {
   )
 }
 
-function DiagnosticCard({ model, diagnostics, color }) {
+function DiagnosticCard({ model, diagnostics, color, lang }) {
   const [expanded, setExpanded] = useState(false)
+  const copy = getAnalystCopy(lang)
 
   const diagEntries = Object.entries(diagnostics).filter(([_, v]) => v && typeof v === 'object')
   const mainDiags = diagEntries.slice(0, 6)
@@ -424,7 +514,7 @@ function DiagnosticCard({ model, diagnostics, color }) {
 
       <div className="grid grid-cols-2 gap-2">
         {mainDiags.map(([key, value]) => (
-          <DiagnosticMetric key={key} label={key} value={value} />
+          <DiagnosticMetric key={key} label={key} value={value} lang={lang} />
         ))}
       </div>
 
@@ -435,7 +525,7 @@ function DiagnosticCard({ model, diagnostics, color }) {
             className="flex items-center gap-1 mt-3 text-[11px] text-slate-400 hover:text-slate-200 transition-colors"
           >
             {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            {expanded ? 'Less' : `+${extraDiags.length} more metrics`}
+            {expanded ? copy.less : copy.moreMetrics(extraDiags.length)}
           </button>
           <AnimatePresence>
             {expanded && (
@@ -447,7 +537,7 @@ function DiagnosticCard({ model, diagnostics, color }) {
               >
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   {extraDiags.map(([key, value]) => (
-                    <DiagnosticMetric key={key} label={key} value={value} />
+                    <DiagnosticMetric key={key} label={key} value={value} lang={lang} />
                   ))}
                 </div>
               </motion.div>
@@ -459,10 +549,10 @@ function DiagnosticCard({ model, diagnostics, color }) {
   )
 }
 
-function DiagnosticMetric({ label, value }) {
+function DiagnosticMetric({ label, value, lang }) {
   if (!value || typeof value !== 'object') return null
 
-  const displayLabel = label.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const displayLabel = formatMetricLabel(label, lang)
   const labelColor = getColor(value.label)
 
   let displayValue = value.label || ''
@@ -499,7 +589,8 @@ function DiagnosticMetric({ label, value }) {
 // Failures Tab
 // ---------------------------------------------------------------------------
 
-function FailuresTab({ data }) {
+function FailuresTab({ data, t, lang }) {
+  const copy = getAnalystCopy(lang)
   // Compute failure analysis per model from diagnostics
   const modelDiags = data?.model_diagnostics || {}
   const modelNames = Object.keys(modelDiags)
@@ -538,8 +629,8 @@ function FailuresTab({ data }) {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {/* Failure Matrix */}
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Failure Pattern Matrix</h4>
-        <FailureMatrix failureData={failureData} />
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{copy.failurePatternMatrix}</h4>
+        <FailureMatrix failureData={failureData} lang={lang} />
       </div>
 
       {/* Per-Model Failure Cards */}
@@ -550,19 +641,19 @@ function FailuresTab({ data }) {
               <span className="w-3 h-3 rounded-full" style={{ backgroundColor: MODEL_COLORS[model] }} />
               <h4 className="text-sm font-bold text-slate-100">{model}</h4>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                {issues.length} issue{issues.length !== 1 ? 's' : ''}
+                {copy.issueCount(issues.length)}
               </span>
             </div>
 
             {issues.length === 0 ? (
               <div className="flex items-center gap-2 text-sm text-emerald-400 py-2">
                 <CheckCircle2 size={16} />
-                No significant failure patterns detected
+                {copy.noFailurePatterns}
               </div>
             ) : (
               <div className="space-y-2">
                 {issues.map((issue, i) => (
-                  <FailureIssue key={i} issue={issue} model={model} diagnostics={diagnostics} />
+                  <FailureIssue key={i} issue={issue} model={model} diagnostics={diagnostics} lang={lang} />
                 ))}
               </div>
             )}
@@ -573,13 +664,13 @@ function FailuresTab({ data }) {
   )
 }
 
-function FailureMatrix({ failureData }) {
+function FailureMatrix({ failureData, lang }) {
   const allIssueTypes = ['over_smoothing', 'overfitting', 'boundary', 'stability', 'embedding', 'attention']
   const issueLabels = {
-    over_smoothing: 'Over-Smoothing',
-    overfitting: 'Overfitting',
-    boundary: 'Boundary',
-    stability: 'Stability',
+    over_smoothing: lang === 'vi' ? 'Over-smoothing' : 'Over-Smoothing',
+    overfitting: lang === 'vi' ? 'Quá khớp' : 'Overfitting',
+    boundary: lang === 'vi' ? 'Vùng biên' : 'Boundary',
+    stability: lang === 'vi' ? 'Ổn định' : 'Stability',
     embedding: 'Embedding',
     attention: 'Attention',
   }
@@ -589,7 +680,7 @@ function FailureMatrix({ failureData }) {
       <table className="w-full text-xs">
         <thead>
           <tr>
-            <th className="text-left py-2 px-2 text-slate-500 font-medium">Model</th>
+            <th className="text-left py-2 px-2 text-slate-500 font-medium">{lang === 'vi' ? 'Mô hình' : 'Model'}</th>
             {allIssueTypes.map((type) => (
               <th key={type} className="text-center py-2 px-1 text-slate-500 font-medium text-[10px]">
                 {issueLabels[type]}
@@ -627,23 +718,35 @@ function FailureMatrix({ failureData }) {
   )
 }
 
-function FailureIssue({ issue, model, diagnostics }) {
+function FailureIssue({ issue, model, diagnostics, lang }) {
   const descriptions = {
-    over_smoothing: `${model} embeddings are collapsing. Dirichlet energy at ${(diagnostics.over_smoothing_risk?.collapse_ratio * 100).toFixed(0)}% of initial.`,
-    overfitting: `Train-val gap is ${(diagnostics.overfitting_risk?.gap * 100).toFixed(1)}% and widening.`,
-    boundary: `Only ${(diagnostics.boundary_accuracy?.score * 100).toFixed(0)}% of boundary nodes correctly classified.`,
-    stability: `Training variance is high (CV=${diagnostics.stability_score?.cv?.toFixed(4) || 'N/A'}).`,
-    embedding: `Inter/intra-class ratio is only ${diagnostics.embedding_separation?.ratio?.toFixed(2) || 'N/A'}x.`,
-    attention: `Attention weights are diffuse — top-5% edges hold only ${(diagnostics.attention_focus_score?.top5_share * 100)?.toFixed(0) || 0}% of mass.`,
+    over_smoothing: lang === 'vi'
+      ? `${model} đang có embedding bị co cụm. Dirichlet energy chỉ còn ${(diagnostics.over_smoothing_risk?.collapse_ratio * 100).toFixed(0)}% so với ban đầu.`
+      : `${model} embeddings are collapsing. Dirichlet energy at ${(diagnostics.over_smoothing_risk?.collapse_ratio * 100).toFixed(0)}% of initial.`,
+    overfitting: lang === 'vi'
+      ? `Khoảng cách train-val là ${(diagnostics.overfitting_risk?.gap * 100).toFixed(1)}% và đang nới rộng.`
+      : `Train-val gap is ${(diagnostics.overfitting_risk?.gap * 100).toFixed(1)}% and widening.`,
+    boundary: lang === 'vi'
+      ? `Chỉ ${(diagnostics.boundary_accuracy?.score * 100).toFixed(0)}% nút vùng biên được phân loại đúng.`
+      : `Only ${(diagnostics.boundary_accuracy?.score * 100).toFixed(0)}% of boundary nodes correctly classified.`,
+    stability: lang === 'vi'
+      ? `Độ dao động huấn luyện cao (CV=${diagnostics.stability_score?.cv?.toFixed(4) || 'N/A'}).`
+      : `Training variance is high (CV=${diagnostics.stability_score?.cv?.toFixed(4) || 'N/A'}).`,
+    embedding: lang === 'vi'
+      ? `Tỉ lệ giữa lớp/chính lớp chỉ đạt ${diagnostics.embedding_separation?.ratio?.toFixed(2) || 'N/A'}x.`
+      : `Inter/intra-class ratio is only ${diagnostics.embedding_separation?.ratio?.toFixed(2) || 'N/A'}x.`,
+    attention: lang === 'vi'
+      ? `Attention đang loãng - top 5% cạnh chỉ giữ ${(diagnostics.attention_focus_score?.top5_share * 100)?.toFixed(0) || 0}% tổng khối lượng.`
+      : `Attention weights are diffuse - top-5% edges hold only ${(diagnostics.attention_focus_score?.top5_share * 100)?.toFixed(0) || 0}% of mass.`,
   }
 
   const recommendations = {
-    over_smoothing: 'Add residual connections or reduce layers.',
-    overfitting: 'Increase dropout or add weight decay.',
-    boundary: 'Try GAT with learned attention for boundary nodes.',
-    stability: 'Reduce learning rate or add gradient clipping.',
-    embedding: 'Add contrastive loss or increase hidden dimension.',
-    attention: 'Reduce attention heads or add regularization.',
+    over_smoothing: lang === 'vi' ? 'Thêm residual connection hoặc giảm số lớp.' : 'Add residual connections or reduce layers.',
+    overfitting: lang === 'vi' ? 'Tăng dropout hoặc thêm weight decay.' : 'Increase dropout or add weight decay.',
+    boundary: lang === 'vi' ? 'Thử GAT với attention học được cho các nút vùng biên.' : 'Try GAT with learned attention for boundary nodes.',
+    stability: lang === 'vi' ? 'Giảm learning rate hoặc thêm gradient clipping.' : 'Reduce learning rate or add gradient clipping.',
+    embedding: lang === 'vi' ? 'Thêm contrastive loss hoặc tăng hidden dimension.' : 'Add contrastive loss or increase hidden dimension.',
+    attention: lang === 'vi' ? 'Giảm số attention heads hoặc tăng regularization.' : 'Reduce attention heads or add regularization.',
   }
 
   return (
@@ -672,10 +775,11 @@ function FailureIssue({ issue, model, diagnostics }) {
 // Dataset Tab
 // ---------------------------------------------------------------------------
 
-function DatasetTab({ data }) {
+function DatasetTab({ data, t, lang }) {
   const topo = data?.dataset_topology || {}
   const props = topo.properties || {}
   const recs = topo.recommendations || []
+  const copy = getAnalystCopy(lang)
 
   const classDist = props.class_distribution || {}
   const classData = Object.entries(classDist).map(([cls, count]) => ({
@@ -687,25 +791,25 @@ function DatasetTab({ data }) {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {/* Topology Overview */}
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Dataset Topology</h4>
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{t('analyst.dataset_topology')}</h4>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <TopologyStat label="Nodes" value={props.n_nodes} />
-          <TopologyStat label="Edges" value={props.n_edges} />
-          <TopologyStat label="Classes" value={props.n_classes} />
-          <TopologyStat label="Avg Degree" value={props.avg_degree?.toFixed(1)} />
-          <TopologyStat label="Density" value={props.density?.toFixed(4)} />
-          <TopologyStat label="Homophily" value={props.homophily_estimate?.toFixed(3)}
+          <TopologyStat label={copy.nodes} value={props.n_nodes} />
+          <TopologyStat label={copy.edges} value={props.n_edges} />
+          <TopologyStat label={copy.classes} value={props.n_classes} />
+          <TopologyStat label={copy.avgDegree} value={props.avg_degree?.toFixed(1)} />
+          <TopologyStat label={copy.density} value={props.density?.toFixed(4)} />
+          <TopologyStat label={copy.homophily} value={props.homophily_estimate?.toFixed(3)}
             color={props.homophily_estimate > 0.7 ? '#22c55e' : props.homophily_estimate < 0.4 ? '#ef4444' : '#f59e0b'} />
-          <TopologyStat label="Class Balance" value={props.class_balance?.toFixed(3)}
+          <TopologyStat label={copy.classBalance} value={props.class_balance?.toFixed(3)}
             color={props.class_balance > 0.7 ? '#22c55e' : props.class_balance < 0.3 ? '#ef4444' : '#f59e0b'} />
-          <TopologyStat label="Type" value={topo.type?.replace(/_/g, ' ') || 'unknown'} />
+          <TopologyStat label={copy.type} value={topo.type?.replace(/_/g, ' ') || (lang === 'vi' ? 'không rõ' : 'unknown')} />
         </div>
       </div>
 
       {/* Class Distribution */}
       {classData.length > 0 && (
         <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Class Distribution</h4>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{t('analyst.class_distribution')}</h4>
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={classData}>
@@ -715,7 +819,7 @@ function DatasetTab({ data }) {
                 <Tooltip
                   contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
                 />
-                <Bar dataKey="count" name="Nodes" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="count" name={copy.nodes} radius={[4, 4, 0, 0]}>
                   {classData.map((_, i) => (
                     <Cell key={i} fill={['#3b82f6', '#ef4444', '#22c55e', '#eab308', '#a855f7', '#06b6d4', '#ec4899'][i % 7]} />
                   ))}
@@ -730,7 +834,7 @@ function DatasetTab({ data }) {
       {recs.length > 0 && (
         <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
           <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-3 flex items-center gap-2">
-            <Lightbulb size={14} /> Dataset-Aware Recommendations
+            <Lightbulb size={14} /> {copy.datasetAwareRecommendations}
           </h4>
           <ul className="space-y-2">
             {recs.map((rec, i) => (
@@ -762,28 +866,29 @@ function TopologyStat({ label, value, color }) {
 // Models Tab
 // ---------------------------------------------------------------------------
 
-function ModelsTab({ data }) {
+function ModelsTab({ data, t, lang }) {
   const modelDiags = data?.model_diagnostics || {}
   const modelNames = Object.keys(modelDiags)
+  const copy = getAnalystCopy(lang)
 
   const MODEL_PROFILES = {
     GCN: {
-      personality: 'Fast & Stable',
-      strengths: ['Fast convergence', 'Clean baseline', 'Efficient aggregation'],
-      weaknesses: ['Over-smoothing in deep nets', 'Weak on boundary nodes', 'No attention'],
-      bestFor: ['Homophilic graphs', 'Shallow architectures', 'Large-scale graphs'],
+      personality: lang === 'vi' ? 'Nhanh và ổn định' : 'Fast & Stable',
+      strengths: lang === 'vi' ? ['Hội tụ nhanh', 'Baseline sạch', 'Tổng hợp hiệu quả'] : ['Fast convergence', 'Clean baseline', 'Efficient aggregation'],
+      weaknesses: lang === 'vi' ? ['Dễ over-smoothing khi sâu', 'Yếu ở vùng biên', 'Không có attention'] : ['Over-smoothing in deep nets', 'Weak on boundary nodes', 'No attention'],
+      bestFor: lang === 'vi' ? ['Đồ thị homophily cao', 'Kiến trúc nông', 'Đồ thị lớn'] : ['Homophilic graphs', 'Shallow architectures', 'Large-scale graphs'],
     },
     GAT: {
-      personality: 'Expressive but Unstable',
-      strengths: ['Learned attention', 'Better boundaries', 'Multi-head features'],
-      weaknesses: ['Higher variance', 'Diffuse attention risk', 'Computationally expensive'],
-      bestFor: ['Heterophilic graphs', 'Edge-distinctive tasks', 'Interpretable attention'],
+      personality: lang === 'vi' ? 'Biểu đạt tốt nhưng kém ổn định' : 'Expressive but Unstable',
+      strengths: lang === 'vi' ? ['Attention học được', 'Xử lý vùng biên tốt hơn', 'Đặc trưng đa đầu'] : ['Learned attention', 'Better boundaries', 'Multi-head features'],
+      weaknesses: lang === 'vi' ? ['Dao động cao', 'Nguy cơ attention loãng', 'Tốn tính toán'] : ['Higher variance', 'Diffuse attention risk', 'Computationally expensive'],
+      bestFor: lang === 'vi' ? ['Đồ thị heterophily', 'Bài toán nhạy theo cạnh', 'Giải thích bằng attention'] : ['Heterophilic graphs', 'Edge-distinctive tasks', 'Interpretable attention'],
     },
     SAGE: {
-      personality: 'Scalable & Balanced',
-      strengths: ['Inductive capability', 'Scalable sampling', 'Balanced aggregation'],
-      weaknesses: ['Sampling variance', 'Misses rare patterns', 'Smoother curves'],
-      bestFor: ['Large graphs', 'Inductive settings', 'Medium-homophily datasets'],
+      personality: lang === 'vi' ? 'Cân bằng và dễ mở rộng' : 'Scalable & Balanced',
+      strengths: lang === 'vi' ? ['Khả năng inductive', 'Lấy mẫu mở rộng tốt', 'Tổng hợp cân bằng'] : ['Inductive capability', 'Scalable sampling', 'Balanced aggregation'],
+      weaknesses: lang === 'vi' ? ['Dao động do sampling', 'Dễ lỡ pattern hiếm', 'Đường cong mượt nhưng ít sắc'] : ['Sampling variance', 'Misses rare patterns', 'Smoother curves'],
+      bestFor: lang === 'vi' ? ['Đồ thị lớn', 'Bối cảnh inductive', 'Dataset homophily trung bình'] : ['Large graphs', 'Inductive settings', 'Medium-homophily datasets'],
     },
   }
 
@@ -806,7 +911,7 @@ function ModelsTab({ data }) {
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
-                <h5 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Strengths</h5>
+                <h5 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">{copy.strengths}</h5>
                 <ul className="space-y-1">
                   {(profile.strengths || []).map((s, i) => (
                     <li key={i} className="text-[11px] text-slate-300 flex items-center gap-1.5">
@@ -816,7 +921,7 @@ function ModelsTab({ data }) {
                 </ul>
               </div>
               <div>
-                <h5 className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-2">Weaknesses</h5>
+                <h5 className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-2">{copy.weaknesses}</h5>
                 <ul className="space-y-1">
                   {(profile.weaknesses || []).map((w, i) => (
                     <li key={i} className="text-[11px] text-slate-300 flex items-center gap-1.5">
@@ -826,7 +931,7 @@ function ModelsTab({ data }) {
                 </ul>
               </div>
               <div>
-                <h5 className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-2">Best For</h5>
+                <h5 className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-2">{copy.bestFor}</h5>
                 <ul className="space-y-1">
                   {(profile.bestFor || []).map((b, i) => (
                     <li key={i} className="text-[11px] text-slate-300 flex items-center gap-1.5">
@@ -839,9 +944,15 @@ function ModelsTab({ data }) {
 
             {/* Behavior description */}
             <div className="mt-3 text-[11px] text-slate-400 leading-relaxed bg-slate-800/30 rounded-lg p-3">
-              {model === 'GCN' && 'GCN applies symmetric normalization across all neighbors equally. It excels when neighbors share labels (homophily) but treats all edges equally, making it vulnerable to noisy or heterophilic connections.'}
-              {model === 'GAT' && 'GAT learns to weight neighbor importance via attention. When attention focuses correctly, it outperforms GCN on hard cases. However, attention can fail to converge to meaningful patterns, especially on small or noisy graphs.'}
-              {model === 'SAGE' && 'GraphSAGE samples and aggregates neighbor features, enabling training on large graphs. Its sampling introduces variance but also acts as regularization. It provides a balanced trade-off between GCN simplicity and GAT expressiveness.'}
+              {model === 'GCN' && (lang === 'vi'
+                ? 'GCN chuẩn hoá đối xứng và gom hàng xóm theo trọng số đều nhau. Nó mạnh khi hàng xóm cùng nhãn, nhưng cũng dễ bị nhiễu nếu cạnh mang tín hiệu lệch hoặc heterophily.'
+                : 'GCN applies symmetric normalization across all neighbors equally. It excels when neighbors share labels (homophily) but treats all edges equally, making it vulnerable to noisy or heterophilic connections.')}
+              {model === 'GAT' && (lang === 'vi'
+                ? 'GAT học trọng số hàng xóm bằng attention. Khi attention hội tụ đúng, nó vượt GCN ở các ca khó; nhưng trên đồ thị nhỏ hoặc nhiễu, attention cũng có thể không tạo được pattern thật sự có nghĩa.'
+                : 'GAT learns to weight neighbor importance via attention. When attention focuses correctly, it outperforms GCN on hard cases. However, attention can fail to converge to meaningful patterns, especially on small or noisy graphs.')}
+              {model === 'SAGE' && (lang === 'vi'
+                ? 'GraphSAGE lấy mẫu và tổng hợp đặc trưng hàng xóm nên phù hợp với đồ thị lớn. Sampling tạo thêm dao động nhưng cũng đóng vai trò regularization, giúp nó cân bằng giữa sự đơn giản của GCN và độ biểu đạt của GAT.'
+                : 'GraphSAGE samples and aggregates neighbor features, enabling training on large graphs. Its sampling introduces variance but also acts as regularization. It provides a balanced trade-off between GCN simplicity and GAT expressiveness.')}
             </div>
           </div>
         )

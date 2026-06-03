@@ -17,81 +17,52 @@ import {
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import { getDefaultPathForUser } from '../../utils/appRoutes'
-
-const FEATURES = [
-  {
-    icon: Workflow,
-    title: 'Six task workflows',
-    description:
-      'Node, graph, link, community, embedding, generation — each task gets purpose-built panels for setup, training, and review.',
-  },
-  {
-    icon: Layers,
-    title: 'GraphSAGE · GCN · GAT',
-    description:
-      'Swap encoders without rewriting the pipeline. Hyper-parameters and training context travel with every run.',
-  },
-  {
-    icon: Activity,
-    title: 'Live epoch streaming',
-    description:
-      'WebSocket-powered telemetry. Watch metrics, embeddings, and topology evolve epoch by epoch — no refresh needed.',
-  },
-  {
-    icon: PlayCircle,
-    title: 'Replay any run',
-    description:
-      'Every session is snapshot-ready. Scrub back through training and compare versions with frame-accurate replay.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Compare runs side-by-side',
-    description:
-      'Stack experiments next to each other, diff metrics, and surface the variant worth promoting.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Governed by default',
-    description:
-      'Role-based access, audit trails, and retention policy live in the admin shell — not as an afterthought.',
-  },
-]
-
-const STATS = [
-  { value: '6', label: 'GNN tasks supported' },
-  { value: '3', label: 'Encoder families' },
-  { value: '∞', label: 'Replayable epochs' },
-  { value: '100%', label: 'Audit coverage' },
-]
-
-const WORKFLOW_STEPS = [
-  {
-    icon: Boxes,
-    title: 'Upload',
-    text: 'Drop in a graph dataset and pick the task. Versioning, schema preview, and trainable context happen automatically.',
-  },
-  {
-    icon: Compass,
-    title: 'Configure',
-    text: 'Choose the encoder, hyper-parameters, and split policy. Defaults are sensible; overrides are explicit.',
-  },
-  {
-    icon: Zap,
-    title: 'Train',
-    text: 'Hit run and watch the live stream. Metrics, embeddings, and topology animate as the model converges.',
-  },
-  {
-    icon: LineChart,
-    title: 'Review',
-    text: 'Replay any epoch, compare runs, and export research-grade reports for your team.',
-  },
-]
+import { useLanguage } from '../../contexts/LanguageContext'
 
 export default function LandingPage() {
   const user = useAuthStore((s) => s.user)
+  const { t } = useLanguage()
   const primaryCta = user
-    ? { to: getDefaultPathForUser(user), label: 'Open workspace' }
-    : { to: '/register', label: 'Get started — it is free' }
+    ? { to: getDefaultPathForUser(user), label: t('landing.open_workspace') }
+    : { to: '/register', label: t('landing.get_started_free') }
+
+  const features = [
+    { icon: Workflow, title: t('landing.feature_six_title'), description: t('landing.feature_six_desc') },
+    { icon: Layers, title: t('landing.feature_models_title'), description: t('landing.feature_models_desc') },
+    { icon: Activity, title: t('landing.feature_live_title'), description: t('landing.feature_live_desc') },
+    { icon: PlayCircle, title: t('landing.feature_replay_title'), description: t('landing.feature_replay_desc') },
+    { icon: BarChart3, title: t('landing.feature_compare_title'), description: t('landing.feature_compare_desc') },
+    { icon: ShieldCheck, title: t('landing.feature_gov_title'), description: t('landing.feature_gov_desc') },
+  ]
+
+  const stats = [
+    { value: '6', label: t('landing.stat_tasks') },
+    { value: '3', label: t('landing.stat_encoders') },
+    { value: '∞', label: t('landing.stat_replay') },
+    { value: '100%', label: t('landing.stat_audit') },
+  ]
+
+  const workflowSteps = [
+    { icon: Boxes, title: t('landing.step_upload'), text: t('landing.step_upload_text') },
+    { icon: Compass, title: t('landing.step_configure'), text: t('landing.step_configure_text') },
+    { icon: Zap, title: t('landing.step_train'), text: t('landing.step_train_text') },
+    { icon: LineChart, title: t('landing.step_review'), text: t('landing.step_review_text') },
+  ]
+
+  const previewSidebar = [
+    { label: t('landing.preview_dataset'), value: 'Cora · v3' },
+    { label: t('landing.preview_task'), value: t('landing.preview_node_class') },
+    { label: t('landing.preview_model'), value: 'GraphSAGE' },
+    { label: t('landing.preview_optimizer'), value: 'Adam' },
+    { label: t('landing.preview_schedule'), value: 'Cosine' },
+  ]
+
+  const previewMetrics = [
+    { label: t('landing.preview_train_loss'), value: '0.184', trend: '↓ 12%' },
+    { label: t('landing.preview_val_acc'), value: '92.4%', trend: '↑ 3.1%' },
+    { label: t('landing.preview_macro_f1'), value: '0.913', trend: '↑ 2.7%' },
+    { label: t('landing.preview_latency'), value: '11.4 ms', trend: '↓ 8%' },
+  ]
 
   return (
     <div className="relative">
@@ -103,18 +74,15 @@ export default function LandingPage() {
           <div className="max-w-3xl fade-in-up">
             <span className="public-eyebrow">
               <Sparkles size={13} />
-              Graph Neural Network Research Platform
+              {t('landing.eyebrow')}
             </span>
             <h1 className="hero-title mt-6">
-              The cleanest way to{' '}
-              <span className="gradient-text">train, replay, and govern</span>{' '}
-              your graph experiments.
+              {t('landing.hero_title_a')}{' '}
+              <span className="gradient-text">{t('landing.hero_title_b')}</span>{' '}
+              {t('landing.hero_title_c')}
             </h1>
             <p className="hero-subtitle mt-6">
-              GNN Insight gives researchers a single, premium workspace for the
-              entire graph-learning loop — from dataset upload to model
-              comparison, with live training telemetry and audit-ready
-              governance built in.
+              {t('landing.hero_subtitle')}
             </p>
             <div className="mt-9 flex flex-col sm:flex-row gap-3">
               <Link to={primaryCta.to} className="btn-galaxy btn-galaxy-lg">
@@ -122,21 +90,21 @@ export default function LandingPage() {
                 <ArrowRight size={16} />
               </Link>
               <Link to="/about" className="btn-ghost btn-galaxy-lg">
-                See how it works
+                {t('landing.see_how')}
               </Link>
             </div>
             <div className="mt-8 text-xs text-twilight flex flex-wrap items-center gap-x-5 gap-y-2">
               <span className="inline-flex items-center gap-1.5">
                 <ShieldCheck size={13} className="text-amethyst" />
-                Role-based access
+                {t('landing.role_based')}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <GitBranch size={13} className="text-amethyst" />
-                Versioned datasets
+                {t('landing.versioned_datasets')}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Activity size={13} className="text-amethyst" />
-                Live epoch streaming
+                {t('landing.live_streaming')}
               </span>
             </div>
           </div>
@@ -159,25 +127,18 @@ export default function LandingPage() {
                 </div>
                 <div className="grid lg:grid-cols-[260px_1fr] min-h-[360px]">
                   <div className="border-r border-line-subtle p-4 space-y-3 bg-deep">
-                    {['Dataset', 'Task', 'Model', 'Optimizer', 'Schedule'].map((item, i) => (
+                    {previewSidebar.map((item) => (
                       <div
-                        key={item}
+                        key={item.label}
                         className="flex items-center justify-between rounded-lg border border-line-subtle bg-nebula px-3 py-2"
                       >
-                        <span className="text-xs text-moonlight">{item}</span>
-                        <span className="text-[10px] font-mono text-twilight">
-                          {['Cora · v3', 'Node class.', 'GraphSAGE', 'Adam', 'Cosine'][i]}
-                        </span>
+                        <span className="text-xs text-moonlight">{item.label}</span>
+                        <span className="text-[10px] font-mono text-twilight">{item.value}</span>
                       </div>
                     ))}
                   </div>
                   <div className="p-6 grid gap-4 grid-cols-2">
-                    {[
-                      { label: 'Train loss', value: '0.184', trend: '↓ 12%' },
-                      { label: 'Val accuracy', value: '92.4%', trend: '↑ 3.1%' },
-                      { label: 'Macro F1', value: '0.913', trend: '↑ 2.7%' },
-                      { label: 'Avg latency', value: '11.4 ms', trend: '↓ 8%' },
-                    ].map((m) => (
+                    {previewMetrics.map((m) => (
                       <div
                         key={m.label}
                         className="rounded-2xl border border-line-subtle bg-deep p-4"
@@ -202,7 +163,7 @@ export default function LandingPage() {
       {/* ── LOGO STRIP / STATS ─────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-6 -mt-10">
         <div className="rounded-3xl border border-line-subtle bg-deep/80 backdrop-blur-md shadow-card p-6 md:p-8 grid grid-cols-2 md:grid-cols-4 gap-6">
-          {STATS.map((s) => (
+          {stats.map((s) => (
             <div key={s.label} className="text-center">
               <div className="text-3xl md:text-4xl font-extrabold tracking-tight text-white-star">
                 {s.value}
@@ -219,19 +180,18 @@ export default function LandingPage() {
       <section className="mx-auto max-w-7xl px-6 pt-24 lg:pt-32">
         <div className="max-w-2xl">
           <span className="public-eyebrow">
-            <Network size={13} /> Capabilities
+            <Network size={13} /> {t('landing.capabilities')}
           </span>
           <h2 className="mt-4 text-3xl md:text-4xl font-bold tracking-tight text-white-star">
-            A research workspace built for graph people.
+            {t('landing.capabilities_title')}
           </h2>
           <p className="mt-4 text-base text-twilight">
-            Every feature is opinionated, fast, and gets out of your way. Train
-            the model, not the tooling.
+            {t('landing.capabilities_sub')}
           </p>
         </div>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((feature) => {
+          {features.map((feature) => {
             const Icon = feature.icon
             return (
               <div key={feature.title} className="feature-card">
@@ -254,19 +214,18 @@ export default function LandingPage() {
       <section className="mx-auto max-w-7xl px-6 pt-24 lg:pt-32">
         <div className="max-w-2xl">
           <span className="public-eyebrow">
-            <Workflow size={13} /> The flow
+            <Workflow size={13} /> {t('landing.the_flow')}
           </span>
           <h2 className="mt-4 text-3xl md:text-4xl font-bold tracking-tight text-white-star">
-            Upload, train, replay, ship.
+            {t('landing.flow_title')}
           </h2>
           <p className="mt-4 text-base text-twilight">
-            Four steps. No context-switching. Every result is reproducible by
-            design.
+            {t('landing.flow_sub')}
           </p>
         </div>
 
         <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          {WORKFLOW_STEPS.map((step, i) => {
+          {workflowSteps.map((step, i) => {
             const Icon = step.icon
             return (
               <div
@@ -299,11 +258,10 @@ export default function LandingPage() {
           <div className="relative px-8 py-12 md:px-14 md:py-16 flex flex-col md:flex-row md:items-center md:justify-between gap-8">
             <div className="max-w-2xl">
               <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-white-star">
-                Bring graph research into a clean, modern shell.
+                {t('landing.cta_title')}
               </h2>
               <p className="mt-3 text-sm md:text-base text-moonlight">
-                Sign in to your team's workspace, or open a fresh account and
-                start your first experiment in minutes.
+                {t('landing.cta_sub')}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
@@ -313,7 +271,7 @@ export default function LandingPage() {
               </Link>
               {!user ? (
                 <Link to="/login" className="btn-ghost btn-galaxy-lg">
-                  Sign in
+                  {t('landing.sign_in')}
                 </Link>
               ) : null}
             </div>

@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import { useLanguage } from '../../contexts/LanguageContext'
 import NodeHoverCard from './NodeHoverCard'
 import { interpolateSnapshots } from '../../engine/interpolate'
 import {
@@ -9,6 +10,7 @@ import {
   buildTask2GraphDescriptors,
   sortTask2Descriptors,
 } from '../../utils/task2Metrics'
+import { localizeTask2Element } from '../../utils/task2ReportI18n'
 
 function buildGraphClassNames(graphs = [], taskClassNames = []) {
   if (Array.isArray(taskClassNames) && taskClassNames.length) {
@@ -134,7 +136,10 @@ export default function TaskTopology2({
   hideGalleryControls = false,
   showFullCollection = false,
   showGalleryOnly = false,
+  reportMode = false,
 }) {
+  const { lang } = useLanguage()
+  const reportLang = lang
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const taskData = useGNNStore((state) => state.taskData)
   const classNames = useGNNStore((state) => state.classNames)
@@ -150,6 +155,7 @@ export default function TaskTopology2({
   const selectedCell = useGNNStore((state) => state.task2SelectedCell)
 
   const fgRefDetail = useRef(null)
+  const panelRootRef = useRef(null)
   const gridRef = useRef(null)
   const cols = useResponsiveGridCols(gridRef)
   const [page, setPage] = useState(1)
@@ -302,6 +308,26 @@ export default function TaskTopology2({
     graphRef.d3ReheatSimulation()
   }, [selectedGraph])
 
+  useEffect(() => {
+    if (reportLang !== 'vi' || !panelRootRef.current) return undefined
+    const rafId = window.requestAnimationFrame(() => {
+      localizeTask2Element(panelRootRef.current, reportLang)
+    })
+    return () => window.cancelAnimationFrame(rafId)
+  }, [
+    reportMode,
+    reportLang,
+    page,
+    cols,
+    selectedNodeId,
+    sortedDescriptors.length,
+    resolvedSelectedCell?.pred,
+    resolvedSelectedCell?.gt,
+    resolvedFocusId,
+    activeGallerySort,
+    resolvedClassFilter,
+  ])
+
   if (!descriptors.length) {
     return (
       <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs bg-panel">
@@ -316,7 +342,7 @@ export default function TaskTopology2({
       : 'Pending'
 
     return (
-      <div className="w-full h-full relative bg-panel overflow-hidden">
+      <div ref={panelRootRef} className="w-full h-full relative bg-panel overflow-hidden">
         <div className="absolute inset-0" style={{ zIndex: 1 }}>
           <ForceGraph2D
             ref={fgRefDetail}
@@ -362,7 +388,13 @@ export default function TaskTopology2({
   ).sort((a, b) => a - b)
 
   return (
-    <div ref={gridRef} className="w-full h-full overflow-y-auto bg-panel custom-scrollbar">
+    <div
+      ref={(node) => {
+        panelRootRef.current = node
+        gridRef.current = node
+      }}
+      className="w-full h-full overflow-y-auto bg-panel custom-scrollbar"
+    >
       <div className="pt-16 pb-6 px-6">
         <div className="mb-4 flex flex-col gap-3 rounded-xl border border-slate-800/60 bg-slate-950/35 px-4 py-3">
           <div className="flex flex-wrap items-start justify-between gap-3">

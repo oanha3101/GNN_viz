@@ -11,39 +11,27 @@ import {
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import ThemeToggle from '../components/ui/ThemeToggle'
+import LanguageSwitcher from '../components/ui/LanguageSwitcher'
+import { useLanguage } from '../contexts/LanguageContext'
 
 const APP_NAV_ITEMS = [
-  { to: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/app/projects', label: 'Projects', icon: FolderKanban },
-  { to: '/app/datasets', label: 'Datasets', icon: Database },
-  { to: '/app/experiments', label: 'Experiments', icon: BookOpen },
-  { to: '/app/lab', label: 'Lab', icon: Network },
+  { to: '/app/dashboard', key: 'nav.dashboard', icon: LayoutDashboard },
+  { to: '/app/projects', key: 'nav.projects', icon: FolderKanban },
+  { to: '/app/datasets', key: 'nav.datasets', icon: Database },
+  { to: '/app/experiments', key: 'nav.experiments', icon: BookOpen },
+  { to: '/app/lab', key: 'nav.lab', icon: Network },
 ]
 
-const TITLES = {
-  '/app/dashboard': {
-    eyebrow: 'Workspace',
-    title: 'Research Dashboard',
-    description: 'Project context, dataset context, and the next step before training.',
-  },
-  '/app/projects': {
-    eyebrow: 'Projects',
-    title: 'Project Governance',
-    description: 'Create and select the project container that owns your runs.',
-  },
-  '/app/profile': {
-    eyebrow: 'Profile',
-    title: 'My Profile',
-    description: 'Manage your public identity and research details inside the workspace.',
-  },
-  '/app/datasets': {
-    eyebrow: 'Datasets',
-    title: 'Dataset Library',
-    description: 'Manage dataset records, versions, publish state, and trainable context.',
-  },
+const TITLE_KEYS = {
+  '/app/dashboard': 'header.dashboard',
+  '/app/projects': 'header.projects',
+  '/app/profile': 'header.profile',
+  '/app/datasets': 'header.datasets',
+  '/app/experiments': 'header.experiments',
+  '/app/lab': 'header.lab',
 }
 
-function AppNavLink({ item }) {
+function AppNavLink({ item, t }) {
   const Icon = item.icon
   return (
     <NavLink
@@ -53,14 +41,14 @@ function AppNavLink({ item }) {
       {({ isActive }) => (
         <>
           <Icon size={17} className={isActive ? 'text-white' : 'text-twilight'} />
-          <span className="font-semibold">{item.label}</span>
+          <span className="font-semibold">{t(item.key)}</span>
         </>
       )}
     </NavLink>
   )
 }
 
-function UserBadge({ user, navigate }) {
+function UserBadge({ user, navigate, t }) {
   const avatarLabel = (user?.full_name || user?.username || 'U')[0].toUpperCase()
   return (
     <button
@@ -83,10 +71,10 @@ function UserBadge({ user, navigate }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold text-white-star">
-          {user?.full_name || user?.username || 'Unknown'}
+          {user?.full_name || user?.username || t('common.unknown')}
         </div>
         <div className="truncate text-[11px] text-text-shadow">
-          {user?.email || 'No email'}
+          {user?.email || t('common.none')}
         </div>
       </div>
       <span className="app-role-tag">{user?.role || 'viewer'}</span>
@@ -99,12 +87,20 @@ export default function AppLayout() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
+  const { t } = useLanguage()
 
   if (location.pathname === '/app/lab') {
     return <Outlet />
   }
 
-  const titleMeta = TITLES[location.pathname]
+  const titleKey = TITLE_KEYS[location.pathname]
+  const titleMeta = titleKey
+    ? {
+        eyebrow: t(`${titleKey}.eyebrow`),
+        title: t(`${titleKey}.title`),
+        description: t(`${titleKey}.description`),
+      }
+    : null
 
   return (
     <div className="user-shell min-h-screen bg-abyss text-starlight selection:bg-accent-amethyst/30 print:bg-white print:text-slate-900">
@@ -116,19 +112,19 @@ export default function AppLayout() {
                 <Network size={18} className="text-white" />
               </div>
               <div>
-                <div className="app-brand-title">GNN Insight</div>
-                <div className="app-brand-subtitle">Research workspace</div>
+                <div className="app-brand-title">{t('brand.title')}</div>
+                <div className="app-brand-subtitle">{t('brand.subtitle')}</div>
               </div>
             </div>
 
             <nav className="space-y-2">
               {APP_NAV_ITEMS.map((item) => (
-                <AppNavLink key={item.to} item={item} />
+                <AppNavLink key={item.to} item={item} t={t} />
               ))}
             </nav>
 
             <div className="mt-4 space-y-3 border-t border-line-subtle pt-4">
-              <UserBadge user={user} navigate={navigate} />
+              <UserBadge user={user} navigate={navigate} t={t} />
 
               <div className="flex flex-col gap-2">
                 {user?.role === 'admin' ? (
@@ -138,7 +134,7 @@ export default function AppLayout() {
                     className="app-action-btn app-action-btn-admin"
                   >
                     <ShieldCheck size={14} />
-                    Admin
+                    {t('nav.admin')}
                   </button>
                 ) : null}
                 <button
@@ -150,7 +146,7 @@ export default function AppLayout() {
                   className="app-action-btn app-action-btn-logout"
                 >
                   <LogOut size={14} />
-                  Log out
+                  {t('nav.logout')}
                 </button>
               </div>
             </div>
@@ -176,12 +172,14 @@ export default function AppLayout() {
                   {titleMeta.description}
                 </p>
               </div>
-              <div className="shrink-0">
+              <div className="flex shrink-0 items-center gap-2">
+                <LanguageSwitcher variant="compact" />
                 <ThemeToggle />
               </div>
             </header>
           ) : (
-            <div className="flex justify-end px-6 pt-6">
+            <div className="flex justify-end gap-2 px-6 pt-6">
+              <LanguageSwitcher variant="compact" />
               <ThemeToggle />
             </div>
           )}

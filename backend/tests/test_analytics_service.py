@@ -69,3 +69,20 @@ def test_generate_recommendations_merges_llm_brief(monkeypatch):
     assert result["source"] == "llm"
     assert result["summary"] == "LLM summary"
     assert result["analyst_brief"]["findings"] == ["Weak-class recall is lagging."]
+
+
+def test_analyze_dataset_topology_accepts_compact_link_shapes():
+    result = analytics_service.analyze_dataset_topology(
+        {
+            "graph_data_json": {
+                "nodes": [{"id": 0, "groundTruth": 1}, {"id": 1, "groundTruth": 1}, {"id": 2, "groundTruth": 0}],
+                "links": [[0, 1], [1, 2], {"source": 2, "target": 0}],
+            }
+        },
+        snapshots=[{"majority_ratio": [0.8, 0.7, 0.9]}],
+    )
+
+    assert result["properties"]["n_nodes"] == 3
+    assert result["properties"]["n_edges"] == 3
+    assert result["properties"]["n_classes"] == 2
+    assert result["properties"]["homophily_estimate"] == 0.8

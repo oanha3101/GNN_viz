@@ -15,6 +15,7 @@ export default function Task2ConfusionMatrix({
   classNames,
   onSelectCell,
   selectedCell,
+  scopeLabel = 'Focus slice',
 }) {
   const cm = useMemo(
     () => buildConfusionMatrix(predictions || [], groundTruth || []),
@@ -54,7 +55,7 @@ export default function Task2ConfusionMatrix({
       {/* Matrix */}
       <div className="flex flex-col items-start min-w-0">
         <div className="text-nano uppercase tracking-ultra text-slate-500 mb-2">
-          Confusion Matrix · Overall acc {(cm.accuracy * 100).toFixed(1)}%
+          Confusion Matrix · {scopeLabel} acc {(cm.accuracy * 100).toFixed(1)}%
         </div>
         <div
           className="grid gap-1"

@@ -78,6 +78,35 @@ class LinkPredModel(torch.nn.Module):
         return pos_score, neg_score, embedding
 
 
+def _count_neighbor_links(neighbors, adjacency):
+    arr = list(neighbors)
+    links = 0
+    for i in range(len(arr)):
+        for j in range(i + 1, len(arr)):
+            if arr[j] in adjacency.get(arr[i], set()):
+                links += 1
+    return links
+
+
+def _shortest_path_with_limit(adjacency, source, target, max_depth=4):
+    if source == target:
+        return 0
+    visited = {source}
+    queue = [(source, 0)]
+    while queue:
+        node, depth = queue.pop(0)
+        if depth >= max_depth:
+            continue
+        for neighbor in adjacency.get(node, set()):
+            if neighbor == target:
+                return depth + 1
+            if neighbor in visited:
+                continue
+            visited.add(neighbor)
+            queue.append((neighbor, depth + 1))
+    return None
+
+
 def split_edges(edge_index, val_ratio=0.1, test_ratio=0.1):
     """Split edges into train/val/test sets."""
     num_edges = edge_index.size(1)
@@ -311,12 +340,30 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag, sn
                     adj[t].add(s)
             
             test_edge_common_neighbors = []
+            edge_structure_features = []
             # Positive edges
             test_edge_np_temp = test_edges.cpu().numpy()
             for i in range(min(n_pos, test_edge_np_temp.shape[1])):
                 s, t = int(test_edge_np_temp[0, i]), int(test_edge_np_temp[1, i])
-                common = len(adj.get(s, set()) & adj.get(t, set()))
+                source_neighbors = adj.get(s, set())
+                target_neighbors = adj.get(t, set())
+                common_set = source_neighbors & target_neighbors
+                common = len(common_set)
+                union = len(source_neighbors | target_neighbors) or 1
+                degree_s = len(source_neighbors)
+                degree_t = len(target_neighbors)
+                shortest_path = _shortest_path_with_limit(adj, s, t, max_depth=4)
                 emb_dist = float(np.linalg.norm(emb_np[s] - emb_np[t]))
+                emb_sim = float(1.0 / (1.0 + emb_dist))
+                structural_equivalence = float(common / max(1.0, np.sqrt(max(1, degree_s) * max(1, degree_t))))
+                clustering_s = (
+                    float((2 * _count_neighbor_links(source_neighbors, adj)) / (degree_s * (degree_s - 1)))
+                    if degree_s > 1 else 0.0
+                )
+                clustering_t = (
+                    float((2 * _count_neighbor_links(target_neighbors, adj)) / (degree_t * (degree_t - 1)))
+                    if degree_t > 1 else 0.0
+                )
                 test_edge_common_neighbors.append({
                     'source': s,
                     'target': t,
@@ -324,19 +371,70 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag, sn
                     'common_neighbors': common,
                     'embedding_distance': emb_dist
                 })
+                edge_structure_features.append({
+                    'idx': i,
+                    'source': s,
+                    'target': t,
+                    'is_positive': True,
+                    'degree_source': degree_s,
+                    'degree_target': degree_t,
+                    'common_neighbors': common,
+                    'shortest_path': shortest_path,
+                    'neighbor_jaccard': float(common / union),
+                    'embedding_distance': emb_dist,
+                    'embedding_similarity': emb_sim,
+                    'structural_equivalence': structural_equivalence,
+                    'local_clustering_source': clustering_s,
+                    'local_clustering_target': clustering_t,
+                    'same_ground_truth_label': bool(int(data.y[s]) == int(data.y[t])) if getattr(data, 'y', None) is not None else None,
+                })
             
             # Negative edges
             neg_test_np_temp = neg_test.cpu().numpy()
             for i in range(min(n_neg, neg_test_np_temp.shape[1])):
                 s, t = int(neg_test_np_temp[0, i]), int(neg_test_np_temp[1, i])
-                common = len(adj.get(s, set()) & adj.get(t, set()))
+                source_neighbors = adj.get(s, set())
+                target_neighbors = adj.get(t, set())
+                common_set = source_neighbors & target_neighbors
+                common = len(common_set)
+                union = len(source_neighbors | target_neighbors) or 1
+                degree_s = len(source_neighbors)
+                degree_t = len(target_neighbors)
+                shortest_path = _shortest_path_with_limit(adj, s, t, max_depth=4)
                 emb_dist = float(np.linalg.norm(emb_np[s] - emb_np[t]))
+                emb_sim = float(1.0 / (1.0 + emb_dist))
+                structural_equivalence = float(common / max(1.0, np.sqrt(max(1, degree_s) * max(1, degree_t))))
+                clustering_s = (
+                    float((2 * _count_neighbor_links(source_neighbors, adj)) / (degree_s * (degree_s - 1)))
+                    if degree_s > 1 else 0.0
+                )
+                clustering_t = (
+                    float((2 * _count_neighbor_links(target_neighbors, adj)) / (degree_t * (degree_t - 1)))
+                    if degree_t > 1 else 0.0
+                )
                 test_edge_common_neighbors.append({
                     'source': s,
                     'target': t,
                     'is_positive': False,
                     'common_neighbors': common,
                     'embedding_distance': emb_dist
+                })
+                edge_structure_features.append({
+                    'idx': i + n_pos,
+                    'source': s,
+                    'target': t,
+                    'is_positive': False,
+                    'degree_source': degree_s,
+                    'degree_target': degree_t,
+                    'common_neighbors': common,
+                    'shortest_path': shortest_path,
+                    'neighbor_jaccard': float(common / union),
+                    'embedding_distance': emb_dist,
+                    'embedding_similarity': emb_sim,
+                    'structural_equivalence': structural_equivalence,
+                    'local_clustering_source': clustering_s,
+                    'local_clustering_target': clustering_t,
+                    'same_ground_truth_label': bool(int(data.y[s]) == int(data.y[t])) if getattr(data, 'y', None) is not None else None,
                 })
 
             # Compute kNN preservation
@@ -406,6 +504,7 @@ async def run_link_prediction(config, data, model_type, websocket, stop_flag, sn
                 'edge_scores': edge_scores,
                 'edge_classifications': edge_classifications,
                 'test_edge_common_neighbors': test_edge_common_neighbors,
+                'edge_structure_features': edge_structure_features,
                 'embeddings_2d': emb_2d,
                 'knn_preservation': knn_pres,
                 'train_loss': float(loss.item()),

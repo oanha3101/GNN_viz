@@ -10,6 +10,7 @@ from database import get_db
 from models.sql_models import Experiment, User
 from services import experiment_service
 from services import analytics_service
+from services import analytics_i18n
 import logging
 
 logger = logging.getLogger(__name__)
@@ -190,6 +191,7 @@ def update_experiment(
 def get_experiment_report(
     exp_id: int,
     track_export: bool = Query(default=False),
+    lang: str = Query("en", description="Response language: en or vi"),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_optional_user),
 ):
@@ -198,6 +200,7 @@ def get_experiment_report(
         exp_id=exp_id,
         track_export=track_export,
         user=user,
+        lang=lang,
     )
 
 
@@ -281,6 +284,7 @@ def analyze_experiment(
 @router.post("/experiments/compare-insights")
 def compare_insights(
     payload: CompareInsightsRequest,
+    lang: str = Query("en", description="Response language: en or vi"),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_optional_user),
 ):
@@ -336,16 +340,17 @@ def compare_insights(
             "profile": analytics_service.get_model_profile(model_type),
         }
 
-    return {
+    return analytics_i18n.translate_comparison_insights({
         "insights": insights,
         "model_diagnostics": model_diagnostics,
         "dataset_topology": analytics_service.analyze_dataset_topology(graph_payload),
-    }
+    }, lang)
 
 
 @router.post("/experiments/{exp_id}/research-notes")
 def generate_research_notes(
     exp_id: int,
+    lang: str = Query("en", description="Response language: en or vi"),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_optional_user),
 ):
@@ -357,7 +362,8 @@ def generate_research_notes(
     config = detail.get("config_json") or {}
 
     try:
-        return analytics_service.generate_research_notes(snapshots, model_type, config, graph_payload)
+        result = analytics_service.generate_research_notes(snapshots, model_type, config, graph_payload)
+        return analytics_i18n.translate_research_notes(result, lang)
     except Exception as exc:
         logger.exception("Research notes generation failed for experiment %s", exp_id)
         raise HTTPException(status_code=500, detail=f"Research notes failed: {exc}") from exc
@@ -366,6 +372,7 @@ def generate_research_notes(
 @router.post("/experiments/{exp_id}/recommendations")
 def get_recommendations(
     exp_id: int,
+    lang: str = Query("en", description="Response language: en or vi"),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_optional_user),
 ):
@@ -377,7 +384,8 @@ def get_recommendations(
     config = detail.get("config_json") or {}
 
     try:
-        return analytics_service.generate_recommendations(snapshots, model_type, config, graph_payload)
+        result = analytics_service.generate_recommendations(snapshots, model_type, config, graph_payload)
+        return analytics_i18n.translate_recommendations(result, lang)
     except Exception as exc:
         logger.exception("Recommendations generation failed for experiment %s", exp_id)
         raise HTTPException(status_code=500, detail=f"Recommendations failed: {exc}") from exc

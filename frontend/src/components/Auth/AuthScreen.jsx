@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowRight,
   Database,
@@ -12,30 +12,36 @@ import {
   UserPlus,
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
-
-const PLATFORM_POINTS = [
-  {
-    icon: <Network size={18} />,
-    title: 'Connected workspace',
-    description: 'Keep projects, datasets, and experiments under one research shell.',
-  },
-  {
-    icon: <Database size={18} />,
-    title: 'Governed data flow',
-    description: 'Track versions and training context without juggling multiple screens.',
-  },
-  {
-    icon: <ShieldCheck size={18} />,
-    title: 'Admin-ready controls',
-    description: 'Role-based access and audit-friendly operations are built into the platform.',
-  },
-]
+import { useLanguage } from '../../contexts/LanguageContext'
+import LanguageSwitcher from '../ui/LanguageSwitcher'
 
 export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticated }) {
   const login = useAuthStore((s) => s.login)
   const register = useAuthStore((s) => s.register)
   const loading = useAuthStore((s) => s.loading)
   const error = useAuthStore((s) => s.error)
+  const { t } = useLanguage()
+
+  const platformPoints = useMemo(
+    () => [
+      {
+        icon: <Network size={18} />,
+        title: t('auth.feature_connected_title'),
+        description: t('auth.feature_connected_desc'),
+      },
+      {
+        icon: <Database size={18} />,
+        title: t('auth.feature_governed_title'),
+        description: t('auth.feature_governed_desc'),
+      },
+      {
+        icon: <ShieldCheck size={18} />,
+        title: t('auth.feature_admin_title'),
+        description: t('auth.feature_admin_desc'),
+      },
+    ],
+    [t],
+  )
 
   const [form, setForm] = useState({
     email: '',
@@ -68,26 +74,26 @@ export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticat
           <div className="auth-visual-copy">
             <div className="auth-badge">
               <Sparkles size={14} />
-              Research Platform
+              {t('auth.platform_badge')}
             </div>
             <div className="auth-hero-mark">
               <div className="auth-logo">
                 <Network size={28} className="text-white" />
               </div>
               <div>
-                <div className="auth-brand-name">GNN Insight</div>
-                <div className="auth-brand-subtitle">Graph Neural Network Research Platform</div>
+                <div className="auth-brand-name">{t('brand.title')}</div>
+                <div className="auth-brand-subtitle">{t('auth.brand_subtitle')}</div>
               </div>
             </div>
             <h1 className="auth-hero-title">
-              Graph work, grounded.
+              {t('auth.hero_title')}
             </h1>
             <p className="auth-hero-text">
-              A split workspace for serious experiments: cleaner dataset governance, structured project context, and training flows that stay readable.
+              {t('auth.hero_text')}
             </p>
 
             <div className="auth-visual-grid">
-              {PLATFORM_POINTS.map((item) => (
+              {platformPoints.map((item) => (
                 <div key={item.title} className="auth-visual-card">
                   <div className="auth-visual-icon">{item.icon}</div>
                   <div>
@@ -100,16 +106,16 @@ export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticat
 
             <div className="auth-visual-metrics">
               <div className="auth-metric-card">
-                <span className="auth-metric-label">Project-aware runs</span>
-                <strong>Tracked context</strong>
+                <span className="auth-metric-label">{t('auth.metric_runs_label')}</span>
+                <strong>{t('auth.metric_runs_value')}</strong>
               </div>
               <div className="auth-metric-card">
-                <span className="auth-metric-label">Dataset lifecycle</span>
-                <strong>Versioned inputs</strong>
+                <span className="auth-metric-label">{t('auth.metric_dataset_label')}</span>
+                <strong>{t('auth.metric_dataset_value')}</strong>
               </div>
               <div className="auth-metric-card">
-                <span className="auth-metric-label">Session review</span>
-                <strong>Replay-ready logs</strong>
+                <span className="auth-metric-label">{t('auth.metric_session_label')}</span>
+                <strong>{t('auth.metric_session_value')}</strong>
               </div>
             </div>
           </div>
@@ -117,18 +123,21 @@ export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticat
 
         <section className="auth-form-pane">
           <div className="auth-form-shell">
-            <div className="auth-compact-brand">
-              <div className="auth-logo auth-logo-compact">
-                <Network size={22} className="text-white" />
+            <div className="flex items-start justify-between gap-3">
+              <div className="auth-compact-brand">
+                <div className="auth-logo auth-logo-compact">
+                  <Network size={22} className="text-white" />
+                </div>
+                <div>
+                  <div className="auth-brand-name">{t('brand.title')}</div>
+                  <div className="auth-brand-subtitle">{t('auth.brand_subtitle')}</div>
+                </div>
               </div>
-              <div>
-                <div className="auth-brand-name">GNN Insight</div>
-                <div className="auth-brand-subtitle">Graph Neural Network Research Platform</div>
-              </div>
+              <LanguageSwitcher variant="compact" />
             </div>
 
             <div className="auth-form-header">
-              <div className="auth-form-eyebrow">Secure Access</div>
+              <div className="auth-form-eyebrow">{t('auth.secure_access')}</div>
               <div className="auth-tabs">
                 <button
                   type="button"
@@ -136,7 +145,7 @@ export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticat
                   className={`auth-tab ${mode === 'login' ? 'auth-tab-active' : ''}`}
                 >
                   <LockKeyhole size={14} />
-                  Sign In
+                  {t('auth.sign_in')}
                 </button>
                 <button
                   type="button"
@@ -144,68 +153,66 @@ export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticat
                   className={`auth-tab ${mode === 'register' ? 'auth-tab-active' : ''}`}
                 >
                   <UserPlus size={14} />
-                  Register
+                  {t('auth.register_tab')}
                 </button>
               </div>
             </div>
 
             <div className="auth-form-body auth-form-card">
               <h2 className="auth-form-title">
-                {mode === 'login' ? 'Welcome back' : 'Create your account'}
+                {mode === 'login' ? t('auth.welcome_back_title') : t('auth.create_account_title')}
               </h2>
               <p className="auth-form-text">
-                {mode === 'login'
-                  ? 'Sign in to continue into your research workspace.'
-                  : 'Open a new account to start managing graph learning workflows.'}
+                {mode === 'login' ? t('auth.login_subtitle') : t('auth.register_subtitle')}
               </p>
 
               <div className="auth-social-stack">
-                <QuickAuth icon={<Globe2 size={16} />} label="Continue with Google" note="Coming soon" />
-                <QuickAuth icon={<GitBranch size={16} />} label="Continue with GitHub" note="Coming soon" />
+                <QuickAuth icon={<Globe2 size={16} />} label={t('auth.continue_with_google')} note={t('auth.coming_soon')} />
+                <QuickAuth icon={<GitBranch size={16} />} label={t('auth.continue_with_github')} note={t('auth.coming_soon')} />
               </div>
 
               <div className="auth-divider my-6">
-                <span>or use your credentials</span>
+                <span>{t('auth.or_credentials')}</span>
               </div>
 
               <form className="space-y-4" onSubmit={handleSubmit}>
                 {mode === 'register' ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field
-                      label="Email"
+                      label={t('auth.email')}
                       value={form.email}
                       onChange={(value) => setForm((prev) => ({ ...prev, email: value }))}
-                      placeholder="you@example.com"
+                      placeholder={t('auth.email_placeholder')}
                     />
                     <Field
-                      label="Full name"
+                      label={t('auth.full_name')}
                       value={form.fullName}
                       onChange={(value) => setForm((prev) => ({ ...prev, fullName: value }))}
-                      placeholder="Nguyen Van A"
+                      placeholder={t('auth.fullname_placeholder')}
                     />
                   </div>
                 ) : null}
 
                 <Field
-                  label="Username"
+                  label={t('auth.username')}
                   value={form.username}
                   onChange={(value) => setForm((prev) => ({ ...prev, username: value }))}
-                  placeholder="your_username"
+                  placeholder={t('auth.username_placeholder')}
                 />
                 <Field
-                  label="Password"
+                  label={t('auth.password')}
                   value={form.password}
                   onChange={(value) => setForm((prev) => ({ ...prev, password: value }))}
-                  placeholder="Enter your password"
+                  placeholder={t('auth.password_placeholder')}
                   type="password"
                 />
 
                 {mode === 'login' ? (
                   <div className="flex items-center justify-between gap-3">
-                    <div className="text-xs text-twilight">Use your existing workspace account.</div>
+                    <div className="text-xs text-twilight">{t('auth.use_existing')}</div>
                     <button type="button" className="auth-link-subtle">
                       <KeyRound size={14} />
-                      Forgot password
+                      {t('auth.forgot_password_link')}
                     </button>
                   </div>
                 ) : null}
@@ -225,11 +232,11 @@ export default function AuthScreen({ mode = 'login', onModeChange, onAuthenticat
                   {loading ? (
                     <span className="auth-submit-loading">
                       <span className="auth-spinner" />
-                      Processing...
+                      {t('auth.processing')}
                     </span>
                   ) : (
                     <>
-                      {mode === 'login' ? 'Sign In' : 'Create Account'}
+                      {mode === 'login' ? t('auth.sign_in_button') : t('auth.create_account_button')}
                       <ArrowRight size={16} />
                     </>
                   )}

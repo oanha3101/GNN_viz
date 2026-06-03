@@ -195,10 +195,10 @@ describe('Task2MetricsPanel', () => {
   it('surfaces research signals in the overview', () => {
     render(<Task2MetricsPanel />)
 
-    expect(screen.getByText('Research signals')).toBeInTheDocument()
-    expect(screen.getByText('Class collapse')).toBeInTheDocument()
-    expect(screen.getByText('Calibration')).toBeInTheDocument()
-    expect(screen.getAllByText('Shortcut bias').length).toBeGreaterThan(0)
+    expect(screen.getByText(/Research signals|Tín hiệu nghiên cứu/i)).toBeInTheDocument()
+    expect(screen.getByText(/Class collapse|Sụp đổ lớp/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Calibration|Hiệu chuẩn/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Shortcut bias|Thiên lệch shortcut/i).length).toBeGreaterThan(0)
   })
 
   it('surfaces the Task 2 trust profile in the overview', () => {

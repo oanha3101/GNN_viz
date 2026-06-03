@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CheckCircle2, Loader2, Save, Square } from 'lucide-react'
+import { CheckCircle2, Loader2, RotateCcw, Save, Square } from 'lucide-react'
 import useGNNStore from '../store/useGNNStore'
 import usePlayerStore from '../store/playerStore'
 import useSessionStore from '../store/sessionStore'
 import useAuthStore from '../store/authStore'
+import { useLanguage } from '../contexts/LanguageContext'
 import {
   generateTask1Mock,
   generateTask2Mock,
@@ -32,6 +33,11 @@ const TASK_NAMES = {
   6: 'Sinh đồ thị',
 }
 
+function getMockFrameInterval(snapshotCount) {
+  if (!snapshotCount) return 70
+  return Math.max(8, Math.min(70, Math.round(4500 / snapshotCount)))
+}
+
 function getDatasetTaskIssue(gnnState, selectedTask) {
   const meta = gnnState.uploadMetadata || {}
   if (!gnnState.uploadedFilePath || !gnnState.uploadMetadata) return null
@@ -58,6 +64,88 @@ function getDatasetTaskIssue(gnnState, selectedTask) {
   }
 
   return null
+}
+
+function buildTask2TrainingDefaults(selectedTask, selectedModel) {
+  if (selectedTask !== 2) return {}
+  const model = (selectedModel || 'GCN').toUpperCase()
+  if (model === 'GCN') {
+    return {
+      task2_pool: 'attention_sum',
+      task2_class_weighting: true,
+      task2_balanced_sampler: true,
+      task2_focal_gamma: 1.5,
+      task2_label_smoothing: 0.03,
+      task2_weight_decay: 1e-3,
+      task2_edge_dropout: 0.10,
+      task2_readout_entropy_weight: 0.01,
+      task2_density_contrastive_weight: 0.02,
+    }
+  }
+  if (model === 'GAT') {
+    return {
+      hidden: 48,
+      heads: 4,
+      dropout: 0.35,
+      lr: 0.003,
+      task2_pool: 'attention_sum',
+      task2_class_weighting: true,
+      task2_balanced_sampler: true,
+      task2_focal_gamma: 1.5,
+      task2_label_smoothing: 0.02,
+      task2_weight_decay: 1e-3,
+      task2_edge_dropout: 0.20,
+      task2_attn_dropout: 0.25,
+      task2_readout_entropy_weight: 0.01,
+      task2_density_contrastive_weight: 0.03,
+      task2_early_stop_patience: 12,
+    }
+  }
+  if (model === 'SAGE' || model === 'GRAPHSAGE' || model === 'GRAPH_SAGE') {
+    return {
+      hidden: 48,
+      heads: 1,
+      dropout: 0.35,
+      lr: 0.004,
+      task2_pool: 'attention_sum',
+      task2_class_weighting: true,
+      task2_balanced_sampler: true,
+      task2_focal_gamma: 2.0,
+      task2_label_smoothing: 0.02,
+      task2_weight_decay: 1e-3,
+      task2_edge_dropout: 0.15,
+      task2_readout_entropy_weight: 0.01,
+      task2_density_contrastive_weight: 0.02,
+      task2_temperature_min: 1.0,
+      task2_temperature_max: 1.5,
+      task2_early_stop_patience: 8,
+    }
+  }
+  return {
+    task2_pool: 'attention_sum',
+    task2_class_weighting: false,
+    task2_balanced_sampler: true,
+    task2_focal_gamma: 1.0,
+    task2_label_smoothing: 0.02,
+    task2_weight_decay: 1e-3,
+    task2_edge_dropout: 0.08,
+    task2_readout_entropy_weight: 0.02,
+    task2_density_contrastive_weight: 0.025,
+  }
+}
+
+function buildTaskTrainingDefaults(selectedTask, selectedModel) {
+  if (selectedTask === 1) {
+    const model = (selectedModel || 'GCN').toUpperCase()
+    if (model === 'SAGE' || model === 'GRAPHSAGE' || model === 'GRAPH_SAGE') {
+      return {
+        task1_edge_dropout: 0.15,
+        task1_boundary_patience: 8,
+        task1_selection_metric: '0.4*val_acc+0.6*boundary_accuracy',
+      }
+    }
+  }
+  return buildTask2TrainingDefaults(selectedTask, selectedModel)
 }
 
 /**
@@ -112,6 +200,7 @@ async function saveExperiment(taskType, modelType, hyperparams, snapshots, graph
 }
 
 export default function TrainingControlsV2() {
+  const { t } = useLanguage()
   const isTraining = useGNNStore((s) => s.isTraining)
   const trainingProgress = useGNNStore((s) => s.trainingProgress)
   const mockMode = useGNNStore((s) => s.mockMode)
@@ -127,8 +216,7 @@ export default function TrainingControlsV2() {
   const setSessionStatus = useSessionStore((s) => s.setStatus)
   const currentUser = useAuthStore((s) => s.user)
 
-  const playerSnapshots = usePlayerStore((s) => s.snapshots)
-  const loadSnapshots = usePlayerStore((s) => s.loadSnapshots)
+  const addSnapshot = usePlayerStore((s) => s.addSnapshot)
   const setDone = usePlayerStore((s) => s.setDone)
   const resetForTraining = usePlayerStore((s) => s.resetForTraining)
   const trainingDone = usePlayerStore((s) => s.trainingDone)
@@ -137,7 +225,15 @@ export default function TrainingControlsV2() {
 
   // Track the save state
   const lastPreparedVersion = useRef(0)
+  const mockTimerRef = useRef(null)
   const [saveState, setSaveState] = useState('idle')
+
+  const clearMockTimer = useCallback(() => {
+    if (mockTimerRef.current) {
+      clearInterval(mockTimerRef.current)
+      mockTimerRef.current = null
+    }
+  }, [])
 
   // Prepare for saving when training completes
   useEffect(() => {
@@ -186,65 +282,91 @@ export default function TrainingControlsV2() {
     if (isViewer) {
       return
     }
-    resetForTraining()
-    setReportOpen(false)
-    setSaveState('idle')
+
+    const prepareNewRun = () => {
+      clearMockTimer()
+      resetForTraining()
+      setReportOpen(false)
+      setSaveState('idle')
+    }
 
     if (mockMode) {
+      prepareNewRun()
       setTraining(true, 0)
-      setTimeout(() => {
-        let result
-        switch (selectedTask) {
-          case 1:
-            result = generateTask1Mock(60, hyperparams.epochs)
-            setGraphData(result.graphData)
-            setGroundTruth(result.groundTruth)
-            setTrainMask(result.trainMask)
-            loadSnapshots(result.snapshots)
-            break
-          case 2:
-            result = generateTask2Mock(50, hyperparams.epochs)
-            setTaskData({ graphs: result.graphs })
-            loadSnapshots(result.snapshots)
-            break
-          case 3:
-            result = generateTask3Mock(40, hyperparams.epochs)
-            setGraphData(result.graphData)
-            setTaskData({ testEdges: result.testEdges })
-            loadSnapshots(result.snapshots)
-            break
-          case 4:
-            result = generateTask4Mock(4, 12, hyperparams.epochs)
-            setGraphData(result.graphData)
-            setTaskData({ communityGT: result.communityGT })
-            setGroundTruth(result.communityGT)
-            loadSnapshots(result.snapshots)
-            break
-          case 5:
-            result = generateTask5Mock(40, hyperparams.epochs)
-            setGraphData(result.graphData)
-            setGroundTruth(result.groundTruth)
-            useGNNStore.getState().setTask5Meta(result.graphMeta)
-            loadSnapshots(result.snapshots)
-            break
-          case 6:
-            result = generateTask6Mock(hyperparams.epochs)
-            loadSnapshots(result.snapshots)
-            break
-          default:
-            result = generateTask1Mock(60, hyperparams.epochs)
-            setGraphData(result.graphData)
-            setGroundTruth(result.groundTruth)
-            setTrainMask(result.trainMask)
-            loadSnapshots(result.snapshots)
-        }
-        setDone(result.snapshots.length - 1)
+      let result
+      switch (selectedTask) {
+        case 1:
+          result = generateTask1Mock(60, hyperparams.epochs)
+          setGraphData(result.graphData)
+          setGroundTruth(result.groundTruth)
+          setTrainMask(result.trainMask)
+          break
+        case 2:
+          result = generateTask2Mock(50, hyperparams.epochs)
+          setTaskData({ graphs: result.graphs })
+          break
+        case 3:
+          result = generateTask3Mock(40, hyperparams.epochs)
+          setGraphData(result.graphData)
+          setTaskData({ testEdges: result.testEdges })
+          break
+        case 4:
+          result = generateTask4Mock(4, 12, hyperparams.epochs)
+          setGraphData(result.graphData)
+          setTaskData({ communityGT: result.communityGT })
+          setGroundTruth(result.communityGT)
+          break
+        case 5:
+          result = generateTask5Mock(40, hyperparams.epochs)
+          setGraphData(result.graphData)
+          setGroundTruth(result.groundTruth)
+          useGNNStore.getState().setTask5Meta(result.graphMeta)
+          break
+        case 6:
+          result = generateTask6Mock(hyperparams.epochs)
+          break
+        default:
+          result = generateTask1Mock(60, hyperparams.epochs)
+          setGraphData(result.graphData)
+          setGroundTruth(result.groundTruth)
+          setTrainMask(result.trainMask)
+      }
+
+      const snapshots = result.snapshots || []
+      if (snapshots.length === 0) {
+        setDone(0)
         setTraining(false, 1)
-      }, 280)
+        return
+      }
+
+      let index = 0
+      const intervalMs = getMockFrameInterval(snapshots.length)
+      mockTimerRef.current = setInterval(() => {
+        const stillTraining = useGNNStore.getState().isTraining
+        if (!stillTraining) {
+          clearMockTimer()
+          return
+        }
+
+        const snapshot = snapshots[index]
+        if (snapshot) {
+          addSnapshot(snapshot)
+        }
+
+        const progress = Math.min(1, (index + 1) / snapshots.length)
+        setTraining(true, progress)
+        index += 1
+
+        if (index >= snapshots.length) {
+          clearMockTimer()
+          setDone(snapshots.length - 1)
+          setTraining(false, 1)
+        }
+      }, intervalMs)
     } else {
       const gnnState = useGNNStore.getState()
       if (!gnnState.activeProjectId || !gnnState.activeDatasetVersionId) {
-        alert("THIẾU PROJECT / DATASET VERSION!\n\nHãy vào Workspace để chọn project và dataset version trước khi chạy huấn luyện live.")
+        alert(t('lab.alert_missing_project'))
         return
       }
       const uploadProfileTaskId = gnnState.uploadMetadata?.task_profile_id || null
@@ -253,19 +375,20 @@ export default function TrainingControlsV2() {
           || TASK_PROFILE_LABELS[uploadProfileTaskId]
           || `Task ${uploadProfileTaskId}`
         const selectedTaskName = TASK_PROFILE_LABELS[selectedTask] || `Task ${selectedTask}`
-        alert(`TASK KHONG KHOP VOI DATASET VERSION!\n\nDataset version dang chon duoc intake theo profile ${profileName}, nhung ban dang chay ${selectedTaskName}.\n\nHien tai he thong chua remap profile nay an toan cho task khac. Hay chuyen sang task phu hop hoac tao dataset version/profile dung voi bai toan can train.`)
+        alert(t('lab.alert_task_mismatch', { profile: profileName, task: selectedTaskName }))
         return
       }
       const uploadedPath = gnnState.uploadedFilePath
       if (!uploadedPath) {
-        alert("DATASET VERSION CHUA SAN SANG!\n\nVersion du lieu dang chon moi chi co metadata hoac chua co payload train. Hay vao Datasets, chon version co nhan 'Ready to train', hoac upload them mot version moi truoc khi chay live.")
+        alert(t('lab.alert_dataset_not_ready'))
         return
       }
       const datasetTaskIssue = getDatasetTaskIssue(gnnState, selectedTask)
       if (datasetTaskIssue) {
-        alert(`DATASET VERSION KHONG HOP VOI TASK NAY!\n\n${datasetTaskIssue}`)
+        alert(t('lab.alert_dataset_task_issue', { issue: datasetTaskIssue }))
         return
       }
+      const taskTrainingDefaults = buildTaskTrainingDefaults(selectedTask, gnnState.selectedModel)
       let sessionId = useSessionStore.getState().sessionId
       try {
         const session = await createSession({
@@ -275,22 +398,24 @@ export default function TrainingControlsV2() {
           model: gnnState.selectedModel,
           dataset: hyperparams.dataset || 'cora',
           epochs: hyperparams.epochs,
-          lr: hyperparams.lr,
-          hidden: hyperparams.hidden,
+          lr: taskTrainingDefaults.lr ?? hyperparams.lr,
+          hidden: taskTrainingDefaults.hidden ?? hyperparams.hidden,
           config: {
-            dropout: hyperparams.dropout,
-            heads: hyperparams.heads,
+            dropout: taskTrainingDefaults.dropout ?? hyperparams.dropout,
+            heads: taskTrainingDefaults.heads ?? hyperparams.heads,
             aggregator: hyperparams.aggregator,
+            ...taskTrainingDefaults,
           },
         })
         sessionId = session.session_id
         setSessionStatus('pending')
       } catch (e) {
         console.error('Failed to create session before training:', e)
-        alert(`Khong tao duoc live session: ${e.message}`)
+        alert(t('lab.alert_session_failed', { message: e.message }))
         setTraining(false, 0)
         return
       }
+      prepareNewRun()
       const taskConfig = uploadProfileTaskId && uploadProfileTaskId !== selectedTask
         ? {}
         : (useGNNStore.getState().taskConfig || {})
@@ -299,26 +424,16 @@ export default function TrainingControlsV2() {
         : null
       window.dispatchEvent(new CustomEvent('gnn:start-training', {
         detail: {
-          ...(selectedTask === 2 ? {
-            task2_pool: 'attention_sum',
-            task2_class_weighting: false,
-            task2_balanced_sampler: true,
-            task2_focal_gamma: 1.0,
-            task2_label_smoothing: 0.02,
-            task2_weight_decay: 1e-3,
-            task2_edge_dropout: 0.08,
-            task2_readout_entropy_weight: 0.02,
-            task2_density_contrastive_weight: 0.025,
-          } : {}),
           task: selectedTask,
           model: gnnState.selectedModel,
           dataset: hyperparams.dataset || 'cora',
           epochs: hyperparams.epochs,
-          lr: hyperparams.lr,
-          hidden: hyperparams.hidden,
-          dropout: hyperparams.dropout,
-          heads: hyperparams.heads,
+          lr: taskTrainingDefaults.lr ?? hyperparams.lr,
+          hidden: taskTrainingDefaults.hidden ?? hyperparams.hidden,
+          dropout: taskTrainingDefaults.dropout ?? hyperparams.dropout,
+          heads: taskTrainingDefaults.heads ?? hyperparams.heads,
           aggregator: hyperparams.aggregator,
+          ...taskTrainingDefaults,
           project_id: gnnState.activeProjectId,
           dataset_version_id: gnnState.activeDatasetVersionId,
           session_id: sessionId,
@@ -330,7 +445,7 @@ export default function TrainingControlsV2() {
       }))
       setTraining(true, 0)
     }
-  }, [hyperparams, isTraining, isViewer, mockMode, selectedTask, setTraining, setGraphData, setGroundTruth, setTrainMask, setTaskData, loadSnapshots, setDone, resetForTraining, setReportOpen])
+  }, [addSnapshot, clearMockTimer, hyperparams, isTraining, isViewer, mockMode, selectedTask, setTraining, setGraphData, setGroundTruth, setTrainMask, setTaskData, setDone, resetForTraining, setReportOpen, createSession, setSessionStatus, t])
 
   useEffect(() => {
     const handler = () => {
@@ -342,6 +457,7 @@ export default function TrainingControlsV2() {
 
   const handleStop = useCallback(async () => {
     if (mockMode) {
+      clearMockTimer()
       setSessionStatus('stopped')
       setTraining(false, trainingProgress)
       return
@@ -363,7 +479,9 @@ export default function TrainingControlsV2() {
     }
     setSessionStatus('stopped')
     setTraining(false, trainingProgress)
-  }, [mockMode, setSessionStatus, setTraining, trainingProgress])
+  }, [clearMockTimer, mockMode, setSessionStatus, setTraining, trainingProgress])
+
+  useEffect(() => clearMockTimer, [clearMockTimer])
 
   return (
     <div className="flex flex-col items-end gap-1.5">
@@ -371,7 +489,7 @@ export default function TrainingControlsV2() {
         <div className="flex w-full flex-col gap-1">
           <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider">
             <span className="text-twilight flex items-center gap-1">
-              <Loader2 size={10} className="animate-spin" /> Đang huấn luyện
+              <Loader2 size={10} className="animate-spin" /> {t('lab.controls_training')}
             </span>
             <span className="font-mono text-amethyst">{Math.round(trainingProgress * 100)}%</span>
           </div>
@@ -386,47 +504,59 @@ export default function TrainingControlsV2() {
             onClick={handleStop}
             className="self-end inline-flex items-center gap-1 rounded-md border border-aurora-rose/30 bg-aurora-rose/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-aurora-rose transition-colors hover:bg-aurora-rose/20"
           >
-            <Square size={10} /> Stop training
+            <Square size={10} /> {t('lab.controls_stop')}
           </button>
         </div>
       ) : trainingDone ? (
         <div className="flex flex-col items-end gap-1">
-          <button
-            type="button"
-            onClick={handleSaveExperiment}
-            disabled={saveState === 'idle' || saveState === 'saving' || saveState === 'saved'}
-            data-testid="footer-save-experiment"
-            className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${
-              saveState === 'ready'
-                ? 'animate-pulse border-aurora-amber/40 bg-aurora-amber/15 text-aurora-amber shadow-[0_0_12px_rgba(245,158,11,0.18)] hover:bg-aurora-amber/25'
-                : saveState === 'saving'
-                  ? 'border-aurora-amber/30 bg-aurora-amber/10 text-aurora-amber'
-                  : saveState === 'saved'
-                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-                    : 'border-white/10 bg-white/5 text-twilight disabled:opacity-50'
-            }`}
-          >
-            {saveState === 'saving'
-              ? <Loader2 size={11} className="animate-spin" />
-              : saveState === 'saved'
-                ? <CheckCircle2 size={11} />
-                : <Save size={11} />}
-            {saveState === 'saving' ? 'Đang lưu' : saveState === 'saved' ? 'Đã lưu' : 'Lưu thí nghiệm'}
-          </button>
+          <div className="flex flex-wrap justify-end gap-1">
+            <button
+              type="button"
+              onClick={handleStart}
+              disabled={isViewer}
+              data-testid="footer-run-again"
+              className="inline-flex items-center gap-1 rounded-md border border-cyan-400/30 bg-cyan-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-300 transition-all hover:bg-cyan-400/20 disabled:opacity-50"
+              title={t('lab.controls_run_again_hint')}
+            >
+              <RotateCcw size={11} /> {t('lab.controls_run_again')}
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveExperiment}
+              disabled={saveState === 'idle' || saveState === 'saving' || saveState === 'saved'}
+              data-testid="footer-save-experiment"
+              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${
+                saveState === 'ready'
+                  ? 'animate-pulse border-aurora-amber/40 bg-aurora-amber/15 text-aurora-amber shadow-[0_0_12px_rgba(245,158,11,0.18)] hover:bg-aurora-amber/25'
+                  : saveState === 'saving'
+                    ? 'border-aurora-amber/30 bg-aurora-amber/10 text-aurora-amber'
+                    : saveState === 'saved'
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                      : 'border-white/10 bg-white/5 text-twilight disabled:opacity-50'
+              }`}
+            >
+              {saveState === 'saving'
+                ? <Loader2 size={11} className="animate-spin" />
+                : saveState === 'saved'
+                  ? <CheckCircle2 size={11} />
+                  : <Save size={11} />}
+              {saveState === 'saving' ? t('lab.controls_saving') : saveState === 'saved' ? t('lab.controls_saved') : t('lab.controls_save_experiment')}
+            </button>
+          </div>
           <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
             saveState === 'saved'
               ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
               : 'border-aurora-amber/30 bg-aurora-amber/10 text-aurora-amber'
           }`}>
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
-            {saveState === 'saved' ? 'Saved to Hub' : 'Ready to save'}
+            {saveState === 'saved' ? t('lab.controls_saved_to_hub') : t('lab.controls_ready_to_save')}
           </span>
         </div>
       ) : (
         <div className="flex flex-col items-end gap-0.5 text-right">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-twilight/70">Sẵn sàng</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-twilight/70">{t('lab.controls_ready')}</span>
           <span className="text-[9px] uppercase tracking-wider text-twilight/50">
-            Bấm <kbd className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-[8px] text-starlight">Space</kbd> hoặc nút <span className="inline-block h-2 w-2 -mb-0.5 rounded-full bg-rose-500" /> để chạy
+            {t('lab.controls_press_space')} <kbd className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-[8px] text-starlight">Space</kbd> {t('lab.controls_or_button')} <span className="inline-block h-2 w-2 -mb-0.5 rounded-full bg-rose-500" /> {t('lab.controls_to_run')}
           </span>
         </div>
       )}

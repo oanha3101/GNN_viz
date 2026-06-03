@@ -48,12 +48,12 @@ describe('AdminOverviewPage', () => {
     render(<AdminOverviewPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Platform Pulse')).toBeInTheDocument()
+      expect(screen.getByText('Nhịp đập nền tảng')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('Workspace Composition')).toBeInTheDocument()
-    expect(screen.getByText('Execution Risk Surface')).toBeInTheDocument()
-    expect(screen.getByText('Infrastructure Surface')).toBeInTheDocument()
-    expect(screen.getByText('Operational Pressure')).toBeInTheDocument()
+    expect(screen.getByText('Cấu phần workspace')).toBeInTheDocument()
+    expect(screen.getByText('Bề mặt rủi ro thực thi')).toBeInTheDocument()
+    expect(screen.getByText('Mặt hạ tầng')).toBeInTheDocument()
+    expect(screen.getByText('Áp lực vận hành')).toBeInTheDocument()
   })
 })

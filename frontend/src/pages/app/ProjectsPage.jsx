@@ -23,13 +23,8 @@ import EmptyState from '../../components/primitives/EmptyState'
 import ErrorState from '../../components/primitives/ErrorState'
 import LoadingState from '../../components/primitives/LoadingState'
 import useGNNStore from '../../store/useGNNStore'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { apiJson, normalizeCollectionPayload } from '../../utils/api'
-
-const VISIBILITY_FILTERS = [
-  { value: '', label: 'All' },
-  { value: 'public', label: 'Public' },
-  { value: 'private', label: 'Private' },
-]
 
 const PAGE_SIZE = 9
 
@@ -78,16 +73,23 @@ function formatRelative(value) {
   return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest' },
-  { value: 'oldest', label: 'Oldest' },
-  { value: 'az', label: 'A → Z' },
-  { value: 'za', label: 'Z → A' },
-]
-
 export default function ProjectsPage() {
   const activeProjectId = useGNNStore((s) => s.activeProjectId)
   const setActiveProjectContext = useGNNStore((s) => s.setActiveProjectContext)
+  const { t } = useLanguage()
+
+  const VISIBILITY_FILTERS = [
+    { value: '', label: t('projects.vis_all') },
+    { value: 'public', label: t('projects.vis_public') },
+    { value: 'private', label: t('projects.vis_private') },
+  ]
+
+  const SORT_OPTIONS = [
+    { value: 'newest', label: t('projects.sort_newest') },
+    { value: 'oldest', label: t('projects.sort_oldest') },
+    { value: 'az', label: t('projects.sort_az') },
+    { value: 'za', label: t('projects.sort_za') },
+  ]
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -247,10 +249,10 @@ export default function ProjectsPage() {
   }), [projects, total, activeProjectId])
 
   if (loading && projects.length === 0) {
-    return <LoadingState title="Loading projects..." className="min-h-[480px]" />
+    return <LoadingState title={t('projects.loading')} className="min-h-[480px]" />
   }
   if (error && projects.length === 0) {
-    return <ErrorState title="Could not load projects" error={error} onRetry={loadProjects} className="min-h-[480px]" />
+    return <ErrorState title={t('projects.load_error')} error={error} onRetry={loadProjects} className="min-h-[480px]" />
   }
 
   return (
@@ -259,22 +261,22 @@ export default function ProjectsPage() {
       <section className="surface-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="surface-eyebrow">Project Workspace</div>
-            <h2 className="surface-title">Projects ({headerStats.total})</h2>
+            <div className="surface-eyebrow">{t('projects.workspace_eyebrow')}</div>
+            <h2 className="surface-title">{t('projects.page_title_count', { n: headerStats.total })}</h2>
             <p className="surface-sub">
-              Group experiments under a shared context — the active project owns upcoming training runs.
+              {t('projects.page_sub')}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={loadProjects} className="surface-action">
-              <RefreshCw size={13} /> Refresh
+              <RefreshCw size={13} /> {t('projects.refresh')}
             </button>
             <button
               type="button"
               onClick={() => setIsCreateOpen(true)}
               className="primary-cta inline-flex items-center gap-2"
             >
-              <Plus size={14} /> Create project
+              <Plus size={14} /> {t('projects.create_project')}
             </button>
           </div>
         </div>
@@ -285,7 +287,7 @@ export default function ProjectsPage() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by title or description..."
+              placeholder={t('projects.search_placeholder')}
               className="w-full rounded-xl border border-line-subtle bg-bg pl-9 pr-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:border-primary focus:outline-none"
             />
           </label>
@@ -311,7 +313,7 @@ export default function ProjectsPage() {
             className="rounded-xl border border-line-subtle bg-bg px-3 py-2 text-xs font-semibold text-fg focus:border-primary focus:outline-none"
           >
             {SORT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>Sort: {opt.label}</option>
+              <option key={opt.value} value={opt.value}>{t('projects.sort_label')} {opt.label}</option>
             ))}
           </select>
         </div>
@@ -321,11 +323,11 @@ export default function ProjectsPage() {
       {projects.length === 0 ? (
         <EmptyState
           icon={<FolderKanban size={26} />}
-          title={searchDebounced || visibility ? 'No matching projects' : 'No projects yet'}
+          title={searchDebounced || visibility ? t('projects.no_match_title') : t('projects.no_yet_title')}
           description={searchDebounced || visibility
-            ? 'Try clearing filters or searching for something else.'
-            : 'Create the first project so training sessions and saved runs have a governed home.'}
-          actionLabel={searchDebounced || visibility ? 'Clear filters' : 'Create project'}
+            ? t('projects.no_match_desc')
+            : t('projects.no_yet_desc')}
+          actionLabel={searchDebounced || visibility ? t('projects.clear_filters') : t('projects.create_project')}
           onAction={() => {
             if (searchDebounced || visibility) {
               setSearch('')
@@ -341,13 +343,13 @@ export default function ProjectsPage() {
           <section className="surface-card overflow-hidden">
             <div className="flex items-center justify-between border-b border-line-subtle px-5 py-3">
               <div>
-                <div className="surface-eyebrow">All projects</div>
+                <div className="surface-eyebrow">{t('projects.title')}</div>
                 <div className="mt-0.5 text-sm font-bold text-fg">
-                  {sortedProjects.length} project{sortedProjects.length === 1 ? '' : 's'}
+                  {t('projects.page_title_count', { n: sortedProjects.length })}
                 </div>
               </div>
               <div className="text-xs text-fg-muted">
-                Page {page} of {totalPages}
+                {t('common.page')} {page} / {totalPages}
               </div>
             </div>
             <ul className="divide-y divide-line-subtle">
@@ -372,21 +374,21 @@ export default function ProjectsPage() {
                           <span className="truncate text-sm font-semibold text-fg">{project.title}</span>
                           <span className={`project-vis-pill ${project.is_public ? 'is-public' : ''}`}>
                             {project.is_public ? <Globe size={10} /> : <Lock size={10} />}
-                            {project.is_public ? 'Public' : 'Private'}
+                            {project.is_public ? t('projects.vis_public') : t('projects.vis_private')}
                           </span>
                           {isActive ? (
                             <span className="project-active-badge">
-                              <span className="project-active-dot" /> Active
+                              <span className="project-active-dot" /> {t('projects.active')}
                             </span>
                           ) : null}
                         </div>
                         <div className="mt-1 truncate text-xs text-fg-muted">
-                          {project.description || 'No description yet.'}
+                          {project.description || '—'}
                         </div>
                         <div className="mt-1.5 flex items-center gap-3 text-[11px] text-fg-faint">
                           <span>#{project.id}</span>
                           <span>·</span>
-                          <span>Owner #{project.owner_id ?? 'system'}</span>
+                          <span>{t('projects.owner')} #{project.owner_id ?? 'system'}</span>
                           <span>·</span>
                           <span className="inline-flex items-center gap-1">
                             <Clock size={10} /> {formatRelative(project.updated_at || project.created_at)}
@@ -400,12 +402,12 @@ export default function ProjectsPage() {
                           disabled={isActive}
                           className={`project-row-set ${isActive ? 'is-active' : ''}`}
                         >
-                          {isActive ? 'Selected' : 'Select'}
+                          {isActive ? t('projects.selected') : t('projects.select')}
                         </button>
-                        <button type="button" onClick={() => openEdit(project)} className="project-action-icon" aria-label="Edit">
+                        <button type="button" onClick={() => openEdit(project)} className="project-action-icon" aria-label={t('projects.edit')}>
                           <Pencil size={13} />
                         </button>
-                        <button type="button" onClick={() => openDelete(project)} className="project-action-icon project-action-danger" aria-label="Delete">
+                        <button type="button" onClick={() => openDelete(project)} className="project-action-icon project-action-danger" aria-label={t('projects.delete')}>
                           <Trash2 size={13} />
                         </button>
                       </div>
@@ -422,6 +424,7 @@ export default function ProjectsPage() {
             projects={projects}
             activeProjectId={activeProjectId}
             onCreate={() => setIsCreateOpen(true)}
+            t={t}
           />
         </div>
       )}
@@ -430,9 +433,8 @@ export default function ProjectsPage() {
       {totalPages > 1 ? (
         <div className="flex items-center justify-between rounded-2xl border border-line-subtle bg-bg-elev px-4 py-3">
           <div className="text-xs text-fg-muted">
-            Showing <strong className="text-fg">{(page - 1) * pageSize + 1}</strong>–
-            <strong className="text-fg">{Math.min(total, page * pageSize)}</strong> of{' '}
-            <strong className="text-fg">{total}</strong>
+            <strong className="text-fg">{(page - 1) * pageSize + 1}</strong>–
+            <strong className="text-fg">{Math.min(total, page * pageSize)}</strong> / <strong className="text-fg">{total}</strong>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -441,7 +443,7 @@ export default function ProjectsPage() {
               disabled={page <= 1}
               className="pager-btn"
             >
-              <ChevronLeft size={14} /> Prev
+              <ChevronLeft size={14} /> {t('common.previous')}
             </button>
             {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 6).map((n) => (
               <button
@@ -459,7 +461,7 @@ export default function ProjectsPage() {
               disabled={page >= totalPages}
               className="pager-btn"
             >
-              Next <ChevronRight size={14} />
+              {t('common.next')} <ChevronRight size={14} />
             </button>
           </div>
         </div>
@@ -468,27 +470,29 @@ export default function ProjectsPage() {
       {/* Create modal */}
       <ProjectModal
         open={isCreateOpen}
-        title="Create project"
-        eyebrow="New container"
+        title={t('projects.create_project')}
+        eyebrow={t('projects.create_new')}
         onClose={() => setIsCreateOpen(false)}
         form={createForm}
         setForm={setCreateForm}
         submitting={submitting}
         onSubmit={handleCreate}
-        submitLabel="Create project"
+        submitLabel={t('projects.create_button')}
+        t={t}
       />
 
       {/* Edit modal */}
       <ProjectModal
         open={!!editTarget}
-        title="Edit project"
-        eyebrow={`Project #${editTarget?.id ?? ''}`}
+        title={t('projects.edit') + ' — ' + (editTarget?.title || '')}
+        eyebrow={`#${editTarget?.id ?? ''}`}
         onClose={() => setEditTarget(null)}
         form={editForm}
         setForm={setEditForm}
         submitting={submitting}
         onSubmit={handleEditSave}
-        submitLabel="Save changes"
+        submitLabel={t('projects.save_changes')}
+        t={t}
       />
 
       {/* Delete modal */}
@@ -509,10 +513,9 @@ export default function ProjectsPage() {
               onClick={(event) => event.stopPropagation()}
             >
               <div className="modal-icon-danger"><AlertTriangle size={20} /></div>
-              <h3 className="modal-title">Delete this project?</h3>
+              <h3 className="modal-title">{t('projects.delete_confirm_title')}</h3>
               <p className="modal-sub">
-                This will remove <strong>{deleteTarget.title}</strong> and is irreversible.
-                Type the project name to confirm.
+                {t('projects.delete_confirm_desc', { name: deleteTarget.title })}
               </p>
               <input
                 value={deleteConfirmText}
@@ -526,7 +529,7 @@ export default function ProjectsPage() {
                   onClick={() => setDeleteTarget(null)}
                   className="modal-btn-ghost"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
@@ -534,7 +537,7 @@ export default function ProjectsPage() {
                   onClick={handleDelete}
                   className="modal-btn-danger disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {deleting ? 'Deleting...' : 'Delete project'}
+                  {deleting ? t('projects.deleting') : t('projects.delete_confirm_button')}
                 </button>
               </div>
             </motion.div>
@@ -545,7 +548,7 @@ export default function ProjectsPage() {
   )
 }
 
-function ProjectModal({ open, title, eyebrow, onClose, form, setForm, submitting, onSubmit, submitLabel }) {
+function ProjectModal({ open, title, eyebrow, onClose, form, setForm, submitting, onSubmit, submitLabel, t }) {
   return (
     <AnimatePresence>
       {open ? (
@@ -568,26 +571,26 @@ function ProjectModal({ open, title, eyebrow, onClose, form, setForm, submitting
                 <div className="modal-eyebrow">{eyebrow}</div>
                 <h3 className="modal-title">{title}</h3>
               </div>
-              <button type="button" onClick={onClose} className="modal-close" aria-label="Close">
+              <button type="button" onClick={onClose} className="modal-close" aria-label={t ? t('common.close') : 'Close'}>
                 <X size={16} />
               </button>
             </div>
             <div className="mt-5 space-y-4">
               <label className="modal-field">
-                <span className="modal-field-label">Title</span>
+                <span className="modal-field-label">{t ? t('projects.form_title') : 'Title'}</span>
                 <input
                   value={form.title}
                   onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-                  placeholder="e.g. Cora citation experiments"
+                  placeholder={t ? t('projects.form_title_placeholder') : ''}
                   className="modal-input"
                 />
               </label>
               <label className="modal-field">
-                <span className="modal-field-label">Description</span>
+                <span className="modal-field-label">{t ? t('common.description') : 'Description'}</span>
                 <textarea
                   value={form.description}
                   onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                  placeholder="Short description for the team"
+                  placeholder={t ? t('projects.form_description_placeholder') : ''}
                   rows={3}
                   className="modal-textarea"
                 />
@@ -601,19 +604,19 @@ function ProjectModal({ open, title, eyebrow, onClose, form, setForm, submitting
                 <span className="modal-toggle-track" />
                 <span className="modal-field-label flex items-center gap-1.5">
                   {form.is_public ? <Globe size={12} /> : <Lock size={12} />}
-                  {form.is_public ? 'Public — visible to other members' : 'Private — only you can see'}
+                  {form.is_public ? (t ? t('projects.form_public_label') : 'Public') : (t ? t('projects.vis_private') : 'Private')}
                 </span>
               </label>
             </div>
             <div className="modal-actions">
-              <button type="button" onClick={onClose} className="modal-btn-ghost">Cancel</button>
+              <button type="button" onClick={onClose} className="modal-btn-ghost">{t ? t('common.cancel') : 'Cancel'}</button>
               <button
                 type="button"
                 onClick={onSubmit}
                 disabled={submitting || !form.title.trim()}
                 className="modal-btn-primary disabled:opacity-50"
               >
-                {submitting ? 'Saving...' : submitLabel}
+                {submitting ? (t ? t('projects.saving') : 'Saving…') : submitLabel}
               </button>
             </div>
           </motion.div>
@@ -623,7 +626,7 @@ function ProjectModal({ open, title, eyebrow, onClose, form, setForm, submitting
   )
 }
 
-function ProjectsInsightsPanel({ total, projects, activeProjectId, onCreate }) {
+function ProjectsInsightsPanel({ total, projects, activeProjectId, onCreate, t }) {
   const stats = useMemo(() => {
     const totalLoaded = projects.length
     const publicCount = projects.filter((p) => p.is_public).length
@@ -634,9 +637,9 @@ function ProjectsInsightsPanel({ total, projects, activeProjectId, onCreate }) {
   }, [projects, activeProjectId])
 
   const donutData = useMemo(() => [
-    { name: 'Public', value: stats.publicCount },
-    { name: 'Private', value: stats.privateCount },
-  ], [stats.publicCount, stats.privateCount])
+    { name: t('projects.vis_public'), value: stats.publicCount },
+    { name: t('projects.vis_private'), value: stats.privateCount },
+  ], [stats.publicCount, stats.privateCount, t])
 
   const COLORS = ['#10b981', '#f43f5e']
   const hasData = stats.publicCount + stats.privateCount > 0
@@ -646,7 +649,7 @@ function ProjectsInsightsPanel({ total, projects, activeProjectId, onCreate }) {
       {/* Active project card */}
       <section className="surface-card p-5">
         <div className="surface-eyebrow flex items-center gap-1">
-          <Sparkles size={11} /> Active project
+          <Sparkles size={11} /> {t('projects.active_project')}
         </div>
         {stats.active ? (
           <div className="mt-3 space-y-2.5">
@@ -656,16 +659,16 @@ function ProjectsInsightsPanel({ total, projects, activeProjectId, onCreate }) {
               </span>
               <div className="min-w-0">
                 <div className="truncate text-sm font-bold text-fg">{stats.active.title}</div>
-                <div className="text-xs text-fg-muted">#{stats.active.id} · Owner #{stats.active.owner_id ?? 'system'}</div>
+                <div className="text-xs text-fg-muted">#{stats.active.id} · {t('projects.owner')} #{stats.active.owner_id ?? 'system'}</div>
               </div>
             </div>
             <div className="text-xs text-fg-muted line-clamp-2">
-              {stats.active.description || 'No description yet.'}
+              {stats.active.description || t('projects.no_description')}
             </div>
           </div>
         ) : (
           <div className="mt-3 rounded-xl border border-dashed border-line bg-bg p-4 text-xs text-fg-muted">
-            No project selected. Pick one in the list to make it the context for upcoming experiments.
+            {t('projects.no_active_project')}
           </div>
         )}
       </section>
@@ -673,24 +676,24 @@ function ProjectsInsightsPanel({ total, projects, activeProjectId, onCreate }) {
       {/* Donut: visibility */}
       <section className="surface-card p-5">
         <div className="flex items-center justify-between">
-          <div className="surface-eyebrow">Visibility mix</div>
-          <div className="text-xs font-semibold text-fg-muted">{stats.totalLoaded} loaded</div>
+          <div className="surface-eyebrow">{t('projects.visibility_mix')}</div>
+          <div className="text-xs font-semibold text-fg-muted">{stats.totalLoaded} {t('projects.loaded')}</div>
         </div>
         <div className="mt-3 grid grid-cols-[1fr_140px] items-center gap-3">
           <div className="space-y-2">
             <div className="insight-row">
               <span className="insight-dot" style={{ background: COLORS[0] }} />
-              <span>Public</span>
+              <span>{t('projects.vis_public')}</span>
               <strong className="ml-auto">{stats.publicCount}</strong>
             </div>
             <div className="insight-row">
               <span className="insight-dot" style={{ background: COLORS[1] }} />
-              <span>Private</span>
+              <span>{t('projects.vis_private')}</span>
               <strong className="ml-auto">{stats.privateCount}</strong>
             </div>
             <div className="insight-row">
               <span className="insight-dot" style={{ background: 'var(--c-fg-muted)' }} />
-              <span>Total (server)</span>
+              <span>{t('projects.total_server')}</span>
               <strong className="ml-auto">{total}</strong>
             </div>
           </div>
@@ -722,7 +725,7 @@ function ProjectsInsightsPanel({ total, projects, activeProjectId, onCreate }) {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="grid h-full place-items-center text-xs text-fg-faint">No data</div>
+              <div className="grid h-full place-items-center text-xs text-fg-faint">{t('projects.no_data')}</div>
             )}
           </div>
         </div>
@@ -731,7 +734,7 @@ function ProjectsInsightsPanel({ total, projects, activeProjectId, onCreate }) {
       {/* Quick action */}
       <section className="surface-card p-5">
         <div className="surface-eyebrow flex items-center gap-1">
-          <TrendingUp size={11} /> Quick start
+          <TrendingUp size={11} /> {t('projects.quick_start')}
         </div>
         {stats.newest ? (
           <div className="mt-3 flex items-center gap-3">
@@ -739,19 +742,19 @@ function ProjectsInsightsPanel({ total, projects, activeProjectId, onCreate }) {
               {initialsFromTitle(stats.newest.title)}
             </span>
             <div className="min-w-0">
-              <div className="text-xs text-fg-muted">Last added</div>
+              <div className="text-xs text-fg-muted">{t('projects.last_added')}</div>
               <div className="text-xs text-fg-muted">{formatRelative(stats.newest.created_at)}</div>
             </div>
           </div>
         ) : (
-          <div className="mt-2 text-xs text-fg-muted">Nothing yet.</div>
+          <div className="mt-2 text-xs text-fg-muted">{t('projects.nothing_yet')}</div>
         )}
         <button
           type="button"
           onClick={onCreate}
           className="primary-cta mt-4 inline-flex w-full items-center justify-center gap-2"
         >
-          <Plus size={14} /> Create another project
+          <Plus size={14} /> {t('projects.create_another')}
         </button>
       </section>
     </aside>

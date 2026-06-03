@@ -15,12 +15,109 @@ from utils.ws_msg import send_json_zipped
 from utils.model_utils import should_take_snapshot
 
 
+def normalize_node_model_type(model_type):
+    mt = str(model_type or 'GCN').upper().replace('-', '_')
+    if mt in ('GRAPHSAGE', 'GRAPH_SAGE'):
+        return 'SAGE'
+    return mt
+
+
+def drop_edge_index(edge_index, drop_prob=0.0, training=True, seed=None):
+    if not training or drop_prob <= 0 or edge_index is None or edge_index.numel() == 0:
+        return edge_index
+    keep_prob = max(0.0, min(1.0, 1.0 - float(drop_prob)))
+    generator = None
+    if seed is not None:
+        generator = torch.Generator(device=edge_index.device)
+        generator.manual_seed(int(seed))
+    mask = torch.rand(edge_index.size(1), device=edge_index.device, generator=generator) < keep_prob
+    if not bool(mask.any()):
+        mask[torch.randint(0, edge_index.size(1), (1,), device=edge_index.device, generator=generator)] = True
+    return edge_index[:, mask]
+
+
+def _node_adjacency(edge_index, num_nodes):
+    neighbors = [[] for _ in range(num_nodes)]
+    if edge_index is None:
+        return neighbors
+    edge_index_cpu = edge_index.detach().cpu()
+    for i in range(edge_index_cpu.shape[1]):
+        src, tgt = int(edge_index_cpu[0, i]), int(edge_index_cpu[1, i])
+        if src == tgt:
+            continue
+        if 0 <= src < num_nodes and 0 <= tgt < num_nodes:
+            neighbors[src].append(tgt)
+            neighbors[tgt].append(src)
+    return neighbors
+
+
+def compute_boundary_selection_metrics(predictions, ground_truth, edge_index, mask=None, threshold=0.5):
+    pred = predictions.detach().cpu() if torch.is_tensor(predictions) else torch.tensor(predictions)
+    y = ground_truth.detach().cpu() if torch.is_tensor(ground_truth) else torch.tensor(ground_truth)
+    n = int(min(len(pred), len(y)))
+    if mask is None:
+        mask_values = torch.ones(n, dtype=torch.bool)
+    else:
+        mask_values = mask.detach().cpu().bool() if torch.is_tensor(mask) else torch.tensor(mask, dtype=torch.bool)
+        mask_values = mask_values[:n]
+
+    neighbors = _node_adjacency(edge_index, n)
+    selected = [idx for idx in range(n) if bool(mask_values[idx])]
+    if not selected:
+        return {
+            'selection_metric': '0.4*val_acc+0.6*boundary_accuracy',
+            'selection_score': 0.0,
+            'val_acc': 0.0,
+            'boundary_accuracy': 0.0,
+            'boundary_count': 0,
+            'interior_accuracy': 0.0,
+            'interior_count': 0,
+            'interior_boundary_gap': 0.0,
+        }
+
+    correct = [1.0 if int(pred[idx]) == int(y[idx]) else 0.0 for idx in selected]
+    val_acc = float(np.mean(correct)) if correct else 0.0
+    boundary_correct = []
+    interior_correct = []
+    for idx in selected:
+        node_neighbors = neighbors[idx]
+        if not node_neighbors:
+            interior_correct.append(1.0 if int(pred[idx]) == int(y[idx]) else 0.0)
+            continue
+        same_label = sum(1 for nbr in node_neighbors if int(y[nbr]) == int(y[idx]))
+        agreement = same_label / len(node_neighbors)
+        bucket = boundary_correct if agreement < threshold else interior_correct
+        bucket.append(1.0 if int(pred[idx]) == int(y[idx]) else 0.0)
+
+    boundary_accuracy = float(np.mean(boundary_correct)) if boundary_correct else val_acc
+    interior_accuracy = float(np.mean(interior_correct)) if interior_correct else val_acc
+    return {
+        'selection_metric': '0.4*val_acc+0.6*boundary_accuracy',
+        'selection_score': float(0.4 * val_acc + 0.6 * boundary_accuracy),
+        'val_acc': val_acc,
+        'boundary_accuracy': boundary_accuracy,
+        'boundary_count': int(len(boundary_correct)),
+        'interior_accuracy': interior_accuracy,
+        'interior_count': int(len(interior_correct)),
+        'interior_boundary_gap': float(interior_accuracy - boundary_accuracy),
+    }
+
+
 async def run_node_classification(config, data, model, optimizer, websocket, stop_flag, snapshot_hook=None):
     """
     Main training loop for node classification.
     Streams one snapshot per epoch via WebSocket.
     """
     epochs = config.get('epochs', 100)
+    model_type = normalize_node_model_type(config.get('model', getattr(model, 'model_type', 'GCN')))
+    is_sage = model_type == 'SAGE'
+    edge_dropout = float(config.get('task1_edge_dropout', 0.15 if is_sage else 0.0))
+    boundary_patience = int(config.get('task1_boundary_patience', 8 if is_sage else 0))
+    best_selection_score = -1.0
+    best_epoch = 0
+    best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+    best_snapshot = None
+    no_improve_epochs = 0
     epoch_snapshots = []
 
     for epoch in range(epochs):
@@ -30,7 +127,8 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
         # ── Training Step ──────────────────────────────────────────────────
         model.train()
         optimizer.zero_grad()
-        outputs = model(data.x, data.edge_index)
+        train_edge_index = drop_edge_index(data.edge_index, edge_dropout, training=True)
+        outputs = model(data.x, train_edge_index)
         out, embedding = outputs[0], outputs[1]
 
         loss = F.cross_entropy(out[data.train_mask], data.y[data.train_mask])
@@ -47,8 +145,22 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
             pred = out_eval.argmax(dim=1)
             val_acc = (pred[data.val_mask] == data.y[data.val_mask]).float().mean()
             train_acc = (pred[data.train_mask] == data.y[data.train_mask]).float().mean()
+            selection_metrics = compute_boundary_selection_metrics(
+                pred,
+                data.y,
+                data.edge_index,
+                mask=data.val_mask,
+            )
+            improved_this_epoch = bool(selection_metrics['selection_score'] > best_selection_score + 1e-6)
+            if improved_this_epoch:
+                best_selection_score = float(selection_metrics['selection_score'])
+                best_epoch = epoch
+                best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+                no_improve_epochs = 0
+            else:
+                no_improve_epochs += 1
 
-        if should_take_snapshot(epoch, epochs):
+        if should_take_snapshot(epoch, epochs) or improved_this_epoch:
             # ── PCA Reduction ───────────────────────────────────────────────────
             try:
                 emb_np = embedding_eval.cpu().numpy()
@@ -164,7 +276,7 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
             # ── Build Snapshot ──────────────────────────────────────────────────
             snapshot = {
                 'epoch': epoch,
-                'model_type': config.get('model', 'GCN'),
+                'model_type': model_type,
                 'node_predictions': pred.cpu().tolist(),
                 'node_probabilities': node_probabilities,
                 'node_confidence': node_confidence,
@@ -179,9 +291,22 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
                 'val_loss': float(val_loss.item()),
                 'train_acc': float(train_acc.item()),
                 'val_acc': float(val_acc.item()),
+                'boundary_accuracy': float(selection_metrics['boundary_accuracy']),
+                'boundary_count': int(selection_metrics['boundary_count']),
+                'interior_accuracy': float(selection_metrics['interior_accuracy']),
+                'interior_count': int(selection_metrics['interior_count']),
+                'interior_boundary_gap': float(selection_metrics['interior_boundary_gap']),
+                'best_epoch': int(best_epoch),
+                'best_selection_metric': selection_metrics['selection_metric'],
+                'best_selection_score': float(best_selection_score),
+                'is_best_so_far': bool(improved_this_epoch),
+                'task1_edge_dropout': float(edge_dropout),
+                'task1_boundary_patience': int(boundary_patience),
                 'dirichlet_energy': dirichlet_energy,
             }
             epoch_snapshots.append(snapshot)
+            if improved_this_epoch:
+                best_snapshot = dict(snapshot)
             if snapshot_hook:
                 await snapshot_hook(epoch, snapshot)
 
@@ -194,5 +319,32 @@ async def run_node_classification(config, data, model, optimizer, websocket, sto
 
         # Small yield to keep WebSocket responsive
         await asyncio.sleep(0.005)
+
+        if boundary_patience > 0 and no_improve_epochs >= boundary_patience and epoch >= max(8, epochs // 4):
+            if epoch_snapshots:
+                epoch_snapshots[-1]['early_stopped'] = True
+            break
+
+    if best_state:
+        try:
+            model.load_state_dict(best_state)
+        except Exception as e:
+            logger.warning("Failed to restore best Task 1 checkpoint: %s", e)
+
+    if best_snapshot is not None:
+        await send_json_zipped(websocket, {
+            'type': 'task1_best_checkpoint',
+            'data': {
+                'type': 'best_boundary_checkpoint',
+                'best_epoch': int(best_epoch),
+                'best_selection_metric': best_snapshot.get('best_selection_metric'),
+                'best_selection_score': float(best_snapshot.get('best_selection_score', 0.0)),
+                'boundary_accuracy': float(best_snapshot.get('boundary_accuracy', 0.0)),
+                'val_acc': float(best_snapshot.get('val_acc', 0.0)),
+                'weights_saved': bool(best_state),
+                'weight_keys': list(best_state.keys()),
+                'snapshot': best_snapshot,
+            },
+        })
 
     return epoch_snapshots

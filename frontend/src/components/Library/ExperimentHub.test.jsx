@@ -159,7 +159,7 @@ describe('ExperimentHub', () => {
         }
       }
 
-      if (url.endsWith('/api/experiments/1/report')) {
+      if (url.includes('/api/experiments/1/report') && !url.includes('track_export=true')) {
         return {
           ok: true,
           json: async () => ({
@@ -174,7 +174,7 @@ describe('ExperimentHub', () => {
         }
       }
 
-      if (url.endsWith('/api/experiments/1/report?track_export=true')) {
+      if (url.includes('/api/experiments/1/report') && url.includes('track_export=true')) {
         return {
           ok: true,
           json: async () => ({
@@ -217,7 +217,7 @@ describe('ExperimentHub', () => {
         }
       }
 
-      if (url.endsWith('/api/experiments/2/report')) {
+      if (url.includes('/api/experiments/2/report')) {
         return {
           ok: true,
           json: async () => ({
@@ -244,16 +244,16 @@ describe('ExperimentHub', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/record hypotheses/i)).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/ghi lại/i)).toBeInTheDocument()
     })
 
     const titleInput = screen.getByDisplayValue('Alpha Run')
     fireEvent.change(titleInput, { target: { value: 'Alpha Production Run' } })
 
-    const notesInput = screen.getByPlaceholderText(/record hypotheses/i)
+    const notesInput = screen.getByPlaceholderText(/ghi lại/i)
     fireEvent.change(notesInput, { target: { value: 'ready for publish' } })
 
-    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+    fireEvent.click(screen.getByRole('button', { name: /lưu thay đổi/i }))
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -278,7 +278,7 @@ describe('ExperimentHub', () => {
       expect(screen.getByText('Beta Run')).toBeInTheDocument()
     })
 
-    fireEvent.change(screen.getByPlaceholderText(/search by title/i), {
+    fireEvent.change(screen.getByPlaceholderText(/tìm theo tiêu đề/i), {
       target: { value: 'beta' },
     })
 

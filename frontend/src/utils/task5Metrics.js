@@ -6,26 +6,78 @@
  * whose score is NaN / undefined are skipped. Result items are `{ id, score }`.
  */
 export function topKOutliers(scores, k = 10) {
+  const rows = normalizeOutlierScores(scores)
+  rows.sort((a, b) => b.score - a.score)
+  const safeK = Math.max(0, Math.min(rows.length, k))
+  return rows.slice(0, safeK)
+}
+
+export function normalizeOutlierScores(scores) {
   if (!Array.isArray(scores) || !scores.length) return []
   const rows = []
   for (let i = 0; i < scores.length; i++) {
     const s = scores[i]
-    // Handle both plain number[] (mock) and [{node_id, avg_distance_to_neighbors, is_outlier}] (real backend)
     const score = typeof s === 'number' ? s
-      : (s && typeof s === 'object') ? (s.score ?? s.avg_distance_to_neighbors ?? s.is_outlier ?? null)
+      : (s && typeof s === 'object') ? (s.score ?? s.avg_distance_to_neighbors ?? null)
       : null
     if (score == null || !Number.isFinite(score)) continue
-    const nodeId = (s && typeof s === 'object' && s.node_id != null) ? s.node_id : i
+    const nodeId = (s && typeof s === 'object' && s.node_id != null) ? Number(s.node_id) : i
+    if (!Number.isFinite(nodeId)) continue
     const isOutlier = (s && typeof s === 'object' && typeof s.is_outlier === 'boolean')
       ? s.is_outlier
       : undefined
-    const row = { id: nodeId, score }
-    if (isOutlier !== undefined) row.isOutlier = isOutlier
+    const row = { id: nodeId, node_id: nodeId, score, avg_distance_to_neighbors: score }
+    if (isOutlier !== undefined) {
+      row.isOutlier = isOutlier
+      row.is_outlier = isOutlier
+    }
     rows.push(row)
   }
-  rows.sort((a, b) => b.score - a.score)
-  const safeK = Math.max(0, Math.min(rows.length, k))
-  return rows.slice(0, safeK)
+  return rows
+}
+
+export function getNodeKnnScore(perNodeKnn, nodeId, fallback = null) {
+  if (nodeId == null) return fallback
+  if (Array.isArray(perNodeKnn)) {
+    const value = perNodeKnn[nodeId]
+    return Number.isFinite(value) ? value : fallback
+  }
+  if (perNodeKnn && typeof perNodeKnn === 'object') {
+    const value = perNodeKnn[String(nodeId)] ?? perNodeKnn[nodeId]
+    return Number.isFinite(value) ? value : fallback
+  }
+  return fallback
+}
+
+export function getNodeOutlierScore(outlierScores, nodeId, fallback = null) {
+  const rows = normalizeOutlierScores(outlierScores)
+  const row = rows.find((entry) => entry.id === nodeId)
+  return row ? row.score : fallback
+}
+
+export function buildNodeEmbeddingDiagnostics({ graphData, snap }) {
+  if (!graphData?.nodes?.length || !snap) return []
+  const outlierRows = normalizeOutlierScores(snap.outlier_scores)
+  const outlierMap = new Map(outlierRows.map((entry) => [entry.id, entry]))
+  return graphData.nodes.map((node) => {
+    const nodeId = Number(node.id)
+    const norm = Number(snap.embedding_norms?.[nodeId] ?? 0)
+    const knn = getNodeKnnScore(snap.per_node_knn_preservation, nodeId, 0)
+    const outlier = outlierMap.get(nodeId)
+    const outlierScore = outlier?.score ?? 0
+    const isOutlier = outlier?.isOutlier ?? outlier?.is_outlier ?? false
+    const degree = Number(node.degree ?? 0)
+    const importance = norm * 0.4 + (1 - knn) * 0.3 + outlierScore * 0.3
+    return {
+      id: nodeId,
+      degree,
+      norm,
+      knn,
+      outlierScore,
+      isOutlier,
+      importance,
+    }
+  })
 }
 
 /**

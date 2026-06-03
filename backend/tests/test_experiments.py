@@ -223,6 +223,49 @@ def test_get_experiment_report_payload():
     assert delete_response.status_code == 200
 
 
+def test_get_experiment_report_payload_in_vietnamese():
+    payload = {
+        "title": "Vietnamese Report Run",
+        "task_type": 1,
+        "model_type": "GCN",
+        "dataset_name": "cora",
+        "epoch_count": 4,
+        "learning_rate": 0.01,
+        "hidden_dim": 64,
+        "dropout": 0.5,
+        "accuracy": 0.91,
+        "loss": 0.11,
+        "best_epoch": 3,
+        "notes": "Ghi chú thử nghiệm",
+        "is_best": True,
+        "is_mock": True,
+        "config_json": {"epochs": 4, "lr": 0.01},
+        "snapshots_json": [
+            {"epoch": 0, "accuracy": 0.55, "train_loss": 1.0, "val_loss": 0.95},
+            {"epoch": 1, "accuracy": 0.72, "train_loss": 0.7, "val_loss": 0.6},
+            {"epoch": 2, "accuracy": 0.86, "train_loss": 0.3, "val_loss": 0.22},
+            {"epoch": 3, "accuracy": 0.91, "train_loss": 0.15, "val_loss": 0.11},
+        ],
+        "graph_data_json": {"nodes": [{"id": 1}], "links": []},
+        "ground_truth_json": [{"id": 1, "label": 0}],
+        "task_data_json": {"source": "test"},
+    }
+
+    create_response = client.post("/api/experiments", json=payload)
+    assert create_response.status_code == 200
+    exp_id = create_response.json()["id"]
+
+    report_response = client.get(f"/api/experiments/{exp_id}/report?lang=vi")
+    assert report_response.status_code == 200
+    report = report_response.json()
+
+    assert report["summary"]["primary_metric"] == "độ chính xác"
+    assert "Hãy ghim phiên chạy này" in report["next_action"]
+
+    delete_response = client.delete(f"/api/experiments/{exp_id}")
+    assert delete_response.status_code == 200
+
+
 def test_list_experiments_uses_paginated_contract():
     payload = {
         "title": "List Contract Run",
@@ -430,6 +473,73 @@ def test_replay_specific_epoch_and_compare_contract():
 
     invalid_compare = client.post("/api/experiments/compare", json={"experiment_ids": [exp_a]})
     assert invalid_compare.status_code == 400
+
+    assert client.delete(f"/api/experiments/{exp_a}").status_code == 200
+    assert client.delete(f"/api/experiments/{exp_b}").status_code == 200
+
+
+def test_compare_insights_handles_compact_graph_payload_shapes():
+    first_payload = {
+        "title": "Compare Insights A",
+        "task_type": 1,
+        "model_type": "GCN",
+        "dataset_name": "citeseer_compact_payload",
+        "epoch_count": 3,
+        "accuracy": 0.81,
+        "loss": 0.19,
+        "best_epoch": 2,
+        "is_mock": True,
+        "snapshots_json": [
+            {"epoch": 0, "accuracy": 0.55, "majority_ratio": [0.7, 0.8, 0.9]},
+            {"epoch": 1, "accuracy": 0.71, "majority_ratio": [0.7, 0.8, 0.9]},
+            {"epoch": 2, "accuracy": 0.81, "majority_ratio": [0.7, 0.8, 0.9]},
+        ],
+        "graph_data_json": {
+            "nodes": [{"id": 0, "groundTruth": 0}, {"id": 1, "groundTruth": 1}, {"id": 2, "groundTruth": 1}],
+            "links": [[0, 1], [1, 2], [2, 0]],
+        },
+        "ground_truth_json": [0, 1, 1],
+        "task_data_json": {},
+    }
+    second_payload = {
+        "title": "Compare Insights B",
+        "task_type": 1,
+        "model_type": "GAT",
+        "dataset_name": "citeseer_compact_payload",
+        "epoch_count": 3,
+        "accuracy": 0.79,
+        "loss": 0.21,
+        "best_epoch": 1,
+        "is_mock": True,
+        "snapshots_json": [
+            {"epoch": 0, "accuracy": 0.5, "majority_ratio": [0.68, 0.76, 0.88]},
+            {"epoch": 1, "accuracy": 0.79, "majority_ratio": [0.68, 0.76, 0.88]},
+            {"epoch": 2, "accuracy": 0.76, "majority_ratio": [0.68, 0.76, 0.88]},
+        ],
+        "graph_data_json": {
+            "nodes": [{"id": 0, "groundTruth": 0}, {"id": 1, "groundTruth": 1}, {"id": 2, "groundTruth": 1}],
+            "links": [[0, 1], [1, 2], [2, 0]],
+        },
+        "ground_truth_json": [0, 1, 1],
+        "task_data_json": {},
+    }
+
+    create_a = client.post("/api/experiments", json=first_payload)
+    create_b = client.post("/api/experiments", json=second_payload)
+    assert create_a.status_code == 200, create_a.text
+    assert create_b.status_code == 200, create_b.text
+    exp_a = create_a.json()["id"]
+    exp_b = create_b.json()["id"]
+
+    compare_response = client.post(
+        "/api/experiments/compare-insights",
+        json={"experiment_ids": [exp_a, exp_b]},
+    )
+    assert compare_response.status_code == 200, compare_response.text
+    payload = compare_response.json()
+    assert "dataset_topology" in payload
+    assert payload["dataset_topology"]["properties"]["n_nodes"] == 3
+    assert payload["dataset_topology"]["properties"]["n_edges"] == 3
 
     assert client.delete(f"/api/experiments/{exp_a}").status_code == 200
     assert client.delete(f"/api/experiments/{exp_b}").status_code == 200

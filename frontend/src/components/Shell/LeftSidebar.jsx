@@ -6,7 +6,6 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
-  Dna,
   FolderUp,
   Globe2,
   Layers,
@@ -24,8 +23,6 @@ const TASKS = [
   { id: 2, label: 'Phân loại đồ thị', icon: BarChart3 },
   { id: 3, label: 'Dự đoán liên kết', icon: Link2 },
   { id: 4, label: 'Phát hiện cộng đồng', icon: Users },
-  { id: 5, label: 'Biểu diễn đồ thị', icon: Globe2 },
-  { id: 6, label: 'Sinh đồ thị', icon: Dna },
 ]
 
 const MODELS = [
@@ -59,7 +56,6 @@ export default function LeftSidebar({
 
   return (
     <div className="h-full flex flex-col bg-deep border-r border-line-default shadow-sm overflow-hidden pt-2">
-
       <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar py-4 px-2 space-y-6">
         <SidebarSection title="Nhiệm vụ" collapsed={collapsed}>
           <div className="flex flex-col gap-1">
@@ -81,29 +77,30 @@ export default function LeftSidebar({
         <SidebarSection title="Mô hình" collapsed={collapsed}>
           <div className={`flex ${collapsed ? 'flex-col items-center' : 'flex-row'} gap-1 p-1 bg-nebula rounded-xl border border-line-subtle`}>
             {MODELS.map((model) => {
-              const isSelected = selectedModel === model.id;
+              const isSelected = selectedModel === model.id
               return (
-              <button
-                key={model.id}
-                onClick={() => setModel(model.id)}
-                className={`relative flex-1 rounded-lg py-2 text-[10px] font-black transition-all duration-300 uppercase tracking-wide transform hover:scale-[1.03] active:scale-95 ${
-                  isSelected ? 'text-white' : 'text-moonlight hover:text-starlight hover:bg-line-default/30'
-                } ${collapsed ? 'w-full px-0' : 'px-2'}`}
-              >
-                {isSelected && (
-                  <motion.div
-                    layoutId="model-active-bg"
-                    className={`absolute inset-0 rounded-lg ${
-                      model.id === 'GCN' ? 'bg-[#16a34a]' :
-                      model.id === 'GAT' ? 'bg-[#0891b2]' :
-                      'bg-[#be185d]'
-                    }`}
-                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
-                <span className="relative z-10">{model.label}</span>
-              </button>
-            )})}
+                <button
+                  key={model.id}
+                  onClick={() => setModel(model.id)}
+                  className={`relative flex-1 rounded-lg py-2 text-[10px] font-black transition-all duration-300 uppercase tracking-wide transform hover:scale-[1.03] active:scale-95 ${
+                    isSelected ? 'text-white' : 'text-moonlight hover:text-starlight hover:bg-line-default/30'
+                  } ${collapsed ? 'w-full px-0' : 'px-2'}`}
+                >
+                  {isSelected && (
+                    <motion.div
+                      layoutId="model-active-bg"
+                      className={`absolute inset-0 rounded-lg ${
+                        model.id === 'GCN' ? 'bg-[#16a34a]' :
+                        model.id === 'GAT' ? 'bg-[#0891b2]' :
+                        'bg-[#be185d]'
+                      }`}
+                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                  <span className="relative z-10">{model.label}</span>
+                </button>
+              )
+            })}
           </div>
         </SidebarSection>
 
@@ -162,7 +159,14 @@ export default function LeftSidebar({
           onClick={onToggle}
           className="w-full flex items-center justify-center py-2.5 rounded-xl border border-line-subtle bg-deep text-moonlight hover:text-amethyst hover:bg-amethyst/5 hover:border-amethyst/30 transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-sm group"
         >
-          {collapsed ? <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" /> : <div className="flex items-center gap-2"><ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" /><span className="text-[10px] font-bold uppercase tracking-[0.2em]">Thu gọn</span></div>}
+          {collapsed ? (
+            <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+          ) : (
+            <div className="flex items-center gap-2">
+              <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Thu gọn</span>
+            </div>
+          )}
         </button>
       </div>
     </div>

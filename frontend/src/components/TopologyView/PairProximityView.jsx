@@ -1,7 +1,9 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { CLASS_COLORS } from '../../utils/colors'
+import { getTask3Copy } from '../../utils/task3I18n'
 
 /**
  * PairProximityView — Embedding Space for Task 3 (Link Prediction)
@@ -10,7 +12,9 @@ import { CLASS_COLORS } from '../../utils/colors'
  * Features: zoom/pan via mouse wheel + drag, hover to highlight connections,
  * large labeled nodes, thick color-coded edge lines with score labels.
  */
-export default function PairProximityView() {
+export default function PairProximityView({ reportMode = false }) {
+  const { lang } = useLanguage()
+  const copy = getTask3Copy(lang)
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
   const [dims, setDims] = useState({ width: 400, height: 300 })
@@ -54,6 +58,15 @@ export default function PairProximityView() {
 
   // Player subscription
   useEffect(() => {
+    const initialPlayerState = usePlayerStore.getState()
+    if (initialPlayerState.snapshots.length > 0) {
+      snapshotsRef.current = initialPlayerState.snapshots
+      epochRef.current = Math.max(
+        0,
+        Math.min(initialPlayerState.snapshots.length - 1, Math.floor(initialPlayerState.currentEpochFloat || 0)),
+      )
+    }
+
     const unsub = usePlayerStore.subscribe((state) => {
       if (state.snapshots.length > 0) snapshotsRef.current = state.snapshots
       epochRef.current = Math.max(0, Math.min(
@@ -363,7 +376,7 @@ export default function PairProximityView() {
       <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs">
         <div className="text-center">
           <div className="text-3xl mb-2 opacity-40">&#8230;</div>
-          <p>Link embedding will appear<br/>during training</p>
+          <p>{copy.empty.edgeReasoningLoading}</p>
         </div>
       </div>
     )
@@ -383,7 +396,7 @@ export default function PairProximityView() {
       />
 
       {/* Controls — top right */}
-      <div className="absolute top-1 right-1 z-10 flex gap-1">
+      {!reportMode && <div className="absolute top-1 right-1 z-10 flex gap-1">
         <button
           onClick={() => setShowPositive(!showPositive)}
           className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all border
@@ -409,7 +422,7 @@ export default function PairProximityView() {
         >
           ⟳
         </button>
-      </div>
+      </div>}
 
       {/* Legend — bottom left compact */}
       <div className="absolute bottom-1.5 left-1.5 bg-slate-900/90 backdrop-blur-md rounded-lg px-2 py-1.5 border border-slate-700/40 z-10 text-[8px]">

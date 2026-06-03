@@ -1,4 +1,5 @@
 import useGNNStore from '../store/useGNNStore'
+import { buildTask4NodeProfile } from './task4Metrics'
 
 /**
  * buildHoverSummary — Builds a task-aware summary of a node for the HoverCard.
@@ -82,13 +83,24 @@ export function buildHoverSummary(taskId, nodeId, snapshot, graphData, groundTru
     }
 
     case 4: { // Community Detection
-      const commId = snapshot?.community_ids?.[nodeId]
-      if (commId !== undefined) {
-        summary.chips.push({ label: 'Community', value: commId, tone: 'purple' })
+      const profile = buildTask4NodeProfile({ snap: snapshot, nodeId, graphData })
+      if (profile?.community !== undefined) {
+        summary.chips.push({ label: 'Community', value: profile.community, tone: 'purple' })
       }
-      // If backend sends bridge strength or other metrics
-      if (snapshot?.bridge_nodes?.includes(nodeId)) {
+      if (profile?.isBridge) {
         summary.chips.push({ label: 'Role', value: 'Bridge', tone: 'amber' })
+      }
+      if (Number.isFinite(profile?.bridgeStrength)) {
+        summary.rows.push({ label: 'Bridge Strength', value: `${(profile.bridgeStrength * 100).toFixed(1)}%` })
+      }
+      if (Number.isFinite(profile?.confidence)) {
+        summary.rows.push({ label: 'Confidence', value: `${(profile.confidence * 100).toFixed(1)}%` })
+      }
+      if (Number.isFinite(profile?.silhouette)) {
+        summary.rows.push({ label: 'Silhouette', value: profile.silhouette.toFixed(3) })
+      }
+      if (Number.isFinite(profile?.crossCommunityNeighbors)) {
+        summary.rows.push({ label: 'Cross-community Neighbors', value: profile.crossCommunityNeighbors })
       }
       break
     }

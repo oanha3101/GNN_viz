@@ -12,7 +12,7 @@ import { isNodeMisclassified, countMisclassified } from '../../utils/misclassifi
 import { logger } from '../../utils/logger'
 import NodeHoverCard from './NodeHoverCard'
 
-export default function TopologyView() {
+export default function TopologyView({ reportMode = false }) {
   // 1. Dữ liệu tĩnh
   const rawGraphData = useGNNStore(s => s.graphData)
   const groundTruth = useGNNStore(s => s.groundTruth)
@@ -84,14 +84,14 @@ export default function TopologyView() {
       isMediumGraph,
       isLargeGraph,
       isVeryLargeGraph,
-      showNodeLabels: nodeCount <= 80,
-      disableMotion: isVeryLargeGraph,
-      showLinkParticles: !isLargeGraph,
-      enableNodeDrag: nodeCount < 900,
+      showNodeLabels: !reportMode && nodeCount <= 80,
+      disableMotion: reportMode || isVeryLargeGraph,
+      showLinkParticles: !reportMode && !isLargeGraph,
+      enableNodeDrag: !reportMode && nodeCount < 900,
       warmupTicks: isShowcaseGraph ? 45 : isVeryLargeGraph ? 12 : 30,
       cooldownTicks: isShowcaseGraph ? 140 : isVeryLargeGraph ? 40 : 100,
     }
-  }, [rawGraphData])
+  }, [rawGraphData, reportMode])
 
   // Cập nhật Ref và ép Redraw 60 lần/giây
   useEffect(() => {
@@ -453,7 +453,9 @@ export default function TopologyView() {
   return (
     <div 
       ref={containerRef} 
-      className="w-full h-full relative bg-abyss overflow-visible cursor-crosshair"
+      className={reportMode
+        ? 'topology-report-root relative h-[740px] w-full cursor-default overflow-hidden bg-white'
+        : 'w-full h-full relative bg-abyss overflow-visible cursor-crosshair'}
       onClick={handleCloseContextMenu}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -604,10 +606,10 @@ export default function TopologyView() {
         enableNodeDrag={graphPerf.enableNodeDrag}
       />
 
-      <NodeHoverCard />
+      {!reportMode && <NodeHoverCard />}
 
       {/* Context Menu */}
-      <AnimatePresence>
+      {!reportMode && <AnimatePresence>
         {contextMenu && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -650,10 +652,10 @@ export default function TopologyView() {
             </button>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>}
 
       {/* Mode Toggles */}
-      <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-10 items-end">
+      {!reportMode && <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-10 items-end">
         <div className="flex gap-1.5">
           {['prediction', 'error'].map((mode) => (
             <button
@@ -741,7 +743,7 @@ export default function TopologyView() {
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Legend */}
       <div className="absolute bottom-3 left-3 bg-abyss/80 backdrop-blur-md rounded-lg px-3 py-2

@@ -36,7 +36,7 @@ describe('ProjectsPage', () => {
       expect(screen.getByText('Graph Bench')).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /select/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^chọn$/i }))
     expect(setActiveProjectContext).toHaveBeenCalledWith(7, 'Graph Bench')
   })
 })

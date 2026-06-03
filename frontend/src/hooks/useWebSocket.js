@@ -178,6 +178,23 @@ export default function useWebSocket() {
           }
         }
 
+      } else if (msg.type === 'task1_best_checkpoint' || msg.type === 'task2_best_checkpoint') {
+        const bestEpoch = Number(payload?.best_epoch ?? payload?.snapshot?.epoch)
+        const playerState = usePlayerStore.getState()
+        const maxEpoch = playerState.snapshots.length - 1
+        const bestSnapshotIndex = playerState.snapshots.findIndex((snap) => Number(snap?.epoch) === bestEpoch)
+        const safeBestEpoch = Number.isFinite(bestEpoch)
+          ? (bestSnapshotIndex >= 0 ? bestSnapshotIndex : Math.max(0, Math.min(maxEpoch, bestEpoch)))
+          : maxEpoch
+
+        setTraining(false, 1)
+        useSessionStore.getState().setStatus('completed')
+        if (maxEpoch >= 0) {
+          playerState.seekTo(safeBestEpoch)
+          setDone(safeBestEpoch)
+        }
+        expectedCloseRef.current = true
+
       } else if (msg.type === 'training_complete') {
         // Snapshots were already streamed via epoch_snapshot messages during training.
         // DO NOT call loadSnapshots here — it resets currentEpochFloat to 0,

@@ -384,6 +384,20 @@ def _primary_metric_label(task_type: int) -> str:
     return labels.get(task_type, "primary_score")
 
 
+def _translate_primary_metric_label(label: str, lang: str) -> str:
+    if lang != "vi":
+        return label
+    labels = {
+        "accuracy": "độ chính xác",
+        "auc": "AUC",
+        "modularity": "modularity",
+        "structure_preservation": "bảo toàn cấu trúc",
+        "validity_rate": "tỉ lệ hợp lệ",
+        "primary_score": "điểm chính",
+    }
+    return labels.get(label, label)
+
+
 def _recommend_next_action(experiment: Experiment, metrics: Dict[str, Any]) -> str:
     history = metrics.get("history") or {}
     scores = history.get("primary_score") or []
@@ -404,7 +418,20 @@ def _recommend_next_action(experiment: Experiment, metrics: Dict[str, Any]) -> s
     return "Add notes for what worked here, then compare this run against 1-3 nearby variants."
 
 
-def build_report_payload(exp: Experiment, db: Session) -> Dict[str, Any]:
+def _translate_next_action(text: str, lang: str) -> str:
+    if lang != "vi":
+        return text
+    mapping = {
+        "Replay the run and inspect retained epochs before deciding the next iteration.": "Hãy phát lại phiên chạy và xem các epoch được giữ lại trước khi quyết định vòng lặp tiếp theo.",
+        "Pin this run as the current reference and compare it against recent challengers.": "Hãy ghim phiên chạy này làm mốc hiện tại rồi so sánh với các phiên đối chứng gần đây.",
+        "The best score peaked early; try early stopping or a lower learning rate on the next run.": "Điểm tốt nhất xuất hiện khá sớm; ở lượt tiếp theo hãy thử early stopping hoặc giảm learning rate.",
+        "This run is still weak; try more epochs, a wider hidden dimension, or a different model.": "Phiên chạy này vẫn còn yếu; hãy thử thêm epoch, tăng hidden dimension, hoặc đổi mô hình.",
+        "Add notes for what worked here, then compare this run against 1-3 nearby variants.": "Ghi lại điều đã hoạt động tốt ở phiên này, rồi so sánh nó với 1-3 biến thể lân cận.",
+    }
+    return mapping.get(text, text)
+
+
+def build_report_payload(exp: Experiment, db: Session, lang: str = "en") -> Dict[str, Any]:
     try:
         metrics = mongo_runs.get_metrics(exp) or {}
     except PersistenceUnavailableError as exc:
@@ -435,7 +462,7 @@ def build_report_payload(exp: Experiment, db: Session) -> Dict[str, Any]:
             "is_mock": bool(exp.is_mock),
         },
         "summary": {
-            "primary_metric": _primary_metric_label(exp.task_type or 1),
+            "primary_metric": _translate_primary_metric_label(_primary_metric_label(exp.task_type or 1), lang),
             "best_epoch": int(metrics.get("best_epoch") or exp.best_epoch or 0),
             "best_score": float(metrics.get("best_score") or exp.accuracy or 0.0),
             "final_accuracy": float(exp.accuracy or 0.0),
@@ -457,7 +484,7 @@ def build_report_payload(exp: Experiment, db: Session) -> Dict[str, Any]:
             "run_id": exp.mongo_run_id,
         },
         "notes": exp.notes or "",
-        "next_action": _recommend_next_action(exp, metrics),
+        "next_action": _translate_next_action(_recommend_next_action(exp, metrics), lang),
     }
 
 
@@ -467,6 +494,7 @@ def get_experiment_report(
     exp_id: int,
     track_export: bool,
     user: Optional[User],
+    lang: str = "en",
 ) -> dict:
     exp = get_experiment_or_404(db, exp_id)
     ensure_experiment_access(exp, user)
@@ -481,7 +509,7 @@ def get_experiment_report(
             details={"project_id": exp.project_id, "dataset_version_id": exp.dataset_version_id},
         )
         db.commit()
-    return build_report_payload(exp, db)
+    return build_report_payload(exp, db, lang=lang)
 
 
 def run_retention(*, db: Session, user: Optional[User], dry_run: bool) -> dict:

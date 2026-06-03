@@ -2,8 +2,17 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { easeInOutCubic, interpolateSnapshots, lerpColor } from '../../engine/interpolate'
-import { buildTask2FocusBuckets, buildTask2GraphDescriptors, getTask2DescriptorById, sortTask2Descriptors } from '../../utils/task2Metrics'
+import {
+  buildTask2FocusBuckets,
+  buildTask2GraphDescriptors,
+  describeTask2ReadoutPattern,
+  formatTask2ClassLabel,
+  getTask2DescriptorById,
+  sortTask2Descriptors,
+} from '../../utils/task2Metrics'
+import { localizeTask2Element } from '../../utils/task2ReportI18n'
 
 function buildGraphClassNames(graphs = [], taskClassNames = []) {
   if (Array.isArray(taskClassNames) && taskClassNames.length) {
@@ -34,7 +43,9 @@ function formatFailureTag(tag) {
   }
 }
 
-export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell = null }) {
+export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell = null, reportMode = false }) {
+  const { lang } = useLanguage()
+  const reportLang = lang
   const hoveredGraphId = useGNNStore((state) => state.hoveredGraphId)
   const setHoveredGraph = useGNNStore((state) => state.setHoveredGraph)
   const selectedNodeId = useGNNStore((state) => state.selectedNodeId)
@@ -125,6 +136,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
 
   const fgRef = useRef(null)
   const containerRef = useRef(null)
+  const panelRootRef = useRef(null)
   const [dim, setDim] = useState({ w: 200, h: 150 })
 
   useEffect(() => {
@@ -150,6 +162,14 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
     observer.observe(containerRef.current)
     return () => observer.disconnect()
   }, [])
+
+  useEffect(() => {
+    if (reportLang !== 'vi' || !panelRootRef.current) return undefined
+    const rafId = window.requestAnimationFrame(() => {
+      localizeTask2Element(panelRootRef.current, reportLang)
+    })
+    return () => window.cancelAnimationFrame(rafId)
+  }, [reportMode, reportLang, activeGraphId, graph?.originalGraphId, epochInt])
 
   const heatmapColors = useMemo(() => {
     if (!graph || !currSnap?.node_contributions) return {}
@@ -188,24 +208,27 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
     )
   }
 
-  const gtLabel = graphClassNames[graph.groundTruth] || `Class ${graph.groundTruth}`
-  const predLabel = graph.predicted != null
-    ? (graphClassNames[graph.predicted] || `Class ${graph.predicted}`)
-    : 'Analyzing'
+  const gtLabel = formatTask2ClassLabel(graphClassNames, graph.groundTruth, 'Unknown')
+  const predLabel = formatTask2ClassLabel(graphClassNames, graph.predicted, 'Analyzing')
   const confidence = graph.confidence ?? 0
+  const readoutPattern = graph.readoutPattern || describeTask2ReadoutPattern({
+    entropyBucket: graph.entropyBucket,
+    readoutBucket: graph.readoutBucket,
+  })
 
   return (
-    <div className="h-full flex flex-col p-3 text-xs w-full relative bg-slate-950">
+    <div ref={panelRootRef} className="h-full flex flex-col p-3 text-xs w-full relative bg-slate-950">
       <div className="mb-3 space-y-1.5 z-10">
         <div className="flex items-center justify-between">
           <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-tighter">Task 2 readout monitor</h3>
-          {isPinned ? (
+          {isPinned || reportMode ? (
             <button
               onClick={() => setSelectedGraph(null)}
+              disabled={reportMode}
               className="rounded-full bg-amber-500/20 border border-amber-500/40 px-2 py-1 text-[10px] font-bold text-amber-300 hover:bg-amber-500/30 transition-all"
               title="Release pinned graph"
             >
-              Pinned
+              {reportMode ? 'Report' : 'Pinned'}
             </button>
           ) : (
             <button
@@ -307,12 +330,12 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
       <div className="mt-3 rounded-xl border border-slate-800/60 bg-slate-900/50 p-3 space-y-2">
         <div className="text-nano text-slate-500 uppercase font-semibold tracking-ultra">Narrative profile</div>
         <p className="text-[11px] leading-relaxed text-slate-300">
-          {graph.motifSignature}. The readout is <span className="text-slate-100 font-semibold">{graph.readoutBucket}</span> and the graph currently reads as <span className="text-slate-100 font-semibold">{formatFailureTag(graph.failureTag)}</span>.
+          {graph.motifSignature}. Top-k contribution is <span className="text-slate-100 font-semibold">{graph.readoutBucket}</span>, global entropy is <span className="text-slate-100 font-semibold">{graph.entropyBucket}</span>, so the readout pattern is <span className="text-slate-100 font-semibold">{readoutPattern}</span>.
         </p>
         <div className="flex flex-wrap gap-1.5">
           <Tag label={graph.densityBucket} />
           <Tag label={graph.entropyBucket} />
-          <Tag label={graph.readoutBucket} />
+          <Tag label={readoutPattern} />
           <Tag label={formatFailureTag(graph.failureTag)} />
         </div>
       </div>

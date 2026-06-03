@@ -137,6 +137,11 @@ snapshots:
     modularity_q: float
     conductance: float
     community_sizes: array[int]
+    mean_silhouette: float
+    mean_cluster_confidence: float
+    bridge_ratio: float
+    largest_community_ratio: float
+    empty_community_count: int
     linkage_matrix: array[array[float]] | null
     nmi_score: float | null
     community_transitions: map[string, int]

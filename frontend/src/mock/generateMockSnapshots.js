@@ -702,6 +702,19 @@ export function generateTask4Mock(numCommunities = 4, nodesPerComm = 12, numEpoc
 
     // NMI score: improves as predictions converge
     const nmiScore = Math.min(1, 0.2 + 0.7 * sigmoid(6 * (progress - 0.25)) + (seededRand(epoch * 61) - 0.5) * 0.02)
+    const meanSilhouette = silhouetteScores.reduce((a, b) => a + b, 0) / Math.max(1, silhouetteScores.length)
+    const meanClusterConfidence = clusterConfidence.reduce((a, b) => a + b, 0) / Math.max(1, clusterConfidence.length)
+    const bridgeRatio = bridgeNodes.filter(Boolean).length / Math.max(1, bridgeNodes.length)
+    const largestCommunityRatio = Math.max(...commSizes, 0) / Math.max(1, numNodes)
+    const emptyCommunityCount = commSizes.filter(size => size === 0).length
+    const linkageMatrix = (epoch % 10 === 0 || epoch === numEpochs - 1)
+      ? Array.from({ length: Math.max(0, Math.min(numCommunities + 2, numNodes - 1)) }, (_, i) => [
+          i,
+          i + 1,
+          Number((0.15 + i * 0.18 + (1 - progress) * 0.08).toFixed(3)),
+          Math.min(numNodes, i + 2),
+        ])
+      : null
 
     // Community transitions: count changes from previous epoch
     const communityTransitions = {}
@@ -728,6 +741,12 @@ export function generateTask4Mock(numCommunities = 4, nodesPerComm = 12, numEpoc
       modularity_q: modQ,
       conductance,
       community_sizes: commSizes,
+      mean_silhouette: meanSilhouette,
+      mean_cluster_confidence: meanClusterConfidence,
+      bridge_ratio: bridgeRatio,
+      largest_community_ratio: largestCommunityRatio,
+      empty_community_count: emptyCommunityCount,
+      linkage_matrix: linkageMatrix,
       train_loss: Math.max(0, 1.4 * Math.exp(-epoch / 20) + 0.08 + lossNoise),
       val_loss:   Math.max(0, 1.4 * Math.exp(-epoch / 25) + 0.15 + lossNoise * 1.3),
       train_acc: Math.min(1, acc + (seededRand(epoch * 13 + 1) - 0.5) * 0.01),

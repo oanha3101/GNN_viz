@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import usePlayerStore from './playerStore'
 
 const WORKSPACE_CONTEXT_KEY = 'gnn_workspace_context'
 
@@ -30,6 +31,10 @@ function writeWorkspaceContext(partial) {
 }
 
 const persistedWorkspace = readWorkspaceContext()
+
+function resetPlaybackForConfigChange() {
+  usePlayerStore.getState().resetForTraining()
+}
 
 const useGNNStore = create((set, get) => ({
   // ─── Config ──────────────────────────────────────────────────
@@ -64,6 +69,7 @@ const useGNNStore = create((set, get) => ({
   selectedCommunityId: null, // Task 4 — community selected via canvas click / metric table
   focusedEdgeIdx: null,      // Task 3 — edge index a hard-edge row asks the canvas to focus
   outlierPulseIdx: null,     // Task 5 — node id a metric row asks the canvas to pulse
+  task5SelectedNodeIds: [],   // Task 5 — brushed node ids from embedding space
   viewMode: 'prediction',
   attentionHead: 'avg',
   configOpen: false,
@@ -100,9 +106,11 @@ const useGNNStore = create((set, get) => ({
   // ─── Actions: Config ─────────────────────────────────────────
   setTask: (task) => {
     const prevState = get()
+    const changed = prevState.selectedTask !== task
     const needsReset = task === 2 || task === 6 || prevState.selectedTask === 2 || prevState.selectedTask === 6
     const leavingTask5 = prevState.selectedTask === 5
 
+    if (changed) resetPlaybackForConfigChange()
     writeWorkspaceContext({ selectedTask: task })
     set({
       selectedTask: task,
@@ -120,6 +128,8 @@ const useGNNStore = create((set, get) => ({
       selectedCommunityId: null,
       focusedEdgeIdx: null,
       outlierPulseIdx: null,
+      task5SelectedNodeIds: [],
+      reportOpen: false,
       // Clear data only if moving to/from tasks with incompatible graph formats
       ...(needsReset ? {
         graphData: null,
@@ -134,6 +144,10 @@ const useGNNStore = create((set, get) => ({
   },
   setSelectedTask: (task) => get().setTask(task),
   setModel: (model) => {
+    const prevState = get()
+    const changed = prevState.selectedModel !== model
+
+    if (changed) resetPlaybackForConfigChange()
     writeWorkspaceContext({ selectedModel: model })
     set({
       selectedModel: model,
@@ -151,6 +165,8 @@ const useGNNStore = create((set, get) => ({
       selectedCommunityId: null,
       focusedEdgeIdx: null,
       outlierPulseIdx: null,
+      task5SelectedNodeIds: [],
+      reportOpen: false,
       isTraining: false,
       trainingProgress: 0,
     })
@@ -256,6 +272,11 @@ const useGNNStore = create((set, get) => ({
   // ─── Task 5 Actions ────────────────────────────────────────
   setTask5Meta: (meta) => set({ task5Meta: meta }),
   setTask5Exporting: (v) => set({ task5Exporting: v }),
+  setTask5SelectedNodeIds: (ids) => set({
+    task5SelectedNodeIds: Array.isArray(ids)
+      ? ids.map((id) => Number(id)).filter(Number.isFinite)
+      : [],
+  }),
   setUploadedFilePath: (path) => {
     writeWorkspaceContext({ uploadedFilePath: path })
     set({ uploadedFilePath: path })

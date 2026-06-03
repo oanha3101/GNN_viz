@@ -8,12 +8,10 @@ import { logger } from '../../utils/logger'
 const API = API_BASE
 
 const TASKS = [
-  { id: 1, name: 'Node Classification', Icon: Network, desc: 'Predict labels for nodes (e.g. user roles)', needsGraph: false },
-  { id: 2, name: 'Graph Classification', Icon: BarChart3, desc: 'Predict labels for entire graphs (e.g. molecules)', needsGraph: true },
-  { id: 3, name: 'Link Prediction', Icon: Link2, desc: 'Predict future or missing edges (e.g. recommendations)', needsGraph: false },
-  { id: 4, name: 'Community Detection', Icon: Users, desc: 'Find clusters of nodes (Unsupervised)', needsGraph: false },
-  { id: 5, name: 'Graph Embedding', Icon: Globe2, desc: 'Learn node representations (Unsupervised)', needsGraph: false },
-  { id: 6, name: 'Graph Generation', Icon: Dna, desc: 'Learn to generate new graph structures', needsGraph: false },
+  { id: 1, name: 'Phân loại nút', Icon: Network, desc: 'Dự đoán nhãn cho từng node', needsGraph: false },
+  { id: 2, name: 'Phân loại đồ thị', Icon: BarChart3, desc: 'Dự đoán nhãn cho toàn bộ đồ thị', needsGraph: true },
+  { id: 3, name: 'Dự đoán liên kết', Icon: Link2, desc: 'Dự đoán cạnh còn thiếu hoặc sẽ xuất hiện', needsGraph: false },
+  { id: 4, name: 'Phát hiện cộng đồng', Icon: Users, desc: 'Tìm các cụm node trong mạng', needsGraph: false },
 ]
 
 // Data requirements per task — shown in Step 2

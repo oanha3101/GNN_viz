@@ -376,11 +376,43 @@ Rule:
 
 ### Visualization snapshot fields
 
+- Task 3 link prediction snapshots should keep this stable base contract:
+  - `edge_scores`: probability-like score for each `taskData.testEdges[i]`
+  - `edge_classifications`: optional per-edge labels for live overlays
+  - `edge_structure_features`: optional rows keyed by `idx` with
+    `degree_source`, `degree_target`, `shortest_path`,
+    `structural_equivalence`, `neighbor_jaccard`,
+    `local_clustering_source`, `local_clustering_target`,
+    `embedding_distance`, `embedding_similarity`,
+    and `same_ground_truth_label`
+  - `top_k_links`: optional shortlist of the strongest predicted links
+  - `attention_edges`: optional GAT-only weighted edges
+  - `edge_similarity`: optional GCN smoothness cue
+  - `score_variance`: optional GraphSAGE stability cue
+- Task 3 ranking-style metrics such as `Precision@K`, `Recall@K`, `Hits@K`,
+  `Brier`, and calibration buckets are currently derived in the frontend from
+  `edge_scores + taskData.testEdges.exists`. Backend may emit them later, but
+  the current contract does not require extra fields for them.
+- Task 4 community detection snapshots should keep this stable base contract:
+  - `node_predictions_aligned`: label-aligned community IDs used by all UI
+    views; fallback to `node_predictions` for old replays
+  - `modularity_q`, `conductance`, `community_stability`, `community_sizes`,
+    `per_community_metrics`, `bridge_nodes`, `bridge_strength`,
+    `cluster_confidence`, `silhouette_scores`, and `community_transitions`
+  - `best_epoch`, `best_quality_score`, `is_best_epoch`, `stability_drop`, and
+    `model_stability_status` are optional stability fields for Task 4 report
+    reading
+  - `local_smoothness` and `dirichlet_energy` are GCN smoothness cues,
+    `attention_edges` and `attention_boundary_ratio` are GAT cues, and
+    `sage_robustness` is a GraphSAGE robustness cue
 - Task 2 graph classification snapshots include `model_type`; `SAGE`,
   `GRAPHSAGE`, and `GRAPH_SAGE` select the GraphSAGE encoder.
 - Task 5 graph embedding snapshots may send:
   - `per_node_knn_preservation` as `{ "0": 0.8, "1": 0.6 }`
   - `outlier_scores` as rows like `{ "node_id": 7, "avg_distance_to_neighbors": 0.9, "is_outlier": true }`
+  - `primary_metric_name`, `primary_metric_value`, `quality_metric`, and
+    `quality_score`, with `knn_preservation` as the canonical Task 5 quality
+    metric
 - Task 6 graph generation snapshots should keep a stable string `signature` on
   each generated graph when possible. The frontend computes a fallback signature
   from `nodes` and `links` for older payloads.
