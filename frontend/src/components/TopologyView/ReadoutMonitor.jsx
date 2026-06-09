@@ -7,6 +7,7 @@ import { easeInOutCubic, interpolateSnapshots, lerpColor } from '../../engine/in
 import {
   buildTask2FocusBuckets,
   buildTask2GraphDescriptors,
+  buildTask2ModelSignature,
   describeTask2ReadoutPattern,
   formatTask2ClassLabel,
   getTask2DescriptorById,
@@ -51,6 +52,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
   const selectedNodeId = useGNNStore((state) => state.selectedNodeId)
   const taskData = useGNNStore((state) => state.taskData)
   const classNames = useGNNStore((state) => state.classNames)
+  const selectedModel = useGNNStore((state) => state.selectedModel)
   const setSelectedGraph = useGNNStore((state) => state.setSelectedNode)
   const focusMode = useGNNStore((state) => state.task2FocusMode)
   const selectedCell = useGNNStore((state) => state.task2SelectedCell)
@@ -86,6 +88,10 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
   const descriptors = useMemo(
     () => buildTask2GraphDescriptors({ snapshot: currSnap, graphs: indexedGraphs, classNames: graphClassNames }),
     [currSnap, indexedGraphs, graphClassNames]
+  )
+  const modelSignature = useMemo(
+    () => buildTask2ModelSignature(currSnap, snapshots, descriptors, selectedModel),
+    [currSnap, snapshots, descriptors, selectedModel]
   )
 
   const focusBuckets = useMemo(
@@ -177,16 +183,20 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
     const colorMap = {}
     graph.nodes.forEach((node, index) => {
       const score = Math.max(0, Math.min(1, contribs[index] || 0))
-      if (score < 0.3) colorMap[node.id] = lerpColor('#334155', '#ea580c', score / 0.3)
+      if (modelSignature.id === 'SAGE') {
+        colorMap[node.id] = score < 0.45 ? lerpColor('#334155', '#22c55e', score / 0.45) : lerpColor('#22c55e', '#bbf7d0', (score - 0.45) / 0.55)
+      } else if (modelSignature.id === 'GCN') {
+        colorMap[node.id] = score < 0.5 ? lerpColor('#1e293b', '#38bdf8', score / 0.5) : lerpColor('#38bdf8', '#e0f2fe', (score - 0.5) / 0.5)
+      } else if (score < 0.3) colorMap[node.id] = lerpColor('#334155', '#ea580c', score / 0.3)
       else if (score < 0.7) colorMap[node.id] = lerpColor('#ea580c', '#facc15', (score - 0.3) / 0.4)
       else colorMap[node.id] = lerpColor('#facc15', '#ffffff', (score - 0.7) / 0.3)
     })
     return colorMap
-  }, [graph, currSnap])
+  }, [graph, currSnap, modelSignature])
 
   if (snapshots.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4 bg-slate-950">
+      <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4 bg-nebula">
         <p className="text-center leading-relaxed">
           Hover a Task 2 embedding point
           <br />
@@ -198,7 +208,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
 
   if (!graph) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4 bg-slate-950">
+      <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4 bg-nebula">
         <p className="text-center leading-relaxed">
           No graph matches the active readout slice.
           <br />
@@ -217,7 +227,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
   })
 
   return (
-    <div ref={panelRootRef} className="h-full flex flex-col p-3 text-xs w-full relative bg-slate-950">
+    <div ref={panelRootRef} className="h-full flex flex-col p-3 text-xs w-full relative bg-nebula">
       <div className="mb-3 space-y-1.5 z-10">
         <div className="flex items-center justify-between">
           <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-tighter">Task 2 readout monitor</h3>
@@ -233,7 +243,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
           ) : (
             <button
               onClick={() => setHoveredGraph(null)}
-              className="rounded-full border border-slate-700/70 px-2 py-1 text-[10px] font-semibold text-slate-500 hover:text-slate-300 transition-colors"
+              className="rounded-full border border-line-default px-2 py-1 text-[10px] font-semibold text-slate-500 hover:text-slate-300 transition-colors"
             >
               Hover
             </button>
@@ -241,17 +251,20 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
         </div>
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold text-white">Graph #{graph.originalGraphId}</span>
+          <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-cyan-200">
+            {modelSignature.shortLabel}
+          </span>
         </div>
         <div className="flex flex-wrap gap-2 text-[9px]">
-          <span className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-400">GT: <b className="text-slate-200">{gtLabel}</b></span>
-          <span className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-400">Pred: <b className={graph.correct === 1 ? 'text-green-400' : 'text-red-400'}>{predLabel}</b></span>
-          <span className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-400">
+          <span className="bg-deep border border-line-default px-2 py-0.5 rounded text-slate-400">GT: <b className="text-slate-200">{gtLabel}</b></span>
+          <span className="bg-deep border border-line-default px-2 py-0.5 rounded text-slate-400">Pred: <b className={graph.correct === 1 ? 'text-green-400' : 'text-red-400'}>{predLabel}</b></span>
+          <span className="bg-deep border border-line-default px-2 py-0.5 rounded text-slate-400">
             {graph.nodes.length}n / {graph.links.length}e
           </span>
         </div>
       </div>
 
-      <div className="mb-3 grid grid-cols-3 gap-1.5 rounded-md border border-slate-800/60 bg-slate-900/50 p-2">
+      <div className="mb-3 grid grid-cols-3 gap-1.5 rounded-md border border-line-subtle bg-nebula p-2">
         <MetaStat label="Density" value={graph.structural?.density} />
         <MetaStat label="Clustering" value={graph.structural?.avg_clustering} />
         <MetaStat label="AvgDeg" value={graph.structural?.avg_degree} digits={1} />
@@ -264,7 +277,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
             {(confidence * 100).toFixed(1)}%
           </span>
         </div>
-        <div className="h-1.5 w-full bg-slate-800/60 rounded-full overflow-hidden">
+        <div className="h-1.5 w-full bg-nebula rounded-full overflow-hidden">
           <div
             className={`h-full transition-all duration-500 ${graph.correct === 1 ? 'bg-emerald-500' : 'bg-red-500'}`}
             style={{ width: `${Math.max(0, Math.min(1, confidence)) * 100}%` }}
@@ -272,7 +285,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
         </div>
       </div>
 
-      <div ref={containerRef} className="flex-1 min-h-[140px] relative bg-slate-900/30 rounded-xl overflow-hidden border border-slate-800/50 shadow-inner">
+      <div ref={containerRef} className="flex-1 min-h-[140px] relative bg-nebula rounded-xl overflow-hidden border border-line-subtle shadow-inner">
         <ForceGraph2D
           ref={fgRef}
           width={dim.w}
@@ -281,7 +294,25 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
           nodeCanvasObjectMode={() => 'replace'}
           nodeCanvasObject={(node, ctx, globalScale) => {
             if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
-            const size = 6
+            const contribs = currSnap?.node_contributions?.[graph.sourceIndex] || []
+            const score = Math.max(0, Math.min(1, contribs[node.id] || 0))
+            const size = modelSignature.id === 'GCN' ? 6 + score * 3 : 6
+            if (modelSignature.id === 'SAGE' && score > 0.35) {
+              ctx.beginPath()
+              ctx.arc(node.x, node.y, size + 8, 0, 2 * Math.PI, false)
+              ctx.strokeStyle = 'rgba(34,197,94,0.24)'
+              ctx.lineWidth = 1
+              ctx.setLineDash([3, 3])
+              ctx.stroke()
+              ctx.setLineDash([])
+            }
+            if (modelSignature.id === 'GAT' && score > 0.6) {
+              ctx.beginPath()
+              ctx.arc(node.x, node.y, size + 7, 0, 2 * Math.PI, false)
+              ctx.strokeStyle = 'rgba(245,158,11,0.5)'
+              ctx.lineWidth = 2
+              ctx.stroke()
+            }
             ctx.beginPath()
             ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false)
             const color = heatmapColors[node.id] || '#475569'
@@ -299,8 +330,22 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
             const label = node.original_id !== undefined ? node.original_id : node.id
             ctx.fillText(label, node.x, node.y)
           }}
-          linkColor={() => 'rgba(148,163,184,0.1)'}
-          linkWidth={1}
+          linkColor={(link) => {
+            if (modelSignature.id === 'GCN') return 'rgba(56,189,248,0.16)'
+            if (modelSignature.id === 'SAGE') return 'rgba(34,197,94,0.16)'
+            const source = typeof link.source === 'object' ? link.source.id : link.source
+            const target = typeof link.target === 'object' ? link.target.id : link.target
+            const contribs = currSnap?.node_contributions?.[graph.sourceIndex] || []
+            const weight = ((contribs[source] || 0) + (contribs[target] || 0)) / 2
+            return weight > 0.5 ? 'rgba(245,158,11,0.44)' : 'rgba(148,163,184,0.1)'
+          }}
+          linkWidth={(link) => {
+            const source = typeof link.source === 'object' ? link.source.id : link.source
+            const target = typeof link.target === 'object' ? link.target.id : link.target
+            const contribs = currSnap?.node_contributions?.[graph.sourceIndex] || []
+            const weight = ((contribs[source] || 0) + (contribs[target] || 0)) / 2
+            return modelSignature.id === 'GAT' ? 1 + weight * 2 : 1
+          }}
           backgroundColor="transparent"
           cooldownTicks={60}
           d3VelocityDecay={0.6}
@@ -327,10 +372,10 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
         </div>
       </div>
 
-      <div className="mt-3 rounded-xl border border-slate-800/60 bg-slate-900/50 p-3 space-y-2">
-        <div className="text-nano text-slate-500 uppercase font-semibold tracking-ultra">Narrative profile</div>
+      <div className="mt-3 rounded-xl border border-line-subtle bg-nebula p-3 space-y-2">
+        <div className="text-nano text-slate-500 uppercase font-semibold tracking-ultra">Narrative profile · {modelSignature.primaryLabel}</div>
         <p className="text-[11px] leading-relaxed text-slate-300">
-          {graph.motifSignature}. Top-k contribution is <span className="text-slate-100 font-semibold">{graph.readoutBucket}</span>, global entropy is <span className="text-slate-100 font-semibold">{graph.entropyBucket}</span>, so the readout pattern is <span className="text-slate-100 font-semibold">{readoutPattern}</span>.
+          {graph.motifSignature}. Top-k contribution is <span className="text-slate-100 font-semibold">{graph.readoutBucket}</span>, global entropy is <span className="text-slate-100 font-semibold">{graph.entropyBucket}</span>, so the readout pattern is <span className="text-slate-100 font-semibold">{readoutPattern}</span>. {modelSignature.explanation}
         </p>
         <div className="flex flex-wrap gap-1.5">
           <Tag label={graph.densityBucket} />
@@ -347,10 +392,10 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
             {graph.topContributors.map((node) => (
               <div key={node.nodeId} className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="w-5 h-5 rounded-sm flex items-center justify-center bg-slate-800 text-nano font-bold text-slate-100 shrink-0">
+                  <div className="w-5 h-5 rounded-sm flex items-center justify-center bg-nebula text-nano font-bold text-slate-100 shrink-0">
                     {node.nodeId}
                   </div>
-                  <div className="h-1 flex-1 bg-slate-800/50 rounded-full overflow-hidden">
+                  <div className="h-1 flex-1 bg-nebula/50 rounded-full overflow-hidden">
                     <div className="h-full bg-amber-500" style={{ width: `${Math.max(0, Math.min(1, node.value)) * 100}%` }} />
                   </div>
                 </div>
@@ -378,7 +423,7 @@ function MetaStat({ label, value, digits = 3 }) {
 
 function Tag({ label }) {
   return (
-    <span className="rounded-full border border-slate-700/70 bg-slate-900/70 px-2 py-0.5 text-[10px] font-semibold text-slate-200">
+    <span className="rounded-full border border-line-default bg-nebula px-2 py-0.5 text-[10px] font-semibold text-slate-200">
       {label}
     </span>
   )

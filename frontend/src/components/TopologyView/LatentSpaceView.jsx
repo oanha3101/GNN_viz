@@ -196,7 +196,7 @@ export default function LatentSpaceView() {
   }))
 
   return (
-    <div ref={containerRef} className="w-full h-full relative bg-slate-950 overflow-hidden">
+    <div ref={containerRef} className="w-full h-full relative bg-nebula overflow-hidden">
       <canvas
         ref={canvasRef}
         style={{ width: dims.width, height: dims.height, cursor: 'crosshair' }}
@@ -204,7 +204,7 @@ export default function LatentSpaceView() {
         onClick={handleClick}
       />
 
-      <div className="absolute top-2 right-2 z-10 bg-slate-900/85 border border-slate-700/40 rounded-xl px-3 py-2 text-[9px] text-slate-300">
+      <div className="absolute top-2 right-2 z-10 bg-nebula border border-line-subtle rounded-xl px-3 py-2 text-[9px] text-slate-300">
         <div className="text-slate-500 uppercase tracking-wider mb-1">Latent Quality</div>
         <div className="flex items-center gap-3">
           <span className="text-green-400">Valid {(latentPointValidity.filter(v => v >= 0.5).length / Math.max(1, latentPoints.length) * 100).toFixed(0)}%</span>
@@ -214,7 +214,7 @@ export default function LatentSpaceView() {
 
       {/* Interpolation slider */}
       {selectedPts.length === 2 && (
-        <div className="absolute bottom-3 left-3 right-3 z-10 bg-slate-900/90 backdrop-blur-md rounded-xl px-3 py-2 border border-slate-700/50">
+        <div className="absolute bottom-3 left-3 right-3 z-10 bg-deep/90 backdrop-blur-md rounded-xl px-3 py-2 border border-line-subtle">
           <div className="flex items-center gap-2">
             <span className="text-[9px] text-blue-400 font-bold">A</span>
             <input

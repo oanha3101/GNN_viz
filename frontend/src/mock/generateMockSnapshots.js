@@ -433,7 +433,12 @@ export function generateTask1Mock(numNodes = 60, numEpochs = 100, modelOrOptions
 
 
 // ── Task 2: Graph Classification ──────────────────────────────────────────────
-export function generateTask2Mock(numGraphs = 50, numEpochs = 80) {
+export function generateTask2Mock(numGraphs = 50, numEpochs = 80, modelType = 'GCN') {
+  const normalizedModel = String(modelType || 'GCN').toUpperCase().includes('SAGE')
+    ? 'SAGE'
+    : String(modelType || 'GCN').toUpperCase() === 'GAT'
+      ? 'GAT'
+      : 'GCN'
   // Seeded graph generation
   const graphs = Array.from({ length: numGraphs }, (_, g) => {
     const n = seededRandInt(g * 1337 + 1, 6, 14)
@@ -455,9 +460,15 @@ export function generateTask2Mock(numGraphs = 50, numEpochs = 80) {
   })
 
   // Each graph has a fixed convergence epoch
-  const graphConvergeEpoch = Array.from({ length: numGraphs }, (_, g) =>
-    Math.floor(seededRandRange(g * 999 + 17, 0.1, 0.65) * numEpochs)
-  )
+  const graphConvergeEpoch = Array.from({ length: numGraphs }, (_, g) => {
+    const base = seededRandRange(g * 999 + 17, 0.1, 0.65)
+    const modelShift = normalizedModel === 'GAT'
+      ? -0.07
+      : normalizedModel === 'SAGE'
+        ? (g % 5 === 0 ? 0.18 : 0.05)
+        : 0.04
+    return Math.max(1, Math.floor(Math.max(0.06, Math.min(0.82, base + modelShift)) * numEpochs))
+  })
   const graphWrongPred = Array.from({ length: numGraphs }, (_, g) =>
     (graphs[g].groundTruth + 1) % 2
   )
@@ -481,6 +492,10 @@ export function generateTask2Mock(numGraphs = 50, numEpochs = 80) {
       if (epoch >= graphConvergeEpoch[gi]) return g.groundTruth
       const noise = seededRand(gi * 9999 + epoch * 7)
       const localProg = epoch / Math.max(graphConvergeEpoch[gi], 1)
+      if (normalizedModel === 'SAGE') {
+        const earlyFlip = seededRand(gi * 4409 + epoch * 31) < Math.max(0.02, 0.24 * (1 - progress))
+        if (earlyFlip) return (g.groundTruth + 1) % 2
+      }
       if (noise < localProg * 0.25) return g.groundTruth
       return graphWrongPred[gi]
     })
@@ -488,31 +503,49 @@ export function generateTask2Mock(numGraphs = 50, numEpochs = 80) {
     // Confidence: smoothly rises as epoch advances
     const confidences = graphs.map((g, gi) => {
       const distToConverge = Math.max(0, graphConvergeEpoch[gi] - epoch)
-      const baseConf = sigmoid(5 * (progress - distToConverge / numEpochs))
-      const jitter = (seededRand(gi * 511 + epoch) - 0.5) * 0.06
+      const slope = normalizedModel === 'GAT' ? 6.4 : normalizedModel === 'SAGE' ? 4.4 : 5
+      const baseConf = sigmoid(slope * (progress - distToConverge / numEpochs))
+      const jitterScale = normalizedModel === 'SAGE' ? 0.12 * (1 - progress * 0.7) : 0.06
+      const jitter = (seededRand(gi * 511 + epoch) - 0.5) * jitterScale
       return Math.max(0.5, Math.min(0.99, baseConf + jitter))
     })
 
     // Graph Embeddings (moving to clusters 0 and 1)
-    const clusterProgress = Math.pow(progress, 0.6)
+    const clusterExponent = normalizedModel === 'GAT' ? 0.5 : normalizedModel === 'SAGE' ? 0.85 : 0.72
+    const clusterProgress = Math.pow(progress, clusterExponent)
     const embeddings2d = graphs.map((g, gi) => {
       // Create a static localized target for each graph so they form a beautiful cloud cluster
       const targetX = (g.groundTruth === 0 ? -5 : 5) + (seededRand(gi * 111) - 0.5) * 4.5
       const targetY = (seededRand(gi * 222) - 0.5) * 4.5
       
-      const jx = (seededRand(gi * 229 + epoch) - 0.5) * (1 - clusterProgress)
-      const jy = (seededRand(gi * 317 + epoch) - 0.5) * (1 - clusterProgress)
+      const sageShake = normalizedModel === 'SAGE' ? 1.6 * Math.max(0, 1 - progress * 1.2) : 1
+      const jx = (seededRand(gi * 229 + epoch) - 0.5) * (1 - clusterProgress) * sageShake
+      const jy = (seededRand(gi * 317 + epoch) - 0.5) * (1 - clusterProgress) * sageShake
       
       return [lerp(startPos[gi][0], targetX, clusterProgress) + jx, lerp(startPos[gi][1], targetY, clusterProgress) + jy]
     })
 
-    // Node contributions (readout heatmap)
-    // As epoch increases, the "important" node gets higher score, others drop
+    // Node contributions (readout heatmap). Each model keeps a distinct
+    // visual signature while staying on the same real Task 2 schema.
     const nodeContributions = graphs.map((g, gi) => {
       const imp = importantNode[gi]
       return g.nodes.map((n, ni) => {
-        const base = ni === imp ? 0.2 + 0.8 * progress : 0.2 + 0.3 * (1 - progress)
-        const jitter = (seededRand(gi * 100 + ni + epoch * 13) - 0.5) * 0.1
+        let base
+        if (normalizedModel === 'GAT') {
+          const isLocalMotif = ni === imp || ni === (imp + 1) % g.nodes.length
+          base = isLocalMotif ? 0.15 + 0.9 * Math.pow(progress, 0.65) : 0.22 * (1 - progress)
+        } else if (normalizedModel === 'SAGE') {
+          const dist = Math.min(Math.abs(ni - imp), g.nodes.length - Math.abs(ni - imp))
+          const neighborhood = dist <= 2
+          const stability = Math.pow(progress, 1.1)
+          base = neighborhood ? 0.28 + 0.48 * stability : 0.22 + 0.18 * (1 - stability)
+        } else {
+          const dist = Math.min(Math.abs(ni - imp), g.nodes.length - Math.abs(ni - imp))
+          const smooth = Math.max(0, 1 - dist / Math.max(2, g.nodes.length / 2))
+          base = 0.24 + 0.48 * progress * smooth + 0.16 * (1 - progress)
+        }
+        const jitterScale = normalizedModel === 'SAGE' ? 0.16 * (1 - progress * 0.6) : normalizedModel === 'GAT' ? 0.07 : 0.05
+        const jitter = (seededRand(gi * 100 + ni + epoch * 13) - 0.5) * jitterScale
         return Math.max(0, Math.min(1, base + jitter))
       })
     })
@@ -574,7 +607,13 @@ export function generateTask2Mock(numGraphs = 50, numEpochs = 80) {
 
     snapshots.push({
       epoch,
+      model_type: normalizedModel,
+      epochs_target: numEpochs,
+      epochs_completed: epoch + 1,
+      early_stopped: false,
+      stop_reason: null,
       graph_predictions: predictions,
+      graph_ground_truth: graphs.map((graph) => graph.groundTruth),
       graph_confidences: confidences,
       graph_probabilities: graphProbabilities,
       confidence_margins: confidenceMargins,
@@ -583,6 +622,17 @@ export function generateTask2Mock(numGraphs = 50, numEpochs = 80) {
       graph_correct: graphCorrect,
       graph_embeddings_2d: embeddings2d,
       node_contributions: nodeContributions,
+      readout_quality: {
+        mean_entropy: attentionEntropy.reduce((sum, value) => sum + value, 0) / Math.max(1, attentionEntropy.length),
+        diffuse_share: attentionEntropy.filter((value) => value >= 0.7).length / Math.max(1, attentionEntropy.length),
+        concentrated_share: attentionEntropy.filter((value) => value <= 0.35).length / Math.max(1, attentionEntropy.length),
+        model_signature: normalizedModel,
+      },
+      trust_profile: {
+        readout_diffuse_share: attentionEntropy.filter((value) => value >= 0.7).length / Math.max(1, attentionEntropy.length),
+        high_conf_wrong_rate: graphCorrect.filter((value, index) => value === 0 && confidences[index] >= 0.75).length / Math.max(1, graphCorrect.length),
+        shortcut_risk_score: normalizedModel === 'GCN' ? 0.22 : normalizedModel === 'GAT' ? 0.28 : 0.2,
+      },
       train_loss: Math.max(0, trainLoss),
       val_loss: Math.max(0, valLoss),
       train_acc: Math.max(0, trainAcc),

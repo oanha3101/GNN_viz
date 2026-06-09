@@ -409,7 +409,7 @@ export default function TaskTopology5() {
           <NodeHoverCard />
 
           {/* Embedding-cluster legend (replaces former Task-3-style 'proximity' edge legend) */}
-          <div className="absolute bottom-3 left-3 bg-white/85 dark:bg-black/55 backdrop-blur-md rounded-xl px-3 py-2 border border-slate-300/60 dark:border-white/10 z-10 pointer-events-none shadow-lg">
+          <div className="absolute bottom-3 left-3 bg-white/85 dark:bg-black/55 backdrop-blur-md rounded-xl px-3 py-2 border border-slate-300/60 dark:border-line-subtle z-10 pointer-events-none shadow-lg">
             <div className="text-[9px] text-slate-500 dark:text-twilight uppercase tracking-widest font-bold mb-1.5">
               Node color = {hasLabels ? 'Class label' : 'Embedding cluster'}
             </div>
@@ -426,7 +426,7 @@ export default function TaskTopology5() {
 
           {/* Anomaly Legend */}
           {showAnomalies && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md rounded-xl px-4 py-2 border border-white/10 z-10 pointer-events-none shadow-lg">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md rounded-xl px-4 py-2 border border-line-subtle z-10 pointer-events-none shadow-lg">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" /><span className="text-[10px] text-green-400 font-bold">Good</span></div>
                 <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" /><span className="text-[10px] text-red-400 font-bold">Anomaly</span></div>
@@ -443,19 +443,19 @@ export default function TaskTopology5() {
             )}
             <button
               onClick={() => setShowAnomalies(v => !v)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border shadow-lg ${showAnomalies ? 'bg-amber-500/20 border-amber-500/50 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'bg-black/40 border-white/10 text-starlight hover:bg-white/10 hover:text-white backdrop-blur-md'}`}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border shadow-lg ${showAnomalies ? 'bg-amber-500/20 border-amber-500/50 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'bg-black/40 border-line-subtle text-starlight hover:bg-white/10 hover:text-white backdrop-blur-md'}`}
             >
               ANOMALIES
             </button>
             {sizeMode === 'subsample' && (
               <button
                 onClick={() => setResampleKey(k => k + 1)}
-                className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/40 border border-white/10 text-starlight hover:bg-white/10 hover:text-white backdrop-blur-md transition-all shadow-lg"
+                className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/40 border border-line-subtle text-starlight hover:bg-white/10 hover:text-white backdrop-blur-md transition-all shadow-lg"
               >
                 RESAMPLE
               </button>
             )}
-            <div className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-right min-w-16 backdrop-blur-md shadow-lg">
+            <div className="bg-black/40 border border-line-subtle rounded-lg px-3 py-1.5 text-right min-w-16 backdrop-blur-md shadow-lg">
               <div className="text-[8px] text-twilight uppercase font-bold tracking-widest">Nodes</div>
               <div className="text-xs font-bold font-mono text-white-star leading-none mt-0.5">{numNodes.toLocaleString()}</div>
             </div>
@@ -464,7 +464,7 @@ export default function TaskTopology5() {
           {/* Fit button (bottom-right) */}
           <button
             onClick={fitView}
-            className="absolute bottom-3 right-3 z-10 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/40 border border-white/10 text-starlight hover:text-white hover:bg-white/10 backdrop-blur-md transition-all shadow-lg"
+            className="absolute bottom-3 right-3 z-10 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/40 border border-line-subtle text-starlight hover:text-white hover:bg-white/10 backdrop-blur-md transition-all shadow-lg"
             title="Fit to view (F)"
           >
             FIT

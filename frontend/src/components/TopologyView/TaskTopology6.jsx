@@ -27,8 +27,8 @@ const SHAPE_TONE = {
   clique:       { bg: 'bg-fuchsia-500/15', border: 'border-fuchsia-500/40', text: 'text-fuchsia-200' },
   dense:        { bg: 'bg-amber-500/15',   border: 'border-amber-500/40',   text: 'text-amber-200' },
   sparse:       { bg: 'bg-slate-500/15',   border: 'border-slate-500/40',   text: 'text-slate-300' },
-  generic:      { bg: 'bg-slate-800/40',   border: 'border-slate-700/60',   text: 'text-slate-300' },
-  empty:        { bg: 'bg-slate-800/40',   border: 'border-slate-700/60',   text: 'text-slate-500' },
+  generic:      { bg: 'bg-nebula/40',   border: 'border-line-default/60',   text: 'text-slate-300' },
+  empty:        { bg: 'bg-nebula/40',   border: 'border-line-default/60',   text: 'text-slate-500' },
 }
 
 /**
@@ -125,7 +125,7 @@ function CompareCard({ title, graph, invalid }) {
   const n = graph.nodes.length
   const d = (graph.density ?? (m / Math.max(1, (n * (n - 1)) / 2))).toFixed(2)
   return (
-    <div className="bg-slate-900/40 rounded-xl p-3 border border-slate-800/60">
+    <div className="bg-nebula rounded-xl p-3 border border-line-subtle">
       <div className="flex items-center justify-between mb-2 gap-2">
         <span className="text-nano font-black text-slate-400 uppercase tracking-ultra">{title}</span>
         <ShapeBadge shape={shape} />
@@ -178,7 +178,7 @@ export default function TaskTopology6() {
 
   if (!rawGraphs.length) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-slate-600 bg-slate-950">
+      <div className="w-full h-full flex items-center justify-center text-slate-600 bg-nebula">
         <div className="text-center">
           <p className="text-xs font-black uppercase tracking-ultra">Awaiting Latent Formation</p>
         </div>
@@ -194,15 +194,15 @@ export default function TaskTopology6() {
   return (
     <div className="w-full h-full overflow-y-auto overflow-x-hidden p-6 bg-abyss custom-scrollbar">
       <div className="flex flex-wrap items-center gap-3 mb-3">
-        <div className="flex items-center gap-2 bg-slate-900/60 border border-white/5 px-3 py-2 rounded-xl">
+        <div className="flex items-center gap-2 bg-nebula border border-white/5 px-3 py-2 rounded-xl">
           <span className="text-nano text-slate-500 font-black uppercase tracking-ultra">Valid</span>
           <span className="text-lg font-black font-mono text-green-400">{validityPct}%</span>
         </div>
-        <div className="flex items-center gap-2 bg-slate-900/60 border border-white/5 px-3 py-2 rounded-xl">
+        <div className="flex items-center gap-2 bg-nebula border border-white/5 px-3 py-2 rounded-xl">
           <span className="text-nano text-slate-500 font-black uppercase tracking-ultra">Mean n</span>
           <span className="text-lg font-black font-mono text-slate-200">{avgNodes}</span>
         </div>
-        <div className="flex items-center gap-2 bg-slate-900/60 border border-white/5 px-3 py-2 rounded-xl">
+        <div className="flex items-center gap-2 bg-nebula border border-white/5 px-3 py-2 rounded-xl">
           <span className="text-nano text-slate-500 font-black uppercase tracking-ultra">Novel</span>
           <span className="text-lg font-black font-mono text-purple-300">{novelCount}/{rawGraphs.length}</span>
         </div>
@@ -215,7 +215,7 @@ export default function TaskTopology6() {
               className={`px-3 py-1.5 text-nano font-black uppercase tracking-ultra rounded-lg border transition-colors ${
                 filterMode === chip.id
                   ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-200'
-                  : 'bg-slate-900/40 border-white/5 text-slate-500 hover:text-slate-300'
+                  : 'bg-nebula border-white/5 text-slate-500 hover:text-slate-300'
               }`}
             >
               {chip.label}
@@ -253,14 +253,14 @@ export default function TaskTopology6() {
           const borderClass = selected
             ? 'border-indigo-500/60 ring-2 ring-indigo-500/40'
             : g.valid
-              ? 'border-slate-800/60 hover:border-slate-600/60'
+              ? 'border-line-subtle hover:border-line-default/60'
               : 'border-red-500/30 hover:border-red-400/50'
 
           return (
             <div
               key={g.id ?? i}
               onClick={() => setExpandedGraph(selected ? null : g.id)}
-              className={`relative rounded-xl p-3 cursor-pointer border bg-slate-900/40 transition-colors ${borderClass}`}
+              className={`relative rounded-xl p-3 cursor-pointer border bg-nebula transition-colors ${borderClass}`}
             >
               <div className="flex items-center justify-between mb-2 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -301,7 +301,7 @@ export default function TaskTopology6() {
       </div>
 
       {expanded && (
-        <div className="mt-6 bg-slate-900/60 border border-indigo-500/30 rounded-xl p-4">
+        <div className="mt-6 bg-nebula border border-indigo-500/30 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-micro font-black text-slate-300 uppercase tracking-ultra">
               Generated vs nearest source graph
@@ -324,7 +324,7 @@ export default function TaskTopology6() {
                 graph={nearestSource.graph}
               />
             ) : (
-              <div className="bg-slate-900/40 rounded-xl p-3 text-slate-500 text-xs flex items-center justify-center">
+              <div className="bg-nebula rounded-xl p-3 text-slate-500 text-xs flex items-center justify-center">
                 No source distribution available.
               </div>
             )}

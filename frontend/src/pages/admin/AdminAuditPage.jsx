@@ -167,7 +167,7 @@ export default function AdminAuditPage() {
                       {expanded && item.details_json ? (
                         <tr className="admin-tr">
                           <td colSpan={5} className="admin-td">
-                            <pre className="max-h-48 overflow-auto rounded-lg border border-line-subtle/40 bg-slate-50 p-3 font-mono text-[11px] text-slate-700 dark:border-cyan-400/15 dark:bg-slate-900/60 dark:text-slate-200">
+                            <pre className="max-h-48 overflow-auto rounded-lg border border-line-subtle/40 bg-slate-50 p-3 font-mono text-[11px] text-slate-700 dark:border-cyan-400/15 dark:bg-deep/60 dark:text-slate-200">
                               {JSON.stringify(item.details_json, null, 2)}
                             </pre>
                           </td>

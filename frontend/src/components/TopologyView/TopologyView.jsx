@@ -743,7 +743,7 @@ export default function TopologyView({ reportMode = false }) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="fixed z-[100] w-48 rounded-xl border border-line-default/50 bg-deep/95 backdrop-blur-xl shadow-2xl overflow-hidden p-1"
+            className="fixed z-[100] w-48 rounded-xl border border-line-default/50 bg-nebula backdrop-blur-xl shadow-2xl overflow-hidden p-1"
             style={{ left: contextMenu.x, top: contextMenu.y }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -896,7 +896,7 @@ export default function TopologyView({ reportMode = false }) {
                   {headShares.map((h) => (
                     <div key={h.idx} className="flex items-center gap-1">
                       <span className="text-[7px] font-mono w-4 text-twilight">H{h.idx}</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-slate-800/70 overflow-hidden">
+                      <div className="flex-1 h-1.5 rounded-full bg-nebula overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-300"
                           style={{
@@ -922,7 +922,7 @@ export default function TopologyView({ reportMode = false }) {
       <div className="absolute bottom-3 left-3 bg-abyss/80 backdrop-blur-md rounded-lg px-3 py-2
                       border border-line-subtle/50 z-10 pointer-events-none">
         <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-line-subtle/50 pb-2">
-          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[8px] uppercase tracking-[0.18em] text-moonlight">
+          <span className="rounded-full border border-line-subtle bg-white/5 px-2 py-1 text-[8px] uppercase tracking-[0.18em] text-moonlight">
             {selectedModel}
           </span>
           <span className="text-[9px] text-[#8f88c8]">

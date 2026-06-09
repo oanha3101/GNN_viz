@@ -46,7 +46,7 @@ export default function Task6MetricsPanel({ forcedTab = null, hideTabControls = 
   return (
     <div className="w-full h-full flex flex-col">
       {!hideTabControls && (
-        <div className="flex items-center gap-1 px-3 pt-2 pb-1.5 border-b border-slate-800/60 shrink-0 flex-wrap">
+        <div className="flex items-center gap-1 px-3 pt-2 pb-1.5 border-b border-line-subtle shrink-0 flex-wrap">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -54,7 +54,7 @@ export default function Task6MetricsPanel({ forcedTab = null, hideTabControls = 
               className={`px-2.5 py-1 rounded-md text-micro font-bold transition-colors ${
                 tab === t.id
                   ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-nebula/50'
               }`}
             >
               {t.label}
@@ -83,7 +83,7 @@ function StatPill({ label, value, tone = 'slate' }) {
     amber: 'text-amber-300',
   }[tone] || 'text-slate-200'
   return (
-    <div className="bg-slate-900/60 border border-slate-800/60 rounded-lg px-3 py-2 min-w-[96px]">
+    <div className="bg-nebula border border-line-subtle rounded-lg px-3 py-2 min-w-[96px]">
       <div className="text-nano text-slate-500 font-black uppercase tracking-ultra">{label}</div>
       <div className={`text-base font-black font-mono ${toneClass}`}>{value}</div>
     </div>
@@ -168,7 +168,7 @@ function HistBlock({ title, metric }) {
     generated: metric.generated[i]?.count ?? 0,
   }))
   return (
-    <div className="bg-slate-900/40 border border-slate-800/60 rounded-lg p-2">
+    <div className="bg-nebula border border-line-subtle rounded-lg p-2">
       <div className="text-nano text-slate-400 font-black uppercase tracking-ultra mb-1 px-1">{title}</div>
       <ResponsiveContainer width="100%" height={140}>
         <BarChart data={rows} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
@@ -214,17 +214,17 @@ function InvalidityTab({ snap }) {
           Show {invalidTotal}/{total} on canvas
         </button>
       </div>
-      <div className="flex flex-col divide-y divide-slate-800/60 border border-slate-800/60 rounded-lg overflow-hidden">
+      <div className="flex flex-col divide-y divide-slate-800/60 border border-line-subtle rounded-lg overflow-hidden">
         {rows.map((r) => {
           const pct = invalidTotal > 0 ? (r.count / invalidTotal) * 100 : 0
           return (
             <button
               key={r.reason}
               onClick={() => setFilterMode?.('invalid')}
-              className="flex items-center gap-2 px-3 py-2 text-left bg-slate-900/40 hover:bg-slate-800/60 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-left bg-nebula hover:bg-nebula transition-colors"
             >
               <span className="text-xs text-slate-200 font-mono min-w-[120px]">{r.reason}</span>
-              <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div className="flex-1 h-1.5 bg-nebula rounded-full overflow-hidden">
                 <div className="h-full bg-red-500/60" style={{ width: `${pct}%` }} />
               </div>
               <span className="text-xs font-mono text-red-300 tabular-nums w-8 text-right">{r.count}</span>
@@ -254,11 +254,11 @@ function SignaturesTab({ snap }) {
       {groups.length === 0 ? (
         <div className="text-slate-500 text-xs py-6 text-center">No signatures yet.</div>
       ) : (
-        <div className="flex flex-col divide-y divide-slate-800/60 border border-slate-800/60 rounded-lg overflow-hidden">
+        <div className="flex flex-col divide-y divide-slate-800/60 border border-line-subtle rounded-lg overflow-hidden">
           {groups.slice(0, 10).map((g) => (
             <div
               key={g.signature}
-              className="flex items-center gap-3 px-3 py-2 bg-slate-900/40 text-xs"
+              className="flex items-center gap-3 px-3 py-2 bg-nebula text-xs"
             >
               <span className="font-mono text-slate-300 min-w-[120px] truncate" title={g.signature}>
                 {g.signature}

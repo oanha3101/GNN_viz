@@ -233,7 +233,7 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
   return (
     <div className="flex flex-col h-full">
       {/* Tab bar */}
-      <div className="border-b border-slate-800/60 px-4 py-3">
+      <div className="border-b border-line-subtle px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           {tabs.map((tab) => {
             const Icon = tab.icon
@@ -244,7 +244,7 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
                   activeTab === tab.id
                     ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30 shadow-[0_0_0_1px_rgba(168,85,247,0.16)]'
-                    : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                    : 'text-slate-400 hover:bg-nebula/50 hover:text-slate-200'
                 }`}
               >
                 <Icon size={13} />
@@ -253,7 +253,7 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
             )
           })}
           <div className="flex-1" />
-          <div className="rounded-full border border-slate-800 bg-slate-950/60 px-3 py-1 text-[11px] font-medium text-slate-400">
+          <div className="rounded-full border border-line-default bg-nebula px-3 py-1 text-[11px] font-medium text-slate-400">
             {t('analyst.runs_selected', { n: experimentIds.length })}
           </div>
         </div>
@@ -264,7 +264,7 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
         <button
           onClick={fetchInsights}
           disabled={loading}
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-slate-400 transition-all hover:bg-slate-800/50 hover:text-slate-200"
+          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-slate-400 transition-all hover:bg-nebula/50 hover:text-slate-200"
         >
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           {t('analyst.refresh')}
@@ -325,7 +325,7 @@ function InsightsTab({ data, t, lang }) {
             <InsightCard key={i} insight={insight} index={i} t={t} lang={lang} />
           ))
         ) : (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-400">
+          <div className="rounded-xl border border-line-default bg-nebula p-4 text-sm text-slate-400">
             {t('analyst.no_insights_yet')}
           </div>
         )}
@@ -344,7 +344,7 @@ function InsightCard({ insight, index, t, lang }) {
     : insight.type === 'dataset_fit' ? GitCompare
     : Lightbulb
 
-  const sigColor = insight.significance === 'high' ? 'border-amber-500/30 bg-amber-500/5' : 'border-slate-700 bg-slate-900/40'
+  const sigColor = insight.significance === 'high' ? 'border-amber-500/30 bg-amber-500/5' : 'border-line-defaultNone bg-nebula'
 
   return (
     <motion.div
@@ -355,7 +355,7 @@ function InsightCard({ insight, index, t, lang }) {
     >
       <div className="flex items-start gap-3">
         <div className={`p-2 rounded-lg ${
-          insight.significance === 'high' ? 'bg-amber-500/10 text-amber-400' : 'bg-slate-800 text-slate-400'
+          insight.significance === 'high' ? 'bg-amber-500/10 text-amber-400' : 'bg-nebula text-slate-400'
         }`}>
           <Icon size={16} />
         </div>
@@ -456,7 +456,7 @@ function DiagnosticsTab({ data, t, lang }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {/* Radar Comparison */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <div className="rounded-xl border border-line-default bg-nebula p-4">
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{t('analyst.model_radar')}</h4>
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -506,7 +506,7 @@ function DiagnosticCard({ model, diagnostics, color, lang }) {
   const extraDiags = diagEntries.slice(6)
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+    <div className="rounded-xl border border-line-default bg-nebula p-4">
       <div className="flex items-center gap-2 mb-3">
         <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
         <h4 className="text-sm font-bold text-slate-100">{model}</h4>
@@ -575,7 +575,7 @@ function DiagnosticMetric({ label, value, lang }) {
   }
 
   return (
-    <div className="bg-slate-800/50 rounded-lg px-2.5 py-1.5">
+    <div className="bg-nebula/50 rounded-lg px-2.5 py-1.5">
       <div className="text-[10px] text-slate-500 uppercase tracking-wider">{displayLabel}</div>
       <div className="text-[11px] font-semibold mt-0.5" style={{ color: labelColor }}>
         {displayValue}
@@ -628,7 +628,7 @@ function FailuresTab({ data, t, lang }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {/* Failure Matrix */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <div className="rounded-xl border border-line-default bg-nebula p-4">
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{copy.failurePatternMatrix}</h4>
         <FailureMatrix failureData={failureData} lang={lang} />
       </div>
@@ -636,11 +636,11 @@ function FailuresTab({ data, t, lang }) {
       {/* Per-Model Failure Cards */}
       <div className="grid gap-3 lg:grid-cols-2">
         {failureData.map(({ model, issues, diagnostics }) => (
-          <div key={model} className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+          <div key={model} className="rounded-xl border border-line-default bg-nebula p-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="w-3 h-3 rounded-full" style={{ backgroundColor: MODEL_COLORS[model] }} />
               <h4 className="text-sm font-bold text-slate-100">{model}</h4>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-nebula text-slate-400">
                 {copy.issueCount(issues.length)}
               </span>
             </div>
@@ -690,7 +690,7 @@ function FailureMatrix({ failureData, lang }) {
         </thead>
         <tbody>
           {failureData.map(({ model, issues }) => (
-            <tr key={model} className="border-t border-slate-800/50">
+            <tr key={model} className="border-t border-line-subtle">
               <td className="py-2 px-2 font-semibold text-slate-200">{model}</td>
               {allIssueTypes.map((type) => {
                 const issue = issues.find((i) => i.type === type)
@@ -790,7 +790,7 @@ function DatasetTab({ data, t, lang }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {/* Topology Overview */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <div className="rounded-xl border border-line-default bg-nebula p-4">
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{t('analyst.dataset_topology')}</h4>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <TopologyStat label={copy.nodes} value={props.n_nodes} />
@@ -808,7 +808,7 @@ function DatasetTab({ data, t, lang }) {
 
       {/* Class Distribution */}
       {classData.length > 0 && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+        <div className="rounded-xl border border-line-default bg-nebula p-4">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{t('analyst.class_distribution')}</h4>
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -852,7 +852,7 @@ function DatasetTab({ data, t, lang }) {
 
 function TopologyStat({ label, value, color }) {
   return (
-    <div className="bg-slate-800/50 rounded-lg px-3 py-2">
+    <div className="bg-nebula/50 rounded-lg px-3 py-2">
       <div className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</div>
       <div className="text-sm font-bold mt-0.5" style={{ color: color || '#e2e8f0' }}>
         {value ?? 'N/A'}
@@ -900,7 +900,7 @@ function ModelsTab({ data, t, lang }) {
         const color = { GCN: '#22c55e', GAT: '#f59e0b', SAGE: '#06b6d4' }[model] || '#a855f7'
 
         return (
-          <div key={model} className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+          <div key={model} className="rounded-xl border border-line-default bg-nebula p-4">
             <div className="flex items-center gap-3 mb-4">
               <span className="w-4 h-4 rounded-full" style={{ backgroundColor: color }} />
               <div>
@@ -943,7 +943,7 @@ function ModelsTab({ data, t, lang }) {
             </div>
 
             {/* Behavior description */}
-            <div className="mt-3 text-[11px] text-slate-400 leading-relaxed bg-slate-800/30 rounded-lg p-3">
+            <div className="mt-3 text-[11px] text-slate-400 leading-relaxed bg-nebula/30 rounded-lg p-3">
               {model === 'GCN' && (lang === 'vi'
                 ? 'GCN chuẩn hoá đối xứng và gom hàng xóm theo trọng số đều nhau. Nó mạnh khi hàng xóm cùng nhãn, nhưng cũng dễ bị nhiễu nếu cạnh mang tín hiệu lệch hoặc heterophily.'
                 : 'GCN applies symmetric normalization across all neighbors equally. It excels when neighbors share labels (homophily) but treats all edges equally, making it vulnerable to noisy or heterophilic connections.')}

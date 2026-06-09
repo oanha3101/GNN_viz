@@ -731,7 +731,7 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
         {!reportMode && (
           <button
             onClick={() => setSpotlightCollapsed((value) => !value)}
-            className={`self-start rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur-md transition-colors ${isDarkTheme ? 'border border-white/10 bg-slate-950/72 text-slate-300 hover:border-cyan-400/30 hover:text-white' : 'border border-slate-200 bg-white/90 text-slate-700 hover:border-rose-300 hover:text-slate-950'}`}
+            className={`self-start rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur-md transition-colors ${isDarkTheme ? 'border border-line-subtle bg-nebula/72 text-slate-300 hover:border-cyan-400/30 hover:text-white' : 'border border-slate-200 bg-white/90 text-slate-700 hover:border-rose-300 hover:text-slate-950'}`}
           >
             {spotlightCollapsed ? '▸ Mo rong' : '▾ Thu gon'}
           </button>
@@ -766,7 +766,7 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
               <span className={`rounded-full px-2 py-0.5 ${isDarkTheme ? 'border border-amber-400/20 bg-amber-400/10 text-amber-200' : 'border border-amber-200 bg-amber-50 text-amber-700'}`}>
                 {snap?.training_phase === 'baseline' ? 'Baseline chưa train' : phaseMeta.note}
               </span>
-              <span className={`rounded-full px-2 py-0.5 ${isDarkTheme ? 'border border-white/10 bg-white/5 text-slate-200' : 'border border-slate-200 bg-white text-slate-700'}`}>
+              <span className={`rounded-full px-2 py-0.5 ${isDarkTheme ? 'border border-line-subtle bg-white/5 text-slate-200' : 'border border-slate-200 bg-white text-slate-700'}`}>
                 Q {modularityQ.toFixed(3)}
               </span>
               {baselineSimilarity != null && (
@@ -779,7 +779,7 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
                   Độ tin cậy trực quan {(visualizationConfidence * 100).toFixed(0)}%
                 </span>
               )}
-              <span className={`rounded-full px-2 py-0.5 ${isDarkTheme ? 'border border-white/10 bg-white/5 text-slate-200' : 'border border-slate-200 bg-white text-slate-700'}`}>
+              <span className={`rounded-full px-2 py-0.5 ${isDarkTheme ? 'border border-line-subtle bg-white/5 text-slate-200' : 'border border-slate-200 bg-white text-slate-700'}`}>
                 {copy.labels.bridgeRatio} {((snap?.bridge_ratio ?? 0) * 100).toFixed(1)}%
               </span>
               {Number.isFinite(snap?.best_epoch) && (
@@ -817,7 +817,7 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
 
         {/* Mode buttons — always visible, but compact icons when collapsed */}
         {!reportMode && (
-          <div className={`flex gap-1 rounded-xl p-1.5 backdrop-blur-md ${isDarkTheme ? 'border border-white/10 bg-slate-950/72 shadow-[0_12px_30px_rgba(2,6,23,0.45)]' : 'border border-slate-200 bg-white/90 shadow-[0_12px_30px_rgba(15,23,42,0.08)]'}`}>
+          <div className={`flex gap-1 rounded-xl p-1.5 backdrop-blur-md ${isDarkTheme ? 'border border-line-subtle bg-nebula/72 shadow-[0_12px_30px_rgba(2,6,23,0.45)]' : 'border border-slate-200 bg-white/90 shadow-[0_12px_30px_rgba(15,23,42,0.08)]'}`}>
             {[
               ['community', copy.labels.communityMode],
               ['bridges', copy.labels.bridgeMode],
@@ -829,7 +829,7 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
                   key={mode}
                   onClick={() => setVisualMode(mode)}
                   className={`rounded-lg px-3 py-1.5 text-nano font-black uppercase tracking-ultra transition-all ${isActive
-                      ? (isDarkTheme ? 'bg-slate-800 text-white shadow-inner shadow-cyan-500/10' : 'bg-[var(--gradient-primary)] text-white shadow-[0_10px_20px_-12px_rgba(220,38,38,0.45)]')
+                      ? (isDarkTheme ? 'bg-nebula text-white shadow-inner shadow-cyan-500/10' : 'bg-[var(--gradient-primary)] text-white shadow-[0_10px_20px_-12px_rgba(220,38,38,0.45)]')
                       : (isDarkTheme ? 'text-slate-400 hover:text-slate-100 hover:bg-white/5' : 'text-slate-500 hover:text-slate-950 hover:bg-slate-100')
                     }`}
                 >
@@ -844,12 +844,12 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
       {/* Ă¢â€â‚¬Ă¢â€â‚¬ HUD Ă¢â‚¬â€ top-right Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬Ă¢â€â‚¬ */}
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 items-end">
         {/* Q score */}
-        <div className={`backdrop-blur-md rounded-xl px-3 py-2 flex items-center gap-2 ${isDarkTheme ? 'border border-white/10 bg-slate-950/74 shadow-[0_12px_28px_rgba(2,6,23,0.4)]' : 'border border-slate-200 bg-white/92 shadow-[0_12px_28px_rgba(15,23,42,0.08)]'}`}>
+        <div className={`backdrop-blur-md rounded-xl px-3 py-2 flex items-center gap-2 ${isDarkTheme ? 'border border-line-subtle bg-nebula/74 shadow-[0_12px_28px_rgba(2,6,23,0.4)]' : 'border border-slate-200 bg-white/92 shadow-[0_12px_28px_rgba(15,23,42,0.08)]'}`}>
           <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra">Q</span>
           <span className={`text-sm font-black font-mono leading-none ${modularityQ > 0.4 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
             {modularityQ.toFixed(3)}
           </span>
-          <div className={`w-14 h-1.5 rounded-full overflow-hidden ${isDarkTheme ? 'bg-slate-800/70' : 'bg-slate-200'}`}>
+          <div className={`w-14 h-1.5 rounded-full overflow-hidden ${isDarkTheme ? 'bg-nebula' : 'bg-slate-200'}`}>
             <div
               className="h-full bg-amber-500 dark:bg-amber-400"
               style={{ width: `${Math.max(0, Math.min(1, modularityQ)) * 100}%` }}
@@ -859,7 +859,7 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
 
         {/* Model overlay badge */}
         {overlayMode !== 'none' && (
-          <div className={`backdrop-blur-md rounded-xl px-3 py-1.5 flex items-center gap-2 ${isDarkTheme ? 'border border-white/10 bg-slate-950/74 shadow-[0_12px_28px_rgba(2,6,23,0.4)]' : 'border border-slate-200 bg-white/92 shadow-[0_12px_28px_rgba(15,23,42,0.08)]'}`}>
+          <div className={`backdrop-blur-md rounded-xl px-3 py-1.5 flex items-center gap-2 ${isDarkTheme ? 'border border-line-subtle bg-nebula/74 shadow-[0_12px_28px_rgba(2,6,23,0.4)]' : 'border border-slate-200 bg-white/92 shadow-[0_12px_28px_rgba(15,23,42,0.08)]'}`}>
             <span className={`text-[10px] font-black uppercase tracking-wider ${
               overlayMode === 'smoothness' ? 'text-emerald-400' :
               overlayMode === 'attention' ? 'text-amber-400' :
@@ -877,7 +877,7 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
 
         {/* Overlay metric (auto-shown when model has data) */}
         {overlayMode !== 'none' && overlayMetric != null && (
-          <div className={`backdrop-blur-md rounded-xl px-3 py-1.5 flex items-center gap-2 ${isDarkTheme ? 'border border-white/10 bg-slate-950/74 shadow-[0_12px_28px_rgba(2,6,23,0.4)]' : 'border border-slate-200 bg-white/92 shadow-[0_12px_28px_rgba(15,23,42,0.08)]'}`}>
+          <div className={`backdrop-blur-md rounded-xl px-3 py-1.5 flex items-center gap-2 ${isDarkTheme ? 'border border-line-subtle bg-nebula/74 shadow-[0_12px_28px_rgba(2,6,23,0.4)]' : 'border border-slate-200 bg-white/92 shadow-[0_12px_28px_rgba(15,23,42,0.08)]'}`}>
             <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra">{overlayMetricLabel}</span>
             <span className="text-sm font-black font-mono leading-none text-cyan-600 dark:text-cyan-400">
               {overlayMode === 'migration'
@@ -888,7 +888,7 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
         )}
 
         {/* Community legend */}
-        <div className={`backdrop-blur-md rounded-xl px-3 py-1.5 flex items-center gap-2 flex-wrap max-w-[240px] justify-end ${isDarkTheme ? 'border border-white/10 bg-slate-950/74 shadow-[0_12px_28px_rgba(2,6,23,0.4)]' : 'border border-slate-200 bg-white/92 shadow-[0_12px_28px_rgba(15,23,42,0.08)]'}`}>
+        <div className={`backdrop-blur-md rounded-xl px-3 py-1.5 flex items-center gap-2 flex-wrap max-w-[240px] justify-end ${isDarkTheme ? 'border border-line-subtle bg-nebula/74 shadow-[0_12px_28px_rgba(2,6,23,0.4)]' : 'border border-slate-200 bg-white/92 shadow-[0_12px_28px_rgba(15,23,42,0.08)]'}`}>
           {activeCommunityIds.map((i) => (
             <button
               key={i}
@@ -902,7 +902,7 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
           ))}
           {/* Correct/Wrong node legend — only when ground truth available */}
           {graphData?.nodes?.some(n => n.community != null || n.communityGT != null) && (
-            <div className={`flex items-center gap-1.5 pl-2 ${isDarkTheme ? 'border-l border-slate-700/50' : 'border-l border-slate-200'}`}>
+            <div className={`flex items-center gap-1.5 pl-2 ${isDarkTheme ? 'border-l border-line-subtle' : 'border-l border-slate-200'}`}>
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
               <span className={`text-nano ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>Khớp GT sau align</span>
               <div className="w-2 h-2 rounded-full bg-red-400" />
@@ -910,13 +910,13 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
             </div>
           )}
           {overlayMode === 'none' && (
-            <div className={`flex items-center gap-1 pl-2 ${isDarkTheme ? 'border-l border-slate-700/50' : 'border-l border-slate-200'}`}>
-              <div className={`w-2.5 h-2.5 rounded-full ${isDarkTheme ? 'border border-white/60 bg-white/10' : 'border border-slate-400 bg-slate-100'}`} />
+            <div className={`flex items-center gap-1 pl-2 ${isDarkTheme ? 'border-l border-line-subtle' : 'border-l border-slate-200'}`}>
+              <div className={`w-2.5 h-2.5 rounded-full ${isDarkTheme ? 'border border-line-subtle0 bg-white/10' : 'border border-slate-400 bg-slate-100'}`} />
               <span className={`text-nano font-bold ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>{copy.labels.bridgeNode}</span>
             </div>
           )}
           {overlayMode === 'migration' && migratingNodes.size > 0 && (
-            <div className={`flex items-center gap-1 pl-2 ${isDarkTheme ? 'border-l border-slate-700/50' : 'border-l border-slate-200'}`}>
+            <div className={`flex items-center gap-1 pl-2 ${isDarkTheme ? 'border-l border-line-subtle' : 'border-l border-slate-200'}`}>
               <div className="w-2.5 h-2.5 rounded-full border-2 border-amber-400 bg-amber-400/20" />
               <span className={`text-nano font-bold ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>{copy.labels.migratingNode}</span>
             </div>
@@ -927,7 +927,7 @@ export default function TaskTopology4({ viewMode = null, reportMode = false }) {
       {/* Fit to view */}
       <button
         onClick={() => { try { fgRef.current && fgRef.current.zoomToFit(400, 80) } catch { /* ignore */ } }}
-        className={`absolute bottom-3 right-3 z-10 backdrop-blur-md rounded-xl px-3 py-1.5 text-nano font-bold transition-colors uppercase tracking-ultra ${isDarkTheme ? 'border border-white/10 bg-slate-950/74 text-slate-300 hover:text-white hover:border-cyan-500/40 shadow-[0_12px_28px_rgba(2,6,23,0.4)]' : 'border border-slate-200 bg-white/92 text-slate-700 hover:text-slate-950 hover:border-rose-300 shadow-[0_12px_28px_rgba(15,23,42,0.08)]'}`}
+        className={`absolute bottom-3 right-3 z-10 backdrop-blur-md rounded-xl px-3 py-1.5 text-nano font-bold transition-colors uppercase tracking-ultra ${isDarkTheme ? 'border border-line-subtle bg-nebula/74 text-slate-300 hover:text-white hover:border-cyan-500/40 shadow-[0_12px_28px_rgba(2,6,23,0.4)]' : 'border border-slate-200 bg-white/92 text-slate-700 hover:text-slate-950 hover:border-rose-300 shadow-[0_12px_28px_rgba(15,23,42,0.08)]'}`}
         title={`${copy.labels.fit} (F)`}
       >
         {copy.labels.fit} - F

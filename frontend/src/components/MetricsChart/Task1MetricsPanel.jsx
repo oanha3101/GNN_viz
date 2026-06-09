@@ -90,13 +90,13 @@ export default function Task1MetricsPanel({ forcedTab = null, hideTabControls = 
       title="Task 1 Lens"
       subtitle="Node classification diagnostics across accuracy, confusion, neighborhood fit, and embedding structure."
       padding="none"
-      className="border-slate-800/70 bg-slate-950/55 shadow-[0_12px_32px_rgba(15,23,42,0.35)]"
+      className="border-line-default bg-nebula shadow-[0_12px_32px_rgba(15,23,42,0.35)]"
       actions={(
         <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 text-[11px] font-semibold text-cyan-300">
             Epoch {epochInt}
           </div>
-          <div className="rounded-full border border-slate-700/70 bg-slate-900/70 px-2.5 py-1 text-[11px] font-semibold text-slate-300">
+          <div className="rounded-full border border-line-default bg-nebula px-2.5 py-1 text-[11px] font-semibold text-slate-300">
             {snapshots.length} snapshot frames
           </div>
         </div>
@@ -104,7 +104,7 @@ export default function Task1MetricsPanel({ forcedTab = null, hideTabControls = 
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
           <span>Polished for readability only, without adding heavier charts or runtime effects.</span>
-          <span className="rounded-full border border-slate-700/70 bg-slate-900/70 px-2.5 py-1 font-semibold text-slate-300">
+          <span className="rounded-full border border-line-default bg-nebula px-2.5 py-1 font-semibold text-slate-300">
             Active view: {TABS.find((t) => t.id === activeTab)?.label}
           </span>
         </div>
@@ -120,7 +120,7 @@ export default function Task1MetricsPanel({ forcedTab = null, hideTabControls = 
                 className={`rounded-full border px-3 py-1.5 text-nano font-bold uppercase tracking-ultra transition-colors ${
                   activeTab === t.id
                     ? 'border-cyan-400/35 bg-cyan-500/12 text-cyan-300 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]'
-                    : 'border-slate-800/70 bg-slate-900/55 text-slate-500 hover:border-slate-700 hover:text-slate-300'
+                    : 'border-line-default bg-nebula text-slate-500 hover:border-line-default hover:text-slate-300'
                 }`}
               >
                 {t.label}
@@ -196,7 +196,7 @@ function OverviewTab({ snapshots, epochInt, snap, graphData }) {
 
       <LiveSignatureCard model={selectedModel} signature={signature} />
 
-      <div className="rounded-xl border border-slate-800/60 bg-slate-950/45 p-3">
+      <div className="rounded-xl border border-line-subtle bg-nebula p-3">
         <div className="mb-2">
           <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Loss and validation accuracy</span>
           <p className="mt-1 text-[11px] text-slate-400">
@@ -270,7 +270,7 @@ function ReliabilityCard({ reliability }) {
             {reliability.status === 'danger' ? 'Interpret carefully before trusting a single run' : reliability.status === 'warn' ? 'Metrics are usable, but context matters' : 'Metrics look reasonably stable for this snapshot'}
           </div>
         </div>
-        <div className="rounded-full border border-slate-700/70 bg-slate-950/60 px-2.5 py-1 text-[11px] font-semibold text-slate-300">
+        <div className="rounded-full border border-line-default bg-nebula px-2.5 py-1 text-[11px] font-semibold text-slate-300">
           Train-val gap {(reliability.trainValGap * 100).toFixed(1)} pts
         </div>
       </div>
@@ -290,7 +290,7 @@ function ReliabilityCard({ reliability }) {
         </div>
       )}
 
-      <div className="mt-3 rounded-lg border border-slate-800/70 bg-slate-950/45 p-3">
+      <div className="mt-3 rounded-lg border border-line-default bg-nebula p-3">
         <div className="text-[11px] font-semibold text-slate-200">Per-class split context</div>
         <div className="mt-1 text-[11px] leading-relaxed text-slate-400">
           Read this table before over-interpreting a noisy metric. Tiny class support in `val/test` can make accuracy and Macro F1 jump around across runs.
@@ -298,7 +298,7 @@ function ReliabilityCard({ reliability }) {
         <div className="mt-3 overflow-auto">
           <table className="min-w-full text-[11px]">
             <thead>
-              <tr className="border-b border-slate-800/70 text-slate-500">
+              <tr className="border-b border-line-default text-slate-500">
                 <th className="py-1 pr-4 text-left font-semibold">Class</th>
                 {splitColumns.map((column) => (
                   <th key={column.key} className="py-1 text-right font-semibold">{column.label}</th>
@@ -334,7 +334,7 @@ function ReliabilityCard({ reliability }) {
         </div>
       </div>
 
-      <div className="mt-3 rounded-lg border border-slate-800/70 bg-slate-950/45 px-3 py-2 text-[11px] leading-relaxed text-slate-400">
+      <div className="mt-3 rounded-lg border border-line-default bg-nebula px-3 py-2 text-[11px] leading-relaxed text-slate-400">
         <span className="font-semibold text-slate-200">Reading guide: </span>
         {splitGuidance}
       </div>
@@ -342,7 +342,7 @@ function ReliabilityCard({ reliability }) {
       {!!reliability.warnings.length && (
         <div className="mt-3 space-y-2">
           {reliability.warnings.map((warning) => (
-            <div key={warning.code} className="rounded-lg border border-slate-800/70 bg-slate-950/45 px-3 py-2">
+            <div key={warning.code} className="rounded-lg border border-line-default bg-nebula px-3 py-2">
               <div className={`text-[11px] font-semibold ${warning.level === 'danger' ? 'text-red-300' : 'text-amber-300'}`}>
                 {warning.title}
               </div>
@@ -360,7 +360,7 @@ function ReliabilityCard({ reliability }) {
 function LiveSignatureCard({ model, signature }) {
   if (!signature) return null
   return (
-    <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-3">
+    <div className="rounded-lg border border-line-subtle bg-nebula p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Model Lens</div>
@@ -424,7 +424,7 @@ function ConfusionTab({ snap, graphData, onPick, snapshots, epochInt }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
       <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-        <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-2">
+        <div className="rounded-lg border border-line-subtle bg-nebula p-2">
           <div className="mb-1 text-nano font-bold uppercase tracking-ultra text-slate-500">
             {numClasses}x{numClasses} matrix | diagonal = green, off-diagonal = red
           </div>
@@ -479,7 +479,7 @@ function ConfusionTab({ snap, graphData, onPick, snapshots, epochInt }) {
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-2">
+        <div className="rounded-lg border border-line-subtle bg-nebula p-2">
           <div className="mb-1 text-nano font-bold uppercase tracking-ultra text-slate-500">Per-class | Precision / Recall / F1</div>
           <table className="w-full text-nano font-mono">
             <thead>
@@ -493,7 +493,7 @@ function ConfusionTab({ snap, graphData, onPick, snapshots, epochInt }) {
             </thead>
             <tbody>
               {perClass.map((pc, c) => (
-                <tr key={c} className="border-t border-slate-800/40">
+                <tr key={c} className="border-t border-line-default/40">
                   <td className="py-1" style={{ color: CLASS_COLORS[c % CLASS_COLORS.length] }}>C{c}</td>
                   <td className="text-right text-slate-200">{(pc.precision * 100).toFixed(1)}%</td>
                   <td className="text-right text-slate-200">{(pc.recall * 100).toFixed(1)}%</td>
@@ -529,7 +529,7 @@ function HomophilyTab({ snap, onPick }) {
       <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">
         Neighbor majority ratio vs node correctness | click a dot to focus the node on canvas
       </div>
-      <div className="flex-1 min-h-[200px] rounded-xl border border-slate-800/60 bg-slate-950/45 p-2">
+      <div className="flex-1 min-h-[200px] rounded-xl border border-line-subtle bg-nebula p-2">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
@@ -570,7 +570,7 @@ function InsightsTab({ snap, snapshots, graphData, selectedNodeId }) {
   return (
     <div className="custom-scrollbar space-y-2 overflow-auto">
       <DiagnosticsTab snap={snap} snapshots={snapshots} graphData={graphData} />
-      <div className="rounded-xl border border-slate-800/60 bg-slate-950/40 p-3">
+      <div className="rounded-xl border border-line-subtle bg-deep p-3">
         <div className="mb-2 flex items-center justify-between gap-3">
           <div>
             <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Latent space</div>
@@ -605,7 +605,7 @@ function DiagnosticsTab({ snap, snapshots, graphData }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
       <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-        <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-2">
+        <div className="rounded-lg border border-line-subtle bg-nebula p-2">
           <div className="mb-1 flex items-center justify-between">
             <span className="text-nano font-bold uppercase tracking-ultra text-slate-500">Dirichlet Energy (over-smoothing)</span>
             {isOversmooth && <span className="text-nano font-bold text-red-400">Collapsed</span>}
@@ -636,7 +636,7 @@ function DiagnosticsTab({ snap, snapshots, graphData }) {
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-2">
+        <div className="rounded-lg border border-line-subtle bg-nebula p-2">
           <div className="mb-1 text-nano font-bold uppercase tracking-ultra text-slate-500">
             Class distribution | GT vs predicted
           </div>
@@ -735,7 +735,7 @@ function Task1ModelCompare({ currentSnapshot, currentSnapshots, graphData }) {
   )
 
   return (
-    <div className="space-y-3 rounded-lg border border-slate-800/60 bg-slate-900/40 p-3">
+    <div className="space-y-3 rounded-lg border border-line-subtle bg-nebula p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Model Compare</div>
@@ -744,7 +744,7 @@ function Task1ModelCompare({ currentSnapshot, currentSnapshots, graphData }) {
             Comparing saved completed runs for {activeDatasetVersionName || `dataset version #${activeDatasetVersionId || '-'}`}.
           </div>
         </div>
-        <div className="rounded-full border border-slate-700 bg-slate-950/60 px-2.5 py-1 text-nano font-bold uppercase tracking-wide text-slate-300">
+        <div className="rounded-full border border-line-default bg-nebula px-2.5 py-1 text-nano font-bold uppercase tracking-wide text-slate-300">
           Live model: {selectedModel}
         </div>
       </div>
@@ -772,7 +772,7 @@ function Task1ModelCompare({ currentSnapshot, currentSnapshots, graphData }) {
                 <div
                   key={exp.id}
                   className={`rounded-lg border px-3 py-2 ${
-                    isCurrentModel ? 'border-indigo-400/40 bg-indigo-500/10' : 'border-slate-800 bg-slate-950/40'
+                    isCurrentModel ? 'border-indigo-400/40 bg-indigo-500/10' : 'border-line-default bg-deep'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -817,7 +817,7 @@ function Task1ModelCompare({ currentSnapshot, currentSnapshots, graphData }) {
             </div>
           </div>
 
-          <div className="h-[200px] rounded-xl border border-slate-800/60 bg-slate-950/45 p-2">
+          <div className="h-[200px] rounded-xl border border-line-subtle bg-nebula p-2">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={series} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
@@ -853,7 +853,7 @@ function Task1ModelCompare({ currentSnapshot, currentSnapshots, graphData }) {
             <CompareInsight title="Fastest convergence" value={analysis.fastestConvergence} />
           </div>
 
-          <div className="rounded-md border border-slate-800 bg-slate-950/40 px-3 py-3 text-nano leading-relaxed text-slate-300">
+          <div className="rounded-md border border-line-default bg-deep px-3 py-3 text-nano leading-relaxed text-slate-300">
             <span className="font-bold text-slate-100">Analysis: </span>
             {analysis.summary}
           </div>
@@ -889,7 +889,7 @@ function buildLocalTask1Compare({ nodeCount, epochCount }) {
 function LocalModelCompare({ localCompare, currentSnapshot, selectedModel, message }) {
   return (
     <>
-      <div className="rounded-md border border-slate-800 bg-slate-950/40 px-3 py-3 text-nano leading-relaxed text-slate-400">
+      <div className="rounded-md border border-line-default bg-deep px-3 py-3 text-nano leading-relaxed text-slate-400">
         {message}
       </div>
 
@@ -901,7 +901,7 @@ function LocalModelCompare({ localCompare, currentSnapshot, selectedModel, messa
             <div
               key={run.model}
               className={`rounded-lg border px-3 py-2 ${
-                isCurrentModel ? 'border-cyan-400/40 bg-cyan-500/10' : 'border-slate-800 bg-slate-950/40'
+                isCurrentModel ? 'border-cyan-400/40 bg-cyan-500/10' : 'border-line-default bg-deep'
               }`}
             >
               <div className="flex items-center justify-between gap-2">
@@ -930,7 +930,7 @@ function LocalModelCompare({ localCompare, currentSnapshot, selectedModel, messa
         })}
       </div>
 
-      <div className="h-[200px] rounded-xl border border-slate-800/60 bg-slate-950/45 p-2">
+      <div className="h-[200px] rounded-xl border border-line-subtle bg-nebula p-2">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={localCompare.series} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
@@ -1076,7 +1076,7 @@ function resolveConvergenceEpoch(model) {
 
 function CompareInsight({ title, value }) {
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-950/40 px-3 py-2">
+    <div className="rounded-md border border-line-default bg-deep px-3 py-2">
       <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">{title}</div>
       <div className="mt-1 text-sm font-semibold text-slate-100">{value}</div>
     </div>
@@ -1085,7 +1085,7 @@ function CompareInsight({ title, value }) {
 
 function GuardrailStat({ label, value }) {
   return (
-    <div className="rounded-md border border-slate-800/70 bg-slate-950/45 px-3 py-2">
+    <div className="rounded-md border border-line-default bg-nebula px-3 py-2">
       <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">{label}</div>
       <div className="mt-1 text-sm font-semibold text-slate-100">{value}</div>
     </div>
@@ -1096,7 +1096,7 @@ function StatCell({ label, value, digits = 2, suffix = '', tone = 'neutral' }) {
   const toneClass = tone === 'good' ? 'text-emerald-400' : tone === 'warn' ? 'text-amber-400' : tone === 'bad' ? 'text-red-400' : 'text-slate-200'
   const safe = Number.isFinite(value) ? value : 0
   return (
-    <div className="rounded-md border border-slate-800/60 bg-slate-900/40 px-2 py-1">
+    <div className="rounded-md border border-line-subtle bg-nebula px-2 py-1">
       <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">{label}</div>
       <div className={`text-sm font-mono font-black tabular-nums ${toneClass}`}>
         {safe.toFixed(digits)}
@@ -1156,7 +1156,7 @@ function GCNLens({ snapshots, epochInt, snap }) {
 
       <div className="grid grid-cols-2 gap-3">
         {/* Dirichlet Energy sparkline */}
-        <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-3">
+        <div className="rounded-lg border border-line-subtle bg-nebula p-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-nano font-bold uppercase tracking-ultra text-slate-500">Dirichlet Energy</span>
             <span className={`font-mono text-sm font-black ${isOversmooth ? 'text-red-400' : 'text-emerald-400'}`}>
@@ -1183,7 +1183,7 @@ function GCNLens({ snapshots, epochInt, snap }) {
         </div>
 
         {/* Neighborhood Agreement sparkline */}
-        <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-3">
+        <div className="rounded-lg border border-line-subtle bg-nebula p-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-nano font-bold uppercase tracking-ultra text-slate-500">Neighbor Agreement</span>
             <span className="font-mono text-sm font-black text-cyan-400">
@@ -1205,7 +1205,7 @@ function GCNLens({ snapshots, epochInt, snap }) {
       </div>
 
       {/* Reading guide */}
-      <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-3">
+      <div className="rounded-lg border border-line-subtle bg-nebula p-3">
         <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">How to read GCN</div>
         <div className="mt-1 text-[11px] text-slate-300 leading-relaxed">
           <strong>Dirichlet energy</strong> measures embedding diversity — it should decrease slowly. If it drops below 5% of initial, embeddings are collapsing (oversmoothing).
@@ -1265,7 +1265,7 @@ function GATLens({ snapshots, epochInt, snap }) {
 
       <div className="grid grid-cols-2 gap-3">
         {/* Attention Focus sparkline */}
-        <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-3">
+        <div className="rounded-lg border border-line-subtle bg-nebula p-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-nano font-bold uppercase tracking-ultra text-slate-500">Attention Focus</span>
             <span className="font-mono text-sm font-black text-amber-400">
@@ -1292,7 +1292,7 @@ function GATLens({ snapshots, epochInt, snap }) {
         </div>
 
         {/* Per-head breakdown */}
-        <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-3">
+        <div className="rounded-lg border border-line-subtle bg-nebula p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-nano font-bold uppercase tracking-ultra text-slate-500">Head Breakdown</span>
             <span className="text-nano text-slate-500">{headBreakdown?.length || 0} heads</span>
@@ -1302,7 +1302,7 @@ function GATLens({ snapshots, epochInt, snap }) {
               {headBreakdown.map((h) => (
                 <div key={h.head} className="flex items-center gap-2">
                   <span className="text-nano font-mono w-6 text-slate-400">{h.head}</span>
-                  <div className="flex-1 h-3 rounded-full bg-slate-800/70 overflow-hidden">
+                  <div className="flex-1 h-3 rounded-full bg-nebula overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-300"
                       style={{
@@ -1326,7 +1326,7 @@ function GATLens({ snapshots, epochInt, snap }) {
       </div>
 
       {/* Reading guide */}
-      <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-3">
+      <div className="rounded-lg border border-line-subtle bg-nebula p-3">
         <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">How to read GAT</div>
         <div className="mt-1 text-[11px] text-slate-300 leading-relaxed">
           <strong>Attention focus</strong> is entropy-based — high focus means a few edges get most attention (sharp boundary detection). Low focus = diffuse attention across all neighbors.
@@ -1360,7 +1360,7 @@ function SAGELens({ snapshots, epochInt, snap, totalEdges }) {
 
       <div className="grid grid-cols-2 gap-3">
         {/* Boundary Resilience sparkline */}
-        <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-3">
+        <div className="rounded-lg border border-line-subtle bg-nebula p-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-nano font-bold uppercase tracking-ultra text-slate-500">Boundary vs Interior</span>
             <span className="font-mono text-sm font-black text-cyan-400">
@@ -1386,7 +1386,7 @@ function SAGELens({ snapshots, epochInt, snap, totalEdges }) {
         </div>
 
         {/* Sampling Coverage sparkline */}
-        <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-3">
+        <div className="rounded-lg border border-line-subtle bg-nebula p-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-nano font-bold uppercase tracking-ultra text-slate-500">Sampling Coverage</span>
             <span className="font-mono text-sm font-black text-purple-400">
@@ -1414,7 +1414,7 @@ function SAGELens({ snapshots, epochInt, snap, totalEdges }) {
       </div>
 
       {/* Reading guide */}
-      <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-3">
+      <div className="rounded-lg border border-line-subtle bg-nebula p-3">
         <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">How to read GraphSAGE</div>
         <div className="mt-1 text-[11px] text-slate-300 leading-relaxed">
           <strong>Boundary resilience</strong> = accuracy on nodes whose neighbors span multiple communities. If boundary ≈ interior, SAGE handles edges well. Big gap = SAGE struggles at community boundaries.

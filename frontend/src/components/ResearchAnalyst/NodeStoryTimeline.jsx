@@ -104,7 +104,7 @@ export default function NodeStoryTimeline({ experimentId, nodeId, graphData, onC
   return (
     <div className="space-y-4">
       {/* Node Header */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <div className="rounded-xl border border-line-default bg-nebula p-4">
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-sm font-bold text-slate-100">Node #{nodeId}</h4>
@@ -178,7 +178,7 @@ export default function NodeStoryTimeline({ experimentId, nodeId, graphData, onC
 
       {/* Confidence Curve */}
       {confidenceData.length > 0 && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+        <div className="rounded-xl border border-line-default bg-nebula p-4">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
             Confidence Evolution
           </h4>
@@ -207,7 +207,7 @@ export default function NodeStoryTimeline({ experimentId, nodeId, graphData, onC
 
       {/* Class Probability Evolution */}
       {classProbData.length > 0 && classProbData[0] && Object.keys(classProbData[0]).length > 2 && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+        <div className="rounded-xl border border-line-default bg-nebula p-4">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
             Class Probability Evolution
           </h4>
@@ -241,7 +241,7 @@ export default function NodeStoryTimeline({ experimentId, nodeId, graphData, onC
       )}
 
       {/* Narrative Timeline */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <div className="rounded-xl border border-line-default bg-nebula p-4">
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
           <Clock size={14} /> Narrative Timeline
         </h4>
@@ -271,7 +271,7 @@ export default function NodeStoryTimeline({ experimentId, nodeId, graphData, onC
                     <div className={`w-2.5 h-2.5 rounded-full ${
                       isShift ? 'bg-amber-400' : isFirst ? 'bg-blue-400' : isLast ? 'bg-emerald-400' : 'bg-slate-600'
                     }`} />
-                    {i < arr.length - 1 && <div className="w-px flex-1 bg-slate-700/50 mt-1" />}
+                    {i < arr.length - 1 && <div className="w-px flex-1 bg-nebula/50 mt-1" />}
                   </div>
                   <div className="pb-3 flex-1">
                     <div className="flex items-center gap-2">

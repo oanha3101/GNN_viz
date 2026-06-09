@@ -81,7 +81,7 @@ export default function Task2ConfusionMatrix({
                     onClick={() => onSelectCell?.(i, j)}
                     style={cellStyle(i, j, val)}
                     className={`rounded-md border text-center py-3 text-xs font-mono font-bold tabular-nums transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500/60 ${
-                      isActive ? 'border-cyan-400 ring-2 ring-cyan-400/60' : 'border-slate-800/60 hover:border-slate-600/80'
+                      isActive ? 'border-cyan-400 ring-2 ring-cyan-400/60' : 'border-line-subtle hover:border-line-default'
                     } ${i === j ? 'text-emerald-200' : val > 0 ? 'text-red-200' : 'text-slate-500'}`}
                     aria-label={`Predicted ${names[i]} actual ${names[j]}: ${val}`}
                   >
@@ -109,7 +109,7 @@ export default function Task2ConfusionMatrix({
           </thead>
           <tbody className="font-mono tabular-nums">
             {names.map((n, i) => (
-              <tr key={i} className="border-t border-slate-800/60">
+              <tr key={i} className="border-t border-line-subtle">
                 <td className="py-1 text-slate-200">{n}</td>
                 <td className="py-1 text-right text-slate-400">{cm.support[i]}</td>
                 <td className="py-1 text-right text-slate-300">{(cm.precision[i] * 100).toFixed(1)}%</td>

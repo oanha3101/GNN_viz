@@ -41,22 +41,22 @@ export default function ModularityMonitor() {
   }
 
   return (
-    <div className="h-full flex flex-col p-3 text-xs overflow-auto bg-slate-950">
+    <div className="h-full flex flex-col p-3 text-xs overflow-auto bg-nebula">
       {/* Header Metrics */}
       <div className="grid grid-cols-3 gap-2 mb-3">
-        <div className="bg-slate-900/80 rounded-lg px-2 py-1.5 text-center border border-slate-800/50">
+        <div className="bg-nebula rounded-lg px-2 py-1.5 text-center border border-line-subtle">
           <span className="text-[8px] text-slate-500 block uppercase tracking-wider font-bold">Modularity Q</span>
           <span className={`text-sm font-black font-mono ${modQ > 0.4 ? 'text-green-400' : modQ > 0.2 ? 'text-yellow-400' : 'text-red-400'}`}>
             {modQ.toFixed(3)}
           </span>
         </div>
-        <div className="bg-slate-900/80 rounded-lg px-2 py-1.5 text-center border border-slate-800/50">
+        <div className="bg-nebula rounded-lg px-2 py-1.5 text-center border border-line-subtle">
           <span className="text-[8px] text-slate-500 block uppercase tracking-wider font-bold">Conductance</span>
           <span className={`text-sm font-black font-mono ${cond < 0.2 ? 'text-green-400' : 'text-yellow-400'}`}>
             {cond.toFixed(3)}
           </span>
         </div>
-        <div className="bg-slate-900/80 rounded-lg px-2 py-1.5 text-center border border-slate-800/50">
+        <div className="bg-nebula rounded-lg px-2 py-1.5 text-center border border-line-subtle">
           <span className="text-[8px] text-slate-500 block uppercase tracking-wider font-bold">Bridges</span>
           <span className="text-sm font-black font-mono text-white">{bridgeCount}</span>
         </div>

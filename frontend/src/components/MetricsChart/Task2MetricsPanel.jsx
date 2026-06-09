@@ -14,6 +14,7 @@ import {
   buildTask2FocusBuckets,
   buildTask2FocusStory,
   buildTask2GraphDescriptors,
+  buildTask2ModelSignature,
   buildTask2NarrativeSummary,
   buildTask2ResearchSignals,
   describeTask2ReadoutPattern,
@@ -118,6 +119,7 @@ export default function Task2MetricsPanel({
   const selectedCell = useGNNStore((s) => s.task2SelectedCell)
   const setSelectedCell = useGNNStore((s) => s.setTask2SelectedCell)
   const datasetName = useGNNStore((s) => s.datasetName || s.activeDatasetVersionName || s.hyperparams?.dataset)
+  const selectedModel = useGNNStore((s) => s.selectedModel)
 
   const [tab, setTab] = useState(forcedTab || 'overview')
 
@@ -149,6 +151,10 @@ export default function Task2MetricsPanel({
   const descriptors = useMemo(
     () => buildTask2GraphDescriptors({ snapshot: snap, graphs: indexedGraphs, classNames: graphClassNames }),
     [snap, indexedGraphs, graphClassNames]
+  )
+  const modelSignature = useMemo(
+    () => buildTask2ModelSignature(snap, snapshots, descriptors, selectedModel),
+    [snap, snapshots, descriptors, selectedModel]
   )
   const focusBuckets = useMemo(
     () => buildTask2FocusBuckets({ snapshot: snap, graphs: indexedGraphs, classNames: graphClassNames }),
@@ -343,7 +349,7 @@ export default function Task2MetricsPanel({
           <div className="rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 text-[11px] font-semibold text-cyan-300">
             Epoch {epochInt}
           </div>
-          <div className="rounded-full border border-slate-700/70 bg-slate-900/70 px-2.5 py-1 text-[11px] font-semibold text-slate-300">
+          <div className="rounded-full border border-line-default bg-nebula px-2.5 py-1 text-[11px] font-semibold text-slate-300">
             {collectionSummary.totalGraphs} {isViReport ? 'đồ thị' : 'graphs'}
           </div>
           {currentAccuracy != null && (
@@ -366,7 +372,7 @@ export default function Task2MetricsPanel({
                 {isViReport ? 'Ô' : 'Cell'} {resolvedSelectedCell.pred} {'->'} {resolvedSelectedCell.gt}
               </button>
             )}
-            <span className="rounded-full border border-slate-700/70 bg-slate-900/70 px-2.5 py-1 font-semibold text-slate-300">
+            <span className="rounded-full border border-line-default bg-nebula px-2.5 py-1 font-semibold text-slate-300">
               {isViReport ? 'Lát cắt' : 'Focus'}: {translatedActiveFocus.label} ({focusedDescriptors.length})
             </span>
           </div>
@@ -384,7 +390,7 @@ export default function Task2MetricsPanel({
                 className={`rounded-full border px-3 py-1.5 text-nano font-bold uppercase tracking-ultra transition-colors ${
                   tab === item.id
                     ? 'border-cyan-400/35 bg-cyan-500/12 text-cyan-300 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]'
-                    : 'border-slate-800/70 bg-slate-900/55 text-slate-500 hover:border-slate-700 hover:text-slate-300'
+                    : 'border-line-default bg-nebula text-slate-500 hover:border-line-default hover:text-slate-300'
                 }`}
               >
                 {TASK2_TAB_LABELS[reportLang]?.[item.id] || item.label}
@@ -413,6 +419,7 @@ export default function Task2MetricsPanel({
               researchSignals={translatedResearchSignals}
               epochSuggestion={epochSuggestion}
               focusStory={translatedFocusStory}
+              modelSignature={modelSignature}
               reportLang={reportLang}
               onJumpToEpoch={(epoch) => seekTo?.(epoch)}
               onJumpToWeakClass={() => {
@@ -503,6 +510,7 @@ export default function Task2MetricsPanel({
           {tab === 'readout' && (
             <ReadoutTab
               graph={featuredDescriptor}
+              modelSignature={modelSignature}
               classNames={graphClassNames}
               onSelect={setSelectedNode}
               reportLang={reportLang}
@@ -529,14 +537,14 @@ function FocusChipRow({ buckets, activeId, onChange }) {
             className={`rounded-2xl border px-3 py-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${
               active
                 ? 'border-cyan-400/30 bg-cyan-500/10'
-                : 'border-slate-800/70 bg-slate-950/45 hover:border-slate-700 hover:bg-slate-900/60'
+                : 'border-line-default bg-nebula hover:border-line-default hover:bg-nebula'
             }`}
           >
             <div className="flex items-center justify-between gap-2">
               <span className={`text-nano font-bold uppercase tracking-ultra ${active ? 'text-cyan-300' : 'text-slate-400'}`}>
                 {bucket.label}
               </span>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${active ? 'bg-cyan-500/18 text-cyan-200' : 'bg-slate-800/80 text-slate-400'}`}>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${active ? 'bg-cyan-500/18 text-cyan-200' : 'bg-nebula text-slate-400'}`}>
                 {bucket.graphIds.length}
               </span>
             </div>
@@ -544,6 +552,71 @@ function FocusChipRow({ buckets, activeId, onChange }) {
           </button>
         )
       })}
+    </div>
+  )
+}
+
+function Task2ModelSignatureCard({ signature, reportLang = 'en' }) {
+  if (!signature) return null
+  const isVi = reportLang === 'vi'
+  const metricRows = signature.id === 'GAT'
+    ? [
+      [isVi ? 'Độ tập trung attention' : 'Attention focus', signature.metrics.attention_focus],
+      [isVi ? 'Top-k đóng góp' : 'Top-k mass', signature.metrics.topk_contribution_mass],
+      [isVi ? 'Entropy giảm' : 'Entropy drop', signature.metrics.attention_entropy_trend],
+    ]
+    : signature.id === 'SAGE'
+      ? [
+        [isVi ? 'Độ ổn định' : 'Stability', signature.metrics.score_stability],
+        [isVi ? 'Graph dao động' : 'Flip rate', signature.metrics.prediction_flip_rate],
+        [isVi ? 'Dao động margin' : 'Margin variance', signature.metrics.margin_variance],
+      ]
+      : [
+        [isVi ? 'Độ mượt readout' : 'Readout smoothness', signature.metrics.readout_smoothness],
+        [isVi ? 'Đồng thuận cạnh' : 'Edge agreement', signature.metrics.contribution_agreement],
+        [isVi ? 'Readout loãng' : 'Diffuse share', signature.metrics.diffuse_readout_share],
+      ]
+
+  return (
+    <div className="rounded-2xl border border-cyan-500/18 bg-cyan-500/8 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-nano font-bold uppercase tracking-ultra text-cyan-300">
+            {isVi ? 'Dấu hiệu model đang học gì' : 'Model learning signature'}
+          </div>
+          <div className="mt-1 text-sm font-semibold text-slate-100">{signature.primaryLabel}</div>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{signature.explanation}</p>
+        </div>
+        <div className="rounded-full border border-cyan-400/25 bg-cyan-500/12 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-cyan-100">
+          {signature.metricLabel} {(signature.currentScore * 100).toFixed(0)}%
+        </div>
+      </div>
+      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
+        {metricRows.map(([label, value]) => (
+          <div key={label} className="rounded-xl border border-line-subtle bg-nebula p-2">
+            <div className="text-[9px] font-bold uppercase tracking-ultra text-slate-500">{label}</div>
+            <div className="mt-1 font-mono text-sm font-bold text-slate-100">{(Math.max(0, Math.min(1, value || 0)) * 100).toFixed(0)}%</div>
+          </div>
+        ))}
+      </div>
+      {signature.trend?.length > 1 && (
+        <div className="mt-3">
+          <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <span>{isVi ? 'Sparkline theo epoch' : 'Epoch sparkline'}</span>
+            <span>{signature.trend.length} frames</span>
+          </div>
+          <div className="flex h-10 items-end gap-1 rounded-xl border border-line-subtle bg-nebula px-2 py-1">
+            {signature.trend.slice(-32).map((point) => (
+              <div
+                key={point.epoch}
+                className="min-w-0 flex-1 rounded-t bg-cyan-400/75"
+                title={`Epoch ${point.epoch}: ${(point.value * 100).toFixed(1)}%`}
+                style={{ height: `${Math.max(8, Math.min(100, point.value * 100))}%` }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -558,6 +631,8 @@ function OverviewTab({
   researchSignals,
   epochSuggestion,
   focusStory,
+  modelSignature,
+  reportLang = 'en',
   onJumpToEpoch,
   onJumpToWeakClass,
   onJumpToStructure,
@@ -574,6 +649,7 @@ function OverviewTab({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       <ReliabilityCard reliability={reliability} />
+      <Task2ModelSignatureCard signature={modelSignature} reportLang={reportLang} />
       <HeroNarrativeCard narrative={narrative} onNextLensAction={onNextLensAction} />
       <BestEpochSuggestionCard suggestion={epochSuggestion} onJumpToEpoch={onJumpToEpoch} />
       <ResearchSignalsCard signals={researchSignals} onSignalAction={onSignalAction} />
@@ -597,7 +673,7 @@ function OverviewTab({
         <StatCell label="Size Bias" value={sizeBias || 0} digits={2} tone={Math.abs(sizeBias || 0) > 0.35 ? 'bad' : 'info'} />
       </div>
 
-      <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+      <div className="rounded-2xl border border-line-default bg-nebula p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Current focus</div>
@@ -605,13 +681,13 @@ function OverviewTab({
               {focus.description} This lens is currently showing {filteredCount} graph{filteredCount === 1 ? '' : 's'}.
             </p>
           </div>
-          <div className="rounded-full border border-slate-700/70 bg-slate-900/70 px-2.5 py-1 text-[11px] font-semibold text-slate-300">
+          <div className="rounded-full border border-line-default bg-nebula px-2.5 py-1 text-[11px] font-semibold text-slate-300">
             Slice size: {filteredCount}
           </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+      <div className="rounded-2xl border border-line-default bg-nebula p-3">
         <div className="mb-3">
           <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Collection balance</span>
           <p className="mt-1 text-[11px] text-slate-400">
@@ -620,12 +696,12 @@ function OverviewTab({
         </div>
         <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           {classCounts.map((item) => (
-            <div key={item.classId} className="rounded-xl border border-slate-800/60 bg-slate-900/55 p-3">
+            <div key={item.classId} className="rounded-xl border border-line-subtle bg-nebula p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[11px] font-semibold text-slate-200">{item.label}</span>
                 <span className="text-[11px] font-mono text-slate-400">{item.support}</span>
               </div>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800/70">
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-nebula">
                 <div className="h-full rounded-full bg-cyan-400/80" style={{ width: `${item.share * 100}%` }} />
               </div>
               <div className="mt-1 text-nano text-slate-500">{(item.share * 100).toFixed(1)}% of collection</div>
@@ -634,7 +710,7 @@ function OverviewTab({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+      <div className="rounded-2xl border border-line-default bg-nebula p-3">
         <div className="mb-2">
           <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Training trend</span>
           <p className="mt-1 text-[11px] text-slate-400">
@@ -646,7 +722,7 @@ function OverviewTab({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+      <div className="rounded-2xl border border-line-default bg-nebula p-3">
         <div className="mb-2">
           <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Per-class metrics</span>
           <p className="mt-1 text-[11px] text-slate-400">
@@ -675,7 +751,7 @@ function OverviewTab({
         )}
         <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
           {perClass.map((row) => (
-            <div key={row.class_id} className="rounded-xl border border-slate-800/60 bg-slate-900/55 p-3">
+            <div key={row.class_id} className="rounded-xl border border-line-subtle bg-nebula p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[11px] font-semibold text-slate-100">Class {row.class_id}</span>
                 <span className="text-[10px] font-mono text-slate-400">support {row.support}</span>
@@ -691,7 +767,7 @@ function OverviewTab({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+      <div className="rounded-2xl border border-line-default bg-nebula p-3">
         <div className="mb-2">
           <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Shortcut bias</span>
           <p className="mt-1 text-[11px] text-slate-400">
@@ -788,7 +864,7 @@ function BestEpochSuggestionCard({ suggestion, onJumpToEpoch }) {
       <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{suggestion.recommendation}</p>
       <p className="mt-2 text-[11px] leading-relaxed text-slate-400">{suggestion.rationale}</p>
       <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-        <div className="rounded-xl border border-white/6 bg-slate-950/55 p-3">
+        <div className="rounded-xl border border-line-subtle bg-nebula p-3">
           <div className="text-[10px] uppercase tracking-ultra text-slate-500">Best Macro F1</div>
           <div className="mt-2 text-[12px] font-semibold text-slate-100">
             Epoch {suggestion.bestMacro?.epoch ?? '—'}
@@ -806,7 +882,7 @@ function BestEpochSuggestionCard({ suggestion, onJumpToEpoch }) {
             </button>
           )}
         </div>
-        <div className="rounded-xl border border-white/6 bg-slate-950/55 p-3">
+        <div className="rounded-xl border border-line-subtle bg-nebula p-3">
           <div className="text-[10px] uppercase tracking-ultra text-slate-500">Best Balanced Acc</div>
           <div className="mt-2 text-[12px] font-semibold text-slate-100">
             Epoch {suggestion.bestBalanced?.epoch ?? '—'}
@@ -899,7 +975,7 @@ function SignalCard({ signal, onAction }) {
         <button
           type="button"
           onClick={() => onAction?.(signal.id)}
-          className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-slate-200 transition-colors hover:bg-white/8"
+          className="rounded-full border border-line-subtle bg-nebula px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-slate-200 transition-colors hover:bg-nebula"
         >
           Open lens
         </button>
@@ -924,7 +1000,7 @@ function HeroNarrativeCard({ narrative, onNextLensAction }) {
 
 function NarrativeCell({ label, value, actionLabel = null, onAction = null }) {
   return (
-    <div className="rounded-xl border border-white/6 bg-slate-950/55 p-3">
+    <div className="rounded-xl border border-line-subtle bg-nebula p-3">
       <div className="text-[10px] uppercase tracking-ultra text-slate-500">{label}</div>
       <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{value}</p>
       {actionLabel && onAction && (
@@ -974,7 +1050,7 @@ function ReliabilityCard({ reliability }) {
       {!!reliability.warnings?.length && (
         <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
           {reliability.warnings.map((warning) => (
-            <div key={warning} className="rounded-xl border border-white/6 bg-black/18 p-3 text-[11px] leading-relaxed text-slate-300">
+            <div key={warning} className="rounded-xl border border-line-subtle bg-nebula p-3 text-[11px] leading-relaxed text-slate-300">
               {warning}
             </div>
           ))}
@@ -1028,7 +1104,7 @@ function FailuresTab({
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3 task2-report-card">
+      <div className="rounded-2xl border border-line-default bg-nebula p-3 task2-report-card">
         <div className="mb-2">
           <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Batch heatmap</span>
           <p className="mt-1 text-[11px] text-slate-400">
@@ -1047,7 +1123,7 @@ function FailuresTab({
       </div>
 
       <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-        <div className="min-w-0 rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+        <div className="min-w-0 rounded-2xl border border-line-default bg-nebula p-3">
           {selectedCell && (
             <div className="mb-2 rounded-lg border border-cyan-500/15 bg-cyan-500/8 px-2 py-1 text-[10px] font-semibold uppercase tracking-ultra text-cyan-200">
               Confusion matrix slice counts
@@ -1062,7 +1138,7 @@ function FailuresTab({
             scopeLabel={selectedCell ? 'Cell slice' : 'Focus slice'}
           />
         </div>
-        <div className="min-w-0 rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+        <div className="min-w-0 rounded-2xl border border-line-default bg-nebula p-3">
           <div className="mb-2">
             <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Hardest cases</span>
             <p className="mt-1 text-[11px] text-slate-400">
@@ -1094,7 +1170,7 @@ function StructureTab({ snap, graphs, selectedId, onSelect, focus, selectedCell 
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
-      <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+      <div className="rounded-2xl border border-line-default bg-nebula p-3">
         <div className="mb-2">
           <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Structure explanation</span>
           <p className="mt-1 text-[11px] text-slate-400">
@@ -1110,7 +1186,7 @@ function StructureTab({ snap, graphs, selectedId, onSelect, focus, selectedCell 
         />
       </div>
 
-      <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+      <div className="rounded-2xl border border-line-default bg-nebula p-3">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
             <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Structural outliers</span>
@@ -1134,7 +1210,7 @@ function StructureTab({ snap, graphs, selectedId, onSelect, focus, selectedCell 
                 className={`rounded-xl border px-3 py-2 text-left transition-colors ${
                   selectedId === descriptor.originalGraphId
                     ? 'border-cyan-500/50 bg-cyan-500/10'
-                    : 'border-slate-800/60 bg-slate-900/55 hover:border-slate-700 hover:bg-slate-900/70'
+                    : 'border-line-subtle bg-nebula hover:border-line-default hover:bg-nebula'
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1159,7 +1235,28 @@ function StructureTab({ snap, graphs, selectedId, onSelect, focus, selectedCell 
   )
 }
 
-function ReadoutTab({ graph, classNames, onSelect, reportLang = 'en' }) {
+function buildTask2ModelFailureReading(graph, signature, reportLang = 'en') {
+  if (!graph || graph.correct === 1 || !signature) {
+    return reportLang === 'vi'
+      ? 'Graph này đang khớp nhãn hiện tại; hãy dùng readout để kiểm tra model bám vào tín hiệu nào.'
+      : 'This graph currently matches the label; use readout to inspect which signal the model trusts.'
+  }
+  if (signature.id === 'GAT') {
+    return reportLang === 'vi'
+      ? 'Ca sai này nên được đọc như khả năng GAT đã khóa attention vào motif không đúng hoặc quá hẹp. So sánh top-k node với entropy trước khi tin giải thích.'
+      : 'Read this miss as a possible wrong or too-narrow GAT attention lock. Compare top-k nodes with entropy before trusting the explanation.'
+  }
+  if (signature.id === 'SAGE') {
+    return reportLang === 'vi'
+      ? 'Ca sai này nên được đọc như neighborhood vote chưa ổn định. Nếu margin thấp hoặc graph nằm trong nhóm dao động, đừng xem đây là quyết định đã hội tụ.'
+      : 'Read this miss as unstable neighborhood voting. If margin is low or the graph is unstable, do not treat the decision as converged.'
+  }
+  return reportLang === 'vi'
+    ? 'Ca sai này nên được đọc như nguy cơ GCN quá mượt hoặc lan truyền tín hiệu sai qua vùng lân cận, làm motif quyết định bị loãng.'
+    : 'Read this miss as possible GCN oversmoothing or wrong signal propagation through neighbors, diluting the decisive motif.'
+}
+
+function ReadoutTab({ graph, modelSignature = null, classNames, onSelect, reportLang = 'en' }) {
   if (!graph) {
     return <EmptyState title="No graph selected" description="Pick a graph from the topology or hard-case list to inspect graph-level readout." />
   }
@@ -1175,7 +1272,17 @@ function ReadoutTab({ graph, classNames, onSelect, reportLang = 'en' }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-        <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+        <div className="rounded-2xl border border-cyan-500/18 bg-cyan-500/8 p-3">
+          <div className="text-nano font-bold uppercase tracking-ultra text-cyan-300">
+            {reportLang === 'vi' ? 'Đọc theo model' : 'Model reading'}
+          </div>
+          <div className="mt-1 text-sm font-semibold text-slate-100">{modelSignature?.primaryLabel || 'Graph readout'}</div>
+          <p className="mt-2 text-[11px] leading-relaxed text-slate-300">
+            {buildTask2ModelFailureReading(graph, modelSignature, reportLang)}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-line-default bg-nebula p-3">
           <div className="flex items-center justify-between gap-2">
             <div>
               <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Featured graph</div>
@@ -1211,7 +1318,7 @@ function ReadoutTab({ graph, classNames, onSelect, reportLang = 'en' }) {
       </div>
 
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-        <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+        <div className="rounded-2xl border border-line-default bg-nebula p-3">
           <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Readout interpretation</div>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{buildReadoutNarrative(graph, reportLang)}</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -1222,7 +1329,7 @@ function ReadoutTab({ graph, classNames, onSelect, reportLang = 'en' }) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+        <div className="rounded-2xl border border-line-default bg-nebula p-3">
           <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Structural profile</div>
           <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
             <MiniMetric label="Density" value={graph.structural?.density} />
@@ -1234,7 +1341,7 @@ function ReadoutTab({ graph, classNames, onSelect, reportLang = 'en' }) {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-800/70 bg-slate-950/45 p-3">
+        <div className="rounded-2xl border border-line-default bg-nebula p-3">
           <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Readout concentration</div>
           <div className="mt-2 text-lg font-semibold text-slate-100">{(graph.readoutConcentration * 100).toFixed(0)}%</div>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
@@ -1243,10 +1350,10 @@ function ReadoutTab({ graph, classNames, onSelect, reportLang = 'en' }) {
           <div className="mt-3 space-y-2">
             {topContributors.length ? topContributors.map((item) => (
               <div key={item.nodeId} className="flex items-center gap-2">
-                <div className="w-8 shrink-0 rounded-md border border-slate-700/70 bg-slate-900/70 px-2 py-1 text-center text-[11px] font-mono text-slate-200">
+                <div className="w-8 shrink-0 rounded-md border border-line-default bg-nebula px-2 py-1 text-center text-[11px] font-mono text-slate-200">
                   {item.nodeId}
                 </div>
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800/70">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-nebula">
                   <div className="h-full rounded-full bg-amber-400/85" style={{ width: `${Math.max(4, item.value * 100)}%` }} />
                 </div>
                 <div className="w-12 shrink-0 text-right text-[11px] font-mono text-amber-300">
@@ -1420,7 +1527,7 @@ function TagChip({ label, tone = 'info' }) {
     good: 'border-emerald-500/20 bg-emerald-500/8 text-emerald-200',
     warn: 'border-amber-500/20 bg-amber-500/8 text-amber-200',
     bad: 'border-red-500/20 bg-red-500/8 text-red-200',
-    info: 'border-slate-700/70 bg-slate-900/70 text-slate-200',
+    info: 'border-line-default bg-nebula text-slate-200',
   }
   return (
     <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize ${palette[tone] || palette.info}`}>
@@ -1434,7 +1541,7 @@ function StatCell({ label, value, digits = 0, suffix = '', tone = 'info' }) {
     good: 'border-emerald-500/20 bg-emerald-500/8 text-emerald-200',
     warn: 'border-amber-500/20 bg-amber-500/8 text-amber-200',
     bad: 'border-red-500/20 bg-red-500/8 text-red-200',
-    info: 'border-slate-700/70 bg-slate-900/70 text-slate-200',
+    info: 'border-line-default bg-nebula text-slate-200',
   }
 
   const display = Number.isFinite(value) ? `${Number(value).toFixed(digits)}${suffix}` : '—'
@@ -1448,7 +1555,7 @@ function StatCell({ label, value, digits = 0, suffix = '', tone = 'info' }) {
 
 function MiniMetric({ label, value, digits = 2 }) {
   return (
-    <div className="rounded-xl border border-slate-800/60 bg-slate-900/55 p-2">
+    <div className="rounded-xl border border-line-subtle bg-nebula p-2">
       <div className="text-[10px] uppercase tracking-ultra text-slate-500">{label}</div>
       <div className="mt-1 text-[12px] font-mono font-semibold text-slate-200 tabular-nums">
         {Number.isFinite(value) ? value.toFixed(digits) : '—'}

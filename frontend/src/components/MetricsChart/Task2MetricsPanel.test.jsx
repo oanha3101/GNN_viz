@@ -85,6 +85,7 @@ const gnnState = {
     classNames: ['A', 'B'],
   },
   classNames: ['A', 'B'],
+  selectedModel: 'GAT',
   selectedNodeId: null,
   task2FocusMode: 'all',
   task2SelectedCell: null,
@@ -190,6 +191,14 @@ describe('Task2MetricsPanel', () => {
     expect(screen.getByText('ECE')).toBeInTheDocument()
     expect(screen.getByText(/Per-class metrics|Chỉ số theo lớp/i)).toBeInTheDocument()
     expect(screen.getAllByText(/Shortcut bias|Thiên lệch shortcut/i).length).toBeGreaterThan(0)
+  })
+
+  it('surfaces model-specific learning signature in the overview', () => {
+    render(<Task2MetricsPanel />)
+
+    expect(screen.getByText(/Model learning signature|Dấu hiệu model đang học gì/i)).toBeInTheDocument()
+    expect(screen.getByText('Attention khóa motif')).toBeInTheDocument()
+    expect(screen.getAllByText(/Độ tập trung attention|Attention focus/i).length).toBeGreaterThan(0)
   })
 
   it('surfaces research signals in the overview', () => {

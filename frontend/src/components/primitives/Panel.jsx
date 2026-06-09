@@ -11,7 +11,7 @@ export function Panel({
   const padMap = { none: '', sm: 'p-2', md: 'p-4' }
   return (
     <section
-      className={`flex flex-col h-full bg-black/20 rounded-2xl border border-amethyst/20 shadow-[0_4px_24px_rgba(147,51,234,0.08)] backdrop-blur-md overflow-hidden transition-all ${className}`}
+      className={`flex flex-col h-full bg-nebula rounded-2xl border border-amethyst/20 shadow-[0_4px_24px_rgba(147,51,234,0.08)] backdrop-blur-md overflow-hidden transition-all ${className}`}
       {...rest}
     >
       <header className="flex items-center justify-between gap-3 px-5 py-4 border-b border-amethyst/20 shrink-0 bg-gradient-to-r from-amethyst/10 to-transparent">

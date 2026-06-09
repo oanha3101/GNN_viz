@@ -10,7 +10,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 function Brand({ t }) {
   return (
     <Link to="/" className="flex items-center gap-2.5 group">
-      <span className="app-logo-icon !h-9 !w-9 !bg-slate-900/80 !border !border-white/10 shadow-lg flex items-center justify-center overflow-hidden">
+      <span className="app-logo-icon !h-9 !w-9 !bg-deep/80 !border !border-white/10 shadow-lg flex items-center justify-center overflow-hidden">
         <Network size={22} color="#ffffff" strokeWidth={2.2} className="transform group-hover:scale-110 transition-all duration-300" />
       </span>
       <span className="flex flex-col leading-tight">

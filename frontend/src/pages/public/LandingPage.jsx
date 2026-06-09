@@ -832,8 +832,8 @@ function HeroWorkspaceGraphic({
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_left,rgba(var(--aurora-crimson-rgb),0.1),transparent_28%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(var(--aurora-crimson-rgb),0.14),transparent_30%)]" />
 
       <div className="relative h-full p-2.5 sm:p-3 lg:p-3.5">
-        <div className="h-full rounded-[22px] border border-slate-200/85 bg-white/78 p-3 shadow-[0_20px_60px_-34px_rgba(15,23,42,0.3)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/72 sm:p-3.5 lg:p-4">
-          <section className="flex h-full min-h-0 flex-col rounded-[18px] border border-slate-200/85 bg-white/92 p-3 dark:border-white/8 dark:bg-slate-950/56 sm:p-3.5">
+        <div className="h-full rounded-[22px] border border-slate-200/85 bg-white/78 p-3 shadow-[0_20px_60px_-34px_rgba(15,23,42,0.3)] backdrop-blur-xl dark:border-white/10 dark:bg-nebula/72 sm:p-3.5 lg:p-4">
+          <section className="flex h-full min-h-0 flex-col rounded-[18px] border border-slate-200/85 bg-white/92 p-3 dark:border-white/8 dark:bg-nebula/56 sm:p-3.5">
             <div className="flex items-start justify-between gap-3">
               <div className="max-w-[300px]">
                 <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
@@ -1261,9 +1261,9 @@ export default function LandingPage() {
                 }} />
 
                 {/* Browser window */}
-                <motion.div variants={fadeScale} className="relative rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800 bg-white/40 dark:bg-slate-900/60 backdrop-blur-md shadow-2xl transition-all duration-500 hover:scale-[1.015] hover:border-slate-300 dark:hover:border-slate-700/80">
+                <motion.div variants={fadeScale} className="relative rounded-2xl overflow-hidden border border-slate-200/80 dark:border-line-defaultNone bg-white/40 dark:bg-deep/60 backdrop-blur-md shadow-2xl transition-all duration-500 hover:scale-[1.015] hover:border-slate-300 dark:hover:border-line-default/80">
                   {/* Title Bar */}
-                  <div className="flex items-center justify-between px-4 py-3 bg-slate-100/50 dark:bg-slate-950/40 border-b border-slate-200/50 dark:border-white/5">
+                  <div className="flex items-center justify-between px-4 py-3 bg-slate-100/50 dark:bg-nebula/40 border-b border-slate-200/50 dark:border-white/5">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56] inline-block" />
                       <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E] inline-block" />

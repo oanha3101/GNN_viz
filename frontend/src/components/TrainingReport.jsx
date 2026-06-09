@@ -54,9 +54,9 @@ export default function TrainingReport() {
       }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/78 p-6 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-[28px] border border-slate-700/40 bg-deep shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-800/70 px-6 py-5">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-nebula/78 p-6 backdrop-blur-sm">
+      <div className="w-full max-w-3xl rounded-[28px] border border-line-default/40 bg-deep shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-line-default/70 px-6 py-5">
           <div>
             <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">
               <FileText size={12} />
@@ -70,14 +70,14 @@ export default function TrainingReport() {
           <button
             type="button"
             onClick={() => setReportOpen(false)}
-            className="rounded-xl border border-slate-700/40 bg-slate-900/70 p-2.5 text-slate-300 transition-colors hover:bg-slate-800/80"
+            className="rounded-xl border border-line-default/40 bg-deep/70 p-2.5 text-slate-300 transition-colors hover:bg-nebula/80"
           >
             <X size={16} />
           </button>
         </div>
 
         <div className="space-y-4 px-6 py-5">
-          <div className="rounded-2xl border border-slate-700/40 bg-slate-900/60 p-4 text-sm leading-6 text-slate-300">
+          <div className="rounded-2xl border border-line-default/40 bg-deep/60 p-4 text-sm leading-6 text-slate-300">
             <p>
               {copy.dataset}: <span className="font-semibold text-white">{datasetName}</span>
             </p>
@@ -97,7 +97,7 @@ export default function TrainingReport() {
             <button
               type="button"
               onClick={() => setReportOpen(false)}
-              className="rounded-xl border border-slate-700/40 bg-slate-900/70 px-4 py-2 text-sm font-semibold text-slate-300 transition-colors hover:bg-slate-800/80"
+              className="rounded-xl border border-line-default/40 bg-deep/70 px-4 py-2 text-sm font-semibold text-slate-300 transition-colors hover:bg-nebula/80"
             >
               {copy.close}
             </button>

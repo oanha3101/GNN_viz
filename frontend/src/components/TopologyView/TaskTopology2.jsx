@@ -8,6 +8,7 @@ import { interpolateSnapshots } from '../../engine/interpolate'
 import {
   buildTask2FocusBuckets,
   buildTask2GraphDescriptors,
+  buildTask2ModelSignature,
   sortTask2Descriptors,
 } from '../../utils/task2Metrics'
 import { localizeTask2Element } from '../../utils/task2ReportI18n'
@@ -42,7 +43,7 @@ function formatFailureTag(tag) {
   }
 }
 
-function MiniGraphSVG({ nodes, links, contributions, size = 100 }) {
+function MiniGraphSVG({ nodes, links, contributions, modelSignature = null, size = 100 }) {
   const padding = 15
   const radius = (size - padding * 2) / 2
   const centerX = size / 2
@@ -69,6 +70,18 @@ function MiniGraphSVG({ nodes, links, contributions, size = 100 }) {
         const from = nodePos[source]
         const to = nodePos[target]
         if (!from || !to) return null
+        const sourceWeight = contributions?.[source] || 0
+        const targetWeight = contributions?.[target] || 0
+        const linkWeight = (sourceWeight + targetWeight) / 2
+        const isGat = modelSignature?.id === 'GAT'
+        const isSage = modelSignature?.id === 'SAGE'
+        const stroke = isGat && linkWeight > 0.5
+          ? 'rgba(245,158,11,0.55)'
+          : isSage && linkWeight > 0.35
+            ? 'rgba(34,197,94,0.38)'
+            : modelSignature?.id === 'GCN'
+              ? 'rgba(56,189,248,0.22)'
+              : 'rgba(148,163,184,0.16)'
         return (
           <line
             key={index}
@@ -76,8 +89,9 @@ function MiniGraphSVG({ nodes, links, contributions, size = 100 }) {
             y1={from.y}
             x2={to.x}
             y2={to.y}
-            stroke="rgba(148,163,184,0.16)"
-            strokeWidth="0.8"
+            stroke={stroke}
+            strokeWidth={isGat ? 0.8 + linkWeight * 1.8 : isSage ? 0.8 + linkWeight : 0.9}
+            strokeDasharray={isSage && linkWeight > 0.35 ? '2 2' : undefined}
           />
         )
       })}
@@ -85,12 +99,26 @@ function MiniGraphSVG({ nodes, links, contributions, size = 100 }) {
         const point = nodePos[node.id]
         if (!point) return null
         const weight = contributions?.[node.id] || 0
-        const fill = weight > 0.8 ? '#ffffff' : weight > 0.5 ? '#f59e0b' : '#38bdf8'
-        const nodeSize = 2.4 + weight * 4.8
+        const fill = modelSignature?.id === 'SAGE'
+          ? (weight > 0.6 ? '#86efac' : '#34d399')
+          : weight > 0.8
+            ? '#ffffff'
+            : weight > 0.5
+              ? '#f59e0b'
+              : '#38bdf8'
+        const nodeSize = modelSignature?.id === 'GCN'
+          ? 3.2 + weight * 3.8
+          : 2.4 + weight * 4.8
         return (
           <g key={node.id}>
+            {modelSignature?.id === 'GCN' && (
+              <circle cx={point.x} cy={point.y} r={nodeSize + 5} fill="#38bdf8" opacity={0.08 + weight * 0.12} />
+            )}
             {weight > 0.7 && (
-              <circle cx={point.x} cy={point.y} r={nodeSize + 3} fill={fill} opacity="0.16" />
+              <circle cx={point.x} cy={point.y} r={nodeSize + (modelSignature?.id === 'GAT' ? 5 : 3)} fill={fill} opacity={modelSignature?.id === 'GAT' ? 0.26 : 0.16} />
+            )}
+            {modelSignature?.id === 'SAGE' && weight > 0.35 && (
+              <circle cx={point.x} cy={point.y} r={nodeSize + 7} fill="none" stroke="#22c55e" strokeWidth="1" opacity="0.22" strokeDasharray="2 2" />
             )}
             <circle cx={point.x} cy={point.y} r={nodeSize} fill={fill} />
           </g>
@@ -143,6 +171,7 @@ export default function TaskTopology2({
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const taskData = useGNNStore((state) => state.taskData)
   const classNames = useGNNStore((state) => state.classNames)
+  const selectedModel = useGNNStore((state) => state.selectedModel)
   const setSelectedNode = useGNNStore((state) => state.setSelectedNode)
   const setHoveredNode = useGNNStore((state) => state.setHoveredNode)
   const selectedNodeId = useGNNStore((state) => state.selectedNodeId)
@@ -188,6 +217,10 @@ export default function TaskTopology2({
   const descriptors = useMemo(
     () => buildTask2GraphDescriptors({ snapshot: snap, graphs: indexedGraphs, classNames: graphClassNames }),
     [snap, indexedGraphs, graphClassNames]
+  )
+  const modelSignature = useMemo(
+    () => buildTask2ModelSignature(snap, snapshots, descriptors, selectedModel),
+    [snap, snapshots, descriptors, selectedModel]
   )
   const focusBuckets = useMemo(
     () => buildTask2FocusBuckets({ snapshot: snap, graphs: indexedGraphs }),
@@ -270,8 +303,16 @@ export default function TaskTopology2({
       if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
       const graphContribs = contributions[selectedGraph?.sourceIndex ?? -1] || []
       const weight = graphContribs[node.id] || 0
-      const color = weight > 0.8 ? '#ffffff' : weight > 0.5 ? '#f59e0b' : '#3b82f6'
-      const size = (4 + weight * 12) / Math.sqrt(globalScale)
+      const isGat = modelSignature.id === 'GAT'
+      const isSage = modelSignature.id === 'SAGE'
+      const color = isSage
+        ? (weight > 0.6 ? '#86efac' : '#22c55e')
+        : weight > 0.8
+          ? '#ffffff'
+          : weight > 0.5
+            ? '#f59e0b'
+            : '#3b82f6'
+      const size = (modelSignature.id === 'GCN' ? 5 + weight * 8 : 4 + weight * 12) / Math.sqrt(globalScale)
 
       ctx.save()
       const glowRadius = size * 3
@@ -282,6 +323,22 @@ export default function TaskTopology2({
       ctx.arc(node.x, node.y, glowRadius, 0, 2 * Math.PI)
       ctx.fillStyle = gradient
       ctx.fill()
+      if (isSage && weight > 0.35) {
+        ctx.beginPath()
+        ctx.arc(node.x, node.y, glowRadius * 1.25, 0, 2 * Math.PI)
+        ctx.strokeStyle = 'rgba(34,197,94,0.28)'
+        ctx.lineWidth = 1 / Math.sqrt(globalScale)
+        ctx.setLineDash([4 / Math.sqrt(globalScale), 4 / Math.sqrt(globalScale)])
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+      if (isGat && weight > 0.65) {
+        ctx.beginPath()
+        ctx.arc(node.x, node.y, glowRadius * 0.78, 0, 2 * Math.PI)
+        ctx.strokeStyle = 'rgba(245,158,11,0.55)'
+        ctx.lineWidth = 2 / Math.sqrt(globalScale)
+        ctx.stroke()
+      }
       ctx.restore()
 
       ctx.beginPath()
@@ -296,7 +353,7 @@ export default function TaskTopology2({
       ctx.fillStyle = weight > 0.6 ? '#0f172a' : '#fff'
       ctx.fillText(`${node.id}`, node.x, node.y)
     },
-    [selectedGraph, contributions]
+    [selectedGraph, contributions, modelSignature]
   )
 
   useEffect(() => {
@@ -365,19 +422,27 @@ export default function TaskTopology2({
           <button
             type="button"
             onClick={() => setSelectedNode(null)}
-            className="px-3 py-1.5 rounded-md text-micro font-bold tracking-wide bg-slate-900/90 text-slate-200 hover:bg-slate-800 transition-colors border border-slate-700/60 uppercase shadow-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+            className="px-3 py-1.5 rounded-md text-micro font-bold tracking-wide bg-deep/90 text-slate-200 hover:bg-nebula transition-colors border border-line-default/60 uppercase shadow-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
           >
             Back to gallery
           </button>
         </div>
 
-        <div className="absolute top-3 right-3 z-50 flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/50 text-micro font-mono text-slate-300 shadow-lg">
+        <div className="absolute top-3 right-3 z-50 flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-md bg-nebula border border-line-subtle text-micro font-mono text-slate-300 shadow-lg">
           <span className="text-nano uppercase tracking-ultra text-slate-500">#{selectedGraph.originalGraphId}</span>
           <span className="text-slate-200">{labelForClass(selectedGraph.groundTruth)}</span>
           <span className={selectedGraph.correct === 1 ? 'text-emerald-300' : 'text-red-300'}>
             {predictionLabel}
           </span>
           <span className="text-slate-400">{((selectedGraph.confidence ?? 0) * 100).toFixed(0)}%</span>
+        </div>
+
+        <div className="absolute bottom-4 left-4 z-50 max-w-sm rounded-2xl border border-cyan-500/20 bg-nebula/82 px-4 py-3 text-left shadow-xl backdrop-blur-md">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[10px] font-black uppercase tracking-ultra text-cyan-300">{modelSignature.primaryLabel}</span>
+            <span className="font-mono text-[11px] font-bold text-slate-200">{(modelSignature.currentScore * 100).toFixed(0)}%</span>
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{modelSignature.explanation}</p>
         </div>
       </div>
     )
@@ -396,7 +461,7 @@ export default function TaskTopology2({
       className="w-full h-full overflow-y-auto bg-panel custom-scrollbar"
     >
       <div className="pt-16 pb-6 px-6">
-        <div className="mb-4 flex flex-col gap-3 rounded-xl border border-slate-800/60 bg-slate-950/35 px-4 py-3">
+        <div className="mb-4 flex flex-col gap-3 rounded-xl border border-line-subtle bg-nebula/35 px-4 py-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-nano uppercase tracking-ultra text-slate-500">Graph collection</div>
@@ -423,7 +488,7 @@ export default function TaskTopology2({
                   type="button"
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
                   disabled={currentPage === 1}
-                  className="rounded-md border border-slate-800 px-3 py-1.5 text-micro font-bold uppercase tracking-wide text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-md border border-line-default px-3 py-1.5 text-micro font-bold uppercase tracking-wide text-slate-400 transition-colors hover:border-line-default hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Prev
                 </button>
@@ -434,7 +499,7 @@ export default function TaskTopology2({
                   type="button"
                   onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                   disabled={currentPage === totalPages}
-                  className="rounded-md border border-slate-800 px-3 py-1.5 text-micro font-bold uppercase tracking-wide text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-md border border-line-default px-3 py-1.5 text-micro font-bold uppercase tracking-wide text-slate-400 transition-colors hover:border-line-default hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Next
                 </button>
@@ -458,7 +523,7 @@ export default function TaskTopology2({
                     className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors ${
                       activeGallerySort === value
                         ? 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200'
-                        : 'border-slate-800/70 bg-slate-900/60 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                        : 'border-line-default bg-nebula text-slate-400 hover:border-line-default hover:text-slate-200'
                     }`}
                   >
                     {label}
@@ -471,7 +536,7 @@ export default function TaskTopology2({
                 <select
                   value={resolvedClassFilter}
                   onChange={(event) => setClassFilter(event.target.value === 'all' ? 'all' : Number(event.target.value))}
-                  className="rounded-md border border-slate-800/70 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                  className="rounded-md border border-line-default bg-nebula px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
                 >
                   <option value="all">All</option>
                   {classFilterOptions.map((classId) => (
@@ -525,8 +590,8 @@ export default function TaskTopology2({
                 onClick={() => setSelectedNode(descriptor.originalGraphId)}
                 className={`group relative rounded-lg border text-left transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${
                   selected
-                    ? 'ring-2 ring-cyan-500/35 bg-slate-900/70'
-                    : `bg-slate-900/40 ${quickTone}`
+                    ? 'ring-2 ring-cyan-500/35 bg-nebula'
+                    : `bg-nebula ${quickTone}`
                 } ${matched ? 'opacity-100' : 'opacity-45'}`}
                 title={`G#${descriptor.originalGraphId} \u2014 ${statusLabel} (conf ${(confidence * 100).toFixed(0)}%)`}
               >
@@ -535,10 +600,19 @@ export default function TaskTopology2({
                     nodes={descriptor.nodes}
                     links={descriptor.links}
                     contributions={contributions[descriptor.sourceIndex]}
+                    modelSignature={modelSignature}
                   />
+                  <div className="absolute left-3 top-3 rounded-full border border-line-default bg-nebula/82 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-200">
+                    {modelSignature.shortLabel}
+                  </div>
+                  {modelSignature.id === 'SAGE' && modelSignature.unstableGraphIds.includes(descriptor.originalGraphId) && (
+                    <div className="absolute right-3 top-3 rounded-full border border-emerald-400/30 bg-emerald-500/14 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-200">
+                      Graph dao động
+                    </div>
+                  )}
                 </div>
 
-                <div className="px-3 py-2 border-t border-slate-800/60">
+                <div className="px-3 py-2 border-t border-line-subtle">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-xs text-slate-100 font-semibold uppercase truncate tracking-wide">
@@ -586,13 +660,13 @@ export default function TaskTopology2({
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    <span className="rounded-full border border-slate-800/70 bg-slate-900/70 px-2 py-0.5 text-[10px] text-slate-300">
+                    <span className="rounded-full border border-line-default bg-nebula px-2 py-0.5 text-[10px] text-slate-300">
                       margin {((descriptor.margin ?? 0) * 100).toFixed(0)}%
                     </span>
-                    <span className="rounded-full border border-slate-800/70 bg-slate-900/70 px-2 py-0.5 text-[10px] text-slate-300">
+                    <span className="rounded-full border border-line-default bg-nebula px-2 py-0.5 text-[10px] text-slate-300">
                       {descriptor.densityBucket}
                     </span>
-                    <span className="rounded-full border border-slate-800/70 bg-slate-900/70 px-2 py-0.5 text-[10px] text-slate-300">
+                    <span className="rounded-full border border-line-default bg-nebula px-2 py-0.5 text-[10px] text-slate-300">
                       {descriptor.entropyBucket}
                     </span>
                   </div>

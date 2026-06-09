@@ -130,7 +130,7 @@ export default function RecommendationsPanel({ experimentId }) {
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeView === 'recommendations'
               ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-nebula/50'
           }`}
         >
           {t('analyst.recommendations')}
@@ -143,7 +143,7 @@ export default function RecommendationsPanel({ experimentId }) {
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeView === 'notes'
               ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-nebula/50'
           }`}
         >
           {t('analyst.research_notes')}
@@ -266,7 +266,7 @@ function RecommendationCard({ rec, index, t }) {
               style={{ backgroundColor: `${priorityConfig.color}20`, color: priorityConfig.color }}>
               {t(priorityConfig.labelKey)}
             </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-nebula text-slate-400">
               {t(categoryConfig.labelKey)}
             </span>
           </div>
@@ -298,7 +298,7 @@ function ResearchNotesDisplay({ notes, t }) {
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.08 }}
-          className="rounded-xl border border-slate-800 bg-slate-900/40 p-4"
+          className="rounded-xl border border-line-default bg-nebula p-4"
         >
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{section.title}</h4>
           <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">
@@ -313,7 +313,7 @@ function ResearchNotesDisplay({ notes, t }) {
 function BriefBlock({ title, items }) {
   if (!items?.length) return null
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3">
+    <div className="rounded-xl border border-line-default bg-nebula p-3">
       <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">{title}</h4>
       <div className="space-y-1.5">
         {items.map((item, index) => (

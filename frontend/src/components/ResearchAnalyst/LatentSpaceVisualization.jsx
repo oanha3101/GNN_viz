@@ -81,8 +81,8 @@ export default function LatentSpaceVisualization({ snapshot, graphData, selected
 
   if (!embeddings.length) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-700/80 bg-slate-950/45 py-12 text-slate-500">
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-700/80 bg-slate-900/70 text-sm font-semibold text-slate-300">
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line-default/80 bg-nebula py-12 text-slate-500">
+        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-line-default/80 bg-nebula text-sm font-semibold text-slate-300">
           2D
         </div>
         <p className="text-sm font-semibold text-slate-300">No embedding view yet</p>
@@ -105,7 +105,7 @@ export default function LatentSpaceVisualization({ snapshot, graphData, selected
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {separation && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800/60 bg-slate-950/35 px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-subtle bg-nebula/35 px-3 py-2">
           <div className="flex items-center gap-2">
             <span className="text-[10px] uppercase tracking-wider text-slate-500">Separation</span>
             <span className="text-sm font-bold" style={{ color: separation.color }}>
@@ -124,7 +124,7 @@ export default function LatentSpaceVisualization({ snapshot, graphData, selected
         </div>
       )}
 
-      <div className="h-[300px] w-full rounded-xl border border-slate-800/70 bg-slate-950/45 p-3">
+      <div className="h-[300px] w-full rounded-xl border border-line-default bg-nebula p-3">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
@@ -148,7 +148,7 @@ export default function LatentSpaceVisualization({ snapshot, graphData, selected
                 if (!payload?.length) return null
                 const d = payload[0].payload
                 return (
-                  <div className="rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs">
+                  <div className="rounded-lg border border-line-defaultNone bg-deep p-2 text-xs">
                     <div className="font-bold text-slate-100">Node #{d.id}</div>
                     <div className="text-slate-400">Pred: C{d.prediction}</div>
                     <div className="text-slate-400">True: C{d.groundTruth}</div>
@@ -185,7 +185,7 @@ export default function LatentSpaceVisualization({ snapshot, graphData, selected
           const correct = points.filter((p) => p.correct).length
           const avgConf = points.reduce((s, p) => s + p.confidence, 0) / points.length
           return (
-            <div key={cls} className="rounded-lg border border-slate-800/70 bg-slate-950/40 px-3 py-2">
+            <div key={cls} className="rounded-lg border border-line-default bg-deep px-3 py-2">
               <div className="mb-1 flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: CLASS_COLORS[cls % CLASS_COLORS.length] }} />
                 <span className="text-[10px] font-bold text-slate-300">Class {cls}</span>

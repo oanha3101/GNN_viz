@@ -22,6 +22,7 @@ import {
   buildTask2ResearchSignals,
   buildTask2BestEpochSuggestion,
   buildTask2FocusStory,
+  buildTask2ModelSignature,
   describeTask2ReadoutPattern,
   formatTask2ClassLabel,
 } from './task2Metrics'
@@ -422,5 +423,38 @@ describe('task 2 collection helpers', () => {
       weakClassFocusId: 'weak_class',
       structureFocusId: 'outlier',
     }))
+  })
+
+  it('builds model-specific learning signatures without requiring backend-only fields', () => {
+    const descriptors = buildTask2GraphDescriptors({ snapshot, graphs, classNames: ['A', 'B', 'C'] })
+    const history = [
+      {
+        graph_predictions: [1, 0, 0, 2],
+        graph_confidences: [0.55, 0.54, 0.51, 0.5],
+        confidence_margins: [0.05, 0.03, 0.02, 0.04],
+        attention_entropy: [0.9, 0.88, 0.86, 0.82],
+        node_contributions: [[0.3, 0.3], [0.3, 0.3, 0.4], [0.35, 0.35, 0.3], [0.34, 0.33, 0.33]],
+        graph_embeddings_2d: [[0, 0], [1, 1], [2, 2], [3, 3]],
+      },
+      snapshot,
+    ]
+
+    const gcn = buildTask2ModelSignature(snapshot, history, descriptors, 'GCN')
+    const gat = buildTask2ModelSignature(snapshot, history, descriptors, 'GAT')
+    const sage = buildTask2ModelSignature(snapshot, history, descriptors, 'GraphSAGE')
+
+    expect(gcn.id).toBe('GCN')
+    expect(gcn.primaryLabel).toBe('Lan truyền mượt')
+    expect(gcn.metrics.readout_smoothness).toEqual(expect.any(Number))
+
+    expect(gat.id).toBe('GAT')
+    expect(gat.primaryLabel).toBe('Attention khóa motif')
+    expect(gat.metricLabel).not.toBe(gcn.metricLabel)
+    expect(gat.currentScore).toEqual(expect.any(Number))
+
+    expect(sage.id).toBe('SAGE')
+    expect(sage.primaryLabel).toBe('Bỏ phiếu lân cận')
+    expect(sage.metrics.prediction_flip_rate).toBeGreaterThanOrEqual(0)
+    expect(Array.isArray(sage.unstableGraphIds)).toBe(true)
   })
 })

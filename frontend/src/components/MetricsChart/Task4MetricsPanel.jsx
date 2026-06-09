@@ -78,7 +78,7 @@ export default function Task4MetricsPanel({ forcedTab = null, hideTabControls = 
   return (
     <div ref={panelRootRef} className="h-full flex flex-col gap-3">
       {!hideTabControls && (
-        <div className="w-fit rounded-md border border-white/[0.08] bg-white/[0.02] p-1 ">
+        <div className="w-fit rounded-md border border-white/[0.08] bg-deep p-1 ">
           <div className="flex items-center gap-1">
             {tabs.map((t) => (
               <button
@@ -86,7 +86,7 @@ export default function Task4MetricsPanel({ forcedTab = null, hideTabControls = 
                 onClick={() => setActiveTab(t.id)}
                 className={`rounded-md px-3 py-1.5 text-nano font-bold uppercase tracking-ultra transition-all ${
                   activeTab === t.id
-                    ? 'bg-slate-700/95 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                    ? 'bg-nebula/95 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
                     : 'bg-transparent text-slate-400 hover:bg-white/5 hover:text-white'
                 }`}
               >
@@ -216,7 +216,7 @@ function OverviewTab({ copy, snap, snapshots, epochInt, graphData, selectedModel
       )}
 
       <div className="overflow-hidden rounded-md border border-cyan-400/20 bg-cyan-400/[0.04] ">
-        <div className="border-b border-white/[0.06] px-4 py-3">
+        <div className="border-b border-line-subtle px-4 py-3">
           <div className="text-[10px] uppercase tracking-[0.24em] font-black text-cyan-300/90">{copy.labels.conclusion}</div>
           <div className="mt-2 text-[20px] font-bold leading-tight text-white">{reasoning.reportHeadline || reasoning.takeaway}</div>
           <div className="mt-2 max-w-4xl text-[13px] leading-relaxed text-slate-200">{reasoning.bridgeNarrative} {reasoning.modelStability.detail}</div>
@@ -252,7 +252,7 @@ function OverviewTab({ copy, snap, snapshots, epochInt, graphData, selectedModel
         className="grid gap-3"
         style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}
       >
-        <div className="rounded-md border border-white/[0.06] bg-white/[0.02] p-3">
+        <div className="rounded-md border border-line-subtle bg-deep p-3">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
               <div className="text-nano font-bold uppercase tracking-ultra text-slate-200">{copy.labels.communityMap}</div>
@@ -270,7 +270,7 @@ function OverviewTab({ copy, snap, snapshots, epochInt, graphData, selectedModel
           </div>
         </div>
 
-        <div className="rounded-md border border-white/[0.06] bg-white/[0.02] p-3">
+        <div className="rounded-md border border-line-subtle bg-deep p-3">
           <div className="mb-3">
             <div className="text-nano font-bold uppercase tracking-ultra text-slate-200">{copy.labels.primarySignals}</div>
             <div className="mt-1 text-xs text-slate-400">{copy.labels.primarySignalsSubtitle}</div>
@@ -311,7 +311,7 @@ function OverviewTab({ copy, snap, snapshots, epochInt, graphData, selectedModel
         </div>
       </div>
 
-      <div className="rounded-md border border-white/[0.06] bg-white/[0.02] px-1 pt-3">
+      <div className="rounded-md border border-line-subtle bg-deep px-1 pt-3">
         <div className="mb-1 px-2">
           <span className="block text-nano font-bold uppercase tracking-ultra text-slate-200">{copy.labels.qConductance}</span>
           <span className="mt-1 block text-[11px] leading-relaxed text-slate-400">{reasoning.epochChangeSummary}</span>
@@ -515,7 +515,7 @@ function StabilityTab({ copy, snap, snapshots, epochInt }) {
             )
           })}
         </div>
-        <div className="h-[1px] bg-slate-700/50 mt-0.5" />
+        <div className="h-[1px] bg-nebula/50 mt-0.5" />
       </div>
 
       {/* Heatmap with highlighted current epoch column */}
@@ -612,7 +612,7 @@ function DiagnosticsTab({ copy, snap, snapshots, epochInt }) {
       />
 
       {lossComponents && (
-        <div className="rounded-md border border-white/[0.06] bg-white/[0.02] p-3">
+        <div className="rounded-md border border-line-subtle bg-deep p-3">
           <div className="text-nano font-bold uppercase tracking-ultra text-slate-200">Composite loss breakdown</div>
           <div className="mt-2 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}>
             <MiniMetric label="Normalized" value={normalizedLoss} />
@@ -629,7 +629,7 @@ function DiagnosticsTab({ copy, snap, snapshots, epochInt }) {
         </div>
       )}
 
-      <div className="rounded-md border border-white/[0.06] bg-white/[0.02] p-3">
+      <div className="rounded-md border border-line-subtle bg-deep p-3">
         <div className="text-nano font-bold uppercase tracking-ultra text-slate-200">{copy.labels.modelReadingGuide}</div>
         <div className="mt-2 text-[12px] leading-relaxed text-slate-200">
           {modelType === 'GAT'
@@ -690,7 +690,7 @@ function DiagnosticsTab({ copy, snap, snapshots, epochInt }) {
 function HierarchyPreview({ rows }) {
   if (!rows.length) {
     return (
-      <div className="rounded-md border border-slate-800/50 bg-slate-900/40 px-2 py-2">
+      <div className="rounded-md border border-line-subtle bg-nebula px-2 py-2">
         <span className="block text-nano text-slate-200 uppercase font-bold tracking-ultra">{TASK4_COPY.labels.hierarchy}</span>
         <span className="text-nano text-slate-400">Linkage data appears every sampled dendrogram epoch.</span>
       </div>
@@ -707,7 +707,7 @@ function HierarchyPreview({ rows }) {
         {rows.map((row) => (
           <div key={row.step} className="grid grid-cols-[48px_1fr_38px] items-center gap-2">
             <span className="text-nano font-mono text-slate-200">#{row.step}</span>
-            <div className="h-2 rounded-full bg-slate-700/70 overflow-hidden">
+            <div className="h-2 rounded-full bg-nebula/70 overflow-hidden">
               <div
                 className="h-full rounded-full bg-cyan-400/70"
                 style={{ width: `${Math.max(6, Math.min(100, row.normalizedDistance * 100))}%` }}
@@ -729,7 +729,7 @@ function GaugeWithSparkline({ label, value, history, dataKey, color, epochInt })
   const barV = v == null ? 0 : Math.max(0, Math.min(1, v))
 
   return (
-    <div className="rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+    <div className="rounded-md border border-line-subtle bg-deep px-3 py-2.5">
       <div className="flex items-center justify-between">
         <span className="text-[9px] text-slate-300 uppercase font-bold tracking-[0.18em]">{label}</span>
         <span className="text-[13px] font-mono font-black text-white">{v == null ? '—' : v.toFixed(3)}</span>
@@ -800,7 +800,7 @@ function CommunityEvidenceCard({ card }) {
   const bridgeDensity = Math.max(0, Math.min(1, (card.bridgeCount || 0) / Math.max(1, card.size || 1)))
 
   return (
-    <div className="min-w-0 rounded-md border border-white/[0.06] bg-white/[0.02] p-3">
+    <div className="min-w-0 rounded-md border border-line-subtle bg-deep p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full shadow-[0_0_16px_currentColor]" style={{ backgroundColor: color, color }} />
@@ -823,7 +823,7 @@ function CommunityEvidenceCard({ card }) {
 function MiniMetricBar({ label, value, normalized, color, note, suffix = '' }) {
   const display = Number.isFinite(value) ? value.toFixed(suffix ? 1 : 3) : 'N/A'
   return (
-    <div className="rounded-md border border-white/[0.06] bg-white/[0.02] p-3">
+    <div className="rounded-md border border-line-subtle bg-deep p-3">
       <div className="flex items-center justify-between gap-3">
         <div className="text-[13px] font-bold text-slate-100">{label}</div>
         <div className="text-sm font-mono font-black tabular-nums" style={{ color }}>{display}{suffix}</div>
@@ -897,11 +897,11 @@ function BridgeGroup({ title, items, onFocus, copy }) {
         <button
           key={`${title}-${b.id}`}
           onClick={() => onFocus(b.community)}
-          className="w-full rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-left transition-colors hover:bg-slate-900/72"
+          className="w-full rounded-md border border-line-subtle bg-deep px-3 py-2 text-left transition-colors hover:bg-nebula"
           title={`${copy.labels.focusCommunity} C${b.community}`}
         >
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-800 text-nano font-bold text-slate-100 shrink-0">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-nebula text-nano font-bold text-slate-100 shrink-0">
               {b.id}
             </div>
             <div className="min-w-0 flex-1">
@@ -943,7 +943,7 @@ function StatCell({ label, value, digits = 0, tone = 'neutral', caption = '' }) 
 function MiniMetric({ label, value }) {
   const display = Number.isFinite(value) ? Number(value).toFixed(3) : '—'
   return (
-    <div className="rounded-md border border-white/[0.06] bg-slate-950/30 px-2.5 py-2">
+    <div className="rounded-md border border-line-subtle bg-deep px-2.5 py-2">
       <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">{label}</div>
       <div className="mt-1 font-mono text-[15px] font-black text-slate-100">{display}</div>
     </div>

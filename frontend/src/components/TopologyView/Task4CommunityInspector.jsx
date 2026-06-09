@@ -72,7 +72,7 @@ export default function Task4CommunityInspector() {
               <button
                 key={ci}
                 onClick={() => setSelectedCommunity(ci)}
-                className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 border transition-colors bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-900/70"
+                className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 border transition-colors bg-slate-50 dark:bg-nebula border-slate-200 dark:border-line-subtle hover:bg-slate-100 dark:hover:bg-nebula"
               >
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getCommunityColor(ci) }} />
                 <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200">C{ci}</span>
@@ -135,10 +135,10 @@ export default function Task4CommunityInspector() {
             {bridges.map((b) => (
               <div key={b.id} className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="w-5 h-5 rounded-sm flex items-center justify-center bg-slate-800 text-nano font-bold text-slate-100 shrink-0">
+                  <div className="w-5 h-5 rounded-sm flex items-center justify-center bg-nebula text-nano font-bold text-slate-100 shrink-0">
                     {b.id}
                   </div>
-                  <div className="h-1 flex-1 bg-slate-800/50 rounded-full overflow-hidden">
+                  <div className="h-1 flex-1 bg-nebula/50 rounded-full overflow-hidden">
                     <div className="h-full bg-white/60" style={{ width: `${Math.max(0, Math.min(1, b.strength)) * 100}%` }} />
                   </div>
                 </div>
@@ -155,7 +155,7 @@ export default function Task4CommunityInspector() {
         <span className="text-nano text-slate-500 uppercase font-bold tracking-ultra block mb-1.5">{copy.labels.nodesInCommunity} ({nodesInComm.length})</span>
         <div className="flex flex-wrap gap-1">
           {nodesInComm.slice(0, 40).map((id) => (
-            <span key={id} className="inline-flex items-center justify-center w-6 h-5 rounded-sm bg-slate-800 text-nano font-mono text-slate-200">
+            <span key={id} className="inline-flex items-center justify-center w-6 h-5 rounded-sm bg-nebula text-nano font-mono text-slate-200">
               {id}
             </span>
           ))}
@@ -166,7 +166,7 @@ export default function Task4CommunityInspector() {
       </div>
 
       {epochInt > 0 && (
-        <div className="mt-8 pt-4 border-t border-slate-800/80">
+        <div className="mt-8 pt-4 border-t border-line-default/80">
           <div className="flex items-center justify-between mb-2">
             <span className="text-nano text-amber-500 uppercase font-black tracking-widest">
               {copy.labels.migrationFlow}
@@ -174,7 +174,7 @@ export default function Task4CommunityInspector() {
             <span className="text-[10px] text-slate-500 font-mono italic">Epoch {epochInt}</span>
           </div>
 
-          <div className="bg-slate-900/40 rounded-lg p-2 border border-amber-500/10">
+          <div className="bg-nebula rounded-lg p-2 border border-amber-500/10">
             {(() => {
               const previous = snapshots[epochInt - 1]
               const prevPreds = previous?.node_predictions_aligned ?? previous?.node_predictions ?? []
@@ -222,7 +222,7 @@ function MetricCell({ label, value, digits = 0 }) {
     ? (digits > 0 ? value.toFixed(digits) : `${value}`)
     : '-'
   return (
-    <div className="rounded-lg px-2 py-1.5 border bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/50">
+    <div className="rounded-lg px-2 py-1.5 border bg-slate-50 dark:bg-nebula border-slate-200 dark:border-line-subtle">
       <span className="text-[7px] text-slate-500 uppercase font-bold tracking-wider block">{label}</span>
       <span className="text-sm font-bold font-mono text-slate-800 dark:text-slate-100 tabular-nums">{display}</span>
     </div>

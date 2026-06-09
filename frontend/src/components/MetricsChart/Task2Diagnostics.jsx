@@ -86,7 +86,7 @@ export default function Task2Diagnostics({
             {points.length} graphs · 10 bins
           </span>
         </div>
-        <div className="flex items-end gap-0.5 h-24 rounded-md border border-slate-800/60 p-2 bg-slate-950/40">
+        <div className="flex items-end gap-0.5 h-24 rounded-md border border-line-subtle p-2 bg-deep">
           {hist.map((bin, index) => {
             const correctHeight = (bin.correct / maxBinCount) * 100
             const wrongHeight = (bin.wrong / maxBinCount) * 100
@@ -126,7 +126,7 @@ export default function Task2Diagnostics({
           <p className="mb-2 text-[11px] leading-relaxed text-slate-400">
             {explanation}
           </p>
-          <div className="relative rounded-md border border-slate-800/60 bg-slate-950/40 p-2">
+          <div className="relative rounded-md border border-line-subtle bg-deep p-2">
             <svg viewBox={`-8 -4 ${scatterW + 12} ${scatterH + 16}`} className="w-full h-40" role="img" aria-label="entropy vs density scatter">
               <line x1="0" y1={scatterH} x2={scatterW} y2={scatterH} stroke="var(--c-border)" strokeWidth="0.4" />
               <line x1="0" y1="0" x2="0" y2={scatterH} stroke="var(--c-border)" strokeWidth="0.4" />

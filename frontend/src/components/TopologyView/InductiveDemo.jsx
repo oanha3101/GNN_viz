@@ -78,7 +78,7 @@ export default function InductiveDemo() {
         <>
           <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setIsOpen(false)} />
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                          bg-slate-900 border border-slate-700 rounded-xl p-5 z-50
+                          bg-deep border border-line-defaultNone rounded-xl p-5 z-50
                           shadow-2xl w-72">
             <h3 className="text-sm font-semibold text-slate-200 mb-3">
               GraphSAGE — Inductive Demo
@@ -100,7 +100,7 @@ export default function InductiveDemo() {
             </button>
 
             {newNodeClass !== null && !animating && (
-              <div className="bg-slate-800/50 rounded-lg p-3 text-xs">
+              <div className="bg-nebula/50 rounded-lg p-3 text-xs">
                 <span className="text-slate-400">Latest prediction:</span>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="w-4 h-4 rounded-full"

@@ -78,7 +78,7 @@ const BaseForceGraph = forwardRef(({
     if (onNodeHover) onNodeHover(node)
   }, [setHoveredNode, onNodeHover])
 
-  if (!stableData) return <div ref={containerRef} className="w-full h-full bg-slate-900 animate-pulse flex items-center justify-center text-slate-700 text-[10px] uppercase font-black tracking-widest">Initializing Engine...</div>
+  if (!stableData) return <div ref={containerRef} className="w-full h-full bg-deep animate-pulse flex items-center justify-center text-slate-700 text-[10px] uppercase font-black tracking-widest">Initializing Engine...</div>
 
   return (
     <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-transparent">

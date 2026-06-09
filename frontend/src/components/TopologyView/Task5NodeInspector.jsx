@@ -92,11 +92,11 @@ export default function Task5NodeInspector() {
   let predColor = pred !== undefined ? getClassColor(pred) : '#475569'
   
   return (
-    <div className="h-full flex flex-col bg-slate-950 font-sans">
+    <div className="h-full flex flex-col bg-nebula font-sans">
       <div className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar pb-10">
         
         {/* Header */}
-        <div className="flex items-center justify-between sticky top-0 bg-slate-950/95 backdrop-blur-md pb-2 z-20 border-b border-slate-800/50">
+        <div className="flex items-center justify-between sticky top-0 bg-nebula/95 backdrop-blur-md pb-2 z-20 border-b border-line-subtle">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full flex items-center justify-center text-micro font-bold text-white shadow-lg"
                  style={{ backgroundColor: predColor, boxShadow: `0 0 10px ${predColor}44` }}>
@@ -106,46 +106,46 @@ export default function Task5NodeInspector() {
           </div>
           <button
             onClick={() => setSelectedNode(null)}
-            className="w-5 h-5 flex items-center justify-center rounded bg-slate-800 text-slate-500 hover:text-slate-300 hover:bg-slate-700 text-xs transition-all"
+            className="w-5 h-5 flex items-center justify-center rounded bg-nebula text-slate-500 hover:text-slate-300 hover:bg-nebulaNone text-xs transition-all"
           >&#10005;</button>
         </div>
 
         {/* Info Grid */}
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/30">
+          <div className="bg-nebula rounded-lg p-2 border border-line-default/30">
             <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">Original Degree</span>
             <span className="text-slate-200 font-bold text-lg">{degree}</span>
           </div>
-          <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/30">
+          <div className="bg-nebula rounded-lg p-2 border border-line-default/30">
             <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">Epoch</span>
             <span className="text-slate-200 font-bold text-lg">{currentEpoch}</span>
           </div>
-          <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/30">
+          <div className="bg-nebula rounded-lg p-2 border border-line-default/30">
             <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">kNN Preserve</span>
             <span className={`font-bold text-lg ${knnScore == null ? 'text-slate-500' : knnScore > 0.7 ? 'text-emerald-400' : knnScore >= 0.4 ? 'text-amber-400' : 'text-rose-400'}`}>
               {knnScore == null ? '-' : `${(knnScore * 100).toFixed(0)}%`}
             </span>
           </div>
-          <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/30">
+          <div className="bg-nebula rounded-lg p-2 border border-line-default/30">
             <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">Embed Norm</span>
             <span className="text-cyan-300 font-bold text-lg">
               {Number.isFinite(embeddingNorm) ? embeddingNorm.toFixed(2) : '-'}
             </span>
           </div>
-          <div className={`rounded-lg p-2 border ${isOutlier ? 'bg-red-950/30 border-red-500/30' : 'bg-slate-900/40 border-slate-800/30'}`}>
+          <div className={`rounded-lg p-2 border ${isOutlier ? 'bg-red-950/30 border-red-500/30' : 'bg-nebula border-line-default/30'}`}>
             <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">Outlier</span>
             <span className={`font-bold text-lg ${isOutlier ? 'text-red-400' : 'text-slate-200'}`}>
               {outlierScore == null ? '-' : outlierScore.toFixed(3)}
             </span>
           </div>
-          <div className="bg-slate-900/40 rounded-lg p-2 border border-slate-800/30">
+          <div className="bg-nebula rounded-lg p-2 border border-line-default/30">
             <span className="text-slate-500 text-nano block uppercase tracking-wider mb-1 font-medium">Overlap</span>
             <span className="text-slate-200 font-bold text-lg">{neighborOverlap}/{topEmbeddingNeighbors.length || 5}</span>
           </div>
         </div>
 
         {hasLabels && gt !== null && (
-          <div className="bg-slate-900/50 rounded-lg p-2.5 border border-slate-800/50 flex items-center justify-between">
+          <div className="bg-nebula rounded-lg p-2.5 border border-line-subtle flex items-center justify-between">
             <span className="text-slate-400 text-micro uppercase tracking-wider font-semibold">Nhãn gốc (GT)</span>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gtColor }} />
@@ -155,7 +155,7 @@ export default function Task5NodeInspector() {
         )}
 
         {/* Structural Comparison */}
-        <div className="mt-4 pt-4 border-t border-slate-800/50 space-y-4">
+        <div className="mt-4 pt-4 border-t border-line-subtle space-y-4">
           <h4 className="text-xs font-bold text-slate-300 uppercase tracking-widest px-1 flex items-center gap-1.5">
             <span className="text-blue-400">&#9776;</span> So sánh Lân cận
           </h4>
@@ -163,7 +163,7 @@ export default function Task5NodeInspector() {
           <div className="space-y-4">
             
             {/* Base Graph Neighbors */}
-            <div className="bg-slate-900/30 rounded-xl p-2.5 border border-slate-800/30">
+            <div className="bg-nebula rounded-xl p-2.5 border border-line-default/30">
               <span className="text-nano text-slate-500 font-bold tracking-widest uppercase mb-2 block">
                 Hàng xóm đồ thị gốc ({topGraphNeighbors.length})
               </span>
@@ -173,7 +173,7 @@ export default function Task5NodeInspector() {
                   const color = hasLabels && nt !== undefined ? getClassColor(nt) : '#475569'
                   return (
                     <button key={`graph-${nid}`} onClick={() => setSelectedNode(nid)}
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-nano font-bold text-white transition-all hover:scale-110 shadow-md cursor-pointer border border-white/10"
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-nano font-bold text-white transition-all hover:scale-110 shadow-md cursor-pointer border border-line-subtle"
                       style={{ backgroundColor: color }} title={`Xem Node ${nid}`}>
                       {nid}
                     </button>
@@ -198,8 +198,8 @@ export default function Task5NodeInspector() {
 
                   return (
                     <button key={`emb-${item.id}`} onClick={() => setSelectedNode(item.id)}
-                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg border text-left transition-all hover:bg-slate-800/80
-                        ${isAlsoGraphNeighbor ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-slate-800/30 border-transparent'}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg border text-left transition-all hover:bg-nebula/80
+                        ${isAlsoGraphNeighbor ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-nebula/30 border-transparent'}
                       `}>
                       <span className="w-5 h-5 rounded-full flex items-center justify-center text-nano font-bold text-white shadow-sm"
                             style={{ backgroundColor: color }}>

@@ -62,7 +62,7 @@ export default function StructurePreservation() {
   }
 
   return (
-    <div className="h-full flex flex-col p-3 text-xs overflow-auto bg-slate-950">
+    <div className="h-full flex flex-col p-3 text-xs overflow-auto bg-nebula">
       {/* Header with convergence badge */}
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -77,25 +77,25 @@ export default function StructurePreservation() {
 
       {/* Metric cards */}
       <div className="grid grid-cols-4 gap-1.5 mb-2">
-        <div className="bg-slate-900/80 rounded-lg px-2 py-1.5 text-center border border-slate-800/50">
+        <div className="bg-nebula rounded-lg px-2 py-1.5 text-center border border-line-subtle">
           <span className="text-[7px] text-slate-500 block uppercase tracking-wider font-bold">k-NN</span>
           <span className={`text-sm font-black font-mono ${knnVal > 0.7 ? 'text-green-400' : 'text-yellow-400'}`}>
             {(knnVal * 100).toFixed(0)}%
           </span>
         </div>
-        <div className="bg-slate-900/80 rounded-lg px-2 py-1.5 text-center border border-slate-800/50">
+        <div className="bg-nebula rounded-lg px-2 py-1.5 text-center border border-line-subtle">
           <span className="text-[7px] text-slate-500 block uppercase tracking-wider font-bold">AUC</span>
           <span className={`text-sm font-black font-mono ${aucVal > 0.8 ? 'text-green-400' : 'text-yellow-400'}`}>
             {(aucVal * 100).toFixed(0)}%
           </span>
         </div>
-        <div className="bg-slate-900/80 rounded-lg px-2 py-1.5 text-center border border-slate-800/50">
+        <div className="bg-nebula rounded-lg px-2 py-1.5 text-center border border-line-subtle">
           <span className="text-[7px] text-slate-500 block uppercase tracking-wider font-bold">Loss</span>
           <span className="text-sm font-black font-mono text-orange-400">
             {lossVal.toFixed(3)}
           </span>
         </div>
-        <div className="bg-slate-900/80 rounded-lg px-2 py-1.5 text-center border border-slate-800/50">
+        <div className="bg-nebula rounded-lg px-2 py-1.5 text-center border border-line-subtle">
           <span className="text-[7px] text-slate-500 block uppercase tracking-wider font-bold">Isotropy</span>
           <span className={`text-sm font-black font-mono ${isotropyVal > 0.6 ? 'text-green-400' : 'text-yellow-400'}`}>
             {(isotropyVal * 100).toFixed(0)}%

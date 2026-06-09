@@ -554,10 +554,10 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
   const Wrapper = isInline ? 'div' : 'div'
   const wrapperClassName = isInline
     ? 'uploader-inline'
-    : 'fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-8 text-slate-200 font-sans'
+    : 'fixed inset-0 z-50 bg-nebula/90 backdrop-blur-md flex items-center justify-center p-8 text-slate-200 font-sans'
   const cardClassName = isInline
     ? 'uploader-card'
-    : 'w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col h-[85vh]'
+    : 'w-full max-w-5xl bg-deep border border-line-defaultNone rounded-xl shadow-2xl flex flex-col h-[85vh]'
 
   return (
     <Wrapper className={wrapperClassName}>
@@ -638,7 +638,7 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
                 <div className={`text-xs font-mono rounded-lg px-4 py-2 border ${
                   isLargeDataset 
                     ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                    : 'bg-slate-800/50 border-slate-700 text-slate-400'
+                    : 'bg-nebula/50 border-line-defaultNone text-slate-400'
                 }`}>
                   📊 {nodesData.length.toLocaleString()} nodes, {edgesData.length.toLocaleString()} edges
                   {isLargeDataset && ' — Large dataset detected, will use server-side upload for speed'}
@@ -648,14 +648,14 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
               {/* Previews */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 {nodesData.length > 0 && (
-                   <div className="bg-slate-950 rounded-lg border border-slate-800 p-3">
+                   <div className="bg-nebula rounded-lg border border-line-defaultNone p-3">
                      <h4 className="text-xs font-semibold text-slate-400 mb-2">Nodes Preview (Top 3)</h4>
                      <div className="overflow-x-auto text-[10px] text-slate-300 font-mono">
                        <table className="w-full text-left border-collapse">
-                         <thead><tr className="border-b border-slate-800">{nodeCols.map(c => <th key={c} className="p-1">{c}</th>)}</tr></thead>
+                         <thead><tr className="border-b border-line-defaultNone">{nodeCols.map(c => <th key={c} className="p-1">{c}</th>)}</tr></thead>
                          <tbody>
                            {nodesData.slice(0,3).map((r, i) => (
-                             <tr key={i} className="border-b border-slate-800/50">
+                             <tr key={i} className="border-b border-line-subtle">
                                {nodeCols.map(c => <td key={c} className="p-1 truncate max-w-[80px]">{String(r[c] ?? '')}</td>)}
                              </tr>
                            ))}
@@ -665,14 +665,14 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
                    </div>
                 )}
                 {edgesData.length > 0 && (
-                   <div className="bg-slate-950 rounded-lg border border-slate-800 p-3">
+                   <div className="bg-nebula rounded-lg border border-line-defaultNone p-3">
                      <h4 className="text-xs font-semibold text-slate-400 mb-2">Edges Preview (Top 3)</h4>
                      <div className="overflow-x-auto text-[10px] text-slate-300 font-mono">
                        <table className="w-full text-left border-collapse">
-                         <thead><tr className="border-b border-slate-800">{edgeCols.map(c => <th key={c} className="p-1">{c}</th>)}</tr></thead>
+                         <thead><tr className="border-b border-line-defaultNone">{edgeCols.map(c => <th key={c} className="p-1">{c}</th>)}</tr></thead>
                          <tbody>
                            {edgesData.slice(0,3).map((r, i) => (
-                             <tr key={i} className="border-b border-slate-800/50">
+                             <tr key={i} className="border-b border-line-subtle">
                                {edgeCols.map(c => <td key={c} className="p-1 truncate max-w-[80px]">{String(r[c] ?? '')}</td>)}
                              </tr>
                            ))}
@@ -709,7 +709,7 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
               </div>
 
               {/* Data requirements for selected profile */}
-              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+              <div className="bg-nebula/50 border border-line-defaultNone rounded-lg p-4">
                 <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
                   <Eye size={14} /> Data requirements for the initial profile: {TASKS.find(t => t.id === task)?.name}
                 </h4>
@@ -750,10 +750,10 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Node Schema */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-bold border-b border-slate-800 pb-2">Nodes Fields</h3>
+                  <h3 className="text-lg font-bold border-b border-line-defaultNone pb-2">Nodes Fields</h3>
                   <div className="grid grid-cols-[100px_1fr] gap-3 items-center">
                     <label className="text-sm text-slate-400">Node ID *</label>
-                    <select value={mapping.node_id} onChange={e => setMapping({...mapping, node_id: e.target.value})} className="bg-slate-950 border border-slate-700 rounded p-2 text-sm">
+                    <select value={mapping.node_id} onChange={e => setMapping({...mapping, node_id: e.target.value})} className="bg-nebula border border-line-defaultNone rounded p-2 text-sm">
                       <option value="">-- Select Column --</option>
                       {nodeCols.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
@@ -762,7 +762,7 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
                     {task === 1 && (
                       <>
                         <label className="text-sm text-slate-400">Label (Y) *</label>
-                        <select value={mapping.node_label} onChange={e => setMapping({...mapping, node_label: e.target.value})} className="bg-slate-950 border border-slate-700 rounded p-2 text-sm">
+                        <select value={mapping.node_label} onChange={e => setMapping({...mapping, node_label: e.target.value})} className="bg-nebula border border-line-defaultNone rounded p-2 text-sm">
                           <option value="">-- Select Label Column --</option>
                           {nodeCols.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
@@ -775,7 +775,7 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
                         <select
                           value={mapping.community_label}
                           onChange={e => setMapping({...mapping, community_label: e.target.value})}
-                          className="bg-slate-950 border border-slate-700 rounded p-2 text-sm"
+                          className="bg-nebula border border-line-defaultNone rounded p-2 text-sm"
                         >
                           <option value="">-- No GT (Unsupervised) --</option>
                           {nodeCols.map(c => <option key={c} value={c}>{c}</option>)}
@@ -788,14 +788,14 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
                   {task !== 4 && task !== 6 && (
                     <div>
                       <label className="text-sm text-slate-400 block mb-2">Features (X)</label>
-                      <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto border border-slate-800 rounded p-2 bg-slate-950/50">
+                      <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto border border-line-defaultNone rounded p-2 bg-nebula/50">
                         {nodeCols.map(c => {
                           const isSel = mapping.node_features.includes(c);
                           return (
                             <button key={c} onClick={() => {
                               const newF = isSel ? mapping.node_features.filter(x => x!==c) : [...mapping.node_features, c]
                               setMapping({...mapping, node_features: newF})
-                            }} className={`px-2 py-1 rounded text-xs transition-colors ${isSel ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
+                            }} className={`px-2 py-1 rounded text-xs transition-colors ${isSel ? 'bg-blue-600 text-white' : 'bg-nebula text-slate-400 hover:bg-nebulaNone'}`}>
                               {c}
                             </button>
                           )
@@ -807,22 +807,22 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
 
                 {/* Edge Schema */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-bold border-b border-slate-800 pb-2">Edges Fields</h3>
+                  <h3 className="text-lg font-bold border-b border-line-defaultNone pb-2">Edges Fields</h3>
                   <div className="grid grid-cols-[100px_1fr] gap-3 items-center">
                     <label className="text-sm text-slate-400">Source *</label>
-                    <select value={mapping.edge_source} onChange={e => setMapping({...mapping, edge_source: e.target.value})} className="bg-slate-950 border border-slate-700 rounded p-2 text-sm">
+                    <select value={mapping.edge_source} onChange={e => setMapping({...mapping, edge_source: e.target.value})} className="bg-nebula border border-line-defaultNone rounded p-2 text-sm">
                       <option value="">-- Select Column --</option>
                       {edgeCols.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
 
                     <label className="text-sm text-slate-400">Target *</label>
-                    <select value={mapping.edge_target} onChange={e => setMapping({...mapping, edge_target: e.target.value})} className="bg-slate-950 border border-slate-700 rounded p-2 text-sm">
+                    <select value={mapping.edge_target} onChange={e => setMapping({...mapping, edge_target: e.target.value})} className="bg-nebula border border-line-defaultNone rounded p-2 text-sm">
                       <option value="">-- Select Column --</option>
                       {edgeCols.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
 
                     <label className="text-sm text-slate-400">Weight</label>
-                    <select value={mapping.edge_weight} onChange={e => setMapping({...mapping, edge_weight: e.target.value})} className="bg-slate-950 border border-slate-700 rounded p-2 text-sm">
+                    <select value={mapping.edge_weight} onChange={e => setMapping({...mapping, edge_weight: e.target.value})} className="bg-nebula border border-line-defaultNone rounded p-2 text-sm">
                       <option value="">-- Unweighted --</option>
                       {edgeCols.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
@@ -834,7 +834,7 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
                     <button
                       onClick={() => setMapping({...mapping, is_directed: !mapping.is_directed})}
                       className={`px-3 py-1 rounded text-xs font-bold transition-all ${
-                        mapping.is_directed ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'
+                        mapping.is_directed ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/40' : 'bg-nebula text-slate-500 border border-line-defaultNone'
                       }`}
                     >
                       {mapping.is_directed ? 'DIRECTED' : 'UNDIRECTED'}
@@ -844,10 +844,10 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
                   {/* Graph-level fields (Task 2 & 6) */}
                   {(task === 2 || task === 6) && (
                     <>
-                      <h3 className="text-lg font-bold border-b border-slate-800 pb-2 mt-6">Graph Level</h3>
+                      <h3 className="text-lg font-bold border-b border-line-defaultNone pb-2 mt-6">Graph Level</h3>
                       <div className="grid grid-cols-[100px_1fr] gap-3 items-center">
                         <label className="text-sm text-slate-400">Graph ID {task === 2 ? '*' : ''}</label>
-                        <select value={mapping.graph_id} onChange={e => setMapping({...mapping, graph_id: e.target.value})} className="bg-slate-950 border border-slate-700 rounded p-2 text-sm">
+                        <select value={mapping.graph_id} onChange={e => setMapping({...mapping, graph_id: e.target.value})} className="bg-nebula border border-line-defaultNone rounded p-2 text-sm">
                           <option value="">-- Identify Graphs --</option>
                           {[...new Set([...nodeCols, ...graphCols])].map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
@@ -855,7 +855,7 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
                         {task === 2 && (
                           <>
                             <label className="text-sm text-slate-400">Graph Label</label>
-                            <select value={mapping.graph_label} onChange={e => setMapping({...mapping, graph_label: e.target.value})} className="bg-slate-950 border border-slate-700 rounded p-2 text-sm">
+                            <select value={mapping.graph_label} onChange={e => setMapping({...mapping, graph_label: e.target.value})} className="bg-nebula border border-line-defaultNone rounded p-2 text-sm">
                               <option value="">-- No Label --</option>
                               {graphCols.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
@@ -867,7 +867,7 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
 
                   {/* Task 3: Link Prediction specific */}
                   {task === 3 && (
-                    <div className="mt-4 bg-slate-800/50 border border-slate-700 rounded-lg p-3">
+                    <div className="mt-4 bg-nebula/50 border border-line-defaultNone rounded-lg p-3">
                       <label className="text-sm text-slate-300 font-medium block mb-2">Test Edge Split Ratio</label>
                       <div className="flex items-center gap-3">
                         <input
@@ -884,14 +884,14 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
 
                   {/* Task 4: Community Detection specific */}
                   {task === 4 && (
-                    <div className="mt-4 bg-slate-800/50 border border-slate-700 rounded-lg p-3">
+                    <div className="mt-4 bg-nebula/50 border border-line-defaultNone rounded-lg p-3">
                       <label className="text-sm text-slate-300 font-medium block mb-2">Number of Communities</label>
                       <div className="flex items-center gap-3">
                         <input
                           type="number" min="2" max="20"
                           value={mapping.num_communities}
                           onChange={e => setMapping({...mapping, num_communities: parseInt(e.target.value) || 4})}
-                          className="w-20 bg-slate-950 border border-slate-700 rounded p-2 text-sm text-center"
+                          className="w-20 bg-nebula border border-line-defaultNone rounded p-2 text-sm text-center"
                         />
                         <p className="text-[10px] text-slate-500">Target clusters for KMeans. Auto-detected from GT if available.</p>
                       </div>
@@ -984,7 +984,7 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
                             className={`flex-1 p-2 rounded-lg border text-xs transition-all ${
                               uploadMode === mode.id
                                 ? 'bg-amber-500/20 border-amber-500/50 text-amber-200'
-                                : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+                                : 'bg-nebula border-line-defaultNone text-slate-400 hover:border-slate-500'
                             }`}
                           >
                             <div className="font-bold">{mode.label}</div>
@@ -996,7 +996,7 @@ export default function DataInputView({ onClose, variant = 'modal' }) {
                   )}
 
                   {/* Mapping Summary */}
-                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                  <div className="bg-nebula/50 border border-line-defaultNone rounded-lg p-4">
                     <h4 className="text-sm font-bold text-slate-300 mb-3">Mapping Summary</h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
                       {Object.entries(mapping).filter(([k, v]) => v && v !== '' && !(Array.isArray(v) && v.length === 0)).map(([k, v]) => (

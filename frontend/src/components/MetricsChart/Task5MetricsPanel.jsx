@@ -66,7 +66,7 @@ export default function Task5MetricsPanel({ forcedTab = null, hideTabControls = 
               onClick={() => setActiveTab(tab.id)}
               className={`text-nano font-bold uppercase tracking-ultra px-2.5 py-1 rounded-md transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-slate-800 text-white'
+                  ? 'bg-nebula text-white'
                   : 'bg-transparent text-slate-500 hover:text-slate-300'
               }`}
             >
@@ -173,7 +173,7 @@ function OutliersTab({ snap, onOutlierClick, graphData }) {
               <button
                 key={row.id}
                 onClick={() => onOutlierClick(row.id)}
-                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-slate-800/50 transition-colors text-left group"
+                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-nebula/50 transition-colors text-left group"
               >
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-nano text-slate-500">#{row.id}</span>
@@ -278,7 +278,7 @@ function NeighborhoodTab({ snap, graphData, onNodeClick }) {
 
         <Panel title={`Node Influence Ranking (${sortedRows.length} nodes)`}>
           <div className="divide-y divide-slate-800/80 max-h-64 overflow-y-auto custom-scrollbar">
-            <div className="flex items-center gap-2 px-2 py-1 bg-slate-900/60 sticky top-0">
+            <div className="flex items-center gap-2 px-2 py-1 bg-nebula sticky top-0">
               <SortHeader label="ID" active={sortBy === 'id'} direction={sortDir} onClick={() => handleSort('id')} className="w-10" />
               <SortHeader label="Deg" active={sortBy === 'degree'} direction={sortDir} onClick={() => handleSort('degree')} className="w-12" />
               <SortHeader label="Norm" active={sortBy === 'norm'} direction={sortDir} onClick={() => handleSort('norm')} className="flex-1" />
@@ -291,7 +291,7 @@ function NeighborhoodTab({ snap, graphData, onNodeClick }) {
               <button
                 key={row.id}
                 onClick={() => onNodeClick(row.id)}
-                className="w-full flex items-center gap-2 px-2 py-1 hover:bg-slate-800/50 transition-colors text-left"
+                className="w-full flex items-center gap-2 px-2 py-1 hover:bg-nebula/50 transition-colors text-left"
               >
                 <div className="w-10 font-mono text-micro text-slate-400">#{row.id}</div>
                 <div className="w-12 font-mono text-micro text-slate-300">{row.degree}</div>
@@ -587,7 +587,7 @@ function Metric({ label, value, tone = 'slate' }) {
     slate: 'text-slate-200',
   }
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-2">
+    <div className="bg-nebula border border-line-default rounded-lg p-2">
       <div className="text-nano uppercase tracking-ultra text-slate-500 font-bold">{label}</div>
       <div className={`font-mono text-lg font-black leading-tight ${colors[tone]}`}>{value}</div>
     </div>
@@ -596,7 +596,7 @@ function Metric({ label, value, tone = 'slate' }) {
 
 function MiniStat({ label, value }) {
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-md px-2 py-1">
+    <div className="bg-nebula border border-line-default rounded-md px-2 py-1">
       <div className="text-nano uppercase tracking-ultra text-slate-500 font-bold">{label}</div>
       <div className="font-mono text-sm text-slate-200">{value}</div>
     </div>
@@ -612,7 +612,7 @@ function IsotropyGauge({ value }) {
         <span className="text-nano uppercase tracking-ultra text-slate-500 font-bold">Gauge</span>
         <span className="font-mono text-xs text-slate-200">{pct.toFixed(1)}%</span>
       </div>
-      <div className="h-2 rounded bg-slate-800 overflow-hidden">
+      <div className="h-2 rounded bg-nebula overflow-hidden">
         <div className={`h-full ${tone} transition-all`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -621,8 +621,8 @@ function IsotropyGauge({ value }) {
 
 function Panel({ title, children }) {
   return (
-    <div className="bg-slate-900/40 border border-slate-800 rounded-lg overflow-hidden">
-      <div className="px-2 py-1.5 border-b border-slate-800 bg-slate-900/60">
+    <div className="bg-nebula border border-line-default rounded-lg overflow-hidden">
+      <div className="px-2 py-1.5 border-b border-line-default bg-nebula">
         <div className="text-nano uppercase tracking-ultra text-slate-400 font-bold">{title}</div>
       </div>
       <div>{children}</div>

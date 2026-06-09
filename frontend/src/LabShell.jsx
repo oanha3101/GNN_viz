@@ -425,7 +425,7 @@ function LabShell() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/app/dashboard')}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border bg-nebula/50 text-moonlight border-line-default hover:border-line-active"
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border bg-nebula text-moonlight border-line-default hover:border-line-active"
           >
             <span>{user ? user.username : t('lab.anonymous')}</span>
             <span className="text-twilight">•</span>
@@ -436,20 +436,20 @@ function LabShell() {
           <button
             type="button"
             onClick={() => navigate('/app/lab/analysis/structure')}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line-default bg-nebula/55 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-moonlight transition-colors hover:border-line-active hover:text-starlight"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line-default bg-nebula px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-moonlight transition-colors hover:border-line-active hover:text-starlight"
           >
             <ExternalLink size={12} />
             {t('lab.open_capture_view')}
           </button>
           <button
             onClick={() => setRightPanelOpen(!rightPanelOpen)}
-            className={`p-2 rounded-lg transition-all border ${rightPanelOpen ? 'bg-line-default text-amethyst border-line-default' : 'bg-nebula/50 text-twilight border-line-subtle'}`}
+            className={`p-2 rounded-lg transition-all border ${rightPanelOpen ? 'bg-line-default text-amethyst border-line-default' : 'bg-nebula text-twilight border-line-subtle'}`}
             title={rightPanelOpen ? t('lab.hide_analysis') : t('lab.show_analysis')}
           >
             {rightPanelOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
           </button>
           {snapshots.length > 0 && (
-            <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-nebula/50 border border-line-subtle">
+            <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-nebula border border-line-subtle">
               <div className="flex flex-col items-center">
                 <span className="text-[7px] uppercase text-twilight font-bold">{headerPrimaryMetric.label}</span>
                 <span className={`text-[10px] font-mono font-bold ${headerPrimaryMetric.className}`}>

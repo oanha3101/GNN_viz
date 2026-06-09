@@ -44,7 +44,7 @@ function SmallStat({ label, value, tone = 'cyan' }) {
 
 function ItemCard({ title, subtitle, active, onSelect, action, meta }) {
   return (
-    <div className={`rounded-2xl border p-4 transition-all ${active ? 'border-cyan-500/25 bg-cyan-500/6' : 'border-slate-800/70 bg-slate-950/50'}`}>
+    <div className={`rounded-2xl border p-4 transition-all ${active ? 'border-cyan-500/25 bg-cyan-500/6' : 'border-line-default/70 bg-nebula/50'}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-white">{title}</div>
@@ -55,7 +55,7 @@ function ItemCard({ title, subtitle, active, onSelect, action, meta }) {
           {action}
           <button
             onClick={onSelect}
-            className={`rounded-xl border px-3 py-1.5 text-xs font-semibold ${active ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300' : 'border-slate-700 bg-slate-900 text-slate-300'}`}
+            className={`rounded-xl border px-3 py-1.5 text-xs font-semibold ${active ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300' : 'border-line-defaultNone bg-deep text-slate-300'}`}
           >
             {active ? 'Đang dùng' : 'Chọn'}
           </button>
@@ -267,16 +267,16 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
   const isPage = variant === 'page'
   const shellOuterClass = isPage
     ? 'h-full min-h-[720px]'
-    : 'fixed inset-0 z-[94] bg-slate-950/90 backdrop-blur-sm p-6'
+    : 'fixed inset-0 z-[94] bg-nebula/90 backdrop-blur-sm p-6'
   const shellInnerClass = isPage
-    ? 'flex h-full w-full overflow-hidden rounded-[28px] border border-slate-700/50 bg-deep shadow-2xl'
-    : 'mx-auto flex h-full max-w-6xl overflow-hidden rounded-[28px] border border-slate-700/50 bg-deep shadow-2xl'
+    ? 'flex h-full w-full overflow-hidden rounded-[28px] border border-line-default/50 bg-deep shadow-2xl'
+    : 'mx-auto flex h-full max-w-6xl overflow-hidden rounded-[28px] border border-line-default/50 bg-deep shadow-2xl'
 
   return (
     <div className={shellOuterClass}>
       <div className={shellInnerClass}>
-        <aside className="flex w-[240px] shrink-0 flex-col border-r border-slate-800/60 bg-slate-950/50">
-          <div className="border-b border-slate-800/60 px-5 py-5">
+        <aside className="flex w-[240px] shrink-0 flex-col border-r border-line-default/60 bg-nebula/50">
+          <div className="border-b border-line-default/60 px-5 py-5">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-cyan-300/80">
               <Layers3 size={13} /> Workspace
             </div>
@@ -293,7 +293,7 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all ${
                     activeTab === tab.id
                       ? 'border border-cyan-500/20 bg-cyan-500/10 text-cyan-300'
-                      : 'border border-transparent text-slate-400 hover:bg-slate-900/70 hover:text-slate-200'
+                      : 'border border-transparent text-slate-400 hover:bg-nebula hover:text-slate-200'
                   }`}
                 >
                   <Icon size={15} />
@@ -303,10 +303,10 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
             })}
           </div>
           {!isPage ? (
-            <div className="border-t border-slate-800/60 p-3">
+            <div className="border-t border-line-default/60 p-3">
             <button
               onClick={onClose}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-sm text-slate-300"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-line-default/60 bg-deep/60 px-3 py-2 text-sm text-slate-300"
             >
               <X size={14} /> Đóng
             </button>
@@ -315,7 +315,7 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-center justify-between border-b border-slate-800/60 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-line-default/60 px-6 py-4">
             <div>
               <div className="text-sm font-semibold text-white">{TABS.find((tab) => tab.id === activeTab)?.label}</div>
               <div className="mt-1 text-xs text-slate-500">
@@ -324,7 +324,7 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
             </div>
             <button
               onClick={refreshWorkspace}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-cyan-300"
+              className="inline-flex items-center gap-2 rounded-xl border border-line-default/60 bg-deep/60 px-3 py-2 text-xs font-semibold text-cyan-300"
             >
               <RefreshCw size={13} /> Làm mới
             </button>
@@ -345,11 +345,11 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                 </div>
                 <Panel title="Current Context" subtitle="Đây là context sẽ đi cùng session khi train live.">
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4 text-sm text-slate-300">
+                    <div className="rounded-2xl border border-line-default/70 bg-nebula/50 p-4 text-sm text-slate-300">
                       <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Project</div>
                       <div className="mt-2 font-semibold text-white">{activeProjectName || selectedProject?.title || 'Chưa chọn project'}</div>
                     </div>
-                    <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4 text-sm text-slate-300">
+                    <div className="rounded-2xl border border-line-default/70 bg-nebula/50 p-4 text-sm text-slate-300">
                       <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Dataset Version</div>
                       <div className="mt-2 font-semibold text-white">{activeDatasetVersionName || (activeDatasetVersionId ? `Version #${activeDatasetVersionId}` : 'Chưa chọn version')}</div>
                     </div>
@@ -377,7 +377,7 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                         </button>
                         <button
                           onClick={() => setActiveTab('datasets')}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200"
+                          className="inline-flex items-center gap-2 rounded-xl border border-line-defaultNone bg-deep px-3 py-2 text-xs font-semibold text-slate-200"
                         >
                           <Database size={13} /> Sync vào dataset
                         </button>
@@ -396,13 +396,13 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                       value={projectForm.title}
                       onChange={(e) => setProjectForm((prev) => ({ ...prev, title: e.target.value }))}
                       placeholder="Tên project"
-                      className="rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 outline-none"
+                      className="rounded-xl border border-line-defaultNone bg-nebula px-3 py-2 text-sm text-slate-200 outline-none"
                     />
                     <input
                       value={projectForm.description}
                       onChange={(e) => setProjectForm((prev) => ({ ...prev, description: e.target.value }))}
                       placeholder="Mô tả ngắn"
-                      className="rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 outline-none"
+                      className="rounded-xl border border-line-defaultNone bg-nebula px-3 py-2 text-sm text-slate-200 outline-none"
                     />
                     <button
                       onClick={handleCreateProject}
@@ -439,14 +439,14 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                       value={datasetForm.name}
                       onChange={(e) => setDatasetForm((prev) => ({ ...prev, name: e.target.value }))}
                       placeholder={datasetName || 'Tên dataset'}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 outline-none"
+                      className="w-full rounded-xl border border-line-defaultNone bg-nebula px-3 py-2 text-sm text-slate-200 outline-none"
                     />
                     <textarea
                       value={datasetForm.description}
                       onChange={(e) => setDatasetForm((prev) => ({ ...prev, description: e.target.value }))}
                       placeholder="Mô tả dataset"
                       rows={4}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 outline-none"
+                      className="w-full rounded-xl border border-line-defaultNone bg-nebula px-3 py-2 text-sm text-slate-200 outline-none"
                     />
                     <div className="flex gap-2">
                       <button
@@ -457,7 +457,7 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                       </button>
                       <button
                         onClick={onOpenDataInput}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200"
+                        className="inline-flex items-center gap-2 rounded-xl border border-line-defaultNone bg-deep px-4 py-2 text-sm font-semibold text-slate-200"
                       >
                         <Upload size={14} /> Upload data
                       </button>
@@ -478,7 +478,7 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                                 loadDatasetDetail(item.id).catch(setError)
                               }
                             }}
-                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${selectedDataset === item.id ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${selectedDataset === item.id ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300' : 'border-line-defaultNone bg-deep text-slate-400'}`}
                           >
                             {item.name}
                           </button>
@@ -486,7 +486,7 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                       </div>
                       {currentDatasetDetail ? (
                         <div className="space-y-3">
-                          <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+                          <div className="rounded-2xl border border-line-default/70 bg-nebula/50 p-4">
                             <div className="text-sm font-semibold text-white">{currentDatasetDetail.dataset.name}</div>
                             <div className="mt-1 text-xs text-slate-500">{currentDatasetDetail.dataset.description || 'No description'}</div>
                           </div>
@@ -558,13 +558,13 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                     <div className="flex gap-2">
                       <button
                         onClick={() => setAuthMode('login')}
-                        className={`rounded-xl border px-3 py-2 text-sm font-semibold ${authMode === 'login' ? 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                        className={`rounded-xl border px-3 py-2 text-sm font-semibold ${authMode === 'login' ? 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300' : 'border-line-defaultNone bg-deep text-slate-400'}`}
                       >
                         Login
                       </button>
                       <button
                         onClick={() => setAuthMode('register')}
-                        className={`rounded-xl border px-3 py-2 text-sm font-semibold ${authMode === 'register' ? 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                        className={`rounded-xl border px-3 py-2 text-sm font-semibold ${authMode === 'register' ? 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300' : 'border-line-defaultNone bg-deep text-slate-400'}`}
                       >
                         Register
                       </button>
@@ -576,13 +576,13 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                             value={authForm.email}
                             onChange={(e) => setAuthForm((prev) => ({ ...prev, email: e.target.value }))}
                             placeholder="Email"
-                            className="rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 outline-none"
+                            className="rounded-xl border border-line-defaultNone bg-nebula px-3 py-2 text-sm text-slate-200 outline-none"
                           />
                           <input
                             value={authForm.fullName}
                             onChange={(e) => setAuthForm((prev) => ({ ...prev, fullName: e.target.value }))}
                             placeholder="Full name"
-                            className="rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 outline-none"
+                            className="rounded-xl border border-line-defaultNone bg-nebula px-3 py-2 text-sm text-slate-200 outline-none"
                           />
                         </>
                       )}
@@ -590,14 +590,14 @@ export default function WorkspaceConsole({ isOpen, onClose, onOpenDataInput, ini
                         value={authForm.username}
                         onChange={(e) => setAuthForm((prev) => ({ ...prev, username: e.target.value }))}
                         placeholder="Username"
-                        className="rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 outline-none"
+                        className="rounded-xl border border-line-defaultNone bg-nebula px-3 py-2 text-sm text-slate-200 outline-none"
                       />
                       <input
                         type="password"
                         value={authForm.password}
                         onChange={(e) => setAuthForm((prev) => ({ ...prev, password: e.target.value }))}
                         placeholder="Password"
-                        className="rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 outline-none"
+                        className="rounded-xl border border-line-defaultNone bg-nebula px-3 py-2 text-sm text-slate-200 outline-none"
                       />
                     </div>
                     {authError && <div className="text-sm text-red-300">{authError}</div>}

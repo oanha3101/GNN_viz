@@ -13,7 +13,7 @@ function ValidityBar({ label, value, color }) {
         <span className="text-slate-500">{label}</span>
         <span style={{ color }}>{(value * 100).toFixed(1)}%</span>
       </div>
-      <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5">
+      <div className="h-1.5 bg-deep rounded-full overflow-hidden border border-white/5">
         <div 
           className="h-full rounded-full transition-all duration-300 ease-out"
           style={{ width: `${value * 100}%`, backgroundColor: color, boxShadow: `0 0 8px ${color}44` }} 
@@ -69,7 +69,7 @@ export default function ValidityMonitor() {
         <ValidityBar label="Novelty" value={novelty} color="#a855f7" />
       </div>
 
-      <div className="h-px bg-slate-800/40 mb-4" />
+      <div className="h-px bg-nebula/40 mb-4" />
 
       {/* Stacked area chart */}
       <div className="flex-1 min-h-[160px] mb-4">
@@ -107,11 +107,11 @@ export default function ValidityMonitor() {
 
       {/* Loss metrics */}
       <div className="grid grid-cols-2 gap-2 mt-auto">
-        <div className="bg-slate-900/60 rounded-lg px-2 py-2 text-center border border-slate-800/50">
+        <div className="bg-nebula rounded-lg px-2 py-2 text-center border border-line-subtle">
           <span className="text-nano text-slate-500 block uppercase font-bold mb-1">Recon Loss</span>
           <span className="text-xs font-bold font-mono text-orange-400">{reconLoss.toFixed(3)}</span>
         </div>
-        <div className="bg-slate-900/60 rounded-lg px-2 py-2 text-center border border-slate-800/50">
+        <div className="bg-nebula rounded-lg px-2 py-2 text-center border border-line-subtle">
           <span className="text-nano text-slate-500 block uppercase font-bold mb-1">KL Loss</span>
           <span className="text-xs font-bold font-mono text-purple-400">{klLoss.toFixed(3)}</span>
         </div>

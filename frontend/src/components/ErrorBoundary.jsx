@@ -17,7 +17,7 @@ export class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="w-full h-full flex items-center justify-center bg-slate-950 p-4">
+        <div className="w-full h-full flex items-center justify-center bg-nebula p-4">
           <div className="text-center">
             <div className="text-2xl mb-2 text-amber-400">&#9888;</div>
             <p className="text-sm text-red-400 mb-2">Component Error</p>
@@ -26,7 +26,7 @@ export class ErrorBoundary extends React.Component {
             </p>
             <button
               onClick={() => this.setState({ hasError: false, error: null })}
-              className="mt-2 px-3 py-1 rounded text-xs bg-slate-800 text-slate-300 hover:bg-slate-700"
+              className="mt-2 px-3 py-1 rounded text-xs bg-nebula text-slate-300 hover:bg-nebulaNone"
             >
               Retry
             </button>

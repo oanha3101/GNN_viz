@@ -346,7 +346,7 @@ export default function EmbeddingSpaceB() {
             className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border
               ${projMode === mode
                 ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                : 'bg-slate-800/90 text-slate-500 border-slate-700/50 hover:text-slate-300'
+                : 'bg-nebula text-slate-500 border-line-subtle hover:text-slate-300'
               }`}
           >
             {mode === 'pca' ? 'PCA' : 't-SNE'}
@@ -357,7 +357,7 @@ export default function EmbeddingSpaceB() {
           className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all border
             ${showTrajectory
               ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
-              : 'bg-slate-800/90 text-slate-500 border-slate-700/50'}`}
+              : 'bg-nebula text-slate-500 border-line-subtle'}`}
         >
           Trail
         </button>
@@ -373,7 +373,7 @@ export default function EmbeddingSpaceB() {
             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all border ${
               colorMode === mode
                 ? 'bg-violet-500/20 text-violet-300 border-violet-500/40'
-                : 'bg-slate-800/90 text-slate-500 border-slate-700/50 hover:text-slate-300'
+                : 'bg-nebula text-slate-500 border-line-subtle hover:text-slate-300'
             }`}
           >
             {label}
@@ -382,7 +382,7 @@ export default function EmbeddingSpaceB() {
         {task5SelectedNodeIds?.length > 0 && (
           <button
             onClick={() => setTask5SelectedNodeIds([])}
-            className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-950/90 text-amber-300 border border-amber-500/40"
+            className="px-2 py-1 rounded-lg text-[10px] font-bold bg-nebula text-amber-300 border border-amber-500/40"
           >
             Clear {task5SelectedNodeIds.length}
           </button>
@@ -390,7 +390,7 @@ export default function EmbeddingSpaceB() {
       </div>
 
       {/* Isotropy Badge */}
-      <div className="absolute top-2 right-2 z-10 bg-white/90 dark:bg-slate-900/85 border border-slate-300/60 dark:border-slate-700/40 rounded-lg px-2.5 py-1.5 text-right shadow-sm">
+      <div className="absolute top-2 right-2 z-10 bg-white/90 dark:bg-nebula border border-slate-300/60 dark:border-line-subtle rounded-lg px-2.5 py-1.5 text-right shadow-sm">
         <span className="text-[8px] text-slate-500 block uppercase tracking-wider">Isotropy</span>
         <span className={`text-sm font-bold font-mono ${
           isotropy > 0.6 ? 'text-emerald-500 dark:text-emerald-400' : isotropy > 0.3 ? 'text-amber-500 dark:text-yellow-400' : 'text-rose-500 dark:text-red-400'
@@ -401,7 +401,7 @@ export default function EmbeddingSpaceB() {
 
       {/* Subsample indicator */}
       {sampleIndices && (
-        <div className="absolute bottom-2 left-2 bg-white/90 dark:bg-slate-900/80 border border-amber-500/40 rounded-lg px-2 py-1 z-10 shadow-sm">
+        <div className="absolute bottom-2 left-2 bg-white/90 dark:bg-nebula border border-amber-500/40 rounded-lg px-2 py-1 z-10 shadow-sm">
           <span className="text-[9px] text-amber-600 dark:text-amber-400 font-semibold">
             Showing {sampleIndices.length.toLocaleString()} / {totalNodes.toLocaleString()} nodes
           </span>
@@ -409,14 +409,14 @@ export default function EmbeddingSpaceB() {
       )}
 
       {/* Epoch badge */}
-      <div className="absolute bottom-2 right-2 bg-white/85 dark:bg-slate-900/70 border border-slate-300/60 dark:border-slate-700/40 rounded px-2 py-0.5 z-10 shadow-sm">
+      <div className="absolute bottom-2 right-2 bg-white/85 dark:bg-nebula border border-slate-300/60 dark:border-line-subtle rounded px-2 py-0.5 z-10 shadow-sm">
         <span className="text-[9px] text-slate-500">Epoch </span>
         <span className="text-[9px] text-slate-700 dark:text-slate-300 font-semibold">{currentEpoch}</span>
       </div>
 
       {/* Color legend */}
       {numClasses > 1 && (
-        <div className="absolute bottom-10 left-2 bg-white/90 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-slate-300/60 dark:border-slate-700/30 z-10 shadow-sm">
+        <div className="absolute bottom-10 left-2 bg-white/90 dark:bg-nebula backdrop-blur-sm rounded-lg px-2 py-1.5 border border-slate-300/60 dark:border-line-subtle z-10 shadow-sm">
           <div className="text-[7px] text-slate-500 uppercase tracking-wider font-bold mb-1">{hasLabels ? 'Classes' : 'Clusters'}</div>
           <div className="flex gap-2 flex-wrap">
             {Array.from({ length: Math.min(numClasses, 8) }, (_, c) => (

@@ -119,7 +119,7 @@ export default function Task3MetricsPanel({
               onClick={() => setActiveTab(tab.id)}
               className={`text-nano font-bold uppercase tracking-ultra px-2.5 py-1 rounded-md transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-slate-800 text-white'
+                  ? 'bg-nebula text-white'
                   : 'bg-transparent text-slate-500 hover:text-slate-300'
               }`}
             >
@@ -349,7 +349,7 @@ function StructureTab({ copy, edge, bridgeEdges, hubDriven, onFocus }) {
           style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}
         >
           {cards.map(([label, value]) => (
-            <div key={label} className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2">
+            <div key={label} className="min-w-0 rounded-xl border border-line-default bg-nebula px-3 py-2">
               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</div>
               <div className="mt-1 text-sm font-semibold text-slate-100">{value}</div>
             </div>
@@ -445,7 +445,7 @@ function ReasoningTab({ copy, edge, unstable, summary, paired, selectedModel, on
             </div>
             <div className="space-y-1">
               {(summary?.topModes || []).map((mode) => (
-                <div key={mode.key} className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1.5">
+                <div key={mode.key} className="flex items-center justify-between rounded-lg border border-line-default bg-nebula px-2 py-1.5">
                   <span className="text-nano text-slate-300">{mode.label}</span>
                   <span className="font-mono text-nano text-cyan-300">{mode.count}</span>
                 </div>
@@ -498,7 +498,7 @@ function EdgeReasoningTable({ rows, onFocus, emptyLabel, showNarrative = false, 
       {sortedRows.map((row) => (
         <div
           key={`${row.idx}-${row.source}-${row.target}`}
-          className="w-full px-2 py-2 text-left hover:bg-slate-800/40 transition-colors"
+          className="w-full px-2 py-2 text-left hover:bg-nebula/40 transition-colors"
         >
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -551,7 +551,7 @@ function EvidenceBullets({ bullets }) {
   return (
     <div className="grid gap-1">
       {bullets.map((bullet) => (
-        <div key={bullet.key} className="rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1.5">
+        <div key={bullet.key} className="rounded-lg border border-line-default bg-nebula px-2 py-1.5">
           <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-cyan-200">{bullet.label}</span>
           <span className="ml-2 text-nano leading-relaxed text-slate-300">{bullet.value}</span>
         </div>
@@ -580,7 +580,7 @@ function MiniEvidenceSubgraph({ edge, copy }) {
 
   return (
     <div className="px-3 pb-3">
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+      <div className="rounded-xl border border-line-default bg-nebula p-3">
         <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{copy.labels.structuralProof}</div>
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full max-w-[420px] overflow-visible">
           <line x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke="rgba(34,211,238,0.35)" strokeWidth="2" strokeDasharray="6 6" />
@@ -641,7 +641,7 @@ function Metric({ label, value, tone = 'slate' }) {
     slate: 'text-slate-200',
   }
   return (
-    <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2">
+    <div className="min-w-0 rounded-xl border border-line-default bg-nebula px-3 py-2">
       <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</div>
       <div className={`mt-1 text-sm font-semibold ${toneMap[tone] || toneMap.slate}`}>{value}</div>
     </div>
@@ -650,8 +650,8 @@ function Metric({ label, value, tone = 'slate' }) {
 
 function Panel({ title, children }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
-      <div className="border-b border-slate-800 px-3 py-2 text-[11px] font-semibold text-slate-200">{title}</div>
+    <div className="min-w-0 rounded-2xl border border-line-default bg-nebula overflow-hidden">
+      <div className="border-b border-line-default px-3 py-2 text-[11px] font-semibold text-slate-200">{title}</div>
       {children}
     </div>
   )

@@ -4265,21 +4265,56 @@ html:not(.dark) .bg-slate-900 { background-color: var(--c-bg-elev) !important; }
 html:not(.dark) .bg-slate-800 { background-color: var(--c-bg-muted) !important; }
 html:not(.dark) .bg-slate-700 { background-color: var(--c-surface-strong) !important; }
 
-/* Translucent surface overrides (e.g. bg-slate-900/60) */
-html:not(.dark) [class*="bg-slate-950/"],
-html:not(.dark) [class*="bg-slate-900/"],
-html:not(.dark) [class*="bg-slate-800/"],
-html:not(.dark) [class*="bg-slate-700/"] {
-  background-color: var(--c-bg-elev) !important;
-}
+/* Translucent surface overrides — opaque and differentiated by depth */
+html:not(.dark) [class*="bg-slate-950/"] { background-color: #f7f5f5 !important; }
+html:not(.dark) [class*="bg-slate-900/"] { background-color: #ffffff !important; }
+html:not(.dark) [class*="bg-slate-800/"] { background-color: #f7f5f5 !important; }
+html:not(.dark) [class*="bg-slate-700/"] { background-color: #f0eeee !important; }
 
-/* Dark border swaps */
-html:not(.dark) .border-slate-800 { border-color: var(--c-border-subtle) !important; }
+/* Dark border swaps — slightly stronger for card separation */
+html:not(.dark) .border-slate-800 { border-color: var(--c-border) !important; }
 html:not(.dark) .border-slate-700 { border-color: var(--c-border) !important; }
 html:not(.dark) [class*="border-slate-800/"],
 html:not(.dark) [class*="border-slate-700/"] {
   border-color: var(--c-border) !important;
 }
+
+/* Accent card backgrounds — distinct tints for light-mode legibility */
+html:not(.dark) [class*="bg-cyan-500/"] { background-color: #fff1f2 !important; }
+html:not(.dark) [class*="bg-violet-500/"] { background-color: #f5f3ff !important; }
+html:not(.dark) [class*="bg-emerald-500/"] { background-color: #ecfdf5 !important; }
+html:not(.dark) [class*="bg-amber-500/"] { background-color: #fffbeb !important; }
+html:not(.dark) [class*="bg-red-500/"] { background-color: #fef2f2 !important; }
+html:not(.dark) [class*="bg-sky-500/"] { background-color: #f0f9ff !important; }
+
+/* Accent card borders — visible colored borders in light mode */
+html:not(.dark) [class*="border-cyan-500/"] { border-color: #fecaca !important; }
+html:not(.dark) [class*="border-violet-500/"] { border-color: #ddd6fe !important; }
+html:not(.dark) [class*="border-emerald-500/"] { border-color: #a7f3d0 !important; }
+html:not(.dark) [class*="border-amber-500/"] { border-color: #fde68a !important; }
+html:not(.dark) [class*="border-red-500/"] { border-color: #fecaca !important; }
+html:not(.dark) [class*="border-sky-500/"] { border-color: #bae6fd !important; }
+
+/* Accent text colors — keep readable on light surfaces */
+html:not(.dark) .text-cyan-100 { color: var(--c-primary-800) !important; }
+html:not(.dark) .text-cyan-200 { color: var(--c-primary-700) !important; }
+html:not(.dark) .text-cyan-300 { color: var(--c-primary-600) !important; }
+html:not(.dark) .text-cyan-400 { color: var(--c-primary-500) !important; }
+html:not(.dark) .text-violet-200 { color: #7c3aed !important; }
+html:not(.dark) .text-violet-300 { color: #6d28d9 !important; }
+html:not(.dark) .text-emerald-200 { color: #15803d !important; }
+html:not(.dark) .text-emerald-300 { color: #16a34a !important; }
+html:not(.dark) .text-amber-200 { color: #b45309 !important; }
+html:not(.dark) .text-amber-300 { color: #d97706 !important; }
+html:not(.dark) .text-red-200 { color: #b91c1c !important; }
+html:not(.dark) .text-red-300 { color: #dc2626 !important; }
+html:not(.dark) .text-sky-200 { color: #0369a1 !important; }
+html:not(.dark) .text-sky-300 { color: #0284c7 !important; }
+
+/* Hardcoded dark-mode translucent fills — flip to light equivalents */
+html:not(.dark) [class*="bg-black/"] { background-color: rgba(15, 23, 42, 0.04) !important; }
+html:not(.dark) [class*="bg-white/6"] { background-color: rgba(15, 23, 42, 0.03) !important; }
+html:not(.dark) [class*="border-white/"] { border-color: var(--c-border-subtle) !important; }
 
 /* Make sure faint text on dark stays readable on light surfaces */
 html:not(.dark) .text-slate-500 { color: var(--c-fg-subtle) !important; }

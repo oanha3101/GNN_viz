@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateTask1Mock, generateTask3Mock, generateTask4Mock } from './generateMockSnapshots'
+import { generateTask1Mock, generateTask2Mock, generateTask3Mock, generateTask4Mock } from './generateMockSnapshots'
 
 describe('generateTask1Mock', () => {
   it('emits model-specific Task 1 payloads from the same seed inputs', () => {
@@ -38,6 +38,34 @@ describe('generateTask1Mock', () => {
       interior_boundary_gap: expect.any(Number),
       best_selection_metric: '0.4*val_acc+0.6*boundary_accuracy',
     }))
+  })
+})
+
+describe('generateTask2Mock', () => {
+  it('emits model-specific Task 2 graph-classification signatures', () => {
+    const gcn = generateTask2Mock(20, 10, 'GCN')
+    const gat = generateTask2Mock(20, 10, 'GAT')
+    const sage = generateTask2Mock(20, 10, 'GraphSAGE')
+
+    expect(gcn.snapshots[0]).toEqual(expect.objectContaining({
+      model_type: 'GCN',
+      epochs_target: 10,
+      epochs_completed: 1,
+      early_stopped: false,
+      stop_reason: null,
+    }))
+    expect(gat.snapshots[0].model_type).toBe('GAT')
+    expect(sage.snapshots[0].model_type).toBe('SAGE')
+
+    const topk = (snap) => snap.node_contributions
+      .map((arr) => [...arr].sort((a, b) => b - a).slice(0, 3).reduce((sum, value) => sum + value, 0))
+      .reduce((sum, value) => sum + value, 0) / snap.node_contributions.length
+    const flipCount = (snapA, snapB) => snapB.graph_predictions.filter((pred, index) => pred !== snapA.graph_predictions[index]).length
+
+    expect(topk(gat.snapshots[7])).toBeGreaterThan(topk(gcn.snapshots[7]))
+    expect(flipCount(sage.snapshots[0], sage.snapshots[1])).toBeGreaterThan(flipCount(sage.snapshots[8], sage.snapshots[9]))
+    expect(gat.snapshots[7].attention_entropy.reduce((sum, value) => sum + value, 0))
+      .toBeLessThan(gcn.snapshots[7].attention_entropy.reduce((sum, value) => sum + value, 0))
   })
 })
 

@@ -29,6 +29,7 @@ const gnnState = {
     classNames: ['A', 'B'],
   },
   classNames: ['A', 'B'],
+  selectedModel: 'SAGE',
   selectedNodeId: null,
   task2FocusMode: 'all',
   task2GallerySort: 'priority',
@@ -73,6 +74,7 @@ describe('TaskTopology2 task 2 gallery', () => {
     expect(screen.getByRole('button', { name: 'Priority' })).toBeInTheDocument()
     expect(screen.getByText(/margin 3%/i)).toBeInTheDocument()
     expect(screen.getByText('diffuse')).toBeInTheDocument()
+    expect(screen.getAllByText('Ổn định lân cận').length).toBeGreaterThan(0)
   })
 
   it('updates sort and selects graph by original graph id', () => {

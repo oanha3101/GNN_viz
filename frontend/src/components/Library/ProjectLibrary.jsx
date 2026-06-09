@@ -180,10 +180,10 @@ export default function ProjectLibrary({ isOpen, onClose }) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[90] bg-slate-950/88 backdrop-blur-sm flex items-center justify-center p-6">
-      <div className="w-full max-w-4xl max-h-[85vh] rounded-[24px] border border-slate-700/50 bg-deep shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[90] bg-nebula/88 backdrop-blur-sm flex items-center justify-center p-6">
+      <div className="w-full max-w-4xl max-h-[85vh] rounded-[24px] border border-line-default/50 bg-deep shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800/70 px-6 py-5">
+        <div className="flex items-center justify-between border-b border-line-default/70 px-6 py-5">
           <div>
             <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80 mb-1 flex items-center gap-1.5">
               <FolderOpen size={12} /> Thư viện huấn luyện
@@ -197,20 +197,20 @@ export default function ProjectLibrary({ isOpen, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="rounded-xl border border-slate-700/40 bg-slate-900/70 p-2.5 text-slate-300 hover:bg-slate-800/80 transition-colors"
+            className="rounded-xl border border-line-default/40 bg-deep/70 p-2.5 text-slate-300 hover:bg-nebula/80 transition-colors"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Task Filter */}
-        <div className="flex items-center gap-2 px-6 py-3 border-b border-slate-800/50 overflow-x-auto">
+        <div className="flex items-center gap-2 px-6 py-3 border-b border-line-subtle overflow-x-auto">
           <button
             onClick={() => setFilterTask(null)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
               filterTask === null
                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
-                : 'bg-slate-800/60 text-slate-400 border border-slate-700/40 hover:border-slate-600'
+                : 'bg-nebula/60 text-slate-400 border border-line-default/40 hover:border-line-default'
             }`}
           >
             Tất cả
@@ -224,7 +224,7 @@ export default function ProjectLibrary({ isOpen, onClose }) {
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
                   filterTask === t
                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
-                    : 'bg-slate-800/60 text-slate-400 border border-slate-700/40 hover:border-slate-600'
+                    : 'bg-nebula/60 text-slate-400 border border-line-default/40 hover:border-line-default'
                 }`}
               >
                 <TaskIcon size={12} /> Task {t}
@@ -263,11 +263,11 @@ export default function ProjectLibrary({ isOpen, onClose }) {
               return (
                 <div
                   key={exp.id}
-                  className="group relative flex items-center gap-4 rounded-2xl border border-slate-700/40 bg-slate-900/50 p-4 hover:border-cyan-500/30 hover:bg-slate-800/50 transition-all cursor-pointer"
+                  className="group relative flex items-center gap-4 rounded-2xl border border-line-default/40 bg-deep/50 p-4 hover:border-cyan-500/30 hover:bg-nebula/50 transition-all cursor-pointer"
                   onClick={() => handleLoadExperiment(exp.id)}
                 >
                   {/* Task Icon */}
-                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-slate-800/80 flex items-center justify-center">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-nebula/80 flex items-center justify-center">
                     <TaskIcon size={22} className="text-slate-400" />
                   </div>
 
@@ -339,7 +339,7 @@ export default function ProjectLibrary({ isOpen, onClose }) {
         </div>
 
         {/* Footer with count */}
-        <div className="px-6 py-4 border-t border-slate-800/50 text-[11px] text-slate-500 flex justify-between items-center bg-slate-900/40">
+        <div className="px-6 py-4 border-t border-line-subtle text-[11px] text-slate-500 flex justify-between items-center bg-deep/40">
           <span>{experiments.length} thí nghiệm đã lưu</span>
           <div className="flex items-center gap-4">
             {experiments.length > 0 && (

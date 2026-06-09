@@ -56,7 +56,7 @@ export default function LinkMetricsPanel() {
     .slice(0, 4)
 
   return (
-    <div className="h-full flex flex-col p-3 text-xs overflow-auto bg-slate-950 gap-3">
+    <div className="h-full flex flex-col p-3 text-xs overflow-auto bg-nebula gap-3">
       <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
         {copy.labels.evidenceCard}
       </h3>
@@ -66,8 +66,8 @@ export default function LinkMetricsPanel() {
         <Card label={copy.labels.focusedEdge} value={selected ? `${selected.source}-${selected.target}` : '-'} tone="text-cyan-300" />
       </div>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
-        <div className="border-b border-slate-800 px-3 py-2 text-[11px] font-semibold text-slate-200">
+      <section className="rounded-2xl border border-line-default bg-nebula overflow-hidden">
+        <div className="border-b border-line-default px-3 py-2 text-[11px] font-semibold text-slate-200">
           {copy.labels.evidenceCard}
         </div>
         <div className="p-3 space-y-2">
@@ -109,8 +109,8 @@ export default function LinkMetricsPanel() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
-        <div className="border-b border-slate-800 px-3 py-2 text-[11px] font-semibold text-slate-200">
+      <section className="rounded-2xl border border-line-default bg-nebula overflow-hidden">
+        <div className="border-b border-line-default px-3 py-2 text-[11px] font-semibold text-slate-200">
           {copy.labels.failureShortlist}
         </div>
         <div className="divide-y divide-slate-800/80">
@@ -118,7 +118,7 @@ export default function LinkMetricsPanel() {
             <button
               key={row.idx}
               onClick={() => setFocusedEdge(row.idx)}
-              className="w-full px-3 py-2 text-left hover:bg-slate-800/40 transition-colors"
+              className="w-full px-3 py-2 text-left hover:bg-nebula/40 transition-colors"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -148,7 +148,7 @@ export default function LinkMetricsPanel() {
 
 function Card({ label, value, tone }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2">
+    <div className="rounded-xl border border-line-default bg-nebula px-3 py-2">
       <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</div>
       <div className={`mt-1 text-sm font-semibold ${tone}`}>{value}</div>
     </div>
@@ -157,7 +157,7 @@ function Card({ label, value, tone }) {
 
 function Chip({ label, value }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/70 px-2 py-2">
+    <div className="rounded-xl border border-line-default bg-nebula px-2 py-2">
       <div className="text-[9px] uppercase tracking-[0.16em] text-slate-500">{label}</div>
       <div className="mt-1 text-sm font-semibold text-slate-100">{value}</div>
     </div>
@@ -177,7 +177,7 @@ function EvidenceBullets({ bullets }) {
   return (
     <div className="grid gap-1">
       {bullets.map((bullet) => (
-        <div key={bullet.key} className="rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1.5">
+        <div key={bullet.key} className="rounded-lg border border-line-default bg-nebula px-2 py-1.5">
           <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-cyan-200">{bullet.label}</span>
           <span className="ml-2 text-nano leading-relaxed text-slate-300">{bullet.value}</span>
         </div>

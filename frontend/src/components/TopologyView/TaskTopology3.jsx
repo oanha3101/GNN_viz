@@ -641,7 +641,7 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
       </div>
 
       {!reportMode && (
-        <div className="absolute top-4 left-4 z-20 flex gap-1 rounded-xl border border-slate-800 bg-slate-950/80 p-1 backdrop-blur-md">
+        <div className="absolute top-4 left-4 z-20 flex gap-1 rounded-xl border border-line-default bg-nebula/80 p-1 backdrop-blur-md">
           {['global', 'focus', 'evidence'].map((mode) => (
             <button
               key={mode}
@@ -674,7 +674,7 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
         </button>
       </div>
 
-      <div className="absolute bottom-6 left-6 z-20 rounded-2xl border border-slate-800 bg-slate-950/78 px-3 py-2 backdrop-blur-md">
+      <div className="absolute bottom-6 left-6 z-20 rounded-2xl border border-line-default bg-nebula/78 px-3 py-2 backdrop-blur-md">
         <div className="mb-2 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">{copy.labels.legend}</div>
         <div className="grid gap-1 text-[10px] text-slate-300">
           <LegendSwatch color="rgba(91,86,137,0.35)" label={copy.labels.backgroundGraph} />

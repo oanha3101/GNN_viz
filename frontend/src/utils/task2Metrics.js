@@ -294,6 +294,188 @@ export function computeTask2ReadoutConcentration(contributions = []) {
   }
 }
 
+function clamp01(value) {
+  if (!Number.isFinite(value)) return 0
+  return Math.max(0, Math.min(1, value))
+}
+
+function normalizeTask2Model(modelType = 'GCN') {
+  const value = String(modelType || 'GCN').toUpperCase()
+  if (value.includes('SAGE')) return 'SAGE'
+  if (value === 'GAT') return 'GAT'
+  return 'GCN'
+}
+
+function getSourceIndex(descriptor, index) {
+  return Number.isInteger(descriptor?.sourceIndex) ? descriptor.sourceIndex : index
+}
+
+function meanContributionAgreement(descriptors = [], contributions = []) {
+  const perGraph = descriptors.map((descriptor, descriptorIndex) => {
+    const sourceIndex = getSourceIndex(descriptor, descriptorIndex)
+    const weights = contributions[sourceIndex] || []
+    const links = descriptor?.links || []
+    if (!weights.length || !links.length) return null
+    let sum = 0
+    let count = 0
+    for (const link of links) {
+      const source = typeof link.source === 'object' ? link.source.id : link.source
+      const target = typeof link.target === 'object' ? link.target.id : link.target
+      const a = Number(weights[source])
+      const b = Number(weights[target])
+      if (!Number.isFinite(a) || !Number.isFinite(b)) continue
+      sum += 1 - Math.min(1, Math.abs(a - b))
+      count += 1
+    }
+    return count > 0 ? sum / count : null
+  }).filter(Number.isFinite)
+  return average(perGraph)
+}
+
+function meanTopKContribution(contributions = [], k = 3) {
+  const scores = contributions.map((arr) => computeTask2ReadoutConcentration(arr).score)
+  return average(scores)
+}
+
+function averageEmbeddingMovement(snapA = null, snapB = null) {
+  const before = snapA?.graph_embeddings_2d || []
+  const after = snapB?.graph_embeddings_2d || []
+  if (!before.length || !after.length) return 0
+  const moves = after.map((point, index) => {
+    const prev = before[index]
+    if (!Array.isArray(prev) || !Array.isArray(point)) return 0
+    const dx = Number(point[0] || 0) - Number(prev[0] || 0)
+    const dy = Number(point[1] || 0) - Number(prev[1] || 0)
+    return Math.sqrt(dx * dx + dy * dy)
+  })
+  return average(moves)
+}
+
+function predictionFlipRate(current = null, previous = null, descriptors = []) {
+  const currentPred = current?.graph_predictions || []
+  const prevPred = previous?.graph_predictions || []
+  if (!currentPred.length || !prevPred.length) return 0
+  const scoped = descriptors.length
+    ? descriptors.map((descriptor, index) => getSourceIndex(descriptor, index))
+    : currentPred.map((_, index) => index)
+  if (!scoped.length) return 0
+  const flips = scoped.filter((index) => currentPred[index] !== prevPred[index]).length
+  return flips / scoped.length
+}
+
+function marginVariance(snapshot = null, descriptors = []) {
+  const margins = snapshot?.confidence_margins || computeMargins(snapshot?.graph_probabilities || [])
+  const scoped = descriptors.length
+    ? descriptors.map((descriptor, index) => margins[getSourceIndex(descriptor, index)]).filter(Number.isFinite)
+    : margins.filter(Number.isFinite)
+  const avg = average(scoped)
+  if (!scoped.length) return 0
+  return scoped.reduce((sum, value) => sum + ((value - avg) ** 2), 0) / scoped.length
+}
+
+function unstableTask2GraphIds(snapshot = null, previous = null, descriptors = []) {
+  const margins = snapshot?.confidence_margins || computeMargins(snapshot?.graph_probabilities || [])
+  const currentPred = snapshot?.graph_predictions || []
+  const prevPred = previous?.graph_predictions || []
+  return descriptors
+    .filter((descriptor, index) => {
+      const sourceIndex = getSourceIndex(descriptor, index)
+      const margin = margins[sourceIndex]
+      return (Number.isFinite(margin) && margin < 0.12) || currentPred[sourceIndex] !== prevPred[sourceIndex]
+    })
+    .map((descriptor) => descriptor.originalGraphId)
+}
+
+function buildTask2SignatureTrend(snapshots = [], selectedModel = 'GCN') {
+  const model = normalizeTask2Model(selectedModel)
+  return (snapshots || []).map((snapshot, index) => {
+    const previous = snapshots[index - 1] || null
+    const entropy = average(snapshot?.attention_entropy || (snapshot?.node_contributions || []).map((arr) => computeEntropy(arr)))
+    const topk = meanTopKContribution(snapshot?.node_contributions || [])
+    const flips = predictionFlipRate(snapshot, previous)
+    const smoothness = clamp01((1 - entropy) * 0.45 + (1 - Math.min(1, topk)) * 0.25 + 0.3)
+    const value = model === 'GAT'
+      ? topk
+      : model === 'SAGE'
+        ? 1 - flips
+        : smoothness
+    return {
+      epoch: Number.isInteger(snapshot?.epoch) ? snapshot.epoch : index,
+      value: clamp01(value),
+      secondary: model === 'GAT' ? 1 - entropy : model === 'SAGE' ? flips : entropy,
+    }
+  })
+}
+
+export function buildTask2ModelSignature(snapshot, snapshots = [], descriptors = [], selectedModel = 'GCN') {
+  const model = normalizeTask2Model(snapshot?.model_type || selectedModel)
+  const currentIndex = Math.max(0, (snapshots || []).findIndex((item) => item === snapshot))
+  const previous = currentIndex > 0 ? snapshots[currentIndex - 1] : null
+  const contributions = snapshot?.node_contributions || []
+  const entropyValues = snapshot?.attention_entropy || contributions.map((arr) => computeEntropy(arr))
+  const meanEntropy = average(entropyValues)
+  const topkMass = meanTopKContribution(contributions)
+  const agreement = meanContributionAgreement(descriptors, contributions)
+  const embeddingMove = averageEmbeddingMovement(previous, snapshot)
+  const flips = predictionFlipRate(snapshot, previous, descriptors)
+  const variance = marginVariance(snapshot, descriptors)
+  const stability = clamp01(1 - flips - Math.min(0.45, variance))
+  const diffuseShare = descriptors.length
+    ? descriptors.filter((descriptor) => descriptor.entropyBucket === 'diffuse' || descriptor.readoutBucket === 'diffuse').length / descriptors.length
+    : Number(snapshot?.readout_quality?.diffuse_share ?? 0)
+
+  const common = {
+    id: model,
+    trend: buildTask2SignatureTrend(snapshots, model),
+    unstableGraphIds: unstableTask2GraphIds(snapshot, previous, descriptors),
+    metrics: {
+      readout_smoothness: clamp01(agreement * 0.65 + (1 - Math.min(1, topkMass)) * 0.2 + (1 - Math.min(1, embeddingMove)) * 0.15),
+      diffuse_readout_share: clamp01(diffuseShare),
+      contribution_agreement: clamp01(agreement),
+      embedding_cluster_tightening: clamp01(1 - Math.min(1, embeddingMove)),
+      attention_focus: clamp01(topkMass * 0.75 + (1 - meanEntropy) * 0.25),
+      topk_contribution_mass: clamp01(topkMass),
+      attention_entropy_trend: clamp01(1 - meanEntropy),
+      motif_lock_score: clamp01(topkMass * (1 - meanEntropy)),
+      prediction_flip_rate: clamp01(flips),
+      score_stability: stability,
+      margin_variance: clamp01(variance),
+    },
+  }
+
+  if (model === 'GAT') {
+    return {
+      ...common,
+      primaryLabel: 'Attention khóa motif',
+      shortLabel: 'Tập trung',
+      metricLabel: 'Độ tập trung attention',
+      riskLabel: 'Khóa sai motif',
+      explanation: 'GAT nên làm nổi bật một số motif/nút quyết định; attention entropy giảm và top-k đóng góp tăng qua epoch.',
+      currentScore: common.metrics.attention_focus,
+    }
+  }
+  if (model === 'SAGE') {
+    return {
+      ...common,
+      primaryLabel: 'Bỏ phiếu lân cận',
+      shortLabel: 'Ổn định lân cận',
+      metricLabel: 'Độ ổn định',
+      riskLabel: 'Graph dao động',
+      explanation: 'GraphSAGE nên cho thấy các neighborhood vote ổn định dần; flip rate giảm và margin bớt dao động.',
+      currentScore: common.metrics.score_stability,
+    }
+  }
+  return {
+    ...common,
+    primaryLabel: 'Lan truyền mượt',
+    shortLabel: 'Mượt',
+    metricLabel: 'Độ mượt readout',
+    riskLabel: 'Nguy cơ quá mượt',
+    explanation: 'GCN nên lan truyền tín hiệu qua vùng cấu trúc liên thông; contribution giữa nút kề nhau đồng thuận hơn theo epoch.',
+    currentScore: common.metrics.readout_smoothness,
+  }
+}
+
 export function describeTask2MotifSignature({ densityBucket, clusteringBucket, readoutBucket, avgDegree = 0 }) {
   if (densityBucket === 'sparse' && readoutBucket === 'diffuse') {
     return 'sparse graph, weak local motif'

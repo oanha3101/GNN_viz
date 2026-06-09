@@ -48,9 +48,9 @@ export default function CommunityEvolution() {
   const axisColor = dark ? '#94a3b8' : '#64748b'
 
   return (
-    <div className="w-full h-full flex flex-col bg-white/60 dark:bg-slate-950 overflow-hidden pt-7">
+    <div className="w-full h-full flex flex-col bg-white/60 dark:bg-nebula overflow-hidden pt-7">
       {/* KPI strip */}
-      <div className="px-3 pb-2 shrink-0 border-b border-slate-200/60 dark:border-slate-800/60">
+      <div className="px-3 pb-2 shrink-0 border-b border-slate-200/60 dark:border-line-subtle">
         <div className="grid grid-cols-4 gap-1.5 mb-2">
           <KpiTile label="Modularity Q" value={modQ.toFixed(3)} tone={modQ > 0.4 ? 'good' : 'warn'} />
           <KpiTile label="Communities" value={numCommunities} />
@@ -66,7 +66,7 @@ export default function CommunityEvolution() {
                 <div
                   key={ci}
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full border whitespace-nowrap
-                    bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/30"
+                    bg-white dark:bg-nebula border-slate-200 dark:border-line-subtle"
                 >
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getCommunityColor(ci) }} />
                   <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300">C{ci}</span>
@@ -124,7 +124,7 @@ function KpiTile({ label, value, tone }) {
   }
   const valColor = colors[tone] || 'text-slate-800 dark:text-slate-100'
   return (
-    <div className="rounded-lg px-2 py-1.5 border bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/50">
+    <div className="rounded-lg px-2 py-1.5 border bg-slate-50 dark:bg-nebula border-slate-200 dark:border-line-subtle">
       <span className="text-[7px] text-slate-500 uppercase font-bold tracking-wider block">{label}</span>
       <span className={`text-sm font-bold font-mono tabular-nums leading-none ${valColor}`}>{value}</span>
     </div>

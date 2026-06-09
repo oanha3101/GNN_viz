@@ -48,7 +48,7 @@ export default function Task2HardCases({
               className={`w-full flex flex-col gap-1 px-2 py-1.5 rounded-md border text-left transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/60 ${
                 isSelected
                   ? 'border-cyan-500/60 bg-cyan-500/10'
-                  : 'border-slate-800/60 hover:border-slate-600/80 hover:bg-slate-900/60'
+                  : 'border-line-subtle hover:border-line-default hover:bg-nebula'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -68,7 +68,7 @@ export default function Task2HardCases({
                   {(margin * 100).toFixed(0)}%
                 </span>
               </div>
-              <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-1 w-full bg-nebula rounded-full overflow-hidden">
                 <div
                   className={`h-full ${correct ? 'bg-emerald-500/70' : 'bg-red-500/70'}`}
                   style={{ width: `${Math.max(4, margin * 100)}%` }}

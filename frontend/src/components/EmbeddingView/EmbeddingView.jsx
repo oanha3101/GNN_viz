@@ -69,7 +69,7 @@ function MiniGraphPopup({ descriptor, currSnap, position }) {
 
   return (
     <div className="fixed z-[9999] pointer-events-none" style={{ left: position.x + 16, top: position.y - 60 }}>
-      <div className="bg-slate-900/95 backdrop-blur-md rounded-xl border border-slate-600/60 shadow-2xl shadow-black/50 p-2 w-[180px]">
+      <div className="bg-deep/95 backdrop-blur-md rounded-xl border border-line-default/60 shadow-2xl shadow-black/50 p-2 w-[180px]">
         <svg width="100" height="100" viewBox="0 0 100 100" className="mx-auto">
           {links.map((link, index) => {
             const source = typeof link.source === 'object' ? link.source.id : link.source
@@ -474,13 +474,13 @@ export default function EmbeddingView({
   ])
 
   if (!plotData) {
-    return <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-950/20 animate-pulse text-[10px] uppercase font-black tracking-widest">Awaiting Latent...</div>
+    return <div className="w-full h-full flex items-center justify-center text-slate-700 bg-deep animate-pulse text-[10px] uppercase font-black tracking-widest">Awaiting Latent...</div>
   }
 
   return (
     <div ref={plotContainerRef} className="w-full h-full relative bg-abyss/40">
       {selectedTask === 2 && !hideTask2Toolbar && (
-        <div className="absolute left-2 top-2 z-10 flex items-center gap-2 rounded-xl border border-slate-800/70 bg-slate-950/80 px-2 py-1 text-[10px] font-semibold text-slate-300">
+        <div className="absolute left-2 top-2 z-10 flex items-center gap-2 rounded-xl border border-line-default bg-nebula/80 px-2 py-1 text-[10px] font-semibold text-slate-300">
           <span className="uppercase tracking-ultra text-slate-500">Color</span>
           {[
             ['predicted', 'Predicted'],
@@ -541,14 +541,14 @@ export default function EmbeddingView({
         onUnhover={handleUnhover}
       />
 
-      <div className="absolute top-2 right-2 bg-slate-900/90 backdrop-blur-md rounded-xl px-3 py-2 border border-white/5 shadow-2xl text-right pointer-events-none">
+      <div className="absolute top-2 right-2 bg-deep/90 backdrop-blur-md rounded-xl px-3 py-2 border border-white/5 shadow-2xl text-right pointer-events-none">
         <span className="text-[8px] text-slate-500 block uppercase font-black tracking-widest">Silhouette</span>
         <span className={`text-sm font-black font-mono ${silhouetteScore > 0.45 ? 'text-emerald-400' : silhouetteScore > 0.2 ? 'text-amber-400' : 'text-rose-400'}`}>
           {silhouetteScore.toFixed(3)}
         </span>
       </div>
 
-      <div className="absolute bottom-3 left-3 bg-slate-950/80 backdrop-blur-md border border-white/5 rounded-lg px-2 py-1 pointer-events-none flex items-center gap-2">
+      <div className="absolute bottom-3 left-3 bg-nebula/80 backdrop-blur-md border border-white/5 rounded-lg px-2 py-1 pointer-events-none flex items-center gap-2">
         <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_#06b6d4]" />
         <span className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">
           Density: {(axisConfig.compactness * 100).toFixed(0)}%
@@ -556,7 +556,7 @@ export default function EmbeddingView({
       </div>
 
       {selectedTask === 2 && reportMode && (
-        <div className="absolute bottom-3 right-3 max-w-[260px] rounded-lg border border-white/10 bg-slate-950/85 px-3 py-2 text-[9px] leading-4 text-slate-300 pointer-events-none">
+        <div className="absolute bottom-3 right-3 max-w-[260px] rounded-lg border border-line-subtle bg-nebula/85 px-3 py-2 text-[9px] leading-4 text-slate-300 pointer-events-none">
           <div className="font-black uppercase tracking-widest text-slate-500">Legend</div>
           <div>Color mode: {activeGraphColorMode}. Labels mark hard cases, weak-class misses, or structural outliers only.</div>
         </div>

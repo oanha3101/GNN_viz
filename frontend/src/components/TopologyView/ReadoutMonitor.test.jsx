@@ -33,6 +33,7 @@ const gnnState = {
     classNames: ['A', 'B'],
   },
   classNames: ['A', 'B'],
+  selectedModel: 'GCN',
   setHoveredGraph: vi.fn(),
   setSelectedNode: vi.fn(),
 }
@@ -59,6 +60,7 @@ describe('ReadoutMonitor task 2', () => {
 
     expect(screen.getByText('Graph #50')).toBeInTheDocument()
     expect(screen.getAllByText(/Overconfident miss/i)).toHaveLength(1)
+    expect(screen.getByText('Mượt')).toBeInTheDocument()
   })
 
   it('falls back to the active weak-class slice when pinned graph is outside the slice', () => {

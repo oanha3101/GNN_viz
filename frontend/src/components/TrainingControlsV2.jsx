@@ -221,7 +221,7 @@ export default function TrainingControlsV2() {
           setTrainMask(result.trainMask)
           break
         case 2:
-          result = generateTask2Mock(50, hyperparams.epochs)
+          result = generateTask2Mock(50, hyperparams.epochs, useGNNStore.getState().selectedModel)
           setTaskData({ graphs: result.graphs })
           break
         case 3:

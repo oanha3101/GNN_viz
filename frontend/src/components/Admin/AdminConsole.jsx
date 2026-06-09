@@ -46,7 +46,7 @@ function StatCard({ label, value, tone = 'cyan' }) {
 
 function DataCard({ title, subtitle, action, children }) {
   return (
-    <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+    <div className="rounded-2xl border border-line-default/70 bg-nebula/50 p-4">
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
           <div className="text-sm font-semibold text-white">{title}</div>
@@ -198,16 +198,16 @@ export default function AdminConsole({ isOpen, onClose, initialTab = 'overview',
   const isPage = variant === 'page'
   const shellOuterClass = isPage
     ? 'h-full min-h-[720px]'
-    : 'fixed inset-0 z-[95] bg-slate-950/90 backdrop-blur-sm p-6'
+    : 'fixed inset-0 z-[95] bg-nebula/90 backdrop-blur-sm p-6'
   const shellInnerClass = isPage
-    ? 'flex h-full w-full overflow-hidden rounded-[28px] border border-slate-700/50 bg-deep shadow-2xl'
-    : 'mx-auto flex h-full w-full max-w-7xl overflow-hidden rounded-[28px] border border-slate-700/50 bg-deep shadow-2xl'
+    ? 'flex h-full w-full overflow-hidden rounded-[28px] border border-line-default/50 bg-deep shadow-2xl'
+    : 'mx-auto flex h-full w-full max-w-7xl overflow-hidden rounded-[28px] border border-line-default/50 bg-deep shadow-2xl'
 
   return (
     <div className={shellOuterClass}>
       <div className={shellInnerClass}>
-        <aside className="flex w-[240px] shrink-0 flex-col border-r border-slate-800/60 bg-slate-950/50">
-          <div className="border-b border-slate-800/60 px-5 py-5">
+        <aside className="flex w-[240px] shrink-0 flex-col border-r border-line-default/60 bg-nebula/50">
+          <div className="border-b border-line-default/60 px-5 py-5">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.26em] text-cyan-300/80">
               <Shield size={13} /> Admin Console
             </div>
@@ -226,7 +226,7 @@ export default function AdminConsole({ isOpen, onClose, initialTab = 'overview',
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all ${
                     activeTab === tab.id
                       ? 'bg-cyan-500/12 text-cyan-300 border border-cyan-500/20'
-                      : 'text-slate-400 hover:bg-slate-900/70 hover:text-slate-200 border border-transparent'
+                      : 'text-slate-400 hover:bg-nebula hover:text-slate-200 border border-transparent'
                   }`}
                 >
                   <Icon size={15} />
@@ -236,10 +236,10 @@ export default function AdminConsole({ isOpen, onClose, initialTab = 'overview',
             })}
           </div>
           {!isPage ? (
-            <div className="border-t border-slate-800/60 p-3">
+            <div className="border-t border-line-default/60 p-3">
             <button
               onClick={onClose}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-800"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-line-default/60 bg-deep/60 px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-nebula"
             >
               <X size={14} /> Đóng
             </button>
@@ -248,7 +248,7 @@ export default function AdminConsole({ isOpen, onClose, initialTab = 'overview',
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-center justify-between border-b border-slate-800/60 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-line-default/60 px-6 py-4">
             <div>
               <div className="text-sm font-semibold text-white">
                 {TABS.find((tab) => tab.id === activeTab)?.label}
@@ -259,7 +259,7 @@ export default function AdminConsole({ isOpen, onClose, initialTab = 'overview',
             </div>
             <button
               onClick={() => loadTab(activeTab)}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-cyan-300 transition-colors hover:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-xl border border-line-default/60 bg-deep/60 px-3 py-2 text-xs font-semibold text-cyan-300 transition-colors hover:bg-nebula"
             >
               <RefreshCw size={13} /> Làm mới
             </button>
@@ -314,7 +314,7 @@ export default function AdminConsole({ isOpen, onClose, initialTab = 'overview',
                         <select
                           value={roleDrafts[item.id] || item.role}
                           onChange={(e) => setRoleDrafts((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 outline-none"
+                          className="w-full rounded-xl border border-line-defaultNone bg-deep px-3 py-2 text-sm text-slate-200 outline-none"
                         >
                           {ROLE_OPTIONS.map((role) => (
                             <option key={role} value={role}>{role}</option>
@@ -433,7 +433,7 @@ export default function AdminConsole({ isOpen, onClose, initialTab = 'overview',
                   {data.retention.length ? (
                     <div className="space-y-3">
                       {data.retention.map((item) => (
-                        <div key={item.experiment_id} className="rounded-xl border border-slate-800/70 bg-slate-950/50 p-3 text-xs text-slate-400">
+                        <div key={item.experiment_id} className="rounded-xl border border-line-default/70 bg-nebula/50 p-3 text-xs text-slate-400">
                           <div className="flex flex-wrap items-center gap-3">
                             <span className="font-semibold text-white">Experiment #{item.experiment_id}</span>
                             <span>{item.keep_full ? 'Keep full' : 'Compacted'}</span>
@@ -459,7 +459,7 @@ export default function AdminConsole({ isOpen, onClose, initialTab = 'overview',
                   >
                     <div className="text-xs text-slate-400">{item.created_at || 'n/a'}</div>
                     {item.details_json && (
-                      <pre className="mt-3 overflow-auto rounded-xl border border-slate-800/70 bg-slate-950/70 p-3 text-[11px] text-slate-300">
+                      <pre className="mt-3 overflow-auto rounded-xl border border-line-default/70 bg-nebula p-3 text-[11px] text-slate-300">
                         {JSON.stringify(item.details_json, null, 2)}
                       </pre>
                     )}

@@ -383,7 +383,7 @@ export default function PairProximityView({ reportMode = false }) {
   }
 
   return (
-    <div ref={containerRef} className="w-full h-full relative bg-slate-950 overflow-hidden">
+    <div ref={containerRef} className="w-full h-full relative bg-nebula overflow-hidden">
       <canvas
         ref={canvasRef}
         style={{ width: dims.width, height: dims.height, cursor: dragRef.current.dragging ? 'grabbing' : 'crosshair' }}
@@ -402,7 +402,7 @@ export default function PairProximityView({ reportMode = false }) {
           className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all border
             ${showPositive
               ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
-              : 'bg-slate-800/80 text-slate-600 border-slate-700/50'}`}
+              : 'bg-nebula/80 text-slate-600 border-line-subtle'}`}
         >
           ━ Pos
         </button>
@@ -411,13 +411,13 @@ export default function PairProximityView({ reportMode = false }) {
           className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all border
             ${showNegative
               ? 'bg-red-500/20 text-red-400 border-red-500/40'
-              : 'bg-slate-800/80 text-slate-600 border-slate-700/50'}`}
+              : 'bg-nebula/80 text-slate-600 border-line-subtle'}`}
         >
           ╌ Neg
         </button>
         <button
           onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }) }}
-          className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800/80 text-slate-400 border border-slate-700/50 hover:text-white transition-all"
+          className="px-2 py-0.5 rounded text-[9px] font-bold bg-nebula/80 text-slate-400 border border-line-subtle hover:text-white transition-all"
           title="Reset zoom"
         >
           ⟳
@@ -425,7 +425,7 @@ export default function PairProximityView({ reportMode = false }) {
       </div>}
 
       {/* Legend — bottom left compact */}
-      <div className="absolute bottom-1.5 left-1.5 bg-slate-900/90 backdrop-blur-md rounded-lg px-2 py-1.5 border border-slate-700/40 z-10 text-[8px]">
+      <div className="absolute bottom-1.5 left-1.5 bg-deep/90 backdrop-blur-md rounded-lg px-2 py-1.5 border border-line-subtle z-10 text-[8px]">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-blue-400">
             <div className="w-4 h-0.5 bg-blue-500 rounded-full" /> Pos
@@ -441,7 +441,7 @@ export default function PairProximityView({ reportMode = false }) {
 
       {/* Hovered node tooltip */}
       {hoveredNode !== null && (
-        <div className="absolute bottom-2 right-2 bg-slate-900/90 backdrop-blur-md rounded-xl px-3 py-2 border border-slate-700/40 z-10">
+        <div className="absolute bottom-2 right-2 bg-deep/90 backdrop-blur-md rounded-xl px-3 py-2 border border-line-subtle z-10">
           <div className="text-xs text-white font-black mb-0.5">Node {hoveredNode}</div>
           <div className="text-[9px] text-slate-400">
             {(taskDataRef.current?.testEdges || []).filter(e => e.source === hoveredNode || e.target === hoveredNode).map((e, i) => (

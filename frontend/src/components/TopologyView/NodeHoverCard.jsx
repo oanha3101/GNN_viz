@@ -40,7 +40,7 @@ export default function NodeHoverCard() {
           transition={{ duration: 0.2, ease: 'easeOut' }}
           className="absolute top-4 right-4 z-30 w-64 pointer-events-none"
         >
-          <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden shadow-black/50">
+          <div className="bg-nebula backdrop-blur-xl border border-line-subtle rounded-xl shadow-2xl overflow-hidden shadow-black/50">
             {/* Header */}
             <div className="bg-white/5 px-4 py-2.5 border-b border-white/5 flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">

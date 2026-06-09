@@ -118,7 +118,7 @@ export default function ROCMonitor() {
   const snapAuc = snapshots[Math.floor(currentEpochFloat)]?.auc || auc
 
   return (
-    <div className="h-full flex flex-col p-3 bg-slate-950">
+    <div className="h-full flex flex-col p-3 bg-nebula">
       {/* Header with tabs */}
       <div className="flex justify-between items-center mb-2">
         <div className="flex gap-1">
@@ -156,7 +156,7 @@ export default function ROCMonitor() {
           </span>
         )}
       </div>
-      <div className="flex-1 bg-slate-900/30 rounded-xl border border-slate-800/50 overflow-hidden">
+      <div className="flex-1 bg-nebula rounded-xl border border-line-subtle overflow-hidden">
         <LazyPlot
           data={(viewMode === 'roc' ? rocData : viewMode === 'pr' ? prData : distData) || []}
           layout={{

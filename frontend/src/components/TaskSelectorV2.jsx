@@ -16,7 +16,7 @@ export default function TaskSelectorV2() {
   const CurrentIcon = currentTask?.icon || Network
 
   return (
-    <label className="flex items-center gap-2 rounded-2xl border border-slate-700/50 bg-slate-900/65 px-3 py-2">
+    <label className="flex items-center gap-2 rounded-2xl border border-line-default/50 bg-deep/65 px-3 py-2">
       <CurrentIcon size={14} className="text-cyan-400 shrink-0" />
       <span className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Task</span>
       <select
@@ -25,7 +25,7 @@ export default function TaskSelectorV2() {
         className="bg-transparent text-sm text-slate-100 outline-none cursor-pointer"
       >
         {TASKS.map((task) => (
-          <option key={task.id} value={task.id} className="bg-slate-950">
+          <option key={task.id} value={task.id} className="bg-nebula">
             {`${task.id}: ${task.label}`}
           </option>
         ))}

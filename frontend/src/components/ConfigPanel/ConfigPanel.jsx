@@ -29,7 +29,7 @@ export default function ConfigPanel() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-full w-[320px] bg-deep/95 border-l border-slate-800/80
+            className="fixed right-0 top-0 h-full w-[320px] bg-deep/95 border-l border-line-default/80
                       z-50 p-6 overflow-y-auto shadow-2xl backdrop-blur-xl custom-scrollbar"
           >
             <div className="flex items-center justify-between mb-8">
@@ -43,7 +43,7 @@ export default function ConfigPanel() {
               <button
                 data-testid="config-close"
                 onClick={() => setConfigOpen(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800/50 text-slate-400 hover:text-white transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-nebula/50 text-slate-400 hover:text-white transition-colors"
               >
                 <X size={14} />
               </button>
@@ -63,7 +63,7 @@ export default function ConfigPanel() {
                   type="range" min="10" max="1000" step="10"
                   value={hyperparams.epochs}
                   onChange={(e) => setHyperparams({ epochs: Number(e.target.value) })}
-                  className="w-full accent-cyan-500 bg-slate-800 rounded-lg h-1.5 appearance-none cursor-pointer"
+                  className="w-full accent-cyan-500 bg-nebula rounded-lg h-1.5 appearance-none cursor-pointer"
                 />
                 <div className="flex justify-between text-[8px] text-slate-600 font-bold">
                   <span>10</span>
@@ -85,7 +85,7 @@ export default function ConfigPanel() {
                       className={`py-2 rounded-lg text-[10px] font-mono font-bold transition-all border
                         ${hyperparams.lr === lr
                           ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-[0_0_10px_rgba(34,211,238,0.15)]'
-                          : 'bg-slate-900/50 text-slate-500 border-slate-800/60 hover:border-slate-700'}`}
+                          : 'bg-deep/50 text-slate-500 border-line-default/60 hover:border-line-default'}`}
                     >
                       {lr}
                     </button>
@@ -106,7 +106,7 @@ export default function ConfigPanel() {
                       className={`py-2 rounded-lg text-[10px] font-mono font-bold transition-all border
                         ${hyperparams.hidden === h
                           ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40'
-                          : 'bg-slate-900/50 text-slate-500 border-slate-800/60 hover:border-slate-700'}`}
+                          : 'bg-deep/50 text-slate-500 border-line-default/60 hover:border-line-default'}`}
                     >
                       {h}
                     </button>
@@ -127,7 +127,7 @@ export default function ConfigPanel() {
                       className={`py-2 rounded-lg text-[10px] font-mono font-bold transition-all border
                         ${hyperparams.dropout === d
                           ? 'bg-orange-500/20 text-orange-400 border-orange-500/40'
-                          : 'bg-slate-900/50 text-slate-500 border-slate-800/60 hover:border-slate-700'}`}
+                          : 'bg-deep/50 text-slate-500 border-line-default/60 hover:border-line-default'}`}
                     >
                       {d.toFixed(1)}
                     </button>
@@ -149,7 +149,7 @@ export default function ConfigPanel() {
                         className={`py-2 rounded-lg text-[10px] font-mono font-bold transition-all border
                           ${hyperparams.heads === h
                             ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                            : 'bg-slate-900/50 text-slate-500 border-slate-800/60 hover:border-slate-700'}`}
+                            : 'bg-deep/50 text-slate-500 border-line-default/60 hover:border-line-default'}`}
                       >
                         {h}
                       </button>
@@ -172,7 +172,7 @@ export default function ConfigPanel() {
                         className={`py-2 rounded-lg text-[10px] font-bold uppercase transition-all border
                           ${hyperparams.aggregator === agg
                             ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                            : 'bg-slate-900/50 text-slate-500 border-slate-800/60 hover:border-slate-700'}`}
+                            : 'bg-deep/50 text-slate-500 border-line-default/60 hover:border-line-default'}`}
                       >
                         {agg}
                       </button>
@@ -182,7 +182,7 @@ export default function ConfigPanel() {
               )}
             </div>
 
-            <div className="mt-12 p-4 rounded-xl border border-slate-800/40 bg-slate-900/20">
+            <div className="mt-12 p-4 rounded-xl border border-line-default/40 bg-deep/20">
                <div className="text-[9px] text-slate-500 font-medium leading-relaxed italic">
                 * Changes are applied instantly for mock training and for the next session in live mode.
                </div>
