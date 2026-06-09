@@ -28,7 +28,7 @@ const AdminExperimentsPage = lazy(() => import('./pages/admin/AdminExperimentsPa
 const AdminSessionsPage = lazy(() => import('./pages/admin/AdminSessionsPage'))
 const AdminRetentionPage = lazy(() => import('./pages/admin/AdminRetentionPage'))
 const AdminAuditPage = lazy(() => import('./pages/admin/AdminAuditPage'))
-const showAgentation = import.meta.env.DEV
+const showAgentation = false
 const agentationEndpoint = import.meta.env.VITE_AGENTATION_ENDPOINT
 
 function FullscreenLoader() {
