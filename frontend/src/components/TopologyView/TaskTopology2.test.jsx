@@ -63,6 +63,7 @@ vi.mock('../../store/useGNNStore', () => {
 
 describe('TaskTopology2 task 2 gallery', () => {
   beforeEach(() => {
+    gnnState.selectedNodeId = null
     gnnState.setSelectedNode = vi.fn()
     gnnState.setTask2GallerySort = vi.fn()
     gnnState.setTask2ClassFilter = vi.fn()
@@ -94,5 +95,15 @@ describe('TaskTopology2 task 2 gallery', () => {
     expect(screen.queryByRole('button', { name: 'Confidence' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Prev' })).not.toBeInTheDocument()
     expect(screen.queryByText(/Page 1\//i)).not.toBeInTheDocument()
+  })
+
+  it('keeps the detail view reachable when a graph is selected', () => {
+    gnnState.selectedNodeId = 70
+
+    render(<TaskTopology2 />)
+
+    expect(screen.getByRole('button', { name: /back to gallery/i })).toBeInTheDocument()
+    expect(screen.getByText('#70')).toBeInTheDocument()
+    expect(screen.getByText('B')).toBeInTheDocument()
   })
 })

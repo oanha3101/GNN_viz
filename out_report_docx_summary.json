@@ -1,0 +1,2068 @@
+{
+  "paragraph_count": 1035,
+  "table_count": 68,
+  "section_count": 3,
+  "styles_top": [
+    [
+      "Normal",
+      648
+    ],
+    [
+      "Heading 3",
+      102
+    ],
+    [
+      "toc 3",
+      101
+    ],
+    [
+      "Caption",
+      47
+    ],
+    [
+      "table of figures",
+      38
+    ],
+    [
+      "toc 2",
+      26
+    ],
+    [
+      "Heading 2",
+      26
+    ],
+    [
+      "Heading 4",
+      14
+    ],
+    [
+      "Heading 1",
+      9
+    ],
+    [
+      "toc 1",
+      9
+    ],
+    [
+      "Normal (Web)",
+      9
+    ],
+    [
+      "Title",
+      3
+    ],
+    [
+      "0-NDUNG",
+      2
+    ],
+    [
+      "1-phan",
+      1
+    ]
+  ],
+  "fonts_top": [],
+  "sizes_top": [
+    [
+      12.0,
+      219
+    ],
+    [
+      13.0,
+      42
+    ],
+    [
+      14.0,
+      33
+    ],
+    [
+      16.0,
+      12
+    ],
+    [
+      20.0,
+      2
+    ]
+  ],
+  "align_top": [
+    [
+      "JUSTIFY (3)",
+      491
+    ],
+    [
+      "None",
+      420
+    ],
+    [
+      "CENTER (1)",
+      123
+    ],
+    [
+      "LEFT (0)",
+      1
+    ]
+  ],
+  "first_line_top": [
+    [
+      "None",
+      531
+    ],
+    [
+      "0.0",
+      495
+    ],
+    [
+      "28.35",
+      4
+    ],
+    [
+      "-13.6",
+      2
+    ],
+    [
+      "36.0",
+      1
+    ],
+    [
+      "-28.8",
+      1
+    ],
+    [
+      "-21.6",
+      1
+    ]
+  ],
+  "spacing_top": [
+    [
+      "1.5",
+      536
+    ],
+    [
+      "None",
+      455
+    ],
+    [
+      "1.0",
+      38
+    ],
+    [
+      "1.3",
+      5
+    ],
+    [
+      "1.15",
+      1
+    ]
+  ],
+  "headings_first_120": [
+    [
+      22,
+      "Heading 1",
+      "MỤC LỤC"
+    ],
+    [
+      161,
+      "Heading 1",
+      "DANH MỤC HÌNH VẼ"
+    ],
+    [
+      205,
+      "Heading 1",
+      "MỞ ĐẦU"
+    ],
+    [
+      217,
+      "Heading 1",
+      ""
+    ],
+    [
+      218,
+      "Heading 1",
+      "1. TỔNG QUAN ĐỀ TÀI"
+    ],
+    [
+      219,
+      "Heading 2",
+      "Đặt vấn đề"
+    ],
+    [
+      224,
+      "Heading 2",
+      "Mục tiêu đề tài"
+    ],
+    [
+      235,
+      "Heading 2",
+      "Đối tượng và phạm vi nghiên cứu"
+    ],
+    [
+      248,
+      "Heading 2",
+      "Phương pháp nghiên cứu"
+    ],
+    [
+      253,
+      "Heading 2",
+      "Ý nghĩa khoa học và thực tiễn"
+    ],
+    [
+      254,
+      "Heading 3",
+      "Ý nghĩa khoa học"
+    ],
+    [
+      257,
+      "Heading 3",
+      "Ý nghĩa thực tiễn"
+    ],
+    [
+      263,
+      "Heading 1",
+      "CƠ SỞ LÝ THUYẾT"
+    ],
+    [
+      264,
+      "Heading 2",
+      "2.1. Tổng quan về dữ liệu đồ thị"
+    ],
+    [
+      265,
+      "Heading 3",
+      "2.1.1. Khái niệm và định nghĩa hình thức"
+    ],
+    [
+      269,
+      "Heading 3",
+      "2.1.2. Phân loại đồ thị"
+    ],
+    [
+      273,
+      "Heading 3",
+      "2.1.3. Đặc tính phi Euclid của dữ liệu đồ thị"
+    ],
+    [
+      276,
+      "Heading 3",
+      "2.1.4. Ứng dụng thực tế của dữ liệu đồ thị"
+    ],
+    [
+      283,
+      "Heading 2",
+      "2.2. Tổng quan về Graph Neural Network"
+    ],
+    [
+      284,
+      "Heading 3",
+      "2.2.1. Lịch sử hình thành và phát triển"
+    ],
+    [
+      287,
+      "Heading 3",
+      "2.2.2. Cơ chế Message Passing — Truyền thông điệp"
+    ],
+    [
+      301,
+      "Heading 3",
+      "2.2.3. Neighborhood Aggregation và Receptive Field"
+    ],
+    [
+      307,
+      "Heading 3",
+      "2.2.4. Embedding trong Graph Neural Network"
+    ],
+    [
+      311,
+      "Heading 3",
+      "2.2.5. Hiện tượng Over-smoothing"
+    ],
+    [
+      318,
+      "Heading 3",
+      "2.2.6. Pipeline huấn luyện mô hình GNN"
+    ],
+    [
+      329,
+      "Heading 2",
+      "2.3. Một số mô hình GNN phổ biến"
+    ],
+    [
+      331,
+      "Heading 3",
+      "2.3.1. Graph Convolutional Network (GCN)"
+    ],
+    [
+      332,
+      "Heading 3",
+      "a) Bối cảnh ra đời"
+    ],
+    [
+      334,
+      "Heading 4",
+      "b) Ý tưởng chính và nền tảng lý thuyết"
+    ],
+    [
+      338,
+      "Heading 4",
+      "c) Kiến trúc và công thức toán học"
+    ],
+    [
+      350,
+      "Heading 4",
+      "d) Ưu điểm, nhược điểm và ứng dụng"
+    ],
+    [
+      354,
+      "Heading 3",
+      "2.3.2. GraphSAGE (Graph Sample and Aggregate)"
+    ],
+    [
+      355,
+      "Heading 4",
+      "a) Bối cảnh ra đời"
+    ],
+    [
+      357,
+      "Heading 4",
+      "b) Ý tưởng chính — Inductive Learning và Lấy mẫu"
+    ],
+    [
+      359,
+      "Heading 4",
+      "c) Kiến trúc và công thức toán học"
+    ],
+    [
+      370,
+      "Heading 4",
+      "d) Ưu điểm, nhược điểm và ứng dụng"
+    ],
+    [
+      374,
+      "Heading 3",
+      "2.3.3. Graph Attention Network (GAT)"
+    ],
+    [
+      375,
+      "Heading 4",
+      "a) Bối cảnh ra đời"
+    ],
+    [
+      377,
+      "Heading 4",
+      "b) Cơ chế Self-Attention trên đồ thị"
+    ],
+    [
+      379,
+      "Heading 4",
+      "c) Kiến trúc và công thức toán học"
+    ],
+    [
+      388,
+      "Heading 4",
+      "d) Ưu điểm, nhược điểm và ứng dụng"
+    ],
+    [
+      397,
+      "Heading 2",
+      "2.4. Quy trình huấn luyện mô hình Graph Neural Network"
+    ],
+    [
+      398,
+      "Heading 3",
+      "2.4.1. Chuẩn bị dữ liệu và phân chia tập"
+    ],
+    [
+      401,
+      "Heading 3",
+      "2.4.2. Hàm mất mát theo từng bài toán"
+    ],
+    [
+      405,
+      "Heading 3",
+      "2.4.3. Theo dõi các chỉ số trong quá trình huấn luyện"
+    ],
+    [
+      413,
+      "Heading 3",
+      "2.4.4. Kỹ thuật tối ưu và điều chuẩn hóa"
+    ],
+    [
+      419,
+      "Heading 2",
+      "2.5. Các bài toán phổ biến trong Graph Neural Network"
+    ],
+    [
+      421,
+      "Heading 3",
+      "2.5.1. Phân loại nút (Node Classification)"
+    ],
+    [
+      432,
+      "Heading 3",
+      "2.5.2. Phân loại đồ thị (Graph Classification)"
+    ],
+    [
+      441,
+      "Heading 3",
+      "2.5.3. Dự đoán liên kết (Link Prediction)"
+    ],
+    [
+      454,
+      "Heading 3",
+      "2.5.4. Phát hiện cộng đồng (Community Detection)"
+    ],
+    [
+      464,
+      "Heading 3",
+      "2.5.5. Nhúng đồ thị (Graph Embedding)"
+    ],
+    [
+      471,
+      "Heading 3",
+      "2.5.6. Sinh đồ thị (Graph Generation)"
+    ],
+    [
+      482,
+      "Heading 2",
+      "2.6. Trực quan hóa trong quá trình huấn luyện mô hình"
+    ],
+    [
+      483,
+      "Heading 3",
+      "2.6.1. Vai trò của trực quan hóa trong học máy"
+    ],
+    [
+      486,
+      "Heading 3",
+      "2.6.2. Đặc thù của trực quan hóa trong Graph Learning"
+    ],
+    [
+      492,
+      "Heading 3",
+      "2.6.3. Metric Dashboard — Bảng điều khiển chỉ số"
+    ],
+    [
+      497,
+      "Heading 3",
+      "2.6.4. Topology Visualization — Trực quan hóa cấu trúc đồ thị"
+    ],
+    [
+      505,
+      "Heading 3",
+      "2.6.5. Embedding Visualization — Trực quan hóa không gian ẩn"
+    ],
+    [
+      507,
+      "Heading 4",
+      "a) PCA (Principal Component Analysis)"
+    ],
+    [
+      510,
+      "Heading 4",
+      "b) t-SNE (t-Distributed Stochastic Neighbor Embedding)"
+    ],
+    [
+      514,
+      "Heading 4",
+      "c) Giải thích kết quả trực quan hóa embedding"
+    ],
+    [
+      516,
+      "Heading 3",
+      "2.6.6. Realtime Monitoring — Theo dõi thời gian thực"
+    ],
+    [
+      520,
+      "Heading 3",
+      "2.6.7. Replay Experiment — Phát lại thí nghiệm"
+    ],
+    [
+      524,
+      "Heading 3",
+      "2.6.8. Model Comparison — So sánh thí nghiệm"
+    ],
+    [
+      530,
+      "Heading 1",
+      "PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG"
+    ],
+    [
+      531,
+      "Heading 2",
+      "3.1. Phát biểu yêu cầu hệ thống"
+    ],
+    [
+      536,
+      "Heading 3",
+      "3.1.1. Đối tượng người dùng"
+    ],
+    [
+      541,
+      "Heading 3",
+      ""
+    ],
+    [
+      542,
+      "Heading 3",
+      "3.1.2. Yêu cầu chức năng (Functional Requirements)"
+    ],
+    [
+      561,
+      "Heading 3",
+      "3.1.3. Yêu cầu phi chức năng (Non-Functional Requirements)"
+    ],
+    [
+      564,
+      "Heading 2",
+      "3.2. Phân tích use case"
+    ],
+    [
+      565,
+      "Heading 3",
+      "3.2.1. Xác định tác nhân"
+    ],
+    [
+      567,
+      "Heading 3",
+      "3.2.2. Biểu đồ Usecase tổng quát"
+    ],
+    [
+      570,
+      "Heading 3",
+      "3.2.3. Mô tả các Usecase chính"
+    ],
+    [
+      575,
+      "Heading 2",
+      "3.3. Đặc tả các use case chính"
+    ],
+    [
+      576,
+      "Heading 3",
+      "3.3.1. UC01 — Đăng nhập vào hệ thống"
+    ],
+    [
+      580,
+      "Heading 3",
+      "3.3.2. UC02 — Quản lý dự án"
+    ],
+    [
+      584,
+      "Heading 3",
+      "3.3.3. UC03 — Quản lý dataset và tạo phiên bản"
+    ],
+    [
+      588,
+      "Heading 3",
+      "3.3.4. UC04 — Khởi tạo phiên huấn luyện"
+    ],
+    [
+      592,
+      "Heading 3",
+      "3.3.5. UC05 — Theo dõi huấn luyện thời gian thực"
+    ],
+    [
+      596,
+      "Heading 3",
+      "3.3.6. UC06 — Replay và Resume thực nghiệm"
+    ],
+    [
+      601,
+      "Heading 3",
+      "3.3.7. UC07 — So sánh thực nghiệm"
+    ],
+    [
+      606,
+      "Heading 3",
+      "3.3.8. UC08 — Quản trị hệ thống"
+    ],
+    [
+      611,
+      "Heading 2",
+      "3.4. Biểu đồ động mô tả luồng xử lý hệ thống"
+    ],
+    [
+      612,
+      "Heading 3",
+      "3.4.1. Luồng tải và cấu hình dữ liệu"
+    ],
+    [
+      619,
+      "Heading 3",
+      "3.4.2. Luồng huấn luyện mô hình"
+    ],
+    [
+      626,
+      "Heading 3",
+      "3.4.3. Luồng truyền dữ liệu thời gian thực qua WebSocket"
+    ],
+    [
+      633,
+      "Heading 3",
+      "3.4.4. Luồng Replay và Resume thực nghiệm"
+    ],
+    [
+      640,
+      "Heading 3",
+      "3.4.5. Luồng quản trị và Retention"
+    ],
+    [
+      647,
+      "Heading 2",
+      "3.5. Thiết kế cơ sở dữ liệu"
+    ],
+    [
+      649,
+      "Heading 3",
+      "3.5.1. Biểu đồ thực thể - liên kết (ERD)"
+    ],
+    [
+      652,
+      "Heading 3",
+      "3.5.2. Thiết kế dữ liệu quan hệ"
+    ],
+    [
+      679,
+      "Heading 3",
+      "3.5.3. Thiết kế MongoDB"
+    ],
+    [
+      684,
+      "Heading 3",
+      "3.5.4. Thiết kế Blob Storage"
+    ],
+    [
+      686,
+      "Heading 2",
+      "3.6. Kiến trúc hệ thống"
+    ],
+    [
+      689,
+      "Heading 3",
+      "3.6.1. Kiến trúc tổng thể"
+    ],
+    [
+      694,
+      "Heading 2",
+      "3.7. Thiết kế giao diện hệ thống"
+    ],
+    [
+      698,
+      "Heading 3",
+      "3.7.1. Giao diện quản lý dự án"
+    ],
+    [
+      706,
+      "Heading 3",
+      "3.7.3. Giao diện LabShell"
+    ],
+    [
+      713,
+      "Heading 3",
+      "3.7.4. Giao diện Experiment Hub"
+    ],
+    [
+      717,
+      "Heading 3",
+      "3.7.5. Giao diện quản trị"
+    ],
+    [
+      721,
+      "Heading 2",
+      "3.8. Các công nghệ sử dụng"
+    ],
+    [
+      723,
+      "Heading 3",
+      "3.8.1. Frontend — Giao diện người dùng"
+    ],
+    [
+      732,
+      "Heading 3",
+      "3.8.2. Backend — Xử lý nghiệp vụ"
+    ],
+    [
+      740,
+      "Heading 3",
+      "3.8.3. WebSocket — Truyền dữ liệu thời gian thực"
+    ],
+    [
+      744,
+      "Heading 3",
+      "3.8.4. Cơ sở dữ liệu và lưu trữ"
+    ],
+    [
+      753,
+      "Heading 1",
+      "TRIỂN KHAI VÀ ĐÁNH GIÁ KẾT QUẢ"
+    ],
+    [
+      754,
+      "Heading 2",
+      "4.1. Giao diện chính"
+    ],
+    [
+      756,
+      "Heading 3",
+      "4.1.1. Giao diện đăng nhập"
+    ],
+    [
+      768,
+      "Heading 3",
+      "4.4.2. Giao diện dashboard tổng quan của Researcher"
+    ],
+    [
+      780,
+      "Heading 3",
+      "4.4.3. Giao diện quản lý dự án"
+    ],
+    [
+      793,
+      "Heading 3",
+      "4.4.4. Giao diện quản lý dữ liệu và phiên bản dataset"
+    ],
+    [
+      804,
+      "Heading 3",
+      "4.4.5. Giao diện Experiment Hub"
+    ],
+    [
+      814,
+      "Heading 3",
+      "4.4.6. Giao diện LabShell"
+    ],
+    [
+      825,
+      "Heading 3",
+      "4.4.7. Giao diện dashboard quản trị Admin"
+    ],
+    [
+      834,
+      "Heading 3",
+      "4.4.8. Giao diện quản lý người dùng"
+    ],
+    [
+      844,
+      "Heading 3",
+      "4.4.9. Giao diện quản lý phiên huấn luyện"
+    ],
+    [
+      853,
+      "Heading 2",
+      "4.2. Kết quả thực thi hệ thống"
+    ],
+    [
+      864,
+      "Heading 3",
+      "4.2.1. Kết quả thực thi chức năng đăng nhập"
+    ]
+  ],
+  "captions": [],
+  "tables": [
+    {
+      "index": 0,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "m(l)ij = MSG(l)(h(l-1)i, h(l-1)j, eij)"
+      ]
+    },
+    {
+      "index": 1,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "a(l)i = AGG(l)({m(l)ij : vj ∈ N(vi)})"
+      ]
+    },
+    {
+      "index": 2,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "h(l)i = UPD(l)(h(l-1)i, a(l)i) = σ(W(l) · CONCAT[h(l-1)i, a(l)i] + b(l))"
+      ]
+    },
+    {
+      "index": 3,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "z_G = READOUT({h(L)i : vi ∈ V})"
+      ]
+    },
+    {
+      "index": 4,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "lim(k→∞) Â^k X = z_∞"
+      ]
+    },
+    {
+      "index": 5,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "g_θ ★ x ≈ θ(Iₙ + D^(-1/2) A D^(-1/2)) x"
+      ]
+    },
+    {
+      "index": 6,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "H(l+1) = σ( D̃^(-1/2) Ã D̃^(-1/2) H(l) W(l) )"
+      ]
+    },
+    {
+      "index": 7,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "Z = softmax( Â · ReLU(Â X W⁽⁰⁾) W⁽¹⁾ )"
+      ]
+    },
+    {
+      "index": 8,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "ℒ = − Σ(vᵢ ∈ VL) Σ(c=1..C) Yᵢc · ln Zᵢc"
+      ]
+    },
+    {
+      "index": 9,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "h_N(vᵢ)^(l) = AGG_l({ h^(l-1)_vⱼ : vⱼ ∈ S(vᵢ) })"
+      ]
+    },
+    {
+      "index": 10,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "h^(l)_vᵢ = σ( W^(l) · CONCAT[ h^(l-1)_vᵢ, h_N(vᵢ)^(l) ] )"
+      ]
+    },
+    {
+      "index": 11,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "h^(l)_vᵢ ← h^(l)_vᵢ / ||h^(l)_vᵢ||₂"
+      ]
+    },
+    {
+      "index": 12,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "ℒ = −log σ(z^T_vᵢ z_vⱼ) − Q · E_{vₙ~Pₙ}[ log σ(−z^T_vᵢ z_vₙ) ]"
+      ]
+    },
+    {
+      "index": 13,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "eᵢⱼ = LeakyReLU( aᵀ · CONCAT[gᵢ, gⱼ] )"
+      ]
+    },
+    {
+      "index": 14,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "αᵢⱼ = exp(eᵢⱼ) / Σ_{vₖ ∈ N(vᵢ)∪{vᵢ}} exp(eᵢₖ)"
+      ]
+    },
+    {
+      "index": 15,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "h'ᵢ = σ( Σ_{vⱼ ∈ N(vᵢ)∪{vᵢ}} αᵢⱼ W hⱼ )"
+      ]
+    },
+    {
+      "index": 16,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "h'ᵢ = ||_{k=1}^{K} σ( Σ_{vⱼ ∈ N(vᵢ)∪{vᵢ}} α^(k)ᵢⱼ W^(k) hⱼ )"
+      ]
+    },
+    {
+      "index": 17,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "h'ᵢ = σ( (1/K) Σ_{k=1}^{K} Σ_{vⱼ} α^(k)ᵢⱼ W^(k) hⱼ )"
+      ]
+    },
+    {
+      "index": 18,
+      "rows": 7,
+      "cols": 4,
+      "first_row": [
+        "Tiêu chí",
+        "GCN",
+        "GraphSAGE",
+        "GAT"
+      ]
+    },
+    {
+      "index": 19,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "ℒ_NC = −(1/|V_L|) Σ_{vᵢ ∈ V_L} Σ_{c=1}^{C} yᵢc log ŷᵢc"
+      ]
+    },
+    {
+      "index": 20,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "ℒ_LP = −Σ_{(i,j)∈E} log ŝᵢⱼ − Σ_{(i,k)∉E} log(1 − ŝᵢₖ)"
+      ]
+    },
+    {
+      "index": 21,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "ℒ_EMB = −Σ_{(vᵢ,vⱼ)∈E} log σ(z^T_i z_j) − Q · E_{vₙ~Pₙ}[log σ(−z^T_i z_n)]"
+      ]
+    },
+    {
+      "index": 22,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "ℒ_NC = −(1/|V_L|) Σ_{vᵢ ∈ V_L} Σ_{c=1}^{C} yᵢc log ŷᵢc"
+      ]
+    },
+    {
+      "index": 23,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "z_G = READOUT({h^(L)_i}_{vᵢ ∈ V}) = (1/|V|) Σ_{vᵢ ∈ V} h^(L)_i"
+      ]
+    },
+    {
+      "index": 24,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "ŝᵢⱼ = σ( z^T_i · z_j )"
+      ]
+    },
+    {
+      "index": 25,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "ℒ_LP = −Σ_{(i,j)∈E} log ŝᵢⱼ − Σ_{(i,k)∉E} log(1 − ŝᵢₖ)"
+      ]
+    },
+    {
+      "index": 26,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "Q = (1/2m) Σ_{i,j} [ Aᵢⱼ − kᵢkⱼ/(2m) ] δ(cᵢ, cⱼ)"
+      ]
+    },
+    {
+      "index": 27,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "ℒ_EMB = −Σ_{(vᵢ,vⱼ) ∈ E} log P(vⱼ | vᵢ)"
+      ]
+    },
+    {
+      "index": 28,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "P(vⱼ | vᵢ) = exp(z^T_i z_j) / Σ_k exp(z^T_i z_k)"
+      ]
+    },
+    {
+      "index": 29,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "ℒ_VGAE = E_q[log p(A|Z)] − KL[q(Z|X,A) || p(Z)]"
+      ]
+    },
+    {
+      "index": 30,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "Σ = (1/n) Z^T Z → Z_2D = Z W_2"
+      ]
+    },
+    {
+      "index": 31,
+      "rows": 1,
+      "cols": 1,
+      "first_row": [
+        "ℒ_tSNE = KL(P || Q) = Σᵢ Σⱼ pᵢⱼ log(pᵢⱼ / qᵢⱼ)"
+      ]
+    },
+    {
+      "index": 32,
+      "rows": 4,
+      "cols": 4,
+      "first_row": [
+        "STT",
+        "Tác nhân",
+        "Mô tả",
+        "Quyền hạn chính"
+      ]
+    },
+    {
+      "index": 33,
+      "rows": 12,
+      "cols": 5,
+      "first_row": [
+        "Nhóm chức năng",
+        "Quyền hạn chi tiết",
+        "Researcher",
+        "Viewer",
+        "Admin"
+      ]
+    },
+    {
+      "index": 34,
+      "rows": 9,
+      "cols": 4,
+      "first_row": [
+        "Mã UC",
+        "Tên chức năng",
+        "Input",
+        "Output"
+      ]
+    },
+    {
+      "index": 35,
+      "rows": 3,
+      "cols": 3,
+      "first_row": [
+        "Mã chức năng",
+        "Tên chức năng",
+        "Mô tả"
+      ]
+    },
+    {
+      "index": 36,
+      "rows": 4,
+      "cols": 3,
+      "first_row": [
+        "Mã chức năng",
+        "Tên chức năng",
+        "Mô tả"
+      ]
+    },
+    {
+      "index": 37,
+      "rows": 5,
+      "cols": 3,
+      "first_row": [
+        "Mã chức năng",
+        "Tên chức năng",
+        "Mô tả"
+      ]
+    },
+    {
+      "index": 38,
+      "rows": 4,
+      "cols": 3,
+      "first_row": [
+        "Mã chức năng",
+        "Tên chức năng",
+        "Mô tả"
+      ]
+    },
+    {
+      "index": 39,
+      "rows": 6,
+      "cols": 3,
+      "first_row": [
+        "Mã yêu cầu",
+        "Tên yêu cầu",
+        "Mô tả"
+      ]
+    },
+    {
+      "index": 40,
+      "rows": 17,
+      "cols": 4,
+      "first_row": [
+        "Mã Use case",
+        "UC01",
+        "Tên Use case",
+        "Đăng nhập vào hệ thống"
+      ]
+    },
+    {
+      "index": 41,
+      "rows": 18,
+      "cols": 4,
+      "first_row": [
+        "Mã Use case",
+        "UC02",
+        "Tên Use case",
+        "Quản lý dự án"
+      ]
+    },
+    {
+      "index": 42,
+      "rows": 15,
+      "cols": 4,
+      "first_row": [
+        "Mã Use case",
+        "UC03",
+        "Tên Use case",
+        "Quản lý dataset và tạo phiên bản"
+      ]
+    },
+    {
+      "index": 43,
+      "rows": 16,
+      "cols": 4,
+      "first_row": [
+        "Mã Use case",
+        "UC04",
+        "Tên Use case",
+        "Khởi tạo phiên huấn luyện"
+      ]
+    },
+    {
+      "index": 44,
+      "rows": 15,
+      "cols": 4,
+      "first_row": [
+        "Mã Use case",
+        "UC05",
+        "Tên Use case",
+        "Theo dõi huấn luyện thời gian thực"
+      ]
+    },
+    {
+      "index": 45,
+      "rows": 19,
+      "cols": 4,
+      "first_row": [
+        "Mã Use case",
+        "UC06",
+        "Tên Use case",
+        "Replay và Resume thực nghiệm"
+      ]
+    },
+    {
+      "index": 46,
+      "rows": 14,
+      "cols": 4,
+      "first_row": [
+        "Mã Use case",
+        "UC07",
+        "Tên Use case",
+        "So sánh thực nghiệm"
+      ]
+    },
+    {
+      "index": 47,
+      "rows": 17,
+      "cols": 4,
+      "first_row": [
+        "Mã Use case",
+        "UC08",
+        "Tên Use case",
+        "Quản trị hệ thống"
+      ]
+    },
+    {
+      "index": 48,
+      "rows": 10,
+      "cols": 5,
+      "first_row": [
+        "Tên cột",
+        "Kiểu dữ liệu",
+        "Nullable",
+        "Mặc định",
+        "Ý nghĩa"
+      ]
+    },
+    {
+      "index": 49,
+      "rows": 9,
+      "cols": 5,
+      "first_row": [
+        "Tên cột",
+        "Kiểu dữ liệu",
+        "Nullable",
+        "Mặc định",
+        "Ý nghĩa"
+      ]
+    },
+    {
+      "index": 50,
+      "rows": 9,
+      "cols": 5,
+      "first_row": [
+        "Tên cột",
+        "Kiểu dữ liệu",
+        "Nullable",
+        "Mặc định",
+        "Ý nghĩa"
+      ]
+    },
+    {
+      "index": 51,
+      "rows": 12,
+      "cols": 5,
+      "first_row": [
+        "Tên cột",
+        "Kiểu dữ liệu",
+        "Nullable",
+        "Mặc định",
+        "Ý nghĩa"
+      ]
+    },
+    {
+      "index": 52,
+      "rows": 17,
+      "cols": 5,
+      "first_row": [
+        "Tên cột",
+        "Kiểu dữ liệu",
+        "Nullable",
+        "Mặc định",
+        "Ý nghĩa"
+      ]
+    },
+    {
+      "index": 53,
+      "rows": 13,
+      "cols": 5,
+      "first_row": [
+        "Tên cột",
+        "Kiểu dữ liệu",
+        "Nullable",
+        "Mặc định",
+        "Ý nghĩa"
+      ]
+    },
+    {
+      "index": 54,
+      "rows": 8,
+      "cols": 5,
+      "first_row": [
+        "Tên cột",
+        "Kiểu dữ liệu",
+        "Nullable",
+        "Mặc định",
+        "Ý nghĩa"
+      ]
+    },
+    {
+      "index": 55,
+      "rows": 8,
+      "cols": 5,
+      "first_row": [
+        "Tên cột",
+        "Kiểu dữ liệu",
+        "Nullable",
+        "Mặc định",
+        "Ý nghĩa"
+      ]
+    },
+    {
+      "index": 56,
+      "rows": 8,
+      "cols": 3,
+      "first_row": [
+        "Tầng",
+        "Công nghệ chọn",
+        "Lý do chính"
+      ]
+    },
+    {
+      "index": 57,
+      "rows": 7,
+      "cols": 4,
+      "first_row": [
+        "Màn hình",
+        "Route",
+        "Tác nhân",
+        "Chức năng chính"
+      ]
+    },
+    {
+      "index": 58,
+      "rows": 7,
+      "cols": 3,
+      "first_row": [
+        "Thành phần",
+        "Công nghệ",
+        "Vai trò chính"
+      ]
+    },
+    {
+      "index": 59,
+      "rows": 6,
+      "cols": 5,
+      "first_row": [
+        "Mã test case",
+        "Nội dung kiểm tra",
+        "Kết quả mong đợi",
+        "Kết quả thực tế",
+        "Trạng thái"
+      ]
+    },
+    {
+      "index": 60,
+      "rows": 6,
+      "cols": 5,
+      "first_row": [
+        "Mã test case",
+        "Nội dung kiểm tra",
+        "Kết quả mong đợi",
+        "Kết quả thực tế",
+        "Trạng thái"
+      ]
+    },
+    {
+      "index": 61,
+      "rows": 6,
+      "cols": 5,
+      "first_row": [
+        "Mã test case",
+        "Nội dung kiểm tra",
+        "Kết quả mong đợi",
+        "Kết quả thực tế",
+        "Trạng thái"
+      ]
+    },
+    {
+      "index": 62,
+      "rows": 8,
+      "cols": 5,
+      "first_row": [
+        "Mã test case",
+        "Nội dung kiểm tra",
+        "Kết quả mong đợi",
+        "Kết quả thực tế",
+        "Trạng thái"
+      ]
+    },
+    {
+      "index": 63,
+      "rows": 7,
+      "cols": 5,
+      "first_row": [
+        "Mã test case",
+        "Nội dung kiểm tra",
+        "Kết quả mong đợi",
+        "Kết quả thực tế",
+        "Trạng thái"
+      ]
+    },
+    {
+      "index": 64,
+      "rows": 6,
+      "cols": 5,
+      "first_row": [
+        "Mã test case",
+        "Nội dung kiểm tra",
+        "Kết quả mong đợi",
+        "Kết quả thực tế",
+        "Trạng thái"
+      ]
+    },
+    {
+      "index": 65,
+      "rows": 6,
+      "cols": 5,
+      "first_row": [
+        "Mã test case",
+        "Nội dung kiểm tra",
+        "Kết quả mong đợi",
+        "Kết quả thực tế",
+        "Trạng thái"
+      ]
+    },
+    {
+      "index": 66,
+      "rows": 15,
+      "cols": 5,
+      "first_row": [
+        "Mã test case",
+        "Nội dung kiểm tra",
+        "Kết quả mong đợi",
+        "Kết quả thực tế",
+        "Trạng thái"
+      ]
+    },
+    {
+      "index": 67,
+      "rows": 10,
+      "cols": 5,
+      "first_row": [
+        "Nhóm chức năng",
+        "Tổng số test case",
+        "Pass",
+        "Fail",
+        "Tỷ lệ Pass"
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "index": 0,
+      "top_cm": 2.0,
+      "bottom_cm": 2.0,
+      "left_cm": 3.0,
+      "right_cm": 2.0,
+      "header_cm": 1.27,
+      "footer_cm": 1.27,
+      "gutter_cm": 0.0
+    },
+    {
+      "index": 1,
+      "top_cm": 2.01,
+      "bottom_cm": 2.01,
+      "left_cm": 3.0,
+      "right_cm": 2.01,
+      "header_cm": 1.27,
+      "footer_cm": 0.76,
+      "gutter_cm": 0.0
+    },
+    {
+      "index": 2,
+      "top_cm": 2.01,
+      "bottom_cm": 2.01,
+      "left_cm": 3.0,
+      "right_cm": 2.01,
+      "header_cm": 1.27,
+      "footer_cm": 0.76,
+      "gutter_cm": 0.0
+    }
+  ],
+  "core": {
+    "author": "Tùng-Hằng",
+    "title": "DoanCTDL-GT",
+    "created": "2022-11-22 16:51:00+00:00",
+    "modified": "2026-06-09 11:19:36+00:00",
+    "last_modified_by": "Tâm Đệ Tam"
+  },
+  "paragraph_samples_first_120": [
+    [
+      1,
+      "Normal",
+      "TRƯỜNG ĐẠI HỌC BÁCH KHOA"
+    ],
+    [
+      2,
+      "Normal",
+      "KHOA CÔNG NGHỆ THÔNG TIN"
+    ],
+    [
+      8,
+      "Normal",
+      "PBL5: ĐỒ ÁN CÔNG NGHỆ PHẦN MỀM"
+    ],
+    [
+      10,
+      "Normal",
+      "XÂY DỰNG HỆ THỐNG TRỰC QUAN HÓA QUÁ TRÌNH HUẤN LUYỆN MÔ HÌNH GRAPH NEURAL NETWORK"
+    ],
+    [
+      12,
+      "Normal",
+      "Người hướng dẫn: \t         TS.PHẠM MINH TUẤN"
+    ],
+    [
+      13,
+      "Normal",
+      "Sinh viên thực hiện:"
+    ],
+    [
+      14,
+      "Normal",
+      "Hà Thị Kim Oanh\t\tLỚP: 23T_Nhat2"
+    ],
+    [
+      15,
+      "Normal",
+      "Nguyễn Thanh Huyền     \tLỚP: 23T_Nhat2"
+    ],
+    [
+      16,
+      "Normal",
+      "Nhóm: 23.99A"
+    ],
+    [
+      21,
+      "Normal",
+      "Đà Nẵng, 6/2026"
+    ],
+    [
+      22,
+      "Heading 1",
+      "MỤC LỤC"
+    ],
+    [
+      23,
+      "toc 1",
+      "MỤC LỤC\t2"
+    ],
+    [
+      24,
+      "toc 1",
+      "DANH MỤC HÌNH VẼ\t8"
+    ],
+    [
+      25,
+      "toc 1",
+      "MỞ ĐẦU\t11"
+    ],
+    [
+      26,
+      "toc 1",
+      "1. TỔNG QUAN ĐỀ TÀI\t13"
+    ],
+    [
+      27,
+      "toc 2",
+      "1.1. Đặt vấn đề\t13"
+    ],
+    [
+      28,
+      "toc 2",
+      "1.2. Mục tiêu đề tài\t13"
+    ],
+    [
+      29,
+      "toc 2",
+      "1.3. Đối tượng và phạm vi nghiên cứu\t14"
+    ],
+    [
+      30,
+      "toc 2",
+      "1.4. Phương pháp nghiên cứu\t15"
+    ],
+    [
+      31,
+      "toc 2",
+      "1.5. Ý nghĩa khoa học và thực tiễn\t16"
+    ],
+    [
+      32,
+      "toc 3",
+      "1.5.1. Ý nghĩa khoa học\t16"
+    ],
+    [
+      33,
+      "toc 3",
+      "1.5.2. Ý nghĩa thực tiễn\t16"
+    ],
+    [
+      34,
+      "toc 1",
+      "2. CƠ SỞ LÝ THUYẾT\t17"
+    ],
+    [
+      35,
+      "toc 2",
+      "2.1. Tổng quan về dữ liệu đồ thị\t17"
+    ],
+    [
+      36,
+      "toc 3",
+      "2.1.1. Khái niệm và định nghĩa hình thức\t17"
+    ],
+    [
+      37,
+      "toc 3",
+      "2.1.2. Phân loại đồ thị\t17"
+    ],
+    [
+      38,
+      "toc 3",
+      "2.1.3. Đặc tính phi Euclid của dữ liệu đồ thị\t18"
+    ],
+    [
+      39,
+      "toc 3",
+      "2.1.4. Ứng dụng thực tế của dữ liệu đồ thị\t18"
+    ],
+    [
+      40,
+      "toc 2",
+      "2.2. Tổng quan về Graph Neural Network\t19"
+    ],
+    [
+      41,
+      "toc 3",
+      "2.2.1. Lịch sử hình thành và phát triển\t19"
+    ],
+    [
+      42,
+      "toc 3",
+      "2.2.2. Cơ chế Message Passing — Truyền thông điệp\t19"
+    ],
+    [
+      43,
+      "toc 3",
+      "2.2.3. Neighborhood Aggregation và Receptive Field\t21"
+    ],
+    [
+      44,
+      "toc 3",
+      "2.2.4. Embedding trong Graph Neural Network\t21"
+    ],
+    [
+      45,
+      "toc 3",
+      "2.2.5. Hiện tượng Over-smoothing\t22"
+    ],
+    [
+      46,
+      "toc 3",
+      "2.2.6. Pipeline huấn luyện mô hình GNN\t23"
+    ],
+    [
+      47,
+      "toc 2",
+      "2.3. Một số mô hình GNN phổ biến\t24"
+    ],
+    [
+      48,
+      "toc 3",
+      "2.3.1. Graph Convolutional Network (GCN)\t24"
+    ],
+    [
+      49,
+      "toc 3",
+      "a) Bối cảnh ra đời\t24"
+    ],
+    [
+      50,
+      "toc 3",
+      "2.3.2. GraphSAGE (Graph Sample and Aggregate)\t26"
+    ],
+    [
+      51,
+      "toc 3",
+      "2.3.3. Graph Attention Network (GAT)\t28"
+    ],
+    [
+      52,
+      "toc 2",
+      "2.4. Quy trình huấn luyện mô hình Graph Neural Network\t30"
+    ],
+    [
+      53,
+      "toc 3",
+      "2.4.1. Chuẩn bị dữ liệu và phân chia tập\t30"
+    ],
+    [
+      54,
+      "toc 3",
+      "2.4.2. Hàm mất mát theo từng bài toán\t31"
+    ],
+    [
+      55,
+      "toc 3",
+      "2.4.3. Theo dõi các chỉ số trong quá trình huấn luyện\t31"
+    ],
+    [
+      56,
+      "toc 3",
+      "2.4.4. Kỹ thuật tối ưu và điều chuẩn hóa\t32"
+    ],
+    [
+      57,
+      "toc 2",
+      "2.5. Các bài toán phổ biến trong Graph Neural Network\t32"
+    ],
+    [
+      58,
+      "toc 3",
+      "2.5.1. Phân loại nút (Node Classification)\t32"
+    ],
+    [
+      59,
+      "toc 3",
+      "2.5.2. Phân loại đồ thị (Graph Classification)\t33"
+    ],
+    [
+      60,
+      "toc 3",
+      "2.5.3. Dự đoán liên kết (Link Prediction)\t34"
+    ],
+    [
+      61,
+      "toc 3",
+      "2.5.4. Phát hiện cộng đồng (Community Detection)\t35"
+    ],
+    [
+      62,
+      "toc 3",
+      "2.5.5. Nhúng đồ thị (Graph Embedding)\t36"
+    ],
+    [
+      63,
+      "toc 3",
+      "2.5.6. Sinh đồ thị (Graph Generation)\t37"
+    ],
+    [
+      64,
+      "toc 2",
+      "2.6. Trực quan hóa trong quá trình huấn luyện mô hình\t38"
+    ],
+    [
+      65,
+      "toc 3",
+      "2.6.1. Vai trò của trực quan hóa trong học máy\t38"
+    ],
+    [
+      66,
+      "toc 3",
+      "2.6.2. Đặc thù của trực quan hóa trong Graph Learning\t38"
+    ],
+    [
+      67,
+      "toc 3",
+      "2.6.3. Metric Dashboard — Bảng điều khiển chỉ số\t39"
+    ],
+    [
+      68,
+      "toc 3",
+      "2.6.4. Topology Visualization — Trực quan hóa cấu trúc đồ thị\t39"
+    ],
+    [
+      69,
+      "toc 3",
+      "2.6.5. Embedding Visualization — Trực quan hóa không gian ẩn\t40"
+    ],
+    [
+      70,
+      "toc 3",
+      "2.6.6. Realtime Monitoring — Theo dõi thời gian thực\t41"
+    ],
+    [
+      71,
+      "toc 3",
+      "2.6.7. Replay Experiment — Phát lại thí nghiệm\t41"
+    ],
+    [
+      72,
+      "toc 3",
+      "2.6.8. Model Comparison — So sánh thí nghiệm\t42"
+    ],
+    [
+      73,
+      "toc 1",
+      "3. PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG\t43"
+    ],
+    [
+      74,
+      "toc 2",
+      "3.1. Phát biểu yêu cầu hệ thống\t43"
+    ],
+    [
+      75,
+      "toc 3",
+      "3.1.1. Đối tượng người dùng\t43"
+    ],
+    [
+      76,
+      "toc 3",
+      "3.1.2. Yêu cầu chức năng (Functional Requirements)\t45"
+    ],
+    [
+      77,
+      "toc 3",
+      "3.1.3. Yêu cầu phi chức năng (Non-Functional Requirements)\t49"
+    ],
+    [
+      78,
+      "toc 2",
+      "3.2. Phân tích use case\t49"
+    ],
+    [
+      79,
+      "toc 3",
+      "3.2.1. Xác định tác nhân\t49"
+    ],
+    [
+      80,
+      "toc 3",
+      "3.2.2. Biểu đồ Usecase tổng quát\t50"
+    ],
+    [
+      81,
+      "toc 3",
+      "3.2.3. Mô tả các Usecase chính\t50"
+    ],
+    [
+      82,
+      "toc 2",
+      "3.3. Đặc tả các use case chính\t51"
+    ],
+    [
+      83,
+      "toc 3",
+      "3.3.1. UC01 — Đăng nhập vào hệ thống\t51"
+    ],
+    [
+      84,
+      "toc 3",
+      "3.3.2. UC02 — Quản lý dự án\t52"
+    ],
+    [
+      85,
+      "toc 3",
+      "3.3.3. UC03 — Quản lý dataset và tạo phiên bản\t53"
+    ],
+    [
+      86,
+      "toc 3",
+      "3.3.4. UC04 — Khởi tạo phiên huấn luyện\t54"
+    ],
+    [
+      87,
+      "toc 3",
+      "3.3.5. UC05 — Theo dõi huấn luyện thời gian thực\t55"
+    ],
+    [
+      88,
+      "toc 3",
+      "3.3.6. UC06 — Replay và Resume thực nghiệm\t56"
+    ],
+    [
+      89,
+      "toc 3",
+      "3.3.7. UC07 — So sánh thực nghiệm\t58"
+    ],
+    [
+      90,
+      "toc 3",
+      "3.3.8. UC08 — Quản trị hệ thống\t59"
+    ],
+    [
+      91,
+      "toc 2",
+      "3.4. Biểu đồ động mô tả luồng xử lý hệ thống\t60"
+    ],
+    [
+      92,
+      "toc 3",
+      "3.4.1. Luồng tải và cấu hình dữ liệu\t60"
+    ],
+    [
+      93,
+      "toc 3",
+      "3.4.2. Luồng huấn luyện mô hình\t61"
+    ],
+    [
+      94,
+      "toc 3",
+      "3.4.3. Luồng truyền dữ liệu thời gian thực qua WebSocket\t61"
+    ],
+    [
+      95,
+      "toc 3",
+      "3.4.4. Luồng Replay và Resume thực nghiệm\t61"
+    ],
+    [
+      96,
+      "toc 3",
+      "3.4.5. Luồng quản trị và Retention\t62"
+    ],
+    [
+      97,
+      "toc 2",
+      "3.5. Thiết kế cơ sở dữ liệu\t62"
+    ],
+    [
+      98,
+      "toc 3",
+      "3.5.1. Biểu đồ thực thể - liên kết (ERD)\t63"
+    ],
+    [
+      99,
+      "toc 3",
+      "3.5.2. Thiết kế dữ liệu quan hệ\t63"
+    ],
+    [
+      100,
+      "toc 3",
+      "3.5.3. Thiết kế MongoDB\t71"
+    ],
+    [
+      101,
+      "toc 3",
+      "3.5.4. Thiết kế Blob Storage\t72"
+    ],
+    [
+      102,
+      "toc 2",
+      "3.6. Kiến trúc hệ thống\t72"
+    ],
+    [
+      103,
+      "toc 3",
+      "3.6.1. Kiến trúc tổng thể\t72"
+    ],
+    [
+      104,
+      "toc 2",
+      "3.7. Thiết kế giao diện hệ thống\t73"
+    ],
+    [
+      105,
+      "toc 3",
+      "3.7.1. Giao diện quản lý dự án\t73"
+    ],
+    [
+      106,
+      "toc 3",
+      "3.7.3. Giao diện LabShell\t75"
+    ],
+    [
+      107,
+      "toc 3",
+      "3.7.4. Giao diện Experiment Hub\t75"
+    ],
+    [
+      108,
+      "toc 3",
+      "3.7.5. Giao diện quản trị\t76"
+    ],
+    [
+      109,
+      "toc 2",
+      "3.8. Các công nghệ sử dụng\t77"
+    ],
+    [
+      110,
+      "toc 3",
+      "3.8.1. Frontend — Giao diện người dùng\t77"
+    ],
+    [
+      111,
+      "toc 3",
+      "3.8.2. Backend — Xử lý nghiệp vụ\t77"
+    ],
+    [
+      112,
+      "toc 3",
+      "3.8.3. WebSocket — Truyền dữ liệu thời gian thực\t78"
+    ],
+    [
+      113,
+      "toc 3",
+      "3.8.4. Cơ sở dữ liệu và lưu trữ\t78"
+    ],
+    [
+      114,
+      "toc 1",
+      "4. TRIỂN KHAI VÀ ĐÁNH GIÁ KẾT QUẢ\t80"
+    ],
+    [
+      115,
+      "toc 2",
+      "4.1. Giao diện chính\t80"
+    ],
+    [
+      116,
+      "toc 3",
+      "4.1.1. Giao diện đăng nhập\t80"
+    ],
+    [
+      117,
+      "toc 3",
+      "4.4.2. Giao diện dashboard tổng quan của Researcher\t81"
+    ],
+    [
+      118,
+      "toc 3",
+      "4.4.3. Giao diện quản lý dự án\t82"
+    ],
+    [
+      119,
+      "toc 3",
+      "4.4.4. Giao diện quản lý dữ liệu và phiên bản dataset\t83"
+    ],
+    [
+      120,
+      "toc 3",
+      "4.4.5. Giao diện Experiment Hub\t84"
+    ],
+    [
+      121,
+      "toc 3",
+      "4.4.6. Giao diện LabShell\t85"
+    ],
+    [
+      122,
+      "toc 3",
+      "4.4.7. Giao diện dashboard quản trị Admin\t86"
+    ],
+    [
+      123,
+      "toc 3",
+      "4.4.8. Giao diện quản lý người dùng\t87"
+    ],
+    [
+      124,
+      "toc 3",
+      "4.4.9. Giao diện quản lý phiên huấn luyện\t88"
+    ],
+    [
+      125,
+      "toc 2",
+      "4.2. Kết quả thực thi hệ thống\t89"
+    ],
+    [
+      126,
+      "toc 3",
+      "4.2.1. Kết quả thực thi chức năng đăng nhập\t90"
+    ],
+    [
+      127,
+      "toc 3",
+      "4.2.2. Kết quả thực thi chức năng đăng ký\t90"
+    ],
+    [
+      128,
+      "toc 3",
+      "4.2.3. Kết quả thực thi chức năng quản lý dự án\t91"
+    ],
+    [
+      129,
+      "toc 3",
+      "4.2.4. Kết quả thực thi chức năng quản lý dữ liệu và phiên bản dataset\t92"
+    ],
+    [
+      130,
+      "toc 3",
+      "4.2.5. Kết quả thực thi chức năng khởi tạo và điều khiển phiên huấn luyện\t93"
+    ],
+    [
+      131,
+      "toc 3",
+      "4.2.6. Kết quả thực thi chức năng trực quan hóa thời gian thực\t94"
+    ]
+  ]
+}

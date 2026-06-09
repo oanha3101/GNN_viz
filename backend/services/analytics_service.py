@@ -1243,7 +1243,7 @@ def generate_comparison_insights(results: List[Dict], graph_payload: Dict = None
     if score_gap <= 3:
         next_steps.append(copy["next_verify_close"])
 
-    return {
+    result = {
         "insights": insights,
         "insight_count": len(insights),
         "summary": " ".join(part for part in summary_parts if part).strip() or copy["insufficient"],
@@ -1258,7 +1258,14 @@ def generate_comparison_insights(results: List[Dict], graph_payload: Dict = None
             "reason": caution_reason_map.get(winner["caution"], copy["reason_healthy"]),
         },
         "next_steps": next_steps,
+        "source": "heuristic",
+        "llm": llm_analyst_service.get_public_status(),
     }
+    llm_result = llm_analyst_service.generate_comparison_brief(result, lang=lang)
+    if llm_result:
+        result.update(llm_result)
+        result["insight_count"] = len(result.get("insights", []))
+    return result
 
 
 # ---------------------------------------------------------------------------

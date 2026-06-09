@@ -63,6 +63,13 @@ describe('ReadoutMonitor task 2', () => {
     expect(screen.getByText('Mượt')).toBeInTheDocument()
   })
 
+  it('labels clustering as a coefficient so it is not confused with density', () => {
+    render(<ReadoutMonitor />)
+
+    expect(screen.getByText('Density')).toBeInTheDocument()
+    expect(screen.getByText('Cluster Coef')).toBeInTheDocument()
+  })
+
   it('falls back to the active weak-class slice when pinned graph is outside the slice', () => {
     gnnState.selectedNodeId = 99
 

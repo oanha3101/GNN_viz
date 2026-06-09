@@ -81,6 +81,7 @@ function buildReadoutNarrative(descriptor, lang = 'en') {
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
+  { id: 'mechanism', label: 'Mechanism' },
   { id: 'failures', label: 'Failures' },
   { id: 'structure', label: 'Structure' },
   { id: 'readout', label: 'Readout' },
@@ -89,6 +90,7 @@ const TABS = [
 const TASK2_TAB_LABELS = {
   vi: {
     overview: 'Tổng quan',
+    mechanism: 'Cơ chế học',
     failures: 'Lỗi',
     structure: 'Cấu trúc',
     readout: 'Readout',
@@ -496,6 +498,19 @@ export default function Task2MetricsPanel({
               reportLang={reportLang}
             />
           )}
+          {tab === 'mechanism' && (
+            <MechanismTab
+              signature={modelSignature}
+              descriptors={focusedDescriptors}
+              snapshots={snapshots}
+              reportLang={reportLang}
+              onSelect={setSelectedNode}
+              onOpenReadout={(graphId) => {
+                if (graphId != null) setSelectedNode(graphId)
+                setTab('readout')
+              }}
+            />
+          )}
           {tab === 'structure' && (
             <StructureTab
               snap={filteredSnap}
@@ -617,6 +632,260 @@ function Task2ModelSignatureCard({ signature, reportLang = 'en' }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function getMechanismCopy(signature, reportLang = 'en') {
+  const isVi = reportLang === 'vi'
+  if (signature?.id === 'GAT') {
+    return {
+      title: isVi ? 'GAT học bằng cách khóa attention vào motif quyết định' : 'GAT learns by locking attention onto decisive motifs',
+      principle: isVi
+        ? 'Mô hình không xem mọi hàng xóm như nhau. Nó học node hoặc cạnh nào đáng tin hơn, rồi để một nhóm nhỏ node kéo readout của cả graph.'
+        : 'The model does not treat every neighbor equally. It learns which nodes or edges deserve more weight, then lets a small set pull the graph readout.',
+      expected: isVi
+        ? 'Khi học tốt, top-k node đóng góp tăng, entropy giảm, và các graph cùng lớp bắt đầu khóa vào motif giống nhau.'
+        : 'When learning is healthy, top-k contribution rises, entropy falls, and same-class graphs begin to lock onto similar motifs.',
+      risk: isVi
+        ? 'Nếu attention quá hẹp hoặc đổi liên tục, GAT có thể khóa nhầm motif và vẫn rất tự tin.'
+        : 'If attention is too narrow or keeps moving, GAT can lock onto the wrong motif while staying confident.',
+      primary: isVi ? 'Motif lock' : 'Motif lock',
+      secondary: isVi ? 'Entropy còn lại' : 'Remaining entropy',
+    }
+  }
+  if (signature?.id === 'SAGE') {
+    return {
+      title: isVi ? 'GraphSAGE học bằng biểu quyết lân cận ổn định dần' : 'GraphSAGE learns through stabilizing neighborhood votes',
+      principle: isVi
+        ? 'Mỗi node gom ngữ cảnh từ vùng lân cận, rồi graph-level readout dùng các vùng vote đó để quyết định nhãn toàn graph.'
+        : 'Each node aggregates local neighborhood context, then the graph readout uses those neighborhood votes to decide the graph label.',
+      expected: isVi
+        ? 'Khi học tốt, prediction ít flip hơn, margin bớt dao động, và các graph sát biên dần có quyết định rõ hơn.'
+        : 'When learning is healthy, predictions flip less, margins calm down, and boundary graphs settle into clearer decisions.',
+      risk: isVi
+        ? 'Nếu neighborhood vote yếu, cùng một graph sẽ đổi ý nhiều lần qua epoch hoặc giữ margin rất mỏng.'
+        : 'If the neighborhood vote is weak, the same graph keeps changing its mind across epochs or keeps a very thin margin.',
+      primary: isVi ? 'Vote ổn định' : 'Vote stability',
+      secondary: isVi ? 'Flip pressure' : 'Flip pressure',
+    }
+  }
+  return {
+    title: isVi ? 'GCN học bằng lan truyền và làm mượt tín hiệu cấu trúc' : 'GCN learns by propagating and smoothing structural signals',
+    principle: isVi
+      ? 'Mỗi lớp GCN trộn tín hiệu qua cạnh, nên các node kề nhau dần có biểu diễn đồng thuận hơn trước khi được gom thành graph embedding.'
+      : 'Each GCN layer mixes signals across edges, so neighboring nodes gradually become more aligned before they are pooled into a graph embedding.',
+    expected: isVi
+      ? 'Khi học tốt, đóng góp giữa các node kề nhau đồng thuận hơn, readout mượt hơn, và motif không bị chia thành nhiều tín hiệu rời rạc.'
+      : 'When learning is healthy, neighboring node contributions agree more, the readout smooths out, and motifs stop fragmenting into isolated signals.',
+    risk: isVi
+      ? 'Nếu quá mượt, graph khác nhau có thể trông giống nhau trong embedding và motif quyết định bị loãng.'
+      : 'If it oversmooths, different graphs can look too similar in embedding space and the decisive motif gets diluted.',
+    primary: isVi ? 'Độ mượt' : 'Smoothing',
+    secondary: isVi ? 'Readout loãng' : 'Diffuse readout',
+  }
+}
+
+function getMechanismRows(signature, reportLang = 'en') {
+  const isVi = reportLang === 'vi'
+  const metrics = signature?.metrics || {}
+  if (signature?.id === 'GAT') {
+    return [
+      { label: isVi ? 'Attention focus' : 'Attention focus', value: metrics.attention_focus, tone: metrics.attention_focus > 0.65 ? 'good' : 'warn' },
+      { label: isVi ? 'Top-k motif mass' : 'Top-k motif mass', value: metrics.topk_contribution_mass, tone: metrics.topk_contribution_mass > 0.65 ? 'good' : 'warn' },
+      { label: isVi ? 'Entropy đã giảm' : 'Entropy resolved', value: metrics.attention_entropy_trend, tone: metrics.attention_entropy_trend > 0.45 ? 'good' : 'warn' },
+      { label: isVi ? 'Motif lock score' : 'Motif lock score', value: metrics.motif_lock_score, tone: metrics.motif_lock_score > 0.45 ? 'good' : 'warn' },
+    ]
+  }
+  if (signature?.id === 'SAGE') {
+    return [
+      { label: isVi ? 'Vote stability' : 'Vote stability', value: metrics.score_stability, tone: metrics.score_stability > 0.65 ? 'good' : 'warn' },
+      { label: isVi ? 'Ít flip hơn' : 'Flip resistance', value: 1 - (metrics.prediction_flip_rate || 0), tone: metrics.prediction_flip_rate < 0.15 ? 'good' : 'warn' },
+      { label: isVi ? 'Margin ổn định' : 'Margin calm', value: 1 - (metrics.margin_variance || 0), tone: metrics.margin_variance < 0.18 ? 'good' : 'warn' },
+      { label: isVi ? 'Graph dao động' : 'Unstable graphs', value: Math.min(1, (signature.unstableGraphIds?.length || 0) / 12), tone: signature.unstableGraphIds?.length ? 'bad' : 'good' },
+    ]
+  }
+  return [
+    { label: isVi ? 'Readout smoothness' : 'Readout smoothness', value: metrics.readout_smoothness, tone: metrics.readout_smoothness > 0.55 ? 'good' : 'warn' },
+    { label: isVi ? 'Neighbor agreement' : 'Neighbor agreement', value: metrics.contribution_agreement, tone: metrics.contribution_agreement > 0.55 ? 'good' : 'warn' },
+    { label: isVi ? 'Embedding tightening' : 'Embedding tightening', value: metrics.embedding_cluster_tightening, tone: metrics.embedding_cluster_tightening > 0.5 ? 'good' : 'warn' },
+    { label: isVi ? 'Readout không loãng' : 'Readout clarity', value: 1 - (metrics.diffuse_readout_share || 0), tone: metrics.diffuse_readout_share < 0.35 ? 'good' : 'warn' },
+  ]
+}
+
+function rankMechanismGraphs(signature, descriptors = []) {
+  const model = signature?.id || 'GCN'
+  const unstable = new Set(signature?.unstableGraphIds || [])
+  return [...descriptors]
+    .map((graph) => {
+      const base =
+        model === 'GAT'
+          ? (graph.readoutConcentration || 0) * 0.55 + (1 - (graph.entropy || 0)) * 0.35 + (graph.correct === 1 ? 0.1 : 0)
+          : model === 'SAGE'
+            ? (unstable.has(graph.originalGraphId) ? 0.55 : 0) + (1 - Math.min(1, graph.margin || 0)) * 0.25 + (graph.correct === 0 ? 0.2 : 0)
+            : (1 - (graph.entropy || 0)) * 0.35 + (graph.readoutBucket !== 'diffuse' ? 0.25 : 0) + (graph.correct === 1 ? 0.2 : 0) + (1 - Math.min(1, graph.structuralOutlierScore || 0)) * 0.2
+      return { ...graph, mechanismScore: Math.max(0, Math.min(1, base)) }
+    })
+    .sort((a, b) => b.mechanismScore - a.mechanismScore)
+    .slice(0, 4)
+}
+
+function MechanismTab({ signature, descriptors = [], snapshots = [], reportLang = 'en', onSelect, onOpenReadout }) {
+  if (!signature) {
+    return <EmptyState title="No mechanism signal" description="Start Task 2 training to inspect how the selected model is learning graph labels." />
+  }
+
+  const isVi = reportLang === 'vi'
+  const copy = getMechanismCopy(signature, reportLang)
+  const rows = getMechanismRows(signature, reportLang)
+  const examples = rankMechanismGraphs(signature, descriptors)
+  const lastTrend = signature.trend?.slice(-40) || []
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+      <div className="rounded-2xl border border-cyan-500/18 bg-cyan-500/8 p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-nano font-bold uppercase tracking-ultra text-cyan-300">
+              {isVi ? 'Model mechanism lens' : 'Model mechanism lens'}
+            </div>
+            <div className="mt-1 text-sm font-semibold text-slate-100">{copy.title}</div>
+            <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{copy.principle}</p>
+          </div>
+          <div className="rounded-full border border-cyan-400/25 bg-cyan-500/12 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-cyan-100">
+            {signature.shortLabel}
+          </div>
+        </div>
+        <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          <MechanismTextBlock label={isVi ? 'Khi học đúng hướng' : 'Healthy learning evidence'} value={copy.expected} />
+          <MechanismTextBlock label={isVi ? 'Rủi ro cần nhìn kỹ' : 'Failure mode to watch'} value={copy.risk} />
+        </div>
+      </div>
+
+      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
+        {rows.map((row) => (
+          <StatCell
+            key={row.label}
+            label={row.label}
+            value={(Math.max(0, Math.min(1, row.value || 0)) * 100)}
+            digits={0}
+            suffix="%"
+            tone={row.tone}
+          />
+        ))}
+      </div>
+
+      <div className="rounded-2xl border border-line-default bg-nebula p-3">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">
+              {isVi ? 'Bằng chứng theo epoch' : 'Epoch evidence'}
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+              {copy.primary} {isVi ? 'là tín hiệu chính; cột mờ bên dưới là tín hiệu phụ để biết model đang ổn định hay đang phân tán.' : 'is the primary signal; the muted rail tracks the secondary pressure behind it.'}
+            </p>
+          </div>
+          <span className="rounded-full border border-line-default bg-nebula px-2.5 py-1 text-[11px] font-semibold text-slate-300">
+            {snapshots.length} epochs
+          </span>
+        </div>
+        <div className="grid h-24 grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border border-line-subtle bg-nebula px-2 py-2">
+          <div className="flex items-end gap-1">
+            {lastTrend.map((point) => (
+              <div key={`p-${point.epoch}`} className="min-w-0 flex-1 rounded-t bg-cyan-400/80" style={{ height: `${Math.max(8, Math.min(100, point.value * 100))}%` }} title={`Epoch ${point.epoch}: ${(point.value * 100).toFixed(1)}%`} />
+            ))}
+          </div>
+          <div className="flex items-end gap-1">
+            {lastTrend.map((point) => (
+              <div key={`s-${point.epoch}`} className="min-w-0 flex-1 rounded-t bg-slate-500/45" style={{ height: `${Math.max(6, Math.min(100, (point.secondary || 0) * 100))}%` }} title={`Epoch ${point.epoch}: ${(Number(point.secondary || 0) * 100).toFixed(1)}%`} />
+            ))}
+          </div>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <span>{copy.primary}</span>
+          <span>{copy.secondary}</span>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-line-default bg-nebula p-3">
+        <div className="mb-3">
+          <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">
+            {isVi ? 'Graph chứng minh cơ chế học' : 'Mechanism evidence graphs'}
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+            {isVi ? 'Các graph này được chọn vì chúng làm lộ rõ nhất cách model đang ra quyết định, không chỉ vì đúng hay sai.' : 'These graphs are ranked by how clearly they expose the model behavior, not just by correctness.'}
+          </p>
+        </div>
+        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
+          {examples.map((graph) => (
+            <MechanismGraphCard
+              key={graph.originalGraphId}
+              graph={graph}
+              signature={signature}
+              reportLang={reportLang}
+              onSelect={onSelect}
+              onOpenReadout={onOpenReadout}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MechanismTextBlock({ label, value }) {
+  return (
+    <div className="rounded-xl border border-line-subtle bg-nebula p-3">
+      <div className="text-[10px] font-bold uppercase tracking-ultra text-slate-500">{label}</div>
+      <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{value}</p>
+    </div>
+  )
+}
+
+function MechanismGraphCard({ graph, signature, reportLang = 'en', onSelect, onOpenReadout }) {
+  const isVi = reportLang === 'vi'
+  const model = signature?.id || 'GCN'
+  const reason = model === 'GAT'
+    ? `${isVi ? 'Top-k đóng góp' : 'Top-k mass'} ${(graph.readoutConcentration * 100).toFixed(0)}%, entropy ${((graph.entropy || 0) * 100).toFixed(0)}%.`
+    : model === 'SAGE'
+      ? `${isVi ? 'Margin' : 'Margin'} ${((graph.margin || 0) * 100).toFixed(1)}%, ${signature.unstableGraphIds?.includes(graph.originalGraphId) ? (isVi ? 'đang dao động' : 'unstable') : (isVi ? 'đang ổn định' : 'settling')}.`
+      : `${isVi ? 'Readout' : 'Readout'} ${graph.readoutBucket}, ${isVi ? 'motif' : 'motif'} ${graph.motifSignature}.`
+
+  return (
+    <div className="rounded-xl border border-line-subtle bg-nebula p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="text-[11px] font-semibold text-slate-100">G#{graph.originalGraphId}</div>
+          <div className={`mt-1 text-[10px] font-semibold ${graph.correct === 1 ? 'text-emerald-300' : 'text-red-300'}`}>
+            {graph.correct === 1 ? (isVi ? 'Đúng' : 'Correct') : (isVi ? 'Sai' : 'Wrong')}
+          </div>
+        </div>
+        <span className="rounded-full border border-line-default bg-nebula px-2 py-0.5 text-[10px] font-mono text-slate-300">
+          {(graph.mechanismScore * 100).toFixed(0)}%
+        </span>
+      </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-slate-400">{reason}</p>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <TagChip label={graph.densityBucket} tone="info" />
+        <TagChip label={graph.entropyBucket} tone={graph.entropyBucket === 'diffuse' ? 'warn' : 'good'} />
+        <TagChip label={graph.failureTag} tone={graph.correct === 1 ? 'good' : 'bad'} />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => onSelect?.(graph.originalGraphId)}
+          className="rounded-full border border-cyan-400/25 bg-cyan-500/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-cyan-100 transition-colors hover:bg-cyan-500/18"
+        >
+          Focus
+        </button>
+        <button
+          type="button"
+          onClick={() => onOpenReadout?.(graph.originalGraphId)}
+          className="rounded-full border border-line-subtle bg-nebula px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-slate-200 transition-colors hover:bg-nebula"
+        >
+          Readout
+        </button>
+      </div>
     </div>
   )
 }
@@ -1333,7 +1602,7 @@ function ReadoutTab({ graph, modelSignature = null, classNames, onSelect, report
           <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Structural profile</div>
           <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
             <MiniMetric label="Density" value={graph.structural?.density} />
-            <MiniMetric label="Clustering" value={graph.structural?.avg_clustering} />
+            <MiniMetric label="Cluster Coef" value={graph.structural?.avg_clustering} />
             <MiniMetric label="AvgDeg" value={graph.structural?.avg_degree} digits={1} />
           </div>
           <p className="mt-3 text-[11px] leading-relaxed text-slate-400">

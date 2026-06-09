@@ -44,7 +44,23 @@ function formatFailureTag(tag) {
   }
 }
 
-export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell = null, reportMode = false }) {
+function buildStablePreviewGraph(graph) {
+  if (!graph) return null
+  const total = Math.max(graph.nodes.length, 1)
+  const radius = Math.max(38, Math.min(88, total * 6))
+  return {
+    ...graph,
+    nodes: graph.nodes.map((node, index) => {
+      const angle = (index / total) * Math.PI * 2 - Math.PI / 2
+      const x = Math.cos(angle) * radius
+      const y = Math.sin(angle) * radius
+      return { ...node, x, y, fx: x, fy: y }
+    }),
+    links: graph.links.map((link) => ({ ...link })),
+  }
+}
+
+export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell = null, reportMode = false, analysisMode = false }) {
   const { lang } = useLanguage()
   const reportLang = lang
   const hoveredGraphId = useGNNStore((state) => state.hoveredGraphId)
@@ -139,6 +155,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
       links: descriptor.links.map((link) => ({ ...link })),
     }
   }, [descriptor])
+  const previewGraph = useMemo(() => buildStablePreviewGraph(graph), [graph])
 
   const fgRef = useRef(null)
   const containerRef = useRef(null)
@@ -146,17 +163,16 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
   const [dim, setDim] = useState({ w: 200, h: 150 })
 
   useEffect(() => {
-    if (!fgRef.current || !graph) return undefined
-    fgRef.current.d3Force('charge').strength(-60).distanceMax(100)
-    fgRef.current.d3Force('link').distance(20)
-    fgRef.current.d3Force('center').strength(0.5)
-    fgRef.current.d3ReheatSimulation()
+    if (!fgRef.current || !previewGraph) return undefined
+    fgRef.current.d3Force('charge')?.strength(0)
+    fgRef.current.d3Force('link')?.distance(32)
+    fgRef.current.d3Force('center')?.strength(0)
 
     const timer = setTimeout(() => {
       if (fgRef.current) fgRef.current.zoomToFit(300, 15)
-    }, 100)
+    }, 60)
     return () => clearTimeout(timer)
-  }, [graph])
+  }, [previewGraph])
 
   useEffect(() => {
     if (!containerRef.current) return undefined
@@ -227,10 +243,21 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
   })
 
   return (
-    <div ref={panelRootRef} className="h-full flex flex-col p-3 text-xs w-full relative bg-nebula">
-      <div className="mb-3 space-y-1.5 z-10">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-tighter">Task 2 readout monitor</h3>
+    <div
+      ref={panelRootRef}
+      className={`h-full w-full overflow-y-auto custom-scrollbar bg-nebula text-xs text-slate-200 ${analysisMode ? 'p-4' : 'p-3'}`}
+    >
+      <div className="sticky top-0 z-20 -mx-1 mb-3 rounded-xl border border-line-subtle bg-deep/90 px-3 py-2 backdrop-blur">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Task 2 readout monitor</h3>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-xl font-black tracking-tight text-white">Graph #{graph.originalGraphId}</span>
+              <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-cyan-200">
+                {modelSignature.shortLabel}
+              </span>
+            </div>
+          </div>
           {isPinned || reportMode ? (
             <button
               onClick={() => setSelectedGraph(null)}
@@ -249,13 +276,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
             </button>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-bold text-white">Graph #{graph.originalGraphId}</span>
-          <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-cyan-200">
-            {modelSignature.shortLabel}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-2 text-[9px]">
+        <div className="mt-2 flex flex-wrap gap-2 text-[9px]">
           <span className="bg-deep border border-line-default px-2 py-0.5 rounded text-slate-400">GT: <b className="text-slate-200">{gtLabel}</b></span>
           <span className="bg-deep border border-line-default px-2 py-0.5 rounded text-slate-400">Pred: <b className={graph.correct === 1 ? 'text-green-400' : 'text-red-400'}>{predLabel}</b></span>
           <span className="bg-deep border border-line-default px-2 py-0.5 rounded text-slate-400">
@@ -265,8 +286,8 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
       </div>
 
       <div className="mb-3 grid grid-cols-3 gap-1.5 rounded-md border border-line-subtle bg-nebula p-2">
-        <MetaStat label="Density" value={graph.structural?.density} />
-        <MetaStat label="Clustering" value={graph.structural?.avg_clustering} />
+        <MetaStat label="Density" value={graph.structural?.density} title="Existing undirected edges divided by all possible edges." />
+        <MetaStat label="Cluster Coef" value={graph.structural?.avg_clustering} title="Average local triangle closure. A chain or tree can be 0 even when density is not 0." />
         <MetaStat label="AvgDeg" value={graph.structural?.avg_degree} digits={1} />
       </div>
 
@@ -285,12 +306,16 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
         </div>
       </div>
 
-      <div ref={containerRef} className="flex-1 min-h-[140px] relative bg-nebula rounded-xl overflow-hidden border border-line-subtle shadow-inner">
+      <div
+        ref={containerRef}
+        className={`relative mb-3 overflow-hidden rounded-2xl border border-cyan-500/10 bg-deep/70 shadow-inner ${analysisMode ? 'h-[260px]' : 'h-[190px]'}`}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.10),transparent_58%)]" />
         <ForceGraph2D
           ref={fgRef}
           width={dim.w}
           height={dim.h}
-          graphData={graph}
+          graphData={previewGraph}
           nodeCanvasObjectMode={() => 'replace'}
           nodeCanvasObject={(node, ctx, globalScale) => {
             if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
@@ -347,17 +372,19 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
             return modelSignature.id === 'GAT' ? 1 + weight * 2 : 1
           }}
           backgroundColor="transparent"
-          cooldownTicks={60}
-          d3VelocityDecay={0.6}
+          warmupTicks={0}
+          cooldownTicks={0}
+          d3VelocityDecay={0.9}
           enableZoomInteraction={false}
           enablePanInteraction={false}
+          enableNodeDrag={false}
           onEngineStop={() => {
             if (fgRef.current) fgRef.current.zoomToFit(200, 20)
           }}
         />
       </div>
 
-      <div className="mt-3 grid gap-2 text-[11px] text-slate-300">
+      <div className="grid gap-2 rounded-xl border border-line-subtle bg-deep/45 p-3 text-[11px] text-slate-300">
         <div className="flex items-center justify-between gap-2">
           <span className="text-slate-500">Margin</span>
           <span className="font-mono text-slate-200">{((graph.margin ?? 0) * 100).toFixed(1)}%</span>
@@ -372,7 +399,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
         </div>
       </div>
 
-      <div className="mt-3 rounded-xl border border-line-subtle bg-nebula p-3 space-y-2">
+      <div className="mt-3 rounded-xl border border-cyan-500/10 bg-deep/55 p-3 space-y-2">
         <div className="text-nano text-slate-500 uppercase font-semibold tracking-ultra">Narrative profile · {modelSignature.primaryLabel}</div>
         <p className="text-[11px] leading-relaxed text-slate-300">
           {graph.motifSignature}. Top-k contribution is <span className="text-slate-100 font-semibold">{graph.readoutBucket}</span>, global entropy is <span className="text-slate-100 font-semibold">{graph.entropyBucket}</span>, so the readout pattern is <span className="text-slate-100 font-semibold">{readoutPattern}</span>. {modelSignature.explanation}
@@ -411,10 +438,10 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
   )
 }
 
-function MetaStat({ label, value, digits = 3 }) {
+function MetaStat({ label, value, digits = 3, title = undefined }) {
   const display = value != null && Number.isFinite(value) ? value.toFixed(digits) : '—'
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col gap-0.5" title={title}>
       <span className="text-[8px] text-slate-500 uppercase tracking-ultra font-semibold">{label}</span>
       <span className="text-micro font-mono font-bold text-slate-200 tabular-nums">{display}</span>
     </div>

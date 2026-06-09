@@ -134,6 +134,7 @@ export function translateTask2ReportText(text, lang) {
     'Margin': 'Margin',
     'Density': 'Mật độ',
     'Clustering': 'Phân cụm',
+    'Cluster Coef': 'Hệ số cụm',
     'AvgDeg': 'Bậc TB',
     'Color mode': 'Chế độ màu',
     'Task 2 metrics will appear here': 'Chỉ số Task 2 sẽ hiện ở đây',

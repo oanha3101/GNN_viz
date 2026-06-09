@@ -1,0 +1,4454 @@
+===== PAGE 1 =====
+TRƯỜNG ĐẠI HỌC BÁCH KHOA
+KHOA CÔNG NGHỆTHÔNG TIN
+PBL5: ĐỒÁN CÔNG NGHỆPHẦN MỀM
+XÂY DỰNG HỆTHỐNG TRỰC QUAN HÓA
+QUÁ TRÌNH HUẤN LUYỆN MÔ HÌNH GRAPH
+NEURAL NETWORK
+Người hướng dẫn:
+TS.PHẠM MINH TUẤN
+Sinh viên thực hiện:
+Hà ThịKim Oanh
+LỚP: 23T_Nhat2
+Nguyễn Thanh Huyền
+LỚP: 23T_Nhat2
+Nhóm: 23.99A
+Đà Nẵng, 6/2026
+
+===== PAGE 2 =====
+Đồán Công nghệphần mềm
+2
+MỤC LỤC
+MỤC LỤC............................................................................................................ 2
+DANH MỤC HÌNH VẼ...................................................................................... 8
+MỞĐẦU.............................................................................................................11
+1. TỔNG QUAN ĐỀTÀI..................................................................................13
+1.1. Đặt vấn đề.................................................................................................13
+1.2. Mục tiêu đềtài..........................................................................................13
+1.3. Đối tượng và phạm vi nghiên cứu........................................................... 14
+1.4. Phương pháp nghiên cứu..........................................................................15
+1.5. Ý nghĩa khoa học và thực tiễn................................................................. 16
+1.5.1. Ý nghĩa khoa học...............................................................................16
+1.5.2. Ý nghĩa thực tiễn............................................................................... 16
+2. CƠ SỞLÝ THUYẾT....................................................................................17
+2.1. Tổng quan vềdữliệu đồthị..................................................................... 17
+2.1.1. Khái niệm và định nghĩa hình thức...................................................17
+2.1.2. Phân loại đồthị.................................................................................17
+2.1.3. Đặc tính phi Euclid của dữliệu đồthị..............................................18
+2.1.4. Ứng dụng thực tếcủa dữliệu đồthị................................................. 18
+2.2. Tổng quan vềGraph Neural Network..................................................... 19
+2.2.1. Lịch sửhình thành và phát triển.......................................................19
+2.2.2. Cơ chếMessage Passing — Truyền thông điệp...............................19
+2.2.3. Neighborhood Aggregation và Receptive Field............................... 21
+2.2.4. Embedding trong Graph Neural Network........................................ 21
+2.2.5. Hiện tượng Over-smoothing............................................................. 22
+2.2.6. Pipeline huấn luyện mô hình GNN...................................................23
+2.3. Một sốmô hình GNN phổbiến............................................................... 24
+2.3.1. Graph Convolutional Network (GCN)............................................. 24
+a) Bối cảnh ra đời........................................................................................24
+
+===== PAGE 3 =====
+Đồán Công nghệphần mềm
+3
+2.3.2. GraphSAGE (Graph Sample and Aggregate).................................. 26
+2.3.3. Graph Attention Network (GAT)...................................................... 28
+2.4. Quy trình huấn luyện mô hình Graph Neural Network...........................30
+2.4.1. Chuẩn bịdữliệu và phân chia tập....................................................30
+2.4.2. Hàm mất mát theo từng bài toán...................................................... 31
+2.4.3. Theo dõi các chỉsốtrong quá trình huấn luyện...............................31
+2.4.4. Kỹthuật tối ưu và điều chuẩn hóa....................................................32
+2.5. Các bài toán phổbiến trong Graph Neural Network...............................32
+2.5.1. Phân loại nút (Node Classification)................................................. 32
+2.5.2. Phân loại đồthị(Graph Classification)...........................................33
+2.5.3. Dựđoán liên kết (Link Prediction)...................................................34
+2.5.4. Phát hiện cộng đồng (Community Detection).................................. 35
+2.5.5. Nhúng đồthị(Graph Embedding)....................................................36
+2.5.6. Sinh đồthị(Graph Generation)........................................................37
+2.6. Trực quan hóa trong quá trình huấn luyện mô hình................................38
+2.6.1. Vai trò của trực quan hóa trong học máy........................................ 38
+2.6.2. Đặc thù của trực quan hóa trong Graph Learning..........................38
+2.6.3. Metric Dashboard — Bảng điều khiển chỉsố.................................. 39
+2.6.4. Topology Visualization — Trực quan hóa cấu trúc đồthị...............39
+2.6.5. Embedding Visualization — Trực quan hóa không gian ẩn............ 40
+2.6.6. Realtime Monitoring — Theo dõi thời gian thực............................. 41
+2.6.7. Replay Experiment — Phát lại thí nghiệm....................................... 41
+2.6.8. Model Comparison — So sánh thí nghiệm.......................................42
+3. PHÂN TÍCH VÀ THIẾT KẾHỆTHỐNG................................................43
+3.1. Phát biểu yêu cầu hệthống...................................................................... 43
+3.1.1. Đối tượng người dùng.......................................................................43
+3.1.2. Yêu cầu chức năng (Functional Requirements)............................... 45
+
+===== PAGE 4 =====
+Đồán Công nghệphần mềm
+4
+3.1.3. Yêu cầu phi chức năng (Non-Functional Requirements).................49
+3.2. Phân tích use case.....................................................................................49
+3.2.1. Xác định tác nhân............................................................................. 49
+3.2.2. Biểu đồUsecase tổng quát................................................................50
+3.2.3. Mô tảcác Usecase chính.................................................................. 50
+3.3. Đặc tảcác use case chính.........................................................................51
+3.3.1. UC01 — Đăng nhập vào hệthống....................................................51
+3.3.2. UC02 — Quản lý dựán.....................................................................52
+3.3.3. UC03 — Quản lý dataset và tạo phiên bản......................................53
+3.3.4. UC04 — Khởi tạo phiên huấn luyện.................................................54
+3.3.5. UC05 — Theo dõi huấn luyện thời gian thực...................................55
+3.3.6. UC06 — Replay và Resume thực nghiệm.........................................56
+3.3.7. UC07 — So sánh thực nghiệm..........................................................58
+3.3.8. UC08 — Quản trịhệthống...............................................................59
+3.4. Biểu đồđộng mô tảluồng xửlý hệthống............................................... 60
+3.4.1. Luồng tải và cấu hình dữliệu........................................................... 60
+3.4.2. Luồng huấn luyện mô hình................................................................61
+3.4.3. Luồng truyền dữliệu thời gian thực qua WebSocket....................... 61
+3.4.4. Luồng Replay và Resume thực nghiệm.............................................61
+3.4.5. Luồng quản trịvà Retention............................................................. 62
+3.5. Thiết kếcơ sởdữliệu...............................................................................62
+3.5.1. Biểu đồthực thể- liên kết (ERD)......................................................63
+3.5.2. Thiết kếdữliệu quan hệ....................................................................63
+3.5.3. Thiết kếMongoDB............................................................................ 71
+3.5.4. Thiết kếBlob Storage........................................................................72
+3.6. Kiến trúc hệthống....................................................................................72
+3.6.1. Kiến trúc tổng thể..............................................................................72
+
+===== PAGE 5 =====
+Đồán Công nghệphần mềm
+5
+3.7. Thiết kếgiao diện hệthống......................................................................73
+3.7.1. Giao diện quản lý dựán....................................................................73
+3.7.3. Giao diện LabShell............................................................................75
+3.7.4. Giao diện Experiment Hub............................................................... 75
+3.7.5. Giao diện quản trị.............................................................................76
+3.8. Các công nghệsửdụng............................................................................ 77
+3.8.1. Frontend — Giao diện người dùng...................................................77
+3.8.2. Backend — Xửlý nghiệp vụ..............................................................77
+3.8.3. WebSocket — Truyền dữliệu thời gian thực....................................78
+3.8.4. Cơ sởdữliệu và lưu trữ....................................................................78
+4. TRIỂN KHAI VÀ ĐÁNH GIÁ KẾT QUẢ................................................ 80
+4.1. Giao diện chính........................................................................................ 80
+4.1.1. Giao diện đăng nhập.........................................................................80
+4.4.2. Giao diện dashboard tổng quan của Researcher.............................81
+4.4.3. Giao diện quản lý dựán....................................................................82
+4.4.4. Giao diện quản lý dữliệu và phiên bản dataset...............................83
+4.4.5. Giao diện Experiment Hub............................................................... 84
+4.4.6. Giao diện LabShell............................................................................85
+4.4.7. Giao diện dashboard quản trịAdmin...............................................86
+4.4.8. Giao diện quản lý người dùng.......................................................... 87
+4.4.9. Giao diện quản lý phiên huấn luyện.................................................88
+4.2. Kết quảthực thi hệthống.........................................................................89
+4.2.1. Kết quảthực thi chức năng đăng nhập.............................................90
+4.2.2. Kết quảthực thi chức năng đăng ký................................................. 90
+4.2.3. Kết quảthực thi chức năng quản lý dựán....................................... 91
+4.2.4. Kết quảthực thi chức năng quản lý dữliệu và phiên bản dataset...92
+4.2.5. Kết quảthực thi chức năng khởi tạo và điều khiển phiên huấn luyện93
+
+===== PAGE 6 =====
+Đồán Công nghệphần mềm
+6
+4.2.6. Kết quảthực thi chức năng trực quan hóa thời gian thực...............94
+4.2.7. Kết quảthực thi chức năng Replay và Resume thực nghiệm...........95
+4.2.8. Kết quảthực thi chức năng quản trịhệthống..................................96
+4.2.9. Tổng kết kết quảthực thi...................................................................98
+4.3. Kết quảtrực quan hóa và phân tích GNN................................................99
+4.3.1. Node Classification.........................................................................100
+4.3.2. Graph Classification.......................................................................102
+4.3.3. Community Detection......................................................................103
+4.3.4. Graph Generation...........................................................................104
+4.4. Kết quảchức năng AI hỗtrợphân tích và so sánh mô hình................. 105
+4.4.1. Kết quảAI phân tích thực nghiệm đơn...........................................106
+4.4.2. Kết quảAI so sánh mô hình GCN, GAT và GraphSAGE...............107
+4.4.3. Kết quảtrực quan hóa so sánh đa mô hình....................................107
+4.4.4. Kết quảphân tích lỗi và mẫu thất bại............................................ 108
+4.4.5. Kết quảhồsơ phân tích mô hình....................................................109
+4.4.6. Nhận xét vềchức năng AI hỗtrợphân tích....................................110
+4.5. Nhận xét và đánh giá..............................................................................111
+4.5.1. Mức độhoàn thành yêu cầu chức năng..........................................111
+4.5.2. Tính khảthi kỹthuật........................................................................111
+4.5.3. Tính khảthi vận hành..................................................................... 111
+4.5.4. Khảnăng mởrộng.......................................................................... 111
+4.5.5. Đánh giá theo từng mô hình GNN..................................................112
+4.5.6. Hạn chếhiện tại.............................................................................. 113
+4.5.7. Nhận xét tổng quát..........................................................................113
+5. KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN................................................113
+5.1. Kết luận.................................................................................................. 113
+5.2. Hướng phát triển....................................................................................115
+
+===== PAGE 7 =====
+Đồán Công nghệphần mềm
+7
+PHỤLỤC......................................................................................................... 118
+
+===== PAGE 8 =====
+Đồán Công nghệphần mềm
+8
+DANH MỤC HÌNH VẼ
+
+===== PAGE 9 =====
+Đồán Công nghệphần mềm
+9
+DANH MỤC BẢNG BIỂU
+Bảng 2.1 . So sánh tổng quan 3 mô hình GNN...................................................30
+Bảng 3.1 . Các tác nhân tham gia hệthống.........................................................43
+Bảng 3.2 . Ma trận phân quyền chi tiết (RBAC Matrix)....................................44
+Bảng 3.3 . Phát biểu yêu cầu Input / Output theo chức năng............................. 45
+Bảng 3.4 . Phân hệQuản lý Tài nguyên Nghiên cứu......................................... 46
+Bảng 3.5 . Phân hệHuấn luyện Thời gian thực..................................................46
+Bảng 3.6 . Phân hệQuản lý Thực nghiệm và Replay.........................................47
+Bảng 3.7 . Phân hệQuản trịHệthống................................................................ 48
+Bảng 3.8 . Yêu cầu phi chức năng của hệthống.................................................49
+Bảng 3.9 . Đặc tảchi tiết use case UC01............................................................51
+Bảng 3.10 . Đặc tảchi tiết use case UC02..........................................................52
+Bảng 3.11 . Đặc tảchi tiết use case UC03..........................................................53
+Bảng 3.12 . Đặc tảchi tiết use case UC04..........................................................54
+Bảng 3.13 . Đặc tảchi tiết use case UC05..........................................................55
+Bảng 3.14 . Đặc tảchi tiết use case UC06..........................................................57
+Bảng 3.15 . Đặc tảchi tiết use case UC07..........................................................58
+Bảng 3.16 . Đặc tảchi tiết use case UC08..........................................................59
+Bảng 3.17 . Cấu trúc bảng urses..........................................................................64
+Bảng 3.18 . Cấu trúc bảng projects.....................................................................64
+Bảng 3.19 . Cấu trúc bảng datasets.....................................................................65
+Bảng 3.20 . Cấu trúc bảng datasets_versions..................................................... 66
+Bảng 3.21 . Cấu trúc bảng experiments..............................................................67
+Bảng 3.22 . Cấu trúc bảng training_sessions.....................................................68
+Bảng 3.23 . Cấu trúc bảng session_snapshots.................................................... 69
+
+===== PAGE 10 =====
+Đồán Công nghệphần mềm
+10
+Bảng 3.24 . Cấu trúc bảng audit_log...................................................................71
+Bảng 3.25 . So sánh và lý do lựa chọn công nghệtheo từng tầng kiến trúc...... 72
+Bảng 3.26 . Tóm tắt các màn hình chính của hệthống GNN-Insight................73
+Bảng 3.27 . Tóm tắt stack công nghệcủa hệthống GNN Insight......................79
+Bảng 4.1 . Kết quảkiểm thửchức năng đăng nhập............................................90
+Bảng 4.2 . Kết quảkiểm thửchức năng đăng ký................................................91
+Bảng 4.3 . Kết quảkiểm thửchức năng quản lý dựán.......................................91
+Bảng 4.4 . Kết quảkiểm thửchức năng quản lý dữliệu.................................... 92
+Bảng 4.5 . Kết quảkiểm thửchức năng điều khiển phiên huấn luyện...............93
+Bảng 4.6 . Kết quảkiểm thửchức năng trực quan hóa thời gian thực...............95
+Bảng 4.7 . Kết quảkiểm thửchức năng Replay và Resume thực nghiệm.........96
+Bảng 4.8 . Kết quảkiểm thửchức năng quản trịhệthống.................................97
+Bảng 4.9 . Tổng kết kết quảthực thi các chức năng chính.................................99
+
+===== PAGE 11 =====
+Đồán Công nghệphần mềm
+11
+MỞĐẦU
+Trong những năm gần đây, cùng với sựphát triển mạnh mẽcủa trí tuệnhân tạo
+(Artificial Intelligence – AI) và học sâu (Deep Learning), nhu cầu khai thác và phân
+tích các dạng dữliệu có cấu trúc ngày càng gia tăng. Bên cạnh dữliệu dạng bảng, văn
+bản hay hình ảnh, dữliệu dạng đồthịxuất hiện phổbiến trong nhiều lĩnh vực như
+mạng xã hội, mạng giao thông, hệthống gợi ý, mạng trích dẫn khoa học, sinh học phân
+tửvà nhiều bài toán có tính quan hệphức tạp khác. Đểxửlý hiệu quảloại dữliệu này,
+Graph Neural Network (GNN) đã trởthành một trong những hướng nghiên cứu nổi
+bật nhờkhảnăng học đồng thời từthuộc tính của các thực thểvà mối quan hệgiữa
+chúng.
+Các mô hình GNN đã đạt được nhiều thành tựu trong các bài toán như phân loại nút
+(Node Classification), phân loại đồthị(Graph Classification), dựđoán liên kết
+(Link Prediction) và phát hiện cộng đồng. Tuy nhiên, quá trình huấn luyện GNN
+thường diễn ra phức tạp, đòi hỏi người dùng phải theo dõi đồng thời nhiều yếu tốnhư
+sựthay đổi của cấu trúc đồthị, biểu diễn embedding, quá trình lan truyền thông tin
+giữa các nút và hiệu năng của mô hình theo từng giai đoạn huấn luyện. Trong khi đó,
+các công cụhiện có chủyếu tập trung vào việc hiển thịcác chỉsốtổng quát như Loss
+hoặc Accuracy, chưa hỗtrợđầy đủviệc trực quan hóa các đặc trưng riêng của dữliệu
+đồthịvà hành vi học của mô hình GNN. Điều này gây khó khăn cho việc phân tích,
+đánh giá và tối ưu mô hình trong quá trình nghiên cứu cũng như phát triển ứng dụng
+thực tế.
+Xuất phát từthực tếtrên, đềtài “Xây dựng hệthống trực quan hóa và theo dõi quá
+trình huấn luyện cho Graph Neural Network” được thực hiện nhằm xây dựng một nền
+tảng hỗtrợquan sát trực quan toàn bộquá trình huấn luyện GNN trên môi trường web.
+Hệthống cho phép theo dõi các chỉsốhuấn luyện theo thời gian thực, trực quan hóa
+dữliệu đồthịvà không gian biểu diễn, lưu trữvà phát lại các thí nghiệm đã thực hiện,
+đồng thời hỗtrợso sánh kết quảgiữa các mô hình khác nhau. Thông qua đó, đềtài góp
+phần nâng cao khảnăng quan sát, phân tích và đánh giá quá trình huấn luyện GNN, hỗ
+
+===== PAGE 12 =====
+Đồán Công nghệphần mềm
+12
+trợhiệu quảcho hoạt động học tập, nghiên cứu và phát triển các ứng dụng trí tuệnhân
+tạo trên dữliệu đồthị.
+Ngoài phần mởđầu và tài liệu tham khảo, nội dung báo cáo được tổchức thành 5
+chương như sau:
+Chương 1: Tổng quan đềtài giới thiệu bối cảnh nghiên cứu, lý do lựa chọn đềtài,
+bài toán đặt ra, mục tiêu thực hiện và ý nghĩa của đềtài.
+Chương 2: Cơ sởlý thuyết trình bày các kiến thức nền tảng liên quan đến lý thuyết
+đồthị, Graph Neural Network (GNN), quy trình huấn luyện mô hình và các phương
+pháp trực quan hóa dữliệu.
+Chương 3: Phân tích và thiết kếhệthống tập trung phân tích yêu cầu, xây dựng kiến
+trúc tổng thể, thiết kếcơ sởdữliệu, mô tảcác luồng xửlý và giao diện của hệthống.
+Chương 4: Triển khai và đánh giá kết quảmô tảquá trình xây dựng hệthống, cài
+đặt các chức năng chính, trình bày kết quảđạt được và đánh giá hiệu quảhoạt động
+của hệthống.
+Chương 5: Kết luận và hướng phát triển tổng kết những kết quảđã đạt được, nêu ra
+các hạn chếcòn tồn tại và đềxuất các hướng nghiên cứu, phát triển trong tương lai.
+
+===== PAGE 13 =====
+Đồán Công nghệphần mềm
+13
+1. TỔNG QUAN ĐỀTÀI
+1.1. Đặt vấn đề
+Trong bối cảnh trí tuệnhân tạo ngày càng phát triển mạnh mẽ, các bài toán học máy
+không còn chỉgiới hạn trên dữliệu dạng bảng, chuỗi hay hình ảnh, mà đã mởrộng
+sang nhiều loại dữliệu có cấu trúc phức tạp hơn. Một trong những dạng dữliệu quan
+trọng đó là dữliệu đồthị, trong đó các đối tượng không tồn tại độc lập mà có mối liên
+hệchặt chẽvới nhau thông qua các cạnh kết nối. Dữliệu đồthịxuất hiện rộng rãi
+trong thực tế, chẳng hạn như mạng xã hội, mạng giao thông, mạng lưới viễn thông, dữ
+liệu phân tử, dữliệu sinh học, hệthống gợi ý và mạng trích dẫn khoa học.
+Đểgiải quyết hiệu quảcác bài toán trên dữliệu đồthị, Graph Neural Network (GNN)
+đã trởthành một trong những hướng tiếp cận nổi bật trong lĩnh vực học sâu. Khác với
+các mô hình truyền thống, GNN cho phép khai thác đồng thời cảthông tin thuộc tính
+của các nút lẫn thông tin cấu trúc của toàn bộđồthị. Nhờđó, GNN đã đạt được nhiều
+kết quảtích cực trong các bài toán như phân loại nút, phân loại đồthị, dựđoán liên kết,
+phát hiện cộng đồng, nhúng đồthịvà sinh đồthị.
+Tuy nhiên, quá trình huấn luyện mô hình GNN thường tương đối phức tạp. Ngoài các
+chỉsốcơ bản như loss, accuracy hay các metric đánh giá khác, người dùng còn cần
+quan sát được sựthay đổi của cấu trúc dữliệu, trạng thái dựđoán, embedding và các
+tín hiệu đặc trưng của mô hình qua từng epoch. Trong nhiều trường hợp, việc chỉtheo
+dõi các giá trịsốkhông đủđểphản ánh đầy đủcách mô hình học và hội tụ. Điều này
+gây khó khăn cho việc phân tích kết quả, phát hiện bất thường, đánh giá chất lượng mô
+hình cũng như hỗtrợhọc tập và nghiên cứu.
+Từthực tếđó, việc xây dựng một hệthống trực quan hóa và theo dõi quá trình huấn
+luyện cho Graph Neural Network là cần thiết. Một hệthống như vậy không chỉgiúp
+hiển thịtrực quan tiến trình huấn luyện theo thời gian thực mà còn hỗtrợngười dùng
+quan sát sâu hơn vào hành vi của mô hình, từđó nâng cao hiệu quảnghiên cứu, phát
+triển và ứng dụng các bài toán học trên dữliệu đồthị.
+1.2. Mục tiêu đềtài
+Đềtài được thực hiện nhằm xây dựng một hệthống hỗtrợtrực quan hóa và theo dõi
+quá trình huấn luyện cho Graph Neural Network trên môi trường web. Hệthống hướng
+
+===== PAGE 14 =====
+Đồán Công nghệphần mềm
+14
+đến việc giúp người dùng dễdàng quan sát, phân tích và đánh giá diễn biến huấn luyện
+của mô hình thông qua các biểu diễn trực quan thay vì chỉdựa trên các chỉsốsốhọc
+đơn lẻ.
+Mục tiêu tổng quát của đềtài là xây dựng một nền tảng phần mềm cho phép quản lý,
+hiển thịvà theo dõi tiến trình huấn luyện của các mô hình GNN, đồng thời hỗtrợlưu
+trữvà xem lại kết quảthí nghiệm sau khi quá trình huấn luyện kết thúc.
+Đểđạt được mục tiêu trên, đềtài đặt ra các mục tiêu cụthểnhư sau:
+Nghiên cứu cơ sởlý thuyết liên quan đến dữliệu đồthị, Graph Neural Network và
+các phương pháp trực quan hóa trong học máy.
+Khảo sát nhu cầu theo dõi và phân tích quá trình huấn luyện đối với các bài toán
+học trên dữliệu đồthị.
+Phân tích yêu cầu và thiết kếkiến trúc cho hệthống trực quan hóa và theo dõi
+huấn luyện GNN.
+Xây dựng hệthống web cho phép người dùng khởi tạo, theo dõi và quản lý các
+phiên huấn luyện.
+Hiển thịtrực quan các chỉsốhuấn luyện, topology đồthị, embedding và các thông
+tin liên quan đến từng bài toán GNN.
+Hỗtrợlưu trữ, phát lại (Replay) và so sánh các kết quảthí nghiệm.
+Đánh giá hiệu quảhoạt động của hệthống sau khi triển khai.
+1.3. Đối tượng và phạm vi nghiên cứu
+Đối tượng nghiên cứu của đềtài là quá trình huấn luyện các mô hình Graph Neural
+Network và các phương pháp trực quan hóa phục vụcho việc theo dõi, phân tích kết
+quảhuấn luyện. Đồng thời, đềtài cũng nghiên cứu các công nghệvà phương pháp xây
+dựng hệthống phần mềm hỗtrợhiển thịdữliệu thời gian thực trên nền tảng web.
+Vềmặt nội dung, đềtài tập trung vào các bài toán tiêu biểu trong Graph Neural
+Network gồm:
+Phân loại nút (Node Classification).
+
+Phân loại đồthị(Graph Classification).
+
+Dựđoán liên kết (Link Prediction).
+
+===== PAGE 15 =====
+Đồán Công nghệphần mềm
+15
+
+Phát hiện cộng đồng (Community Detection).
+
+Nhúng đồthị(Graph Embedding).
+
+Sinh đồthị(Graph Generation).
+Hệthống được xây dựng nhằm hỗtrợhiển thịcác metric huấn luyện, trực quan hóa
+topology, embedding, trạng thái dựđoán và dữliệu replay của thí nghiệm.
+Vềmặt phạm vi, đềtài tập trung vào khía cạnh trực quan hóa, theo dõi và quản lý quá
+trình huấn luyện mô hình, không đi sâu vào việc nghiên cứu hoặc đềxuất các thuật
+toán GNN mới. Ngoài ra, hệthống được xây dựng chủyếu phục vụmục đích học tập,
+nghiên cứu và minh họa nên các nội dung như tối ưu hiệu năng ởquy mô rất lớn, triển
+khai thương mại hoặc mởrộng hạtầng phân tán chưa phải là trọng tâm chính của đề
+tài.
+Hình 1. Hình ảnh minh họa vềcác bài toán tiêu biểu trong Graph Neural Network
+1.4. Phương pháp nghiên cứu
+Đểthực hiện đềtài, nhóm sửdụng kết hợp giữa phương pháp nghiên cứu lý thuyết và
+phương pháp xây dựng phần mềm.
+Trước hết, nhóm tiến hành nghiên cứu các kiến thức nền tảng liên quan đến lý thuyết
+đồthị, Graph Neural Network, quy trình huấn luyện mô hình học sâu và các phương
+pháp trực quan hóa dữliệu. Đây là cơ sởđểxác định đúng bài toán và định hướng xây
+dựng hệthống phù hợp.
+
+===== PAGE 16 =====
+Đồán Công nghệphần mềm
+16
+Tiếp theo, nhóm thực hiện phân tích yêu cầu hệthống dựa trên mục tiêu đềtài và đặc
+trưng của các bài toán GNN. Từđó, nhóm tiến hành thiết kếkiến trúc tổng thể, thiết kế
+cơ sởdữliệu, xây dựng các thành phần frontend, backend và cơ chếtruyền dữliệu thời
+gian thực.
+Sau giai đoạn thiết kế, hệthống được triển khai bằng các công nghệphù hợp cho ứng
+dụng web hiện đại. Trong quá trình phát triển, các chức năng được kiểm thửvà đánh
+giá liên tục nhằm đảm bảo khảnăng đáp ứng các yêu cầu đã đặt ra. Cuối cùng, dựa
+trên kết quảthực nghiệm, nhóm tiến hành phân tích, đánh giá hiệu quảhoạt động của
+hệthống và đềxuất các hướng cải tiến trong tương lai.
+1.5. Ý nghĩa khoa học và thực tiễn
+1.5.1. Ý nghĩa khoa học
+Đềtài góp phần hệthống hóa các kiến thức liên quan đến dữliệu đồthị, Graph Neural
+Network và các phương pháp trực quan hóa trong quá trình huấn luyện mô hình. Việc
+kết hợp giữa học sâu trên dữliệu đồthịvà trực quan hóa giúp làm rõ hơn cách mô
+hình học, cách các chỉsốthay đổi theo thời gian cũng như cách biểu diễn dữliệu phản
+ánh trạng thái huấn luyện.
+Bên cạnh đó, đềtài góp phần nâng cao khảnăng giải thích và phân tích hành vi của mô
+hình GNN, hỗtrợcho các hoạt động nghiên cứu và phát triển trong lĩnh vực học sâu
+trên dữliệu có cấu trúc.
+1.5.2. Ý nghĩa thực tiễn
+Hệthống được xây dựng có thểhỗtrợsinh viên, giảng viên và nhà nghiên cứu trong
+việc quan sát trực quan quá trình huấn luyện các mô hình GNN, từđó thuận tiện hơn
+trong việc học tập, giảng dạy, thực nghiệm và đánh giá kết quả.
+Ngoài ra, hệthống góp phần giảm bớt sựphụthuộc vào các chỉsốsốhọc đơn thuần
+bằng cách cung cấp các biểu diễn trực quan dễtheo dõi và dễphân tích hơn. Đây cũng
+có thểlà nền tảng đểphát triển các công cụhỗtrợnghiên cứu nâng cao trong tương lai
+đối với các bài toán học sâu trên dữliệu đồthị.
+
+===== PAGE 17 =====
+Đồán Công nghệphần mềm
+17
+2. CƠ SỞLÝ THUYẾT
+2.1. Tổng quan vềdữliệu đồthị
+2.1.1. Khái niệm và định nghĩa hình thức
+Đồthị(graph) là một cấu trúc toán học dùng đểmô hình hóa các mối quan hệgiữa các
+đối tượng trong thếgiới thực. Vềmặt hình thức, một đồthịG được định nghĩa là một
+cặp (V, E), trong đó V = {v₁, v₂, ..., vₙ} là tập hợp các đỉnh (vertices) hay nút (nodes)
+biểu diễn các thực thể, và E ⊆V × V là tập hợp các cạnh (edges) biểu diễn mối quan
+hệgiữa các thực thểđó.
+Trong nhiều bài toán thực tế, mỗi nút vᵢđược gắn kèm một vector đặc trưng xᵢ∈ℝᵈ,
+và mỗi cạnh (vᵢ, vⱼ) cũng có thểmang vector thuộc tính eᵢⱼ∈ℝᵏ. Dạng đầy đủcủa đồ
+thịcó thuộc tính được ký hiệu là G = (V, E, X, E_attr), trong đó X ∈ℝⁿˣᵈlà ma trận
+đặc trưng nút.
+Cấu trúc đồthịthường được biểu diễn qua ma trận kề(adjacency matrix) A ∈{0,1}ⁿˣⁿ,
+trong đó Aᵢⱼ= 1 nếu tồn tại cạnh giữa vᵢvà vⱼ, ngược lại Aᵢⱼ= 0. Với đồthịcó trọng số,
+Aᵢⱼmang giá trịtrọng sốcủa cạnh tương ứng. Ngoài ra, ma trận bậc (degree matrix) D
+là ma trận đường chéo với Dᵢᵢ= ΣⱼAᵢⱼlà bậc của nút vᵢ.
+2.1.2. Phân loại đồthị
+Đồthịvô hướng và có hướng: Trong đồthịvô hướng (undirected graph), cạnh (vᵢ, vⱼ)
+có tính đối xứng — nếu vᵢkết nối với vⱼthì vⱼcũng kết nối lại với vᵢ, và ma trận kềlà
+đối xứng (A = Aᵀ). Trong đồthịcó hướng (directed graph), mỗi cạnh mang hướng xác
+định từnút nguồn tới nút đích, phản ánh quan hệbất đối xứng như mối quan hệtheo
+dõi trong mạng xã hội hay luồng thông tin trong mạng máy tính.
+Đồthịđồng nhất và không đồng nhất: Đồthịđồng nhất (homogeneous graph) chứa
+một loại nút và một loại cạnh. Đồthịkhông đồng nhất (heterogeneous graph) bao gồm
+nhiều loại nút và nhiều loại cạnh với ngữnghĩa khác nhau — ví dụ, một mạng tri thức
+bao gồm thực thểngười, địa điểm, sựkiện cùng các quan hệphong phú giữa chúng.
+
+===== PAGE 18 =====
+Đồán Công nghệphần mềm
+18
+Đồthịtĩnh và động: Đồthịtĩnh (static graph) có cấu trúc cốđịnh theo thời gian. Đồ
+thịđộng (dynamic graph) có cấu trúc thay đổi theo thời gian — ví dụ, mạng giao dịch
+tài chính hay mạng tương tác người dùng trực tuyến.
+2.1.3. Đặc tính phi Euclid của dữliệu đồthị
+Khác với dữliệu dạng ảnh hay chuỗi thời gian — vốn tồn tại trên lưới đều (regular
+grid) với cấu trúc láng giềng xác định — dữliệu đồthịcó tính phi Euclid (non-
+Euclidean). Cụthể, sốlượng nút lân cận của mỗi nút là khác nhau và không cốđịnh;
+không có thứtựkhông gian chuẩn giữa các nút; và không thểáp dụng trực tiếp phép
+tích chập (convolution) tiêu chuẩn được thiết kếcho lưới đều.
+Chính đặc điểm phi Euclid này là lý do tại sao các mô hình học máy truyền thống như
+CNN hay RNN gặp khó khăn khi xửlý đồthị, từđó thúc đẩy sựra đời và phát triển
+của Graph Neural Network như một hướng tiếp cận chuyên biệt.
+2.1.4. Ứng dụng thực tếcủa dữliệu đồthị
+Dữliệu đồthịxuất hiện phổbiến trong nhiều lĩnh vực khoa học và công nghiệp:
+•
+Mạng xã hội: Người dùng là nút, mối quan hệkết bạn hoặc theo dõi là cạnh.
+Bài toán điển hình gồm phát hiện cộng đồng, gợi ý kết bạn, phát hiện tài khoản
+giảmạo.
+•
+Hóa sinh và y tế: Phân tửđược mô hình hóa là đồthịvới nguyên tửlà nút và
+liên kết hóa học là cạnh. GNN đã được áp dụng thành công trong phát hiện
+thuốc mới và dựđoán tính chất phân tử.
+•
+Mạng giao thông: Giao lộlà nút, tuyến đường là cạnh. Các mô hình GNN
+được dùng đểdựđoán lưu lượng và tối ưu điều phối giao thông.
+•
+Hệthống gợi ý: Người dùng và sản phẩm là nút, tương tác (mua, đánh giá) là
+cạnh. GNN học được sởthích người dùng thông qua cấu trúc đồthịtương tác.
+•
+Mạng tri thức: Thực thểlà nút, quan hệngữnghĩa là cạnh. Ứng dụng trong hệ
+thống hỏi đáp và hoàn thiện tri thức (knowledge completion).
+
+===== PAGE 19 =====
+Đồán Công nghệphần mềm
+19
+2.2. Tổng quan vềGraph Neural Network
+2.2.1. Lịch sửhình thành và phát triển
+Ý tưởng áp dụng mạng nơ-ron cho dữliệu đồthịđược đềxuất lần đầu bởi Gori và
+cộng sự(2005) và sau đó được hệthống hóa bởi Scarselli và cộng sự(2009) trong
+công trình "The Graph Neural Network Model". Tuy nhiên, giai đoạn đầu GNN hoạt
+động theo nguyên lý lan truyền thông tin lặp đến hội tụ, gặp nhiều hạn chếvềhiệu quả
+tính toán.
+Bước ngoặt quan trọng xảy ra trong giai đoạn 2016–2018, khi hàng loạt kiến trúc hiện
+đại được đềxuất: GCN (Kipf & Welling, 2017), GraphSAGE (Hamilton et al., 2017),
+và GAT (Veličković et al., 2018). Các mô hình này đã giải quyết được nhiều hạn chế
+của thếhệđầu, nhanh chóng chứng minh hiệu quảvượt trội trên các benchmark chuẩn,
+và trởthành nền tảng cho phần lớn nghiên cứu GNN hiện đại.
+2.2.2. Cơ chếMessage Passing — Truyền thông điệp
+Message Passing là cơ chếcốt lõi chi phối cách thức học biểu diễn trong hầu hết các
+mô hình GNN hiện đại. Ý tưởng cơ bản là: mỗi nút tổng hợp thông tin từcác nút lân
+cận của nó đểcập nhật biểu diễn của chính mình. Quá trình này được lặp lại qua nhiều
+lớp, cho phép thông tin lan truyền xa dần trong đồthị. Một lớp Message Passing tổng
+quát bao gồm ba bước chính:
+Bước 1 — Message: Tạo thông điệp
+Mỗi nút vⱼthuộc vùng lân cận N(vᵢ) của nút vᵢtạo ra một thông điệp mᵢⱼgửi tới vᵢ:
+m(l)ij = MSG(l)(h(l-1)i, h(l-1)j, eij)
+Trong đó: h(l-1)i là embedding của nút vᵢtại lớp l-1; h(l-1)j là embedding của nút lân
+cận vⱼ; eij là thuộc tính của cạnh (vᵢ, vⱼ); MSG(l) là hàm tạo thông điệp, có thểlà phép
+tích tuyến tính, MLP hoặc hàm tùy chỉnh.
+Bước 2 — Aggregation: Tổng hợp thông điệp
+Nút vᵢtổng hợp tất cảthông điệp nhận được từcác nút lân cận:
+a(l)i = AGG(l)({m(l)ij : vj ∈N(vi)})
+
+===== PAGE 20 =====
+Đồán Công nghệphần mềm
+20
+Hàm AGG phải là hàm bất biến với thứtựđầu vào (permutation-invariant) vì tập lân
+cận không có thứtựxác định. Các lựa chọn phổbiến gồm: phép tổng (Sum), trung
+bình (Mean), cực đại (Max), hoặc LSTM kết hợp với hoán vịngẫu nhiên.
+Bước 3 — Update: Cập nhật biểu diễn
+Nút vᵢkết hợp thông tin tổng hợp từlân cận với biểu diễn hiện tại của chính nó đểtạo
+ra biểu diễn mới:
+h(l)i = UPD(l)(h(l-1)i, a(l)i) = σ(W(l) · CONCAT[h(l-1)i, a(l)i] + b(l))
+Trong đó W(l) và b(l) là các tham sốhọc được tại lớp l; σ là hàm kích hoạt phi tuyến
+(thường dùng ReLU hoặc ELU); CONCAT ký hiệu phép nối (concatenation) hai
+vector.
+Hình 2.2. Cơ chếMessage Passing trong một lớp GNN
+=> MSG →AGG →UPDATE. Nút trung tâm tổng hợp thông tin từcác nút lân cận
+đểcập nhật biểu diễn.
+
+===== PAGE 21 =====
+Đồán Công nghệphần mềm
+21
+2.2.3. Neighborhood Aggregation và Receptive Field
+Sau k lớp GNN, biểu diễn của nút vᵢbao gồm thông tin từtất cảcác nút nằm trong
+vùng k-hop (khoảng cách đồthịkhông quá k từvᵢ). Đây được gọi là receptive field của
+nút, tương tựkhái niệm tương ứng trong CNN nhưng được định nghĩa theo cấu trúc đồ
+thịthay vì lưới đều:
+•
+Sau lớp 1: vᵢnhận thông tin từcác nút trong N¹(vᵢ) — hàng xóm trực tiếp.
+•
+Sau lớp 2: vᵢnhận thông tin từN²(vᵢ) — hàng xóm của hàng xóm.
+•
+Sau lớp k: vᵢnhận thông tin từtoàn bộNᵏ(vᵢ).
+Sốlớp k ảnh hưởng trực tiếp đến lượng thông tin ngữcảnh mà mỗi nút có thểtiếp cận.
+Tuy nhiên, k quá lớn dẫn đến hiện tượng over-smoothing, trong khi k quá nhỏsẽhạn
+chếkhảnăng học thông tin toàn cục. Thực tiễn cho thấy với hầu hết các bộdữliệu, k =
+2 đến 3 cho kết quảtốt nhất.
+2.2.4. Embedding trong Graph Neural Network
+Node Embedding là quá trình ánh xạmỗi nút vᵢtừkhông gian đặc trưng thô sang một
+vector biểu diễn zᵢ∈ℝᵈtrong không gian ẩn (latent space), sao cho các nút có đặc
+trưng và cấu trúc lân cận tương tựsẽcó vector biểu diễn gần nhau trong không gian ẩn,
+và khoảng cách trong không gian ẩn phản ánh mức độtương đồng trong đồthịgốc.
+Sau L lớp GNN, embedding cuối cùng của nút vᵢlà zᵢ= h(L)i. Các embedding này có
+thểđược sửdụng trực tiếp cho nhiều tác vụdownstream. Graph-level Embedding tổng
+hợp toàn bộembedding của các nút thành một vector đại diện cho cảđồthịthông qua
+hàm Readout:
+z_G = READOUT({h(L)i : vi ∈V})
+Hàm Readout phổbiến gồm: tổng (Sum), trung bình (Mean), hay các phương pháp
+phức tạp hơn như Hierarchical Pooling hay DiffPool. Chất lượng của embedding quyết
+định trực tiếp hiệu quảcủa các tác vụdownstream, và trực quan hóa embedding (qua t-
+SNE hay PCA) là một công cụquan trọng đểđánh giá chất lượng học biểu diễn — đây
+chính là một trong những tính năng cốt lõi của hệthống GNN Insight được xây dựng
+trong đềtài này.
+
+===== PAGE 22 =====
+Đồán Công nghệphần mềm
+22
+2.2.5. Hiện tượng Over-smoothing
+Over-smoothing là hiện tượng xảy ra khi mô hình GNN có quá nhiều lớp: các nút ởxa
+nhau trong đồthịdần hội tụvềcùng một biểu diễn, khiến khảnăng phân biệt giữa các
+nút giảm đi nghiêm trọng. Vềmặt lý thuyết, Li et al. (2018) chứng minh rằng khi số
+lớp k →∞, kết quảcủa phép nhân ma trận kềchuẩn hóa lặp đi lặp lại hội tụvềmột giá
+trịcốđịnh:
+lim(k→∞) Â^k X = z_∞
+trong đó Â là ma trận kềđược chuẩn hóa. Kết quảlà mọi nút đều có biểu diễn gần như
+giống nhau bất kểvịtrí trong đồthị. Một sốkỹthuật được đềxuất đểgiảm thiểu over-
+smoothing bao gồm: DropEdge, Residual Connection (kết nối tắt), PairNorm, JK-Net
+(Jumping Knowledge Network).
+Hình 2.3. Minh họa hiện tượng Over-smoothing trong GNN— biểu diễn embedding của các
+nút (màu sắc = lớp thực) hội tụvềmột điểm khi sốlớp GNN tăng từ2 đến 8 lớp.
+Hình 2.3 minh họa hiện tượng này trong không gian embedding hai chiều. Khi sốlớp
+GNN tăng từ2 lên 8 lớp, các cụm embedding ban đầu tách biệt rõ ràng dần chồng lấn
+và cuối cùng hội tụvềcùng một vùng trong không gian đặc trưng. Điều này cho thấy
+khảnăng phân biệt giữa các lớp suy giảm đáng kểkhi mạng trởnên quá sâu.
+Đểgiảm thiểu hiện tượng over-smoothing, nhiều phương pháp đã được đềxuất như
+DropEdge, Residual Connection, PairNorm và Jumping Knowledge Network (JK-Net).
+Các kỹthuật này giúp duy trì sựđa dạng của embedding giữa các nút và cho phép xây
+dựng các mô hình GNN sâu hơn mà không làm mất khảnăng biểu diễn.
+
+===== PAGE 23 =====
+Đồán Công nghệphần mềm
+23
+2.2.6. Pipeline huấn luyện mô hình GNN
+Quá trình huấn luyện một mô hình GNN bao gồm các bước được lặp lại qua từng
+epoch:
+1. Chuẩn bịdữliệu: Xây dựng đồthịG = (V, E, X), phân chia
+train/validation/test mask, chuẩn hóa đặc trưng đầu vào.
+2. Khởi tạo mô hình: Chọn kiến trúc GNN, sốlớp L, chiều ẩn d, hàm kích hoạt,
+dropout rate; khởi tạo tham sốngẫu nhiên.
+3. Forward Pass: H⁰ = X →H(l) = f(l)(H(l-1), A) với l = 1,...,L →Ŷ =
+Classifier(H(L)).
+4. Tính hàm mất mát: Tùy bài toán (phân loại, dựđoán liên kết,...) chọn hàm
+loss phù hợp.
+5. Backward Pass: Tính gradient ∇θℒthông qua backpropagation.
+6. Cập nhật tham số: θ ←θ −η · ∇θℒbằng Adam hoặc SGD.
+7. Ghi nhận và đánh giá: Tính metric trên tập validation; lưu snapshot
+embedding và metric cho trực quan hóa.
+
+===== PAGE 24 =====
+Đồán Công nghệphần mềm
+24
+Hình 2.4. Pipeline huấn luyện tổng quát của mô hình GNN theo từng epoch
+2.3. Một sốmô hình GNN phổbiến
+Trong quá trình phát triển của Graph Neural Network, nhiều kiến trúc khác nhau đã
+được đềxuất. Phần này trình bày chi tiết ba mô hình nền tảng và phổbiến nhất, được
+sửdụng làm backbone trong hệthống GNN Insight: GCN, GraphSAGE và GAT.
+2.3.1. Graph Convolutional Network (GCN)
+a) Bối cảnh ra đời
+GCN được đềxuất bởi Kipf và Welling vào năm 2017 trong bài báo "Semi-Supervised
+Classification with Graph Convolutional Networks". Trước đó, các phương pháp phân
+loại nút dựa vào lan truyền nhãn hoặc học biểu diễn hai bước riêng biệt, không được
+tối ưu đầu-cuối. GCN ra đời nhằm thống nhất hai bước này vào một khung học sâu có
+
+===== PAGE 25 =====
+Đồán Công nghệphần mềm
+25
+thểhuấn luyện theo cơ chếbán giám sát (semi-supervised), trong đó chỉcần một phần
+nhỏnút có nhãn (thường 1–10%) đểhuấn luyện toàn bộmô hình.
+b) Ý tưởng chính và nền tảng lý thuyết
+GCN áp dụng phép tích chập lên đồthịbằng cách khai thác ma trận kềvà ma trận bậc
+đểtổng hợp thông tin từcác nút lân cận. Xuất phát từlý thuyết tín hiệu đồthị(graph
+signal processing), GCN thực hiện phép tích chập trong miền phổ(spectral domain)
+thông qua biến đổi Laplacian chuẩn hóa, sau đó được Kipf & Welling xấp xỉhóa thành
+phép tích chập cục bộhiệu quảhơn.
+Nền tảng lý thuyết: Laplacian chuẩn hóa của đồthịđược định nghĩa là L = Iₙ −D^(-
+1/2) A D^(-1/2), với các giá trịriêng λ ∈[0, 2]. GCN xấp xỉphép lọc phổbậc nhất
+(first-order approximation) đểtránh tính toán phân tích phổtốn kém:
+g_θ ★x ≈θ(Iₙ + D^(-1/2) A D^(-1/2)) x
+Đểtránh gradient bùng nổ, Kipf & Welling áp dụng thủthuật chuẩn hóa lại
+(renormalization trick) bằng cách thêm self-loop: Ã = A + Iₙ, D̃ ᵢᵢ= ΣⱼÃᵢⱼ.
+c) Kiến trúc và công thức toán học
+Quy tắc lan truyền của một lớp GCN được định nghĩa như sau:
+H(l+1) = σ( D̃ ^(-1/2) Ã D̃ ^(-1/2) H(l) W(l) )
+Trong đó:
+•
+Ã = A + Iₙ: Ma trận kềđược thêm self-loop, đảm bảo mỗi nút tổng hợp cả
+thông tin của chính mình.
+•
+D̃ᵢᵢ= ΣⱼÃᵢⱼ: Ma trận bậc của Ã.
+•
+D̃^(-1/2) Ã D̃^(-1/2): Phép chuẩn hóa đối xứng (symmetric normalization) đảm
+bảo đóng góp của nút vⱼvào cập nhật vᵢđược cân nhắc theo bậc của cảhai nút:
+Âᵢⱼ= Ãᵢⱼ/ √(D̃ ᵢᵢ· D̃ ⱼⱼ).
+•
+H(l) ∈ℝᴺˣᵈˡ: Ma trận embedding ởlớp l; H(0) = X là ma trận đặc trưng đầu
+vào.
+•
+W(l) ∈ℝᵈˡˣᵈˡ⁺¹: Ma trận trọng sốhọc được tại lớp l.
+
+===== PAGE 26 =====
+Đồán Công nghệphần mềm
+26
+•
+σ: Hàm kích hoạt phi tuyến, thường dùng ReLU.
+Đối với bài toán phân loại nút, mô hình GCN hai lớp đầy đủcó dạng:
+Z = softmax( Â · ReLU(Â X W⁽⁰⁾) W⁽¹⁾ )
+với hàm mất mát Cross-Entropy trên tập nút có nhãn VL:
+ℒ= −Σ(vᵢ∈VL) Σ(c=1..C) Yᵢc · ln Zᵢc
+Trong đó Yᵢc = 1 nếu nút vᵢthuộc lớp c, Zᵢc là xác suất dựđoán tương ứng.
+d) Ưu điểm, nhược điểm và ứng dụng
+•
+Ưu điểm: Kiến trúc đơn giản, hiệu quảtính toán cao; hoạt động tốt trên đồthị
+có cấu trúc đồng nhất; dễtích hợp vào các pipeline học sâu; có nền tảng lý
+thuyết phổvững chắc.
+•
+Nhược điểm: Yêu cầu toàn bộđồthịtrong bộnhớ(transductive learning);
+không thểsuy diễn trên nút mới chưa thấy trong huấn luyện; nhạy cảm với
+over-smoothing; không phân biệt mức quan trọng của các hàng xóm (mọi hàng
+xóm đóng góp đều nhau theo bậc).
+•
+Ứng dụng tiêu biểu: Phân loại nút trong mạng trích dẫn học thuật (Cora,
+Citeseer, PubMed), phân loại tài liệu, phân tích mạng xã hội, dựđoán tương tác
+protein.
+2.3.2. GraphSAGE (Graph Sample and Aggregate)
+a) Bối cảnh ra đời
+GraphSAGE được đềxuất bởi Hamilton và cộng sự(2017) trong bài báo "Inductive
+Representation Learning on Large Graphs". Động lực chính là khắc phục hai hạn chế
+cơ bản của GCN: (1) chỉhoạt động theo kiểu transductive — không tổng quát hóa
+sang nút mới; và (2) không mởrộng được (không scalable) với đồthịquy mô lớn hàng
+triệu nút do yêu cầu toàn bộma trận kềtrong bộnhớ.
+b) Ý tưởng chính — Inductive Learning và Lấy mẫu
+GraphSAGE học một hàm aggregator thay vì embedding riêng cho từng nút. Thay vì
+sửdụng toàn bộđồthị, GraphSAGE lấy mẫu ngẫu nhiên một sốlượng cốđịnh Sl nút
+lân cận ởmỗi lớp l, sau đó áp dụng hàm aggregation lên tập mẫu này. Cách này kiểm
+
+===== PAGE 27 =====
+Đồán Công nghệphần mềm
+27
+soát được chi phí tính toán và cho phép mini-batch training trên đồthịquy mô lớn. Vì
+hàm aggregator được học (không phải embedding cụthể), nó có thểáp dụng cho bất
+kỳnút mới nào — đây là bản chất của inductive learning.
+c) Kiến trúc và công thức toán học
+Quy tắc cập nhật của GraphSAGE tại lớp l cho nút vᵢgồm ba bước:
+Bước 1 — Lấy mẫu và tổng hợp lân cận:
+h_N(vᵢ)^(l) = AGG_l({ h^(l-1)_vⱼ: vⱼ∈S(vᵢ) })
+Bước 2 — Nối và biến đổi tuyến tính:
+h^(l)_vᵢ= σ( W^(l) · CONCAT[ h^(l-1)_vᵢ, h_N(vᵢ)^(l) ] )
+Bước 3 — Chuẩn hóa L2 (tùy chọn):
+h^(l)_vᵢ←h^(l)_vᵢ/ ||h^(l)_vᵢ||₂
+Trong đó S(vᵢ) là tập mẫu ngẫu nhiên từN(vᵢ) với kích thước cốđịnh Sl. GraphSAGE
+đềxuất ba loại hàm AGG:
+•
+Mean Aggregator: h_N(vᵢ)^(l) = mean({h^(l-1)_vⱼ: vⱼ∈S(vᵢ)}) — đơn giản,
+hiệu quả, không có tham sốthêm. Đây là aggregator mặc định cho đồthịlớn.
+•
+LSTM Aggregator: Áp dụng LSTM trên hoán vịngẫu nhiên của tập lân cận,
+cho phép học phụthuộc thứtựphức tạp hơn. Chi phí tính toán cao hơn Mean
+nhưng khảnăng biểu diễn tốt hơn.
+•
+Pooling Aggregator: h_N(vᵢ)^(l) = max({σ(W_pool h^(l-1)_v ⱼ+ b) : v ⱼ∈
+S(vᵢ)}) — phép max-pooling sau phép biến đổi tuyến tính. Có thểnắm bắt các
+đặc trưng cực trịtừtập lân cận.
+Hàm mất mát không giám sát của GraphSAGE sửdụng negative sampling, tối ưu hóa
+đểnút gần nhau trong đồthịcó embedding gần nhau trong không gian ẩn:
+ℒ= −log σ(z^T_vᵢz_vⱼ) −Q · E_{vₙ~Pₙ}[ log σ(−z^T_vᵢz_vₙ) ]
+Trong đó vⱼlà nút lân cận dương (positive sample), vₙ là nút âm lấy mẫu từphân phối
+Pₙ (thường là phân phối đều trên các nút không liên kết), Q là sốmẫu âm.
+d) Ưu điểm, nhược điểm và ứng dụng
+
+===== PAGE 28 =====
+Đồán Công nghệphần mềm
+28
+•
+Ưu điểm: Hỗtrợinductive learning — tổng quát hóa sang nút hoàn toàn mới;
+kiểm soát được chi phí tính toán qua lấy mẫu; phù hợp với đồthịquy mô lớn;
+hỗtrợmini-batch training.
+•
+Nhược điểm: Kết quảbịảnh hưởng bởi tính ngẫu nhiên trong lấy mẫu —
+không tái lặp hoàn toàn; không phân biệt tầm quan trọng của các hàng xóm
+(trong mean aggregator); cần điều chỉnh kích thước mẫu Sl cẩn thận.
+•
+Ứng dụng tiêu biểu: Phân loại bài đăng Reddit (230,000 nút), phân tích đồthị
+protein-protein, hệthống gợi ý Pinterest (3 tỷnút), suy diễn trên người dùng/sản
+phẩm mới.
+2.3.3. Graph Attention Network (GAT)
+a) Bối cảnh ra đời
+GAT được đềxuất bởi Veličković và cộng sự(2018) trong bài báo "Graph Attention
+Networks". GCN và GraphSAGE đối xửvới tất cảnút lân cận đồng đều (hoặc theo bậc
+cốđịnh), không phân biệt mức độliên quan của từng mối quan hệ. GAT ra đời đểkhắc
+phục điều này bằng cách đểmô hình tựhọc trọng sốcủa từng mối quan hệthông qua
+cơ chếattention — không cần thông tin cạnh trước (edge features không bắt buộc).
+b) Cơ chếSelf-Attention trên đồthị
+GAT áp dụng cơ chếself-attention — vốn thành công trong NLP (Transformer,
+Vaswani et al., 2017) — vào đồthị. Với mỗi cặp nút (vᵢ, vⱼ) có cạnh kết nối, GAT tính
+toán hệsốchú ý αᵢⱼđo lường mức độquan trọng của nút vⱼđối với việc cập nhật biểu
+diễn của vᵢ. Điểm đặc biệt: hệsốαᵢⱼđược học trực tiếp từdữliệu, không được xác định
+sẵn bởi cấu trúc đồthịnhư trong GCN.
+c) Kiến trúc và công thức toán học
+Bước 1 — Biến đổi tuyến tính chia sẻ: Áp dụng cùng một ma trận W ∈ℝᵈ'×ᵈlên tất
+cảcác nút: gᵢ= W hᵢ, gⱼ= W hⱼ.
+Bước 2 — Tính attention score thô (unnormalized):
+eᵢⱼ= LeakyReLU( aᵀ· CONCAT[gᵢ, gⱼ] )
+
+===== PAGE 29 =====
+Đồán Công nghệphần mềm
+29
+Trong đó a ∈ℝ²ᵈ' là vector tham sốhọc được (shared attention mechanism).
+LeakyReLU với negative slope = 0.2 được dùng đểtránh mất thông tin gradient ở
+vùng âm.
+Bước 3 — Chuẩn hóa Softmax trong vùng lân cận:
+αᵢⱼ= exp(eᵢⱼ) / Σ_{vₖ ∈N(vᵢ)∪{vᵢ}} exp(eᵢₖ)
+Phép chuẩn hóa này đảm bảo Σⱼαᵢⱼ= 1 và αᵢⱼ∈(0,1), biểu diễn phân phối xác suất
+mức độchú ý trên các hàng xóm.
+Bước 4 — Tổng hợp có trọng sốvà cập nhật:
+h'ᵢ= σ( Σ_{vⱼ∈N(vᵢ)∪{vᵢ}} αᵢⱼW hⱼ)
+Multi-head Attention: GAT sửdụng K đầu attention độc lập đểổn định quá trình học
+và tăng khảnăng biểu diễn. Tại các lớp ẩn, kết quảđược nối:
+h'ᵢ= ||_{k=1}^{K} σ( Σ_{vⱼ∈N(vᵢ)∪{vᵢ}} α^(k)ᵢⱼW^(k) hⱼ)
+Tại lớp cuối cùng, thường dùng trung bình thay vì nối đểkiểm soát chiều đầu ra:
+h'ᵢ= σ( (1/K) Σ_{k=1}^{K} Σ_{vⱼ} α^(k)ᵢⱼW^(k) hⱼ)
+d) Ưu điểm, nhược điểm và ứng dụng
+•
+Ưu điểm: Tựhọc trọng sốmối quan hệ— không cần biết bậc đồthịtrước; hệ
+sốattention αᵢⱼcó thểtrực quan hóa và giải thích (interpretable); hỗtrợ
+inductive learning; xửlý tốt đồthịkhông đồng nhất.
+•
+Nhược điểm: Chi phí tính toán cao hơn GCN và GraphSAGE do tính attention
+cho từng cặp nút-hàng xóm O(|E|); với đồthịrất dày (dense), sốlượng attention
+coefficient rất lớn; cần điều chỉnh sốđầu K cẩn thận.
+•
+Ứng dụng tiêu biểu: Phân loại nút đòi hỏi tính giải thích (explainable AI),
+phân tích mạng không đồng nhất, hệthống gợi ý cần cơ chếgiải thích theo từng
+mối quan hệ, bài toán đồthịphân tửphức tạp.
+
+===== PAGE 30 =====
+Đồán Công nghệphần mềm
+30
+Hình 2.5. So sánh cơ chếaggregation trong GCN, GraphSAGE và GAT; độdày mũi tên trong
+GAT biểu diễn trọng sốattention α_ij
+Bảng 2.1. So sánh tổng quan 3 mô hình GNN
+Tiêu chí
+GCN
+GraphSAGE
+GAT
+Cơ chế
+Chuẩn hóa phổ
+Lấy mẫu + tổng hợp
+Attention học được
+Transductive/Inductive
+Transductive
+Inductive
+Inductive
+Scalability
+Thấp
+Cao
+Trung bình
+Interpretability
+Thấp
+Thấp
+Cao (qua αᵢⱼ)
+Chi phí tính toán
+O(|E|d)
+O(Sl·L·d)
+O(K·|E|·d)
+Dataset điển hình
+Cora, Citeseer
+Reddit, Pinterest
+Cora, PPI
+2.4. Quy trình huấn luyện mô hình Graph Neural Network
+2.4.1. Chuẩn bịdữliệu và phân chia tập
+Dữliệu đầu vào của GNN gồm đồthịG = (V, E, X). Bước tiền xửlý bao gồm: chuẩn
+hóa đặc trưng (z-score hoặc min-max normalization trên ma trận X); xửlý đồthị(thêm
+self-loop, chuẩn hóa ma trận kề, xửlý nút/cạnh bịthiếu); và phân chia theo nút (node
+mask) hoặc theo đồthị(graph-level split), đảm bảo tỉlệcân bằng nhãn. Thông thường,
+tỉlệphân chia train/val/test là 60%/20%/20%.
+Trong bài toán bán giám sát (semi-supervised), tỉlệnút có nhãn có thểrất nhỏ(20 nút
+mỗi lớp với Cora). Kỹthuật data augmentation trên đồthịbao gồm DropEdge (loại
+
+===== PAGE 31 =====
+Đồán Công nghệphần mềm
+31
+ngẫu nhiên cạnh), NodeDrop (loại ngẫu nhiên nút) và FeatureMask (che một phần đặc
+trưng) nhằm tăng tính tổng quát hóa của mô hình.
+2.4.2. Hàm mất mát theo từng bài toán
+Phân loại nút (Node Classification): Cross-Entropy Loss trên tập nút có nhãn:
+ℒ_NC = −(1/|V_L|) Σ_{vᵢ∈V_L} Σ_{c=1}^{C} yᵢc log ŷᵢc
+Dựđoán liên kết (Link Prediction): Binary Cross-Entropy với negative sampling:
+ℒ_LP = −Σ_{(i,j)∈E} log ŝᵢⱼ−Σ_{(i,k)∉E} log(1 −ŝᵢₖ)
+Nhúng đồthịkhông giám sát: Negative Sampling Loss (tương tựWord2Vec):
+ℒ_EMB = −Σ_{(vᵢ,vⱼ)∈E} log σ(z^T_i z_j) −Q · E_{vₙ~Pₙ}[log σ(−z^T_i z_n)]
+2.4.3. Theo dõi các chỉsốtrong quá trình huấn luyện
+Trong mỗi epoch, các đại lượng sau cần được theo dõi và ghi nhận đểđánh giá toàn
+diện quá trình học:
+•
+Training Loss / Validation Loss: Phát hiện overfitting khi validation loss tăng
+trong khi training loss giảm. Khoảng cách giữa hai đường này phản ánh mức độ
+tổng quát hóa.
+•
+Accuracy, F1-score, AUC-ROC: Đánh giá chất lượng phân loại; cần tính cả
+trên tập train và tập validation. AUC-ROC đặc biệt quan trọng với tập dữliệu
+mất cân bằng nhãn.
+•
+Gradient norm: Phát hiện gradient explosion (norm quá lớn, >10) hoặc
+gradient vanishing (norm < 10⁻⁵). Theo dõi norm gradient giúp đánh giá hiệu
+quảcủa gradient clipping.
+•
+Embedding statistics: Phân phối chuẩn của các embedding qua epoch — giúp
+phát hiện over-smoothing sớm khi variance giảm dần.
+•
+Learning rate schedule: Theo dõi tốc độhọc trong các chiến lược cosine
+annealing hoặc step decay.
+Ngoài ra, đối với bài toán đặc thù: Link Prediction cần MRR (Mean Reciprocal Rank)
+và Hits@K; Graph Generation cần Validity, Uniqueness, Novelty; Community
+Detection cần NMI (Normalized Mutual Information) và Modularity.
+
+===== PAGE 32 =====
+Đồán Công nghệphần mềm
+32
+2.4.4. Kỹthuật tối ưu và điều chuẩn hóa
+•
+Optimizer — Adam: Là lựa chọn phổbiến cho GNN với learning rate mặc
+định η = 10⁻³. Adam duy trì ước lượng moment bậc nhất (m̂ ₜ) và bậc hai (v̂ ₜ) để
+tựđộng điều chỉnh learning rate: θₜ₊₁ = θₜ −η · m̂ ₜ/(√v̂ ₜ + ε). AdamW bổsung
+weight decay λ||θ||² vào objective đểgiảm overfitting.
+•
+Dropout: Áp dụng sau mỗi lớp GNN với tỉlệp = 0.5 thông thường. DropEdge
+— một biến thểcủa Dropout dành riêng cho đồthị— loại bỏngẫu nhiên các
+cạnh trong mỗi mini-batch đểtăng tính tổng quát và giảm over-smoothing.
+•
+Early Stopping: Dừng huấn luyện khi validation metric không cải thiện sau P
+epoch liên tiếp (thường P = 50–100). Lưu trữcheckpoint của mô hình tốt nhất
+(best_val_acc) thay vì mô hình ởepoch cuối.
+•
+Batch Normalization / Layer Normalization: Ổn định phân phối activation
+giữa các lớp, đặc biệt quan trọng với mô hình sâu (>3 lớp). Layer Norm thường
+hiệu quảhơn Batch Norm cho GNN vì không phụthuộc vào kích thước batch.
+•
+Gradient Clipping: Giới hạn norm gradient bằng cách scale: g ←g · (c/||g||)
+nếu ||g|| > c (thường c = 1.0). Đây là kỹthuật cần thiết khi gradient explosion
+xuất hiện.
+2.5. Các bài toán phổbiến trong Graph Neural Network
+Graph Neural Network được ứng dụng trong nhiều loại bài toán khác nhau tùy theo
+mục tiêu học và loại đầu ra mong muốn. Hệthống GNN Insight được xây dựng trong
+đềtài hỗtrợsáu bài toán tiêu biểu sau đây, mỗi bài toán có đặc trưng riêng vềdữliệu,
+hàm mục tiêu và cách đánh giá kết quả.
+2.5.1. Phân loại nút (Node Classification)
+Mục tiêu: Dựđoán nhãn yᵢ∈{1,...,C} cho mỗi nút vᵢ∈V dựa trên embedding học
+được từGNN và cấu trúc đồthịxung quanh nút đó.
+Đầu vào: ĐồthịG = (V, E, X); tập nút có nhãn VL ⊂V (thường chỉchiếm 1–10%
+tổng sốnút trong bài toán bán giám sát).
+Đầu ra: Nhãn dựđoán ŷᵢcho tất cảnút vᵢ∈V \ VL.
+Hàm mất mát (Cross-Entropy trên tập nhãn):
+
+===== PAGE 33 =====
+Đồán Công nghệphần mềm
+33
+ℒ_NC = −(1/|V_L|) Σ_{vᵢ∈V_L} Σ_{c=1}^{C} yᵢc log ŷᵢc
+Metric đánh giá: Accuracy, Macro-F1 (ưu tiên khi mất cân bằng nhãn), Micro-F1.
+Dataset phổbiến: Cora (2.708 nút, 5.429 cạnh, 7 lớp), Citeseer (3.327 nút, 4.732 cạnh,
+6 lớp), PubMed (19.717 nút, 3 lớp), ogbn-arxiv (169.343 nút, 40 lớp).
+Ví dụthực tế: Phân loại chủđềbài báo khoa học trong mạng trích dẫn; phân loại loại
+tài khoản (bot/người dùng thực) trong mạng xã hội Twitter; phân loại loại tếbào trong
+mạng tương tác sinh học.
+Hình 2.6.Minh họa bài toán Node classification với GNN
+=> Sau quá trình message passing và huấn luyện, các nút chưa gán nhãn được dựđoán
+nhãn và các nút cùng lớp hình thành các cụm riêng trong không gian embedding.
+2.5.2. Phân loại đồthị(Graph Classification)
+Mục tiêu: Dựđoán nhãn y_G cho toàn bộđồthịG, xem đồthịnhư một mẫu dữliệu
+hoàn chỉnh (ví dụ: phân tửnày có độc tính hay không?).
+Đầu vào: Tập đồthị{(G₁, y₁), (G₂, y₂), ..., (Gₙ, yₙ)}; mỗi đồthịlà một mẫu huấn luyện
+độc lập.
+Đầu ra: Nhãn đồthịŷ_Gᵢ.
+
+===== PAGE 34 =====
+Đồán Công nghệphần mềm
+34
+Pipeline: Node Embeddings →Readout (tổng hợp theo đồthị) →Graph Embedding
+→Classifier →Label.
+Hàm Readout phổbiến:
+z_G = READOUT({h^(L)_i}_{vᵢ∈V}) = (1/|V|) Σ_{vᵢ∈V} h^(L)_i
+Hàm mất mát: Cross-Entropy cho phân loại đa lớp, Binary Cross-Entropy cho phân
+loại nhịphân.
+Dataset phổbiến: MUTAG (188 đồthịphân tử, 2 lớp), IMDB-B (1.000 đồthịmạng
+xã hội), PROTEINS (1.113 đồthịprotein), RDT-B (2.000 đồthịReddit), ogbg-molhiv
+(41.127 phân tử).
+Ví dụthực tế: Dựđoán tính độc tính (mutagenicity) của hợp chất hóa học trong dược
+học; phân loại thểloại mạng tương tác xã hội; phân loại cấu trúc protein theo chức
+năng sinh học.
+2.5.3. Dựđoán liên kết (Link Prediction)
+Mục tiêu: Xác định xác suất tồn tại cạnh (vᵢ, vⱼ) ∉
+E trong đồthị— tức là dựđoán
+những mối quan hệchưa quan sát được hoặc chưa xuất hiện.
+Đầu vào: ĐồthịG = (V, E, X); tập cạnh dương (vᵢ, vⱼ) ∈E_train và tập cạnh âm được
+lấy mẫu ngẫu nhiên.
+Đầu ra: Điểm sốŝᵢⱼ∈[0,1] biểu diễn xác suất tồn tại cạnh.
+Decoder — Dot-product (phổbiến nhất):
+ŝᵢⱼ= σ( z^T_i · z_j )
+Decoder — MLP (phức tạp hơn): ŝᵢⱼ= MLP( CONCAT[zᵢ, zⱼ] )
+Hàm mất mát (Binary Cross-Entropy với negative sampling):
+ℒ_LP = −Σ_{(i,j)∈E} log ŝᵢⱼ−Σ_{(i,k)∉E} log(1 −ŝᵢₖ)
+Metric đánh giá: AUC-ROC, AP (Average Precision), Hits@K, MRR (Mean
+Reciprocal Rank).
+Dataset phổbiến: Cora, Citeseer (phân chia tập cạnh train/test), ogbl-collab (hợp tác
+nghiên cứu khoa học), ogbl-ddi (tương tác thuốc-thuốc), ogbl-citation2.
+
+===== PAGE 35 =====
+Đồán Công nghệphần mềm
+35
+Ví dụthực tế: Gợi ý kết bạn/theo dõi trên mạng xã hội (Facebook, Twitter); dựđoán
+tương tác thuốc-thuốc (drug-drug interaction) trong y học; phát hiện quan hệtiềm ẩn
+trong mạng tri thức.
+Hình 2.6. Minh họa bài toán Graph Classification với GNN
+=> Mỗi đồthịđược ánh xạthành embedding mức nút, sau đó tổng hợp bởi hàm
+readout đểtạo graph embedding và đưa vào bộphân loại nhằm dựđoán nhãn của toàn
+bộđồthị.
+2.5.4. Phát hiện cộng đồng (Community Detection)
+Mục tiêu: Chia các nút trong đồthịthành các nhóm (cộng đồng) có mức liên kết nội
+bộchặt chẽhơn so với liên kết với các nhóm khác. Đây là bài toán phân cụm không
+giám sát (unsupervised clustering) trên đồthị.
+Đầu vào: ĐồthịG = (V, E); sốcộng đồng mong muốn K (hoặc tựđộng học).
+Đầu ra: Phân công cộng đồng C: V →{1,...,K}.
+Objective function — Modularity (Newman & Girvan, 2004):
+
+===== PAGE 36 =====
+Đồán Công nghệphần mềm
+36
+Q = (1/2m) Σ_{i,j} [ Aᵢⱼ−kᵢkⱼ/(2m) ] δ(cᵢ, cⱼ)
+Trong đó m là tổng sốcạnh; kᵢlà bậc của nút vᵢ; cᵢlà cộng đồng của vᵢ; δ là hàm
+Kronecker delta (1 nếu cᵢ= cⱼ, 0 nếu ngược lại). Modularity Q ∈[-1, 1], giá trịQ > 0.3
+được xem là cộng đồng rõ ràng.
+Metric đánh giá (có nhãn ground truth): NMI (Normalized Mutual Information),
+ARI (Adjusted Rand Index), Conductance (không cần nhãn).
+Ứng dụng: Phân tích nhóm người dùng trong mạng xã hội; phát hiện chức năng mô-
+đun trong mạng sinh học; phân tích cấu trúc tổchức trong mạng tri thức.
+Hình 2.6. Minh họa bài toán Community Detection với GNN
+2.5.5. Nhúng đồthị(Graph Embedding)
+Mục tiêu: Ánh xạnút hoặc toàn bộđồthịsang không gian vector liên tục có chiều
+thấp hơn (d << n), giữlại thông tin cấu trúc và ngữnghĩa quan trọng. Biểu diễn này có
+thểđược dùng cho nhiều tác vụdownstream.
+Objective function (bảo toàn cấu trúc lân cận):
+ℒ_EMB = −Σ_{(vᵢ,vⱼ) ∈E} log P(vⱼ| vᵢ)
+Trong đó:
+P(vⱼ| vᵢ) = exp(z^T_i z_j) / Σ_k exp(z^T_i z_k)
+
+===== PAGE 37 =====
+Đồán Công nghệphần mềm
+37
+mô hình hóa xác suất nút vⱼlà hàng xóm của vᵢtrong không gian embedding. Vì tính
+toán mẫu sốtrên toàn bộnút tốn kém, thực tếthường dùng negative sampling.
+Metric đánh giá: Khi embedding dùng cho classification: Accuracy, F1. Khi dùng
+cho link prediction: AUC, AP. Chất lượng định tính: quan sát sựphân tách lớp qua t-
+SNE/PCA.
+Trong hệthống GNN Insight, embedding được trực quan hóa qua t-SNE/PCA theo
+từng epoch đểngười dùng quan sát quá trình học biểu diễn của mô hình theo thời gian
+thực, phát hiện sớm các vấn đềnhư over-smoothing hay embedding collapse.
+2.5.6. Sinh đồthị(Graph Generation)
+Mục tiêu: Tạo ra các đồthịmới sao cho chúng có những đặc trưng tương tựdữliệu
+huấn luyện hoặc thỏa mãn một sốràng buộc nhất định (ví dụ: phân tửhợp lệtheo hóa
+học).
+Đầu vào: Tập đồthịhuấn luyện {G₁, G₂, ..., Gₙ}; (tùy chọn) điều kiện ngữcảnh
+(conditional generation).
+Đầu ra: Đồthịmới G_new thỏa mãn các tính chất mong muốn.
+Mô hình VGAE (Variational Graph Autoencoder — Kipf & Welling, 2016):
+ℒ_VGAE = E_q[log p(A|Z)] −KL[q(Z|X,A) || p(Z)]
+Trong đó: vếđầu là reconstruction loss của ma trận kề(khảnăng tái tạo cấu trúc đồthị
+từembedding Z); vếsau là KL divergence đảm bảo không gian latent có phân phối
+chuẩn hóa hợp lý (prior p(Z) = N(0,I)).
+Đánh giá chất lượng sinh đồthị(ba chỉsốbắt buộc):
+•
+Validity: Tỉlệđồthịsinh ra thỏa mãn ràng buộc hợp lệ(ví dụ: phân tửcó liên
+kết hóa học hợp lệ).
+•
+Uniqueness: Tỉlệđồthịsinh ra không trùng lặp với nhau trong tập sinh.
+•
+Novelty: Tỉlệđồthịsinh ra mới (không có trong tập huấn luyện).
+Ứng dụng: Thiết kếphân tửtrong dược học và vật liệu mới; sinh cấu trúc mạng giao
+thông tối ưu; mô phỏng hệthống phức tạp trong vật lý và sinh học.
+
+===== PAGE 38 =====
+Đồán Công nghệphần mềm
+38
+2.6. Trực quan hóa trong quá trình huấn luyện mô hình
+2.6.1. Vai trò của trực quan hóa trong học máy
+Trực quan hóa (visualization) là quá trình biểu diễn dữliệu và thông tin bằng hình ảnh
+nhằm hỗtrợcon người quan sát, phân tích và ra quyết định hiệu quảhơn. Trong học
+máy nói chung, trực quan hóa đóng vai trò không thểthiếu ởba giai đoạn: (1) khám
+phá dữliệu (EDA) trước khi mô hình hóa, (2) theo dõi và gỡlỗi trong quá trình huấn
+luyện, và (3) giải thích kết quảsau khi mô hình được triển khai.
+Trong học sâu, với hàng triệu tham sốvà quá trình huấn luyện phức tạp, trực quan hóa
+trở
+nên
+đặc
+biệt
+cần
+thiết
+để
+phát
+hiện
+sớm
+các
+vấn
+đề
+như
+gradient
+vanishing/explosion, overfitting hay mode collapse. Các công cụnhư TensorBoard
+(Google), Weights & Biases, Neptune.ai hay MLflow đã chứng minh tầm quan trọng
+của việc theo dõi trực quan trong quá trình phát triển mô hình học sâu.
+2.6.2. Đặc thù của trực quan hóa trong Graph Learning
+So với các mô hình học sâu thông thường (CNN cho ảnh, Transformer cho văn bản),
+trực quan hóa cho GNN có những thách thức và yêu cầu đặc thù riêng:
+•
+Trực quan hóa cấu trúc đồthị: Không giống ảnh hay chuỗi, đồthịkhông có
+vịtrí không gian tựnhiên. Cần thuật toán bốcục đồthị(layout algorithm) như
+Force-Directed, Kamada-Kawai hay Spring Layout đểphân bổnút trong không
+gian 2D.
+•
+Trực quan hóa embedding không gian cao chiều: Embedding của GNN
+thường có 64–256 chiều, cần kỹthuật giảm chiều (PCA, t-SNE, UMAP) để
+chiếu xuống 2D/3D cho người dùng quan sát.
+•
+Trực quan hóa theo thời gian (temporal): Trong quá trình huấn luyện, cả
+embedding lẫn cấu trúc đồthịthay đổi theo từng epoch. Cần hỗtrợanimation
+hoặc slider đểquan sát sựthay đổi này.
+•
+Trực quan hóa attention/salience: Với mô hình GAT, hệsốattention αᵢⱼcó
+thểđược hiển thịdưới dạng độdày/màu sắc cạnh đểgiải thích quyết định của
+mô hình.
+
+===== PAGE 39 =====
+Đồán Công nghệphần mềm
+39
+2.6.3. Metric Dashboard — Bảng điều khiển chỉsố
+Bảng điều khiển metric (Metric Dashboard) là thành phần trực quan hóa định lượng
+cốt lõi, hiển thịtheo thời gian thực các chỉsốhuấn luyện quan trọng dưới dạng biểu đồ
+đường (line chart) theo epoch.
+Các chỉsốcần thiết bao gồm: Training Loss và Validation Loss trên cùng một biểu đồ
+(phát hiện overfitting khi khoảng cách hai đường tăng); Accuracy/F1/AUC của tập
+train và validation; Learning Rate (đểtheo dõi hiệu quảlr scheduler); Gradient Norm
+(phát hiện bất ổn trong quá trình tối ưu); và Epoch Time (phát hiện bottleneck tính
+toán).
+Bên cạnh biểu đồtheo thời gian, Dashboard cần hiển thịbảng tóm tắt (summary table)
+trạng thái huấn luyện hiện tại: best validation metric, epoch hiện tại, tổng sốepoch,
+thời gian chạy và estimated time to completion.
+Trong hệthống GNN Insight, Metric Dashboard được cập nhật liên tục qua
+WebSocket — mỗi khi backend hoàn thành một epoch, dữliệu metric được đẩy ngay
+lập tức đến frontend mà không cần người dùng tải lại trang.
+2.6.4. Topology Visualization — Trực quan hóa cấu trúc đồthị
+Topology Visualization là thành phần quan trọng nhất và độc đáo nhất của hệthống
+GNN Insight, cho phép người dùng trực tiếp quan sát đồthịthay đổi theo từng epoch
+huấn luyện.
+Các yếu tốtrực quan cần được cập nhật theo epoch bao gồm:
+•
+Màu sắc nút (node color): Mã màu theo nhãn dựđoán (predicted label) hoặc
+nhãn thực (ground truth). Sựthay đổi màu sắc qua các epoch cho thấy mô hình
+đang học phân loại nút như thếnào.
+•
+Kích thước nút (node size): Có thểánh xạtheo confidence score (xác suất dự
+đoán cao nhất), bậc nút, hoặc chỉsốtrung tâm (centrality).
+•
+Màu sắc/độdày cạnh: Với GAT, độdày cạnh có thểánh xạtheo hệsố
+attention αᵢⱼ— cạnh quan trọng hơn sẽđược tô đậm hơn.
+
+===== PAGE 40 =====
+Đồán Công nghệphần mềm
+40
+•
+Nhóm cộng đồng (community coloring): Với bài toán Community Detection,
+các cộng đồng được tô màu khác nhau, cho thấy sựhình thành nhóm qua quá
+trình học.
+Vềthuật toán bốcục: Force-Directed Layout (Fruchterman-Reingold) là lựa chọn phổ
+biến nhất — coi cạnh như lò xo và nút như điện tích, tựđộng sắp xếp nút đểcạnh gần
+bằng nhau và tránh chồng chéo. Đểđảm bảo tính ổn định qua các epoch (stable layout),
+vịtrí nút từepoch trước được dùng làm điểm khởi đầu cho epoch sau.
+2.6.5. Embedding Visualization — Trực quan hóa không gian ẩn
+Embedding Visualization chiếu không gian embedding nhiều chiều (thường 64–256D)
+xuống 2D đểngười dùng quan sát chất lượng biểu diễn của mô hình. Đây là công cụ
+quan trọng đểđánh giá khảnăng phân tách lớp và phát hiện sớm over-smoothing.
+a) PCA (Principal Component Analysis)
+PCA là phương pháp giảm chiều tuyến tính tìm các thành phần chính PC₁, PC₂,... sao
+cho phương sai được giữlại là tối đa. Vềmặt toán học, PCA giải bài toán phân tích giá
+trịriêng của ma trận hiệp phương sai:
+Σ = (1/n) Z^T Z →Z_2D = Z W_2
+Trong đó W₂ ∈ℝᵈˣ² là ma trận chứa hai vector riêng ứng với hai giá trịriêng lớn nhất.
+PCA có tính tái lặp hoàn toàn (deterministic), chi phí tính toán thấp O(nd²), phù hợp để
+theo dõi xu hướng embedding theo thời gian huấn luyện. Tuy nhiên, PCA chỉnắm bắt
+được cấu trúc tuyến tính, có thểbỏsót các nhóm phi tuyến phức tạp.
+b) t-SNE (t-Distributed Stochastic Neighbor Embedding)
+t-SNE là phương pháp phi tuyến bảo toàn cấu trúc cục bộcủa dữliệu, đặc biệt hiệu
+quảtrong việc tạo ra sựphân tách trực quan rõ ràng giữa các nhóm. t-SNE tối thiểu
+hóa KL divergence giữa phân phối cao chiều và thấp chiều:
+ℒ_tSNE = KL(P || Q) = ΣᵢΣⱼpᵢⱼlog(pᵢⱼ/ qᵢⱼ)
+Trong đó pᵢⱼlà xác suất tương đồng trong không gian cao chiều (Gaussian), qᵢⱼlà xác
+suất tương đồng trong không gian 2D (t-distribution bậc 1). Việc dùng t-distribution
+
+===== PAGE 41 =====
+Đồán Công nghệphần mềm
+41
+trong không gian thấp chiều giúp tránh hiện tượng "crowding problem" — các điểm xa
+nhau bịdồn lại gần nhau.
+t-SNE phù hợp đểđánh giá chất lượng embedding cuối cùng và trong tính năng replay
+do chi phí tính toán cao hơn PCA. Tham sốquan trọng cần điều chỉnh: perplexity
+(thường 5–50), learning rate, sốbước tối ưu.
+c) Giải thích kết quảtrực quan hóa embedding
+Một embedding tốt trong bài toán Node Classification sẽthểhiện: (1) các nút cùng lớp
+tạo thành cụm tách biệt trong không gian 2D; (2) ranh giới giữa các lớp rõ ràng; (3)
+kích thước cụm tương đối đồng đều. Ngược lại, dấu hiệu over-smoothing là tất cảcác
+cụm hội tụvềcùng một điểm, mất đi tính phân biệt lớp — đây là cảnh báo sớm rằng
+mô hình có quá nhiều lớp hoặc quá nhiều epoch.
+2.6.6. Realtime Monitoring — Theo dõi thời gian thực
+Realtime Monitoring là khảnăng cập nhật liên tục thông tin huấn luyện đến người
+dùng ngay khi backend xửlý xong mỗi epoch, mà không cần người dùng phải tải lại
+trang hoặc gửi yêu cầu polling. Điều này được thực hiện thông qua giao thức
+WebSocket.
+Các sựkiện WebSocket trong hệthống GNN Insight bao gồm: epoch_start (epoch bắt
+đầu), epoch_end (kèm metric snapshot), graph_update (cập nhật nhãn nút mới),
+embedding_update (vector embedding mới), training_complete (hoàn thành), và
+error_event (lỗi trong quá trình train).
+Ưu điểm của Realtime Monitoring: người dùng có thểcan thiệp sớm nếu phát hiện vấn
+đề(dừng training sớm nếu loss phân kỳ, điều chỉnh learning rate khi plateau). Đây là
+điểm khác biệt quan trọng so với các công cụlog-based truyền thống yêu cầu phân tích
+sau khi huấn luyện kết thúc.
+2.6.7. Replay Experiment — Phát lại thí nghiệm
+Tính năng Replay cho phép người dùng xem lại toàn bộdiễn biến huấn luyện bất kỳ
+lúc nào sau khi thí nghiệm kết thúc. Điều này được thực hiện bằng cách backend lưu
+trữmột chuỗi epoch snapshot, mỗi snapshot chứa: metric tại epoch đó, trạng thái nhãn
+dựđoán của từng nút, và embedding vector tại thời điểm đó.
+
+===== PAGE 42 =====
+Đồán Công nghệphần mềm
+42
+Các tính năng của Replay: điều chỉnh tốc độphát (0.5x, 1x, 2x, 4x); dừng tại bất kỳ
+epoch nào đểphân tích chi tiết; nhảy tới epoch cụthể(seek); so sánh song song
+snapshot của hai epoch bất kỳ.
+Replay đặc biệt hữu ích trong: phân tích sâu sau thí nghiệm đểhiểu tại sao mô hình hội
+tụhay không hội tụ; trình bày kết quảnghiên cứu trong báo cáo hoặc seminar; phục vụ
+mục đích giảng dạy khi muốn minh họa quá trình học của GNN cho sinh viên.
+2.6.8. Model Comparison — So sánh thí nghiệm
+Model Comparison hỗtrợso sánh song song nhiều thí nghiệm (runs) với các cấu hình
+hyperparameter khác nhau. Giao diện hiển thịđồng thời đường cong loss/metric của
+từng thí nghiệm trên cùng một biểu đồ, cho phép người dùng nhanh chóng xác định
+cấu hình tốt nhất.
+Các trường hợp sửdụng điển hình: so sánh GCN vs GraphSAGE vs GAT trên cùng
+dataset; so sánh các learning rate khác nhau (1e-2, 1e-3, 1e-4); so sánh sốlớp GNN
+khác nhau (2, 3, 4 lớp) đểphân tích ảnh hưởng của over-smoothing; so sánh với/không
+có dropout.
+Model Comparison thay thếcho việc so sánh thủcông qua log file, tiết kiệm đáng kể
+thời gian phân tích và cho phép đưa ra quyết định vềhyperparameter dựa trên bằng
+chứng trực quan rõ ràng.
+Hình 2.7. Tổng quan hệthống trực quan hóa GNN Insight trong quá trình huấn
+luyện mô hình.
+
+===== PAGE 43 =====
+Đồán Công nghệphần mềm
+43
+3. PHÂN TÍCH VÀ THIẾT KẾHỆTHỐNG
+3.1. Phát biểu yêu cầu hệthống
+Hệthống GNN-Insight được thiết kếnhằm giải quyết bài toán thiếu khảnăng giải
+thích (black-box problem) trong quá trình huấn luyện và đánh giá các mô hình Graph
+Neural Network (GNN). Trong các nghiên cứu vềhọc sâu trên dữliệu đồthị, việc chỉ
+theo dõi các chỉsốhiệu năng truyền thống như Accuracy, Loss hoặc F1-Score là chưa
+đủđểhiểu rõ cơ chếhọc tập và nguyên nhân dẫn đến thành công hoặc thất bại của mô
+hình.
+Do đó, hệthống cần cung cấp khảnăng giám sát trực quan toàn bộquá trình huấn
+luyện thông qua việc theo dõi đồng thời các chỉsốhiệu năng, sựthay đổi cấu trúc topo
+của đồthị, sựdịch chuyển của không gian biểu diễn nút (Node Embedding Space),
+cũng như các đặc trưng học được của mô hình qua từng epoch.
+Ngoài ra, hệthống phải hỗtrợso sánh nhiều kiến trúc GNN khác nhau như GCN,
+GAT và GraphSAGE trên cùng một tập dữliệu; cung cấp các công cụphân tích, trực
+quan hóa và diễn giải kết quảnhằm giúp người nghiên cứu đánh giá độổn định, khả
+năng hội tụ, mức độphân tách lớp và các hiện tượng đặc trưng như over-smoothing,
+attention concentration hay neighborhood aggregation.
+Hệthống cũng cần lưu trữlịch sửthực nghiệm, hỗtrợtái hiện (replay) quá trình huấn
+luyện, so sánh các lần chạy mô hình và tạo báo cáo phân tích tựđộng. Qua đó, GNN-
+Insight không chỉđóng vai trò là công cụhuấn luyện mô hình mà còn là nền tảng hỗ
+trợnghiên cứu, phân tích và giải thích hành vi của các mô hình học sâu trên dữliệu đồ
+thị.
+3.1.1. Đối tượng người dùng
+Bảng 3.1. Các tác nhân tham gia hệthống
+STT
+Tác nhân
+Mô tả
+Quyền hạn chính
+1
+Researcher
+(Nhà nghiên
+Tác nhân chính sửdụng
+hệthống đểthực hiện
+Quản lý dựán, quản lý bộdữliệu, cấu
+hình siêu tham số, khởi tạo huấn luyện,
+
+===== PAGE 44 =====
+Đồán Công nghệphần mềm
+44
+STT
+Tác nhân
+Mô tả
+Quyền hạn chính
+cứu / Kỹsư
+AI)
+các nghiên cứu và thí
+nghiệm trên mô hình
+Graph Neural Network.
+theo dõi tiến trình theo thời gian thực, trực
+quan hóa topo đồthịvà embeddings, lưu
+trữthực nghiệm, so sánh kết quảvà xuất
+báo cáo nghiên cứu.
+2
+Viewer
+(Người quan
+sát)
+Người dùng có quyền
+truy cập ởchếđộchỉ
+đọc nhằm theo dõi tiến
+trình nghiên cứu hoặc
+đánh giá kết quả.
+Xem dựán, xem lịch sửhuấn luyện, xem
+dashboard, trực quan hóa kết quảvà báo
+cáo nghiên cứu; không được phép chỉnh
+sửa dữliệu hoặc kích hoạt huấn luyện.
+3
+Admin
+(Quản trị
+viên hệ
+thống)
+Người chịu trách nhiệm
+vận hành và duy trì hoạt
+động của nền tảng
+GNN-Insight.
+Quản lý người dùng, giám sát tài nguyên
+hệthống, kiểm soát các phiên huấn luyện,
+thực hiện dừng khẩn cấp, quản lý chính
+sách lưu trữdữliệu (Retention Policy) và
+kiểm tra nhật ký hệthống (Audit Log).
+Bảng 3.2. Ma trận phân quyền chi tiết (RBAC Matrix)
+Nhóm chức
+năng
+Quyền hạn chi tiết
+Researcher
+Viewer
+Admin
+Xác thực
+Đăng nhập, đăng ký, cập nhật thông tin cá
+nhân
+x
+x
+x
+Dựán
+Tạo mới, cập nhật, xóa dựán
+x
+x
+Dữliệu
+Upload dataset, tạo phiên bản, kiểm định
+schema
+x
+x
+Dữliệu
+Phát hành / Thu hồi dataset version
+x
+x
+Huấn luyện
+Khởi tạo phiên huấn luyện (WebSocket
+Session)
+x
+x
+
+===== PAGE 45 =====
+Đồán Công nghệphần mềm
+45
+Huấn luyện
+Can thiệp dừng khẩn cấp (Emergency
+stop)
+x
+x
+Thực nghiệm
+Xem kết quả, chạy Replay theo từng
+epoch
+x
+x
+x
+Thực nghiệm
+Pin thực nghiệm tốt nhất, ghi chú (Notes)
+x
+x
+Quản trị
+Quản lý người dùng (khóa/mở, phân role)
+x
+Quản trị
+Thực thi Retention Compaction
+x
+Quản trị
+Truy xuất nhật ký hệthống (Audit Log)
+x
+3.1.2. Yêu cầu chức năng (Functional Requirements)
+Bảng dưới đây tóm tắt các chức năng cốt lõi của hệthống theo định dạng Input/Output:
+Bảng 3.3. Phát biểu yêu cầu Input / Output theo chức năng
+Mã
+UC
+Tên chức năng
+Input
+Output
+UC01
+Đăng nhập vào hệ
+thống
+Email/Username, Password
+JWT Token (24h), thông tin
+role và định tuyến màn hình
+UC02
+Quản lý dựán
+Tên dựán, mô tả, task_type,
+model_type
+Bản ghi project mới trong
+MySQL, thư mục Blob
+Storage tương ứng
+UC03
+Quản lý dataset và
+tạo phiên bản
+Tệp dữliệu đồthị
+(JSON/CSV/Excel/artifact), tên
+dataset, dataset_id
+dataset_version_id, trạng thái
+kiểm định (validated/draft),
+blob_key
+UC04
+Khởi tạo phiên
+huấn luyện
+project_id, dataset_version_id,
+kiến trúc mô hình, siêu tham số
+(lr, dropout, hidden_dim,
+epochs)
+session_id (UUIDv4),
+WebSocket endpoint (ws_url),
+trạng thái pending
+UC05
+Theo dõi huấn
+luyện thời gian
+thực
+WebSocket stream: graph_data
+payload, epoch_snapshot (gzip
+nén)
+Trực quan hóa topology,
+embeddings 2D, metric
+loss/accuracy cập nhật theo
+từng epoch
+UC06
+Replay và
+Resume thực
+experiment_id hoặc session_id,
+sốepoch cần tua đến
+Trạng thái trực quan hóa chính
+xác tại epoch yêu cầu; hoặc
+
+===== PAGE 46 =====
+Đồán Công nghệphần mềm
+46
+nghiệm
+khôi phục kết nối WebSocket
+nếu Resume
+UC07
+So sánh thực
+nghiệm
+Danh sách 2–4 experiment_id
+cùng project
+Biểu đồđối chiếu đa đường
+loss/accuracy, bảng ma trận so
+sánh siêu tham số
+UC08
+Quản trịhệthống
+Cấu hình retention policy
+(epoch giữlại), session_id cần
+dừng
+Danh sách snapshot đã xóa,
+dung lượng giải phóng, bản
+ghi audit_log
+Yêu cầu chức năng được chia thành 04 phân hệchính:
+A. Phân hệQuản lý Tài nguyên Nghiên cứu
+Bảng 3.4. Phân hệQuản lý Tài nguyên Nghiên cứu
+Mã chức
+năng
+Tên chức
+năng
+Mô tả
+F-01
+Quản lý dự
+án
+Cho phép tạo không gian làm việc biệt lập cho từng đềtài nghiên
+cứu. Mỗi dựán được liên kết với một loại nhiệm vụđồthịcụthể
+như Node Classification, Link Prediction hoặc Graph
+Classification.
+F-02
+Quản lý dữ
+liệu đa
+phiên bản
+Hỗtrợtải lên dữliệu đồthịdưới nhiều định dạng như JSON,
+CSV, Excel hoặc Artifact Runtime; thực hiện kiểm định schema
+và đóng gói thành phiên bản dữliệu sẵn sàng huấn luyện.
+B. Phân hệHuấn luyện Thời gian thực
+Bảng 3.5. Phân hệHuấn luyện Thời gian thực
+Mã chức
+năng
+Tên chức năng
+Mô tả
+
+===== PAGE 47 =====
+Đồán Công nghệphần mềm
+47
+Mã chức
+năng
+Tên chức năng
+Mô tả
+F-03
+Khởi tạo phiên
+huấn luyện
+Cho phép Researcher lựa chọn siêu tham sốvà khởi động
+quá trình huấn luyện trên GPU hoặc CPU thông qua kết nối
+WebSocket.
+F-04
+Truyền tải thời
+gian thực
+Backend truyền luồng Epoch Snapshot đã nén qua
+WebSocket; Frontend tiếp nhận và cập nhật các panel metric,
+topology và embedding theo thời gian thực.
+F-05
+Tương tác trực
+quan hóa nâng
+cao
+Hỗtrợhiển thịattention weights, phân cụm cộng đồng thời
+gian thực, lựa chọn nút và xem chi tiết thuộc tính, nhãn dự
+đoán và độtin cậy của mô hình.
+C. Phân hệQuản lý Thực nghiệm và Replay
+Bảng 3.6. Phân hệQuản lý Thực nghiệm và Replay
+Mã chức
+năng
+Tên chức năng
+Mô tả
+F-06
+Lưu trữvà khôi
+phục thực
+nghiệm
+Tựđộng lưu phiên huấn luyện thành bản ghi thực nghiệm bất
+biến, bao gồm siêu tham số, metric và dữliệu replay.
+F-07
+Trình phát
+Replay
+Cho phép người dùng tái dựng toàn bộtrạng thái huấn luyện
+tại bất kỳepoch nào thông qua thanh điều khiển thời gian.
+F-08
+Tiếp tục huấn
+luyện
+Hỗtrợkhôi phục trạng thái phiên và dữliệu replay khi kết
+nối WebSocket bịgián đoạn.
+
+===== PAGE 48 =====
+Đồán Công nghệphần mềm
+48
+Mã chức
+năng
+Tên chức năng
+Mô tả
+F-09
+So sánh thực
+nghiệm
+Cho phép lựa chọn từhai đến bốn thực nghiệm đểso sánh
+biểu đồhội tụ, siêu tham sốvà chất lượng mô hình trên cùng
+giao diện.
+D. Phân hệQuản trịHệthống
+Bảng 3.7. Phân hệQuản trịHệthống
+Mã chức
+năng
+Tên chức năng
+Mô tả
+F-10
+Quản lý phiên
+huấn luyện
+Hiển thịcác tiến trình huấn luyện đang hoạt động và cho
+phép Admin thực hiện thao tác dừng hoặc khởi động lại.
+F-11
+Quản lý dung
+lượng lưu trữ
+Áp dụng chính sách Retention Policy nhằm tối ưu hóa dung
+lượng lưu trữcác thực nghiệm cũ.
+F-12
+Audit Log
+Ghi nhận các hoạt động quan trọng như thay đổi quyền, xóa
+thực nghiệm hoặc can thiệp phiên huấn luyện nhằm phục vụ
+giám sát và bảo mật hệthống.
+
+===== PAGE 49 =====
+Đồán Công nghệphần mềm
+49
+3.1.3. Yêu cầu phi chức năng (Non-Functional Requirements)
+Bảng 3.8. Yêu cầu phi chức năng của hệthống
+Mã yêu
+cầu
+Tên yêu cầu
+Mô tả
+NF-01
+Độtrễcập nhật
+trực quan hóa
+Thời gian từkhi Backend hoàn tất một epoch đến khi
+Frontend hiển thịtopology và embedding cần được tối ưu
+nhằm bảo đảm khảnăng quan sát gần thời gian thực.
+NF-02
+Hiệu quảlưu trữ
+dữliệu
+Dữliệu snapshot phải được nén đểgiảm băng thông truyền
+tải và chi phí lưu trữ. Hệthống áp dụng cơ chếRetention
+Compaction nhằm tiết kiệm dung lượng trong khi vẫn duy trì
+khảnăng replay thực nghiệm.
+NF-03
+Kiến trúc tách
+biệt
+Frontend và Backend phải được tách biệt hoàn toàn. Backend
+cung cấp REST API và WebSocket đểgiao tiếp, cho phép
+triển khai lõi huấn luyện GNN trên máy chủGPU độc lập.
+NF-04
+Độổn định kết
+nối
+Kết nối WebSocket phải hỗtrợduy trì trạng thái phiên và cơ
+chếkhôi phục khi xảy ra gián đoạn ngắn nhằm hạn chếmất
+dữliệu theo dõi.
+NF-05
+Tính an toàn và
+bảo mật
+Tất cảAPI và kết nối WebSocket phải được xác thực bằng
+JWT. Người dùng có vai trò Viewer chỉđược phép xem dữ
+liệu và không được tạo, chỉnh sửa hoặc điều khiển phiên
+huấn luyện.
+3.2. Phân tích use case
+3.2.1. Xác định tác nhân
+Hệthống GNN-Insight xác định 03 tác nhân: Researcher, Viewer và Admin. Mỗi tác
+nhân tương ứng với một nhóm quyền hạn riêng biệt như đã mô tảởmục 3.1.1.
+
+===== PAGE 50 =====
+Đồán Công nghệphần mềm
+50
+3.2.2. Biểu đồUsecase tổng quát
+Hình 3.1. Biểu đồUsecase tổng quát hệthống GNN-Insight
+3.2.3. Mô tảcác Usecase chính
+Hệthống bao gồm 08 ca sửdụng cốt lõi chia thành 03 phân hệ:
+Phân hệKhông gian Nghiên cứu: UC01 (Đăng nhập), UC02 (Quản lý dựán), UC03
+(Quản lý dataset), UC04 (Khởi tạo phiên huấn luyện), UC05 (Theo dõi thời gian thực).
+Phân hệThực nghiệm & Replay: UC06 (Replay và Resume), UC07 (So sánh thực
+nghiệm).
+Phân hệQuản trịhệthống: UC08 (Quản trịhệthống).
+
+===== PAGE 51 =====
+Đồán Công nghệphần mềm
+51
+3.3. Đặc tảcác use case chính
+3.3.1. UC01 — Đăng nhập vào hệthống
+Mô tảnghiệp vụ: Cho phép tất cảngười dùng xác thực thông tin tài khoản đểlấy JWT
+Token và truy cập không gian làm việc tương ứng với vai trò.
+Bảng 3.9. Đặc tảchi tiết use case UC01
+Mã Use case
+UC01
+Tên Use
+case
+Đăng nhập vào hệthống
+Tác nhân
+Researcher, Viewer, Admin
+Mô tả
+Cho phép tất cảngười dùng xác thực thông tin tài khoản đểlấy mã
+Token (JWT), từđó truy cập vào không gian làm việc hoặc trang
+quản trịtương ứng với vai trò của mình.
+Tiền điều kiện
+Người dùng đã đăng ký tài khoản hợp lệtrên hệthống.
+Luồng sựkiện
+chính (Thành công)
+STT
+Thực hiện
+bởi
+Hành động
+1
+Người dùng
+Mởtrang đăng nhập trên Web Browser.
+2
+Hệthống
+Hiển thịbiểu mẫu đăng nhập
+(Email/Username và Password).
+3
+Người dùng
+Nhập thông tin đăng nhập và bấm "Sign
+In".
+4
+Hệthống
+Kiểm định tài khoản thông qua API POST
+/api/auth/login.
+5
+Hệthống
+Xác nhận thông tin hợp lệ, trảvềJWT
+Token và thông tin định danh.
+6
+Frontend
+Lưu JWT vào localStorage/Zustand Store
+và điều hướng đến route bảo mật.
+Luồng sựkiện thay
+thế
+STT
+Thực hiện
+bởi
+Hành động
+1a
+Hệthống
+Tại bước 6, nếu role == 'admin', hệthống
+điều hướng trực tiếp đến /admin/overview.
+Luồng ngoại lệ
+STT
+Thực hiện
+bởi
+Hành động
+
+===== PAGE 52 =====
+Đồán Công nghệphần mềm
+52
+1a
+Hệthống
+TrảvềHTTP 401 Unauthorized. Frontend
+hiển thịthông báo lỗi tương ứng.
+2a
+Hệthống
+Nếu is_active == False, báo lỗi HTTP 403
+Forbidden và thông báo tài khoản đã bị
+khóa.
+Hậu điều kiện
+Hệthống cấp một JWT Token có thời hạn 24 giờ, định tuyến người
+dùng về/app/dashboard hoặc /admin/overview dựa trên thuộc tính
+role.
+3.3.2. UC02 — Quản lý dựán
+Mô tảnghiệp vụ: Researcher tạo mới và quản lý các dựán nghiên cứu nhằm nhóm các
+phiên huấn luyện và cấu hình dữliệu liên quan.
+Bảng 3.10. Đặc tảchi tiết use case UC02
+Mã Use case
+UC02
+Tên Use
+case
+Quản lý dựán
+Tác nhân
+Researcher, Admin
+Mô tả
+Researcher tạo mới các dựán nghiên cứu đểnhóm các phiên huấn
+luyện và cấu hình dữliệu liên quan.
+Tiền điều kiện
+Người dùng đã đăng nhập với vai trò researcher hoặc admin.
+Luồng sựkiện
+chính (Thành công)
+STT
+Thực hiện
+bởi
+Hành động
+1
+Người dùng
+Truy cập trang /app/projects.
+2
+Hệthống
+Hiển thịdanh sách các dựán đang sởhữu.
+3
+Người dùng
+Bấm "Create New Project".
+4
+Hệthống
+Hiển thịForm yêu cầu nhập: Tên dựán,
+Mô tả, Loại nhiệm vụGNN và Loại mô
+hình mặc định.
+5
+Người dùng
+Nhập thông tin và xác nhận.
+6
+Frontend
+Gửi yêu cầu POST /api/projects kèm cấu
+hình dựán.
+7
+Backend
+Lưu thông tin vào bảng projects trong
+
+===== PAGE 53 =====
+Đồán Công nghệphần mềm
+53
+MySQL.
+8
+Hệthống
+Phản hồi thành công và danh sách dựán
+được tải lại.
+Luồng sựkiện thay
+thế
+STT
+Thực hiện
+bởi
+Hành động
+1a
+Người dùng
+Chọn dựán hiện có và sửa tên/mô tả. Hệ
+thống gửi request PUT /api/projects/{id}.
+Luồng ngoại lệ
+STT
+Thực hiện
+bởi
+Hành động
+1a
+Hệthống
+Trảvềlỗi HTTP 400 Bad Request kèm
+thông tin chi tiết lỗi kiểm định.
+Hậu điều kiện
+Bản ghi dựán mới được tạo trong MySQL, các thư mục con tương
+ứng được khởi tạo trong Blob Storage.
+3.3.3. UC03 — Quản lý dataset và tạo phiên bản
+Mô tảnghiệp vụ: Cho phép Researcher upload tệp dữliệu đồthị, hệthống kiểm định
+cấu trúc và đóng gói thành phiên bản dữliệu bất biến.
+Bảng 3.11. Đặc tảchi tiết use case UC03
+Mã Use case
+UC03
+Tên Use case
+Quản lý dataset và tạo phiên bản
+Tác nhân
+Researcher
+Mô tả
+Cho phép Researcher tạo Dataset logic và phiên bản dữliệu mới, hệ
+thống thực hiện kiểm định cấu trúc và lưu trữphù hợp.
+Tiền điều kiện
+Người dùng đã đăng nhập với vai trò researcher.
+Luồng sựkiện
+chính (Thành
+công)
+STT
+Thực hiện
+bởi
+Hành động
+1
+Người dùng
+Truy cập trang /app/datasets, tạo mới
+Dataset logic hoặc chọn Dataset đã có.
+2
+Người dùng
+Tạo phiên bản dữliệu mới và cung cấp dữ
+liệu dưới định dạng phù hợp: JSON, CSV,
+Excel hoặc artifact runtime.
+3
+Frontend
+Gửi metadata qua POST /api/datasets và
+yêu cầu tạo phiên bản qua POST
+
+===== PAGE 54 =====
+Đồán Công nghệphần mềm
+54
+/api/datasets/{dataset_id}/versions.
+4
+Backend
+Kiểm định cấu trúc dữliệu, lưu metadata
+vào MySQL và dữliệu vật lý vào Blob
+Storage.
+5
+Hệthống
+Tạo bản ghi dataset_versions mới với trạng
+thái ban đầu là draft hoặc validated.
+Luồng sựkiện thay
+thế
+STT
+Thực hiện
+bởi
+Hành động
+1a
+Researcher
+Chọn phiên bản validated và nhấn Publish.
+Hệthống cập nhật trường lifecycle thành
+published.
+Luồng ngoại lệ
+STT
+Thực hiện
+bởi
+Hành động
+1a
+Backend
+Trảvềmã lỗi kèm danh sách chi tiết cảnh
+báo dạng JSON. Bản ghi được đánh dấu
+trạng thái draft.
+Hậu điều kiện
+Metadata Dataset và Dataset Version được lưu trong MySQL; dữliệu
+vật lý được lưu tại Blob Storage; phiên bản được ghi nhận với trạng
+thái phù hợp (draft, validated, published hoặc deprecated).
+3.3.4. UC04 — Khởi tạo phiên huấn luyện
+Mô tảnghiệp vụ: Khởi tạo tiến trình huấn luyện mô hình GNN trên backend thông qua
+liên kết giữa dựán, siêu tham sốvà phiên bản dữliệu.
+Bảng 3.12. Đặc tảchi tiết use case UC04
+Mã Use case
+UC04
+Tên Use
+case
+Khởi tạo phiên huấn luyện
+Tác nhân
+Researcher
+Mô tả
+Khởi tạo tiến trình huấn luyện mô hình GNN trên backend thông qua
+liên kết giữa dựán, cấu hình siêu tham sốvà phiên bản dữliệu đã lựa
+chọn.
+Tiền điều kiện
+Đã có ít nhất một dựán và một phiên bản dữliệu được phát hành
+(lifecycle là published).
+Luồng sựkiện
+chính (Thành công)
+STT
+Thực hiện
+bởi
+Hành động
+
+===== PAGE 55 =====
+Đồán Công nghệphần mềm
+55
+1
+Người dùng
+Mởmàn hình làm việc /app/lab.
+2
+Người dùng
+Chọn Dựán, phiên bản Dataset, loại kiến
+trúc mô hình và cấu hình siêu tham số.
+3
+Người dùng
+Nhấn nút "Start Training".
+4
+Frontend
+Thực hiện POST /api/sessions đểtạo phiên
+huấn luyện.
+5
+Backend
+Khởi tạo bản ghi training_sessions với ID
+dạng UUIDv4 và trảvề{session_id,
+ws_url}.
+6
+Frontend
+Nhận phản hồi và tựđộng mởkết nối
+WebSocket đến ws://backend-url/ws/train.
+Luồng sựkiện thay
+thế
+STT
+Thực hiện
+bởi
+Hành động
+1a
+Hệthống
+Tựđộng copy lại config_json cũ và khởi
+tạo phiên huấn luyện mới kếthừa cấu hình
+gốc.
+Luồng ngoại lệ
+STT
+Thực hiện
+bởi
+Hành động
+1a
+Backend
+Trảvềlỗi HTTP 503 Service Unavailable.
+Phiên làm việc chuyển sang trạng thái
+failed kèm thông tin lỗi.
+Hậu điều kiện
+Bản ghi training_sessions được khởi tạo ởtrạng thái pending. Hệ
+thống cấp phát endpoint WebSocket bảo mật.
+3.3.5. UC05 — Theo dõi huấn luyện thời gian thực
+Mô tảnghiệp vụ: Nhận và xửlý luồng dữliệu biểu thịbiến đổi cấu trúc đồthị,
+embeddings 2D và hiệu năng hội tụqua WebSocket theo từng Epoch.
+Bảng 3.13. Đặc tảchi tiết use case UC05
+Mã Use case
+UC05
+Tên Use
+case
+Theo dõi huấn luyện thời gian thực
+Tác nhân
+Researcher, Viewer
+Mô tả
+Nhận và xửlý luồng dữliệu biểu thịbiến đổi cấu trúc đồthị, biểu
+diễn embeddings 2D và hiệu năng hội tụđược truyền tải liên tục qua
+
+===== PAGE 56 =====
+Đồán Công nghệphần mềm
+56
+WebSocket theo từng Epoch.
+Tiền điều kiện
+Đã thiết lập kết nối WebSocket thành công từUC04.
+Luồng sựkiện
+chính (Thành công)
+STT
+Thực hiện
+bởi
+Hành động
+1
+Backend
+Đóng gói dữliệu cấu trúc đồthịnền và gửi
+gói tin loại graph_data.
+2
+Frontend
+Nhận gói tin, giải nén và cập nhật cấu trúc
+mạng lên thư viện render D3.js/Canvas.
+3
+Backend
+Tại mỗi Epoch, đóng gói tin nhắn
+epoch_snapshot chứa embeddings 2D,
+attention weights, độtựtin dựđoán.
+4
+Frontend
+Liên tục đón nhận epoch_snapshot, cập
+nhật vịtrí nút và màu sắc dựa trên nhãn dự
+đoán.
+5
+Backend
+Khi kết thúc Epoch cuối, gửi tin nhắn
+training_complete và đóng kết nối an toàn.
+Luồng sựkiện thay
+thế
+STT
+Thực hiện
+bởi
+Hành động
+1a
+Người dùng
+Chuyển đổi giữa chếđộxem nhãn dựđoán
+(Prediction Mode) và chếđộtrực quan sai
+số(Error Mode).
+Luồng ngoại lệ
+STT
+Thực hiện
+bởi
+Hành động
+1a
+Hệthống
+Hiển thịcảnh báo "Mất kết nối. Đang tìm
+cách phục hồi..." và lưu session_id đểsẵn
+sàng chuyển sang luồng Resume (UC06).
+Hậu điều kiện
+Trạng thái trực quan hóa trên Frontend được đồng bộvới mô hình
+đang huấn luyện ởBackend.
+3.3.6. UC06 — Replay và Resume thực nghiệm
+Mô tảnghiệp vụ: Cho phép duyệt lại tiến trình huấn luyện theo từng Epoch hoặc khôi
+phục phiên bịgián đoạn do sựcốmạng.
+
+===== PAGE 57 =====
+Đồán Công nghệphần mềm
+57
+Bảng 3.14. Đặc tảchi tiết use case UC06
+Mã Use case
+UC06
+Tên Use
+case
+Replay và Resume thực nghiệm
+Tác nhân
+Researcher, Viewer
+Mô tả
+Cho phép người dùng duyệt lại toàn bộtiến trình huấn luyện theo từng
+Epoch, hoặc khôi phục tiến trình bịgián đoạn do sựcốmạng.
+Tiền điều kiện
+Đối với Replay: Thực nghiệm đã kết thúc và được lưu trữhoàn toàn.
+Đối với Resume: Tiến trình vẫn đang chạy nhưng kết nối frontend bị
+đứt.
+Luồng sựkiện
+chính (Thành
+công)
+STT
+Thực hiện
+bởi
+Hành động
+1
+Người dùng
+Mởtrang Experiment Hub tại
+/app/experiments và chọn một thực nghiệm.
+2
+Hệthống
+Tải thông tin cấu hình và biểu đồlịch sửtừ
+MySQL.
+3
+Người dùng
+Nhấn nút "Open Replay Shell".
+4
+Hệthống
+Tải gói dữliệu cấu trúc đồthịgốc từ
+MongoDB.
+5
+Người dùng
+Tương tác với thanh trượt Epoch.
+6
+Hệthống
+Sửdụng API POST
+/api/experiments/{id}/replay đểnạp lại dữ
+liệu trực quan hóa và lịch sửsnapshot.
+7
+Frontend
+Cập nhật lại tọa độvector 2D, nhãn dựđoán
+và chỉsốhiệu năng.
+Luồng sựkiện thay
+thế
+STT
+Thực hiện
+bởi
+Hành động
+1
+Frontend
+Tựđộng gửi GET
+/api/sessions/{session_id}/resume.
+2
+Backend
+Kiểm tra trạng thái tiến trình và trảvềtoàn
+bộdữliệu lịch sửđến epoch hiện tại.
+3
+Frontend
+Tái lập ngữcảnh phiên làm việc, khôi phục
+dữliệu replay và tiếp tục theo dõi qua
+
+===== PAGE 58 =====
+Đồán Công nghệphần mềm
+58
+WebSocket nếu phiên vẫn hoạt động.
+Luồng ngoại lệ
+STT
+Thực hiện
+bởi
+Hành động
+1a
+Backend
+TrảvềHTTP 404 Not Found và đưa người
+dùng trởlại màn hình danh sách thực
+nghiệm.
+Hậu điều kiện
+Đối với Replay: Render trạng thái đồthịtại Epoch được chọn. Đối với
+Resume: Frontend kết nối lại thành công mà không làm gián đoạn
+GPU.
+3.3.7. UC07 — So sánh thực nghiệm
+Mô tảnghiệp vụ: Cho phép chọn nhiều thực nghiệm đểso sánh song song chỉsốchất
+lượng và không gian biểu diễn vector.
+Bảng 3.15. Đặc tảchi tiết use case UC07
+Mã Use case
+UC07
+Tên Use
+case
+So sánh thực nghiệm
+Tác nhân
+Researcher, Viewer
+Mô tả
+Cho phép Researcher lựa chọn nhiều thực nghiệm trong dựán đểso
+sánh song song các chỉsốchất lượng và không gian biểu diễn vector.
+Tiền điều kiện
+Có ít nhất 2 thực nghiệm thuộc cùng một Dựán nghiên cứu trong cơ
+sởdữliệu.
+Luồng sựkiện
+chính (Thành công)
+STT
+Thực hiện
+bởi
+Hành động
+1
+Người dùng
+Truy cập Experiment Hub tại
+/app/experiments và chọn các thực nghiệm
+cần so sánh.
+2
+Hệthống
+Hiển thịdanh sách các thực nghiệm trong
+dựán.
+3
+Người dùng
+Tích chọn từ2 đến 4 thực nghiệm và bấm
+"Compare Selected Runs".
+4
+Frontend
+Gửi danh sách ID thực nghiệm lên Backend
+qua POST /api/experiments/compare.
+
+===== PAGE 59 =====
+Đồán Công nghệphần mềm
+59
+5
+Backend
+Truy xuất dữliệu tóm tắt lịch sửtừ
+MongoDB.
+6
+Frontend
+Vẽbiểu đồso sánh đa đường và bảng ma
+trận so sánh siêu tham số.
+Luồng ngoại lệ
+STT
+Thực hiện
+bởi
+Hành động
+1a
+Backend
+TrảvềHTTP 400 Bad Request. Frontend
+hiển thịcảnh báo "Không thểso sánh các
+thực nghiệm thuộc các nhiệm vụGNN khác
+nhau".
+Hậu điều kiện
+Biểu đồđối chiếu đa đường và bảng đối chiếu siêu tham sốđược
+render song song trên giao diện.
+3.3.8. UC08 — Quản trịhệthống
+Mô tảnghiệp vụ: Cung cấp công cụcho Admin giám sát máy chủ, quản lý phiên làm
+việc và thực thi chính sách dọn dẹp bộnhớ.
+Bảng 3.16. Đặc tảchi tiết use case UC08
+Mã Use case
+UC08
+Tên Use
+case
+Quản trịhệthống
+Tác nhân
+Admin
+Mô tả
+Cung cấp công cụcho quản trịviên thực hiện giám sát trạng thái máy
+chủ, quản lý phiên làm việc và thực thi chính sách dọn dẹp bộnhớđĩa
+cứng.
+Tiền điều kiện
+Admin đã đăng nhập thành công (role == 'admin').
+Luồng sựkiện
+chính (Thành công)
+STT
+Thực hiện
+bởi
+Hành động
+1
+Admin
+Truy cập trang /admin/retention.
+2
+Hệthống
+Hiển thịtổng dung lượng đĩa MySQL,
+MongoDB và Blob Storage.
+3
+Admin
+Thiết lập quy tắc thu dọn (ví dụ: giữ
+snapshot tại Best Epoch và mỗi 10
+Epochs).
+
+===== PAGE 60 =====
+Đồán Công nghệphần mềm
+60
+4
+Admin
+Bấm nút "Execute Compaction".
+5
+Frontend
+Gửi POST /api/admin/retention kèm cấu
+hình tham sốhoặc chếđộdry run.
+6
+Backend
+Quét bộsưu tập experiment_snapshots và
+xóa các bản ghi không thỏa mãn điều kiện.
+7
+Hệthống
+Ghi bản ghi log trong audit_logs và trảvề
+dung lượng đã giải phóng.
+Luồng sựkiện thay
+thế
+STT
+Thực hiện
+bởi
+Hành động
+1
+Admin
+Truy cập /admin/sessions đểxem tất cả
+phiên huấn luyện đang hoạt động.
+2
+Admin
+Chọn phiên bất thường và bấm "Force
+Stop".
+3
+Backend
+Gửi tín hiệu ngắt, đóng WebSocket, cập
+nhật trạng thái session thành stopped và tạo
+audit log.
+Hậu điều kiện
+Trạng thái các phiên huấn luyện được cập nhật; các snapshot dư thừa
+được xóa khỏi MongoDB theo đúng chính sách.
+3.4. Biểu đồđộng mô tảluồng xửlý hệthống
+3.4.1. Luồng tải và cấu hình dữliệu
+Mô tảnghiệp vụ: Tiếp nhận tệp tin dữliệu đồthịthô từclient, thực hiện phân tích
+schema và kiểm định tính hợp lệ, sau đó phân phối metadata vào MySQL và dữliệu
+vật lý vào Blob Storage.
+Dữliệu vào: Bộdữliệu tích hợp sẵn hoặc tệp người dùng cung cấp (JSON, CSV,
+Excel, artifact runtime), tên dataset logic và định danh người dùng.
+Dữliệu ra: Mã phiên bản dataset mới, thông báo trạng thái kiểm định.
+Thành phần tham gia: Dataset UI, Dataset Router, Dataset Service, Validation
+Engine, Blob Storage, MySQL.
+Hình 3.4. Sơ đồhoạt động luồng tải và cấu hình dữliệu.
+
+===== PAGE 61 =====
+Đồán Công nghệphần mềm
+61
+3.4.2. Luồng huấn luyện mô hình
+Mô tảnghiệp vụ: Khởi tạo tiến trình huấn luyện trên máy chủ, thiết lập vòng lặp huấn
+luyện nơ-ron đồthịvà lưu trữcheckpoint mô hình tốt nhất.
+Dữliệu vào: Cấu hình siêu tham số, ID phiên bản dataset, kiến trúc mô hình được
+chọn.
+Dữliệu ra: Epoch Snapshots, bản ghi thực nghiệm sau khi hoàn thành.
+Thành phần tham gia: Lab UI, Sessions API, Session Manager, Training Service,
+PyTorch GNN Core, Hybrid Store (MySQL & MongoDB).
+Hình 3.5. Sơ đồtrình tựkhởi tạo và huấn luyện mô hình.
+3.4.3. Luồng truyền dữliệu thời gian thực qua WebSocket
+Mô tảnghiệp vụ: Quản lý vòng đời kết nối WebSocket, nén dữliệu nhịphân gzip ở
+backend, giải nén và phân phối cập nhật trạng thái giao diện trên frontend.
+Dữliệu vào: Các cấu trúc dữliệu thô từtiến trình huấn luyện.
+Dữliệu ra: Luồng dữliệu thời gian thực giải nén trên trình duyệt.
+Thành phần tham gia: WebSocket Middleware, WS Zip Utility, Zustand State Store
+(useGNNStore), Topology View, Embedding View.
+Hình 3.6. Sơ đồhoạt động luồng truyền tải và giải nén dữliệu thời gian thực qua WebSocket.
+3.4.4. Luồng Replay và Resume thực nghiệm
+Mô tảnghiệp vụ: Khôi phục trạng thái giao diện từdữliệu lịch sử(Replay) hoặc tiếp
+tục huấn luyện sau sựcốmất kết nối (Resume).
+Dữliệu vào: ID phiên cần Resume hoặc ID thực nghiệm cần Replay, sốEpoch cần tua
+đến.
+Dữliệu ra: Trạng thái trực quan hóa chính xác tại Epoch yêu cầu.
+Thành phần tham gia: Player Store, Replay API, Session Service, MongoDB,
+Zustand GNN Store.
+
+===== PAGE 62 =====
+Đồán Công nghệphần mềm
+62
+Hình 3.7. Sơ đồtrình tựluồng Replay và Resume.
+3.4.5. Luồng quản trịvà Retention
+Mô tảnghiệp vụ: Thực hiện quét định kỳhoặc kích hoạt thủcông tiến trình dọn dẹp
+snapshot chi tiết của các thực nghiệm cũ nhằm tiết kiệm tài nguyên.
+Dữliệu vào: ID thực nghiệm cần dọn dẹp, cấu hình chính sách Retention.
+Dữliệu ra: Danh sách snapshot bịxóa, dung lượng được g
+iải
+phóng
+trong
+MongoDB.
+Thành phần tham gia: Admin UI, Admin Service, Retention Compactor, MongoDB,
+MySQL, Audit Log Service.
+Hình 3.8. Sơ đồhoạt động luồng Retention Compaction.
+3.5. Thiết kếcơ sởdữliệu
+Hệthống GNN-Insight sửdụng kiến trúc lưu trữlai (Hybrid Storage Architecture) kết
+hợp: Cơ sởdữliệu quan hệMySQL đểquản trịcấu trúc nghiệp vụ, MongoDB đểlưu
+các mảng JSON lớn của topo/embeddings theo epoch, và Blob Storage cho tệp dữliệu
+đồthịgốc và trọng sốmô hình.
+
+===== PAGE 63 =====
+Đồán Công nghệphần mềm
+63
+3.5.1. Biểu đồthực thể- liên kết (ERD)
+Hình 3.9. Sơ đồERD hệthống GNN-Insight
+3.5.2. Thiết kếdữliệu quan hệ
+Thiết kếtuân thủchuẩn hóa 1NF →2NF →3NF: mọi bảng có khóa chính xác định,
+không tồn tại phụthuộc hàm bộphận hay bắc cầu, thông tin người dùng chỉlưu khóa
+ngoại owner_id trong các bảng liên quan.
+
+===== PAGE 64 =====
+Đồán Công nghệphần mềm
+64
+Bảng 3.17. Cấu trúc bảng urses
+Tên cột
+Kiểu dữliệu
+Nullable
+Mặc định
+Ý nghĩa
+id
+INT
+Không
+Auto-Inc
+Khóa
+chính
+email
+VARCHAR(100)
+Không
+Email
+đăng nhập
+(Unique)
+username
+VARCHAR(50)
+Không
+Tên đăng
+nhập
+(Unique)
+hashed_password
+VARCHAR(200)
+Không
+Mật khẩu
+băm
+(bcrypt)
+full_name
+VARCHAR(100)
+Có
+NULL
+Họvà tên
+đầy đủ
+role
+VARCHAR(20)
+Không
+'researcher'
+Vai trò
+(admin,
+researcher,
+viewer)
+is_active
+BOOLEAN
+Không
+TRUE
+Trạng thái
+kích hoạt
+tài khoản
+is_superuser
+BOOLEAN
+Không
+FALSE
+Quyền siêu
+admin hệ
+thống
+created_at
+DateTime
+Không
+CURRENT_TIMESTAMP
+Ngày giờ
+khởi tạo tài
+khoản
+Bảng 3.18. Cấu trúc bảng projects
+Tên cột
+Kiểu dữliệu
+Nullable
+Mặc định
+Ý nghĩa
+id
+INT
+Không
+Auto-Inc
+Khóa chính
+dựán
+title
+VARCHAR(100)
+Không
+Tên dựán
+nghiên cứu
+
+===== PAGE 65 =====
+Đồán Công nghệphần mềm
+65
+description
+TEXT
+Có
+NULL
+Mô tảchi tiết
+mục tiêu
+nghiên cứu
+task_type
+INT
+Không
+1
+ID nhiệm vụ
+GNN (1:
+Node
+Classify,...)
+model_type
+VARCHAR(20)
+Không
+'GCN'
+Kiến trúc mô
+hình mặc định
+is_public
+BOOLEAN
+Không
+FALSE
+Trạng thái
+công khai dự
+án
+owner_id
+INT
+Có
+NULL
+Người sởhữu
+(FK →
+users.id)
+created_at
+DateTime
+Không
+CURRENT_TIMESTAMP
+Ngày giờkhởi
+tạo dựán
+Bảng 3.19. Cấu trúc bảng datasets
+Tên cột
+Kiểu dữliệu
+Nullabl
+e
+Mặc định
+Ý nghĩa
+id
+INT
+Không
+Auto-Inc
+Khóa chính
+Dataset
+name
+VARCHAR(15
+0)
+Không
+Tên gọi logic bộ
+dữliệu
+slug
+VARCHAR(18
+0)
+Không
+Đường dẫn định
+danh URL
+(Unique)
+description
+TEXT
+Có
+NULL
+Mô tảđặc tính dữ
+liệu đồthị
+owner_id
+INT
+Có
+NULL
+Người khởi tạo
+(FK →users.id)
+is_public
+BOOLEAN
+Không
+FALSE
+Trạng thái chia sẻ
+công cộng
+current_version_
+INT
+Có
+NULL
+ID phiên bản hiện
+
+===== PAGE 66 =====
+Đồán Công nghệphần mềm
+66
+id
+tại (FK →
+dataset_versions.i
+d)
+created_at
+DateTime
+Không
+CURRENT_TIMESTA
+MP
+Ngày khởi tạo
+Bảng 3.20. Cấu trúc bảng datasets_versions
+Tên cột
+Kiểu dữliệu
+Nullable
+Mặc định
+Ý nghĩa
+id
+INT
+Không
+Auto-Inc
+Khóa chính
+phiên bản
+dataset_id
+INT
+Không
+ID Dataset
+logic (FK
+→
+datasets.id)
+version
+INT
+Không
+1
+Sốhiệu
+phiên bản
+(tăng dần)
+lifecycle
+VARCHAR(20)
+Không
+'draft'
+Vòng đời
+(draft,
+validated,
+published,
+deprecated)
+schema_version
+VARCHAR(20)
+Không
+'2.0'
+Định dạng
+cấu trúc
+schema
+summary_json
+JSON
+Có
+NULL
+Thống kê
+topo đồthị
+validation_json
+JSON
+Có
+NULL
+Nhật ký
+kiểm định
+lỗi
+raw_blob_key
+VARCHAR(500)
+Có
+NULL
+Đường dẫn
+tệp thô trên
+MinIO/S3
+processed_blob_key
+VARCHAR(500)
+Có
+NULL
+Đường dẫn
+tệp PyG đã
+chuẩn hóa
+
+===== PAGE 67 =====
+Đồán Công nghệphần mềm
+67
+created_by
+INT
+Có
+NULL
+ID
+Researcher
+tải lên (FK
+→users.id)
+created_at
+DateTime
+Không
+CURRENT_TIMESTAMP
+Ngày giờ
+tải lên
+Bảng 3.21. Cấu trúc bảng experiments
+Tên cột
+Kiểu dữliệu
+Nullable
+Mặc định
+Ý nghĩa
+id
+INT
+Không
+Auto-Inc
+Khóa chính
+thực nghiệm
+title
+VARCHAR(200)
+Không
+'Untitled Run'
+Tiêu đềthực
+nghiệm
+project_id
+INT
+Có
+NULL
+ID dựán
+(FK)
+owner_id
+INT
+Có
+NULL
+ID chủsở
+hữu (FK)
+dataset_version_id
+INT
+Có
+NULL
+ID phiên bản
+Dataset (FK)
+task_type
+INT
+Không
+1
+Loại nhiệm
+vụGNN
+model_type
+VARCHAR(20)
+Không
+'GCN'
+Kiến trúc mô
+hình
+epoch_count
+INT
+Không
+0
+Tổng số
+epoch đã
+chạy
+learning_rate
+FLOAT
+Có
+NULL
+Siêu tham số
+Learning rate
+accuracy
+FLOAT
+Có
+NULL
+Độchính xác
+cao nhất
+loss
+FLOAT
+Có
+NULL
+Giá trịhàm
+mất mát tại
+best epoch
+best_epoch
+INT
+Không
+0
+Sốepoch đạt
+
+===== PAGE 68 =====
+Đồán Công nghệphần mềm
+68
+kết quảcao
+nhất
+status
+VARCHAR(20)
+Không
+'pending'
+Trạng thái
+(completed,
+failed,
+stopped)
+mongo_run_id
+VARCHAR(100)
+Có
+NULL
+ID liên kết
+NoSQL
+snapshots
+retention_state
+VARCHAR(20)
+Không
+'full'
+Trạng thái
+nén (full,
+compacted)
+created_at
+DateTime
+Không
+CURRENT_TIMESTAMP
+Ngày giờlưu
+trữthực
+nghiệm
+Bảng 3.22. Cấu trúc bảng training_sessions
+Tên cột
+Kiểu dữliệu
+Nullable
+Mặc định
+Ý nghĩa
+id
+VARCHAR(36)
+Không
+Khóa chính
+dạng
+UUIDv4
+user_id
+INT
+Có
+NULL
+Kỹsư chạy
+huấn luyện
+(FK)
+project_id
+INT
+Có
+NULL
+ID dựán
+liên kết (FK)
+experiment_id
+INT
+Có
+NULL
+ID thực
+nghiệm khi
+chốt chạy
+(FK)
+dataset_version_id
+INT
+Có
+NULL
+ID Dataset
+version nạp
+vào GPU
+(FK)
+config_json
+JSON
+Có
+NULL
+Siêu tham số
+khởi tạo
+phiên chạy
+
+===== PAGE 69 =====
+Đồán Công nghệphần mềm
+69
+status
+VARCHAR(20)
+Không
+'pending'
+Trạng thái
+(pending,
+running,
+completed,
+failed,
+stopped)
+last_epoch
+INT
+Không
+-1
+Epoch cuối
+cùng hoàn
+thành
+total_epochs
+INT
+Không
+100
+Tổng số
+epoch cấu
+hình
+started_at
+DateTime
+Không
+CURRENT_TIMESTAMP
+Ngày giờ
+bắt đầu
+ended_at
+DateTime
+Có
+NULL
+Ngày kết
+thúc
+error_message
+TEXT
+Có
+NULL
+Thông tin
+biệt lệnếu
+lỗi
+Bảng 3.23. Cấu trúc bảng session_snapshots
+Tên cột
+Kiểu dữliệu
+Nullable
+Mặc định
+Ý nghĩa
+id
+INT
+Không
+Auto-Inc
+Khóa chính chỉ
+mục
+session_id
+VARCHAR(36)
+Không
+ID phiên huấn
+luyện (FK)
+experiment_id
+INT
+Có
+NULL
+ID thực
+nghiệm liên
+kết (FK)
+epoch
+INT
+Không
+Sốthứtự
+epoch huấn
+luyện
+mongo_doc_id
+VARCHAR(100)
+Có
+NULL
+ID tài liệu
+MongoDB
+chứa dữliệu
+lớn
+
+===== PAGE 70 =====
+Đồán Công nghệphần mềm
+70
+blob_ref
+VARCHAR(500)
+Có
+NULL
+Đường dẫn S3
+nếu đẩy ra file
+vật lý
+created_at
+DateTime
+Không
+CURRENT_TIMESTAMP
+Ngày tạo
+
+===== PAGE 71 =====
+Đồán Công nghệphần mềm
+71
+Bảng 3.24. Cấu trúc bảng audit_log
+Tên cột
+Kiểu dữliệu
+Nullabl
+e
+Mặc định
+Ý nghĩa
+id
+INT
+Không
+Auto-Inc
+Khóa chính nhật
+ký
+actor_user_i
+d
+INT
+Có
+NULL
+ID người thực hiện
+(FK)
+action
+VARCHAR(50)
+Không
+Loại hành động
+(login,
+session_stopped,...
+)
+target_type
+VARCHAR(50)
+Không
+Loại đối tượng
+(user, experiment,
+session,...)
+target_id
+VARCHAR(100
+)
+Có
+NULL
+ID đối tượng bịtác
+động
+details_json
+JSON
+Có
+NULL
+Chi tiết tham số
+hành động
+created_at
+DateTime
+Không
+CURRENT_TIMESTAM
+P
+Ngày giờphát sinh
+3.5.3. Thiết kếMongoDB
+Do dữliệu topo đồthịvà embeddings theo từng epoch chứa mảng rất lớn và thay đổi
+linh hoạt, hệthống chọn MongoDB làm document store với ba bộsưu tập chính:
+graph_payloads: Lưu topo gốc (Nodes & Links) của thực nghiệm đểtránh lặp lại
+thông tin tĩnh ởmỗi epoch snapshot. Khóa chỉmục: experiment_id (Unique).
+experiment_snapshots: Lưu trạng thái chi tiết không gian vector 2D và kết quảdự
+đoán từng nút tại từng Epoch. Khóa chỉmục tổhợp: {run_id: 1, epoch: 1}.
+experiment_metrics: Lưu tóm tắt chuỗi lịch sửLoss/Accuracy qua tất cảepoch phục
+vụhiển thịbiểu đồhội tụmà không cần truy xuất hàng trăm snapshot.
+
+===== PAGE 72 =====
+Đồán Công nghệphần mềm
+72
+3.5.4. Thiết kếBlob Storage
+Hệthống tổchức lưu trữtrên S3/MinIO theo cấu trúc phân cấp: gnn-insight/ →
+datasets/raw/, datasets/runtime/, models/weights/, reports/export/. Cấu trúc này tách
+biệt dữliệu thô, dữliệu đã xửlý, trọng sốmô hình và báo cáo xuất.
+3.6. Kiến trúc hệthống
+Hệthống được thiết kếtheo mô hình client-server, trong đó frontend đảm nhiệm giao
+diện và tương tác, backend cung cấp REST API và WebSocket, tầng lưu trữlai kết
+hợp MySQL, MongoDB, Redis và Blob Storage.
+Hình 3.10. Sơ đồkiến trúc tổng thểhệthống GNN-Insight.
+3.6.1. Kiến trúc tổng thể
+Kiến trúc tổng thểbao gồm các tầng: tầng giao diện (ReactJS + Zustand), tầng
+backend (FastAPI + WebSocket), tầng xửlý (PyTorch GNN Core) và tầng lưu trữlai.
+Redis đóng vai trò ephemeral cache giúp phục hồi phiên (Resume) tức thì sau gián
+đoạn mạng.
+Bảng 3.25. So sánh và lý do lựa chọn công nghệtheo từng tầng kiến trúc
+Tầng
+Công nghệchọn
+Lý do chính
+Frontend
+ReactJS + Zustand
+D3.js ecosystem, cập nhật state không re-
+render toàn DOM
+Backend
+FastAPI (ASGI)
+Bất đồng bộmặc định, REST +
+WebSocket cùng framework
+Training Core
+PyTorch
+HỗtrợGNN native (PyG), GPU
+acceleration
+Relational DB
+MySQL
+Toàn vẹn nghiệp vụ, RBAC, transaction
+Document DB
+MongoDB
+Snapshot JSON lớn, index {run_id,
+epoch} hiệu quả
+Cache
+Redis
+Ephemeral state cho Resume tức thì
+Blob Storage
+MinIO/S3
+Tệp nhịphân lớn, chi phí đĩa thấp
+
+===== PAGE 73 =====
+Đồán Công nghệphần mềm
+73
+3.7. Thiết kếgiao diện hệthống
+Giao diện GNN-Insight được thiết kếtuân thủcác nguyên tắc công thái học phần mềm
+và UX heuristics, ưu tiên trải nghiệm mượt mà cho nhà nghiên cứu AI khi làm việc với
+cấu trúc đồthịlớn.
+Bảng 3.26. Tóm tắt các màn hình chính của hệthống GNN-Insight
+Màn hình
+Route
+Tác nhân
+Chức năng chính
+Dashboard
+/app/dashboard
+Researcher,
+Viewer
+Tổng quan dựán và thực
+nghiệm
+LabShell
+/app/lab
+Researcher
+Cấu hình + huấn luyện thời
+gian thực
+Experiment
+Hub
+/app/experiments
+Researcher,
+Viewer
+Replay, so sánh, pin thực
+nghiệm
+Quản lý dựán
+/app/projects
+Researcher
+Tạo, chỉnh sửa, xoá dựán
+nghiên cứu
+Quản lý dữliệu
+/app/datasets
+Researcher
+Upload, phát hành, quản lý
+phiên bản dữliệu
+Quản trịAdmin
+/admin/*
+Admin
+Giám sát tài nguyên, người
+dùng, audit log, retention
+3.7.1. Giao diện quản lý dựán
+
+===== PAGE 74 =====
+Đồán Công nghệphần mềm
+74
+Hình 3.11. Giao diện quản lý dựán — Hiển thịdanh sách dựán, thông tin loại nhiệm
+vụGNN, trạng thái và tùy chọn tạo/chỉnh sửa.
+3.7.2. Giao diện quản lý dữliệu
+Hình 3.12. Giao diện quản lý dữliệu — Hiển thịdanh sách Dataset, vòng đời phiên
+bản và các thao tác publish/deprecate.
+
+===== PAGE 75 =====
+Đồán Công nghệphần mềm
+75
+3.7.3. Giao diện LabShell
+Màn hình LabShell (/app/lab) được tổchức theo bốcục ba cột (Three-column layout):
+Cột 1 — Control Panel: Cấu hình nhiệm vụGNN, lựa chọn mô hình, thiết lập siêu
+tham sốvà nút Start/Stop.
+Cột 2 — Visualizations Canvas: Topology View (cấu trúc liên kết đồthị, màu sắc
+nút theo nhãn dựđoán, attention weights động) và Embedding View (không gian
+vector 2D, phân cụm hội tụtheo epoch).
+Cột 3 — Metrics & Explainability: Biểu đồloss/accuracy thời gian thực, chi tiết nút
+được chọn, danh sách lân cận và phân bốxác suất dựđoán. Thanh Player Timeline ở
+đáy màn hình hỗtrợReplay và Resume.
+Hình 3.13. Wireframe bốcục màn hình LabShell.
+3.7.4. Giao diện Experiment Hub
+Màn hình Experiment Hub (/app/experiments) cho phép duyệt danh sách thực nghiệm,
+xem chi tiết siêu tham sốvà metric, pin thực nghiệm tốt nhất, mởReplay Shell và khởi
+tạo so sánh đa thực nghiệm.
+
+===== PAGE 76 =====
+Đồán Công nghệphần mềm
+76
+Hình 3.14. Wireframe giao diện Experiment Hub.
+3.7.5. Giao diện quản trị
+Giao diện Admin bao gồm các màn hình: /admin/overview (tổng quan tài nguyên),
+/admin/users (quản lý người dùng), /admin/sessions (giám sát phiên huấn luyện),
+/admin/retention (thiết lập chính sách dọn dẹp), /admin/audit (nhật ký kiểm thửbảo
+mật).
+
+===== PAGE 77 =====
+Đồán Công nghệphần mềm
+77
+Hình 3.15. Wireframe giao diện quản trịAdmin.
+3.8. Các công nghệsửdụng
+Đểxây dựng hệthống GNN Insight đáp ứng đầy đủcác yêu cầu vềgiao diện tương tác,
+xửlý nghiệp vụ, truyền dữliệu thời gian thực và lưu trữkết quả, đềtài sửdụng tập
+hợp các công nghệđược lựa chọn kỹlưỡng, mỗi công nghệđóng một vai trò cụthể
+trong kiến trúc tổng thể.
+3.8.1. Frontend — Giao diện người dùng
+Frontend là thành phần chịu trách nhiệm hiển thịgiao diện và tiếp nhận tương tác từ
+người dùng. Hệthống GNN Insight được xây dựng theo kiến trúc SPA (Single Page
+Application) đểgiúp người dùng dễdàng truy cập và quan sát dữliệu trực quan ngay
+trên trình duyệt mà không cần cài đặt thêm phần mềm.
+Frontend đảm nhiệm các chức năng sau:
+•
+Metric Dashboard: Biểu đồđường tương tác hiển thịloss/accuracy/AUC theo
+epoch, sửdụng thư viện Chart.js hoặc Recharts.
+•
+Topology Visualization: Trực quan hóa cấu trúc đồthịtương tác với Force-
+Directed Layout, zoom/pan, highlight nút/cạnh, sửdụng D3.js hoặc Sigma.js.
+•
+Embedding Visualization: Scatter plot 2D/3D tương tác cho embedding t-
+SNE/PCA, sửdụng Plotly.js hoặc Three.js.
+•
+Replay Control: Timeline slider, nút play/pause/step, điều chỉnh tốc độphát.
+•
+Experiment Management: Giao diện quản lý dataset, cấu hình hyperparameter,
+danh sách thí nghiệm, so sánh runs.
+Kiến trúc frontend theo mô hình component-based (React/Vue) cho phép tái sửdụng
+code và dễdàng mởrộng thêm tính năng mới. State management (Redux/Vuex) được
+dùng đểquản lý trạng thái ứng dụng phức tạp.
+3.8.2. Backend — Xửlý nghiệp vụ
+Backend đảm nhiệm toàn bộlogic xửlý phía server: tiếp nhận yêu cầu từngười dùng
+qua REST API, khởi tạo và điều phối các phiên huấn luyện GNN, xửlý và chuẩn hóa
+dữliệu đầu vào, quản lý trạng thái thí nghiệm, và cung cấp dữliệu cho frontend qua cả
+REST API lẫn WebSocket.
+
+===== PAGE 78 =====
+Đồán Công nghệphần mềm
+78
+Kiến trúc backend gồm các module chính:
+•
+Training Engine: Module thực hiện vòng lặp huấn luyện GNN (PyTorch +
+PyTorch Geometric), tính toán metric, lưu snapshot embedding sau mỗi epoch.
+•
+WebSocket Server: Quản lý kết nối WebSocket, đẩy dữliệu epoch_snapshot
+theo thời gian thực đến tất cảclient đang kết nối.
+•
+REST API Server: Endpoint CRUD cho dataset, experiment, run; API truy
+vấn lịch sử; API so sánh experiment.
+•
+Storage Manager: Điều phối lưu trữvào database (metadata) và file system
+(snapshot artifact).
+Framework Python phổbiến cho backend GNN bao gồm FastAPI (hiệu năng cao, hỗ
+trợasync/await tốt) hoặc Flask. PyTorch Geometric cung cấp đầy đủcác layer GNN
+(GCNConv, SAGEConv, GATConv) và benchmark dataset chuẩn.
+3.8.3. WebSocket — Truyền dữliệu thời gian thực
+WebSocket (RFC 6455) là giao thức mạng hỗtrợtruyền dữliệu hai chiều (full-duplex)
+theo thời gian thực giữa client và server trên một kết nối TCP duy nhất. Khác với
+HTTP truyền thống — chỉhỗtrợrequest-response (client chủđộng gửi, server mới
+phản hồi) — WebSocket cho phép server chủđộng đẩy (push) dữliệu đến client bất kỳ
+lúc nào mà không cần client yêu cầu.
+Quá trình thiết lập kết nối WebSocket bắt đầu bằng HTTP Upgrade handshake, sau đó
+chuyển sang giao thức WebSocket duy trì kết nối liên tục (persistent connection). Điều
+này loại bỏoverhead của việc tạo TCP connection mới cho mỗi yêu cầu — rất quan
+trọng khi cần gửi dữliệu liên tục với tần suất cao (mỗi epoch huấn luyện).
+Trong hệthống GNN Insight, WebSocket đóng vai trò trung tâm: sau mỗi epoch,
+backend training engine gửi epoch_snapshot (kích thước ~10–100KB tùy đồthị) qua
+WebSocket đến tất cảfrontend client đang kết nối. Frontend nhận dữliệu và cập nhật
+ngay lập tức tất cảcác panel trực quan hóa — không cần polling hay tải lại trang.
+3.8.4. Cơ sởdữliệu và lưu trữ
+Hệthống cần hai lớp lưu trữvới yêu cầu và đặc điểm khác nhau:
+
+===== PAGE 79 =====
+Đồán Công nghệphần mềm
+79
+Cơ sởdữliệu quan hệ(Relational DB): MY SQL lưu metadata có cấu trúc — thông
+tin người dùng, mô tảdataset, cấu hình experiment (hyperparameter, kiến trúc mô hình,
+dataset), lịch sửrun (epoch count, best metric, thời gian chạy), trạng thái thí nghiệm.
+Ưu điểm: hỗtrợtruy vấn phức tạp (JOIN, GROUP BY) cho tính năng so sánh
+experiment; đảm bảo tính nhất quán dữliệu (ACID).
+Lưu trữblob / File System: Lưu các artifact có kích thước lớn và không cấu trúc —
+chuỗi epoch snapshot (embedding vectors, predicted labels, graph state), checkpoint
+mô hình (.pt file), log file chi tiết. Mỗi run được lưu trong một thư mục riêng với tên
+định danh duy nhất (UUID), các snapshot được lưu dưới dạng file JSON hoặc binary
+(NPY) theo sốthứtựepoch.
+Phân tầng lưu trữnày giúp hệthống không chỉhỗtrợtheo dõi trực tiếp mà còn tạo
+điều kiện cho việc xem lại (Replay), phân tích và so sánh kết quảbất kỳlúc nào, bất kể
+người dùng có đang online tại thời điểm huấn luyện hay không. Tổng dung lượng lưu
+trữmột run điển hình (100 epoch, đồthị3.000 nút, embedding 128D) ước tính khoảng
+200–500MB.
+Bảng 3.27. Tóm tắt stack công nghệcủa hệthống GNN Insight
+Thành phần
+Công nghệ
+Vai trò chính
+Frontend
+React/Vue + D3.js/Sigma.js
++ Plotly.js
+Giao diện trực quan hóa, tương tác
+người dùng
+Backend API
+FastAPI / Flask (Python)
+REST API, điều phối huấn luyện, quản
+lý thí nghiệm
+Training Engine
+PyTorch + PyTorch
+Geometric
+Vòng lặp huấn luyện GNN, tính metric,
+tạo snapshot
+Realtime
+WebSocket (Socket.IO)
+Đẩy epoch snapshot theo thời gian thực
+đến frontend
+Database
+My SQL
+Lưu metadata thí nghiệm, cấu hình,
+lịch sửrun
+Storage
+File System / Object Storage
+Lưu epoch snapshot, checkpoint mô
+hình, artifact
+
+===== PAGE 80 =====
+Đồán Công nghệphần mềm
+80
+4. TRIỂN KHAI VÀ ĐÁNH GIÁ KẾT QUẢ
+4.1. Giao diện chính
+Hệthống GNN-Insight được xây dựng dưới dạng ứng dụng web hỗtrợhuấn luyện,
+trực quan hóa và quản lý thí nghiệm GNN. Giao diện được tổchức theo vai trò người
+dùng gồm Viewer, Researcher và Admin. Các màn hình chính bao gồm giao diện đăng
+nhập, dashboard tổng quan, quản lý dựán, quản lý dataset, LabShell huấn luyện và
+trực quan hóa, Experiment Hub, hồsơ người dùng và cụm giao diện quản trịhệthống.
+Toàn bộcác màn hình này được hiện thực dựa trên thiết kếgiao diện đã trình bày ở
+chương trước, đồng thời được tối ưu đểhỗtrợtheo dõi thời gian thực, replay thí
+nghiệm và phân tích kết quảhuấn luyện.
+4.1.1. Giao diện đăng nhập
+Sau khi đăng nhập thành công, hệthống xác thực tài khoản và phân quyền người dùng
+đểđiều hướng đến giao diện tương ứng. Người dùng thuộc nhóm Researcher hoặc
+Viewer được chuyển đến workspace chính, trong khi Admin được chuyển đến giao
+diện quản trị. Nếu thông tin đăng nhập không chính xác, hệthống sẽtrảvềthông báo
+lỗi phù hợp.
+Input:
+Email hoặc tên đăng nhập
+Mật khẩu
+Output:
+Đăng nhập thành công
+Điều hướng đến giao diện phù hợp với vai trò người dùng
+Thông báo lỗi nếu thông tin không hợp lệ
+
+===== PAGE 81 =====
+Đồán Công nghệphần mềm
+81
+Hình 33. Giao diện đăng nhập
+4.4.2. Giao diện dashboard tổng quan của Researcher
+Sau khi đăng nhập thành công, người dùng thuộc nhóm Researcher được chuyển đến
+không gian làm việc chính dưới nhánh /app/*. Dashboard tổng quan giúp người dùng
+theo dõi nhanh các thành phần quan trọng như dựán, dataset, thực nghiệm và các lối
+tắt đến LabShell hoặc Experiment Hub. Giao diện này đóng vai trò là điểm vào trung
+tâm cho toàn bộquy trình nghiên cứu và huấn luyện GNN.
+Input:
+Tài khoản người dùng đã xác thực
+Dữliệu tổng hợp từhệthống
+Output:
+Màn hình tổng quan workspace của Researcher
+Điều hướng đến các chức năng chính
+
+===== PAGE 82 =====
+Đồán Công nghệphần mềm
+82
+Hình 33. Giao diện Dashboard Research
+4.4.3. Giao diện quản lý dựán
+Giao diện quản lý dựán tại /app/projects cho phép người dùng tạo mới, chỉnh sửa, xóa
+và lựa chọn dựán đang làm việc. Mỗi dựán đóng vai trò là đơn vịtổchức các dataset,
+phiên huấn luyện và thực nghiệm liên quan. Giao diện này hỗtrợviệc quản lý nghiên
+cứu theo từng nhóm bài toán hoặc mục tiêu cụthể.
+Input:
+
+===== PAGE 83 =====
+Đồán Công nghệphần mềm
+83
+Tên dựán
+Mô tảdựán
+Trạng thái công khai hoặc riêng tư
+Output:
+Danh sách dựán
+Thông tin dựán được tạo mới hoặc cập nhật
+Project đang hoạt động trong workspace
+Hình 33. Giao diện Dashboard Research
+4.4.4. Giao diện quản lý dữliệu và phiên bản dataset
+Giao diện quản lý dữliệu tại /app/datasets hỗtrợtải dữliệu lên, tạo phiên bản mới,
+kiểm định schema và điều khiển vòng đời dataset version như publish hoặc deprecate.
+Đây là màn hình kết nối trực tiếp giữa dữliệu đầu vào và quá trình huấn luyện trong
+LabShell.
+Input:
+Tệp dữliệu đầu vào
+Tên dataset và mô tả
+
+===== PAGE 84 =====
+Đồán Công nghệphần mềm
+84
+Thao tác tạo phiên bản hoặc phát hành dữliệu
+Output:
+Danh sách dataset và các phiên bản
+Trạng thái lifecycle của dataset version
+Dataset version được chọn đểhuấn luyện
+4.4.5. Giao diện Experiment Hub
+Experiment Hub tại /app/experiments cho phép người dùng duyệt danh sách thí
+nghiệm, xem siêu tham số, metric, đánh dấu thực nghiệm tốt nhất và chuẩn bịdữliệu
+cho tác vụso sánh. Đây là không gian quản lý và phân tích kết quảsau huấn luyện.
+Input:
+Danh sách experiment đã lưu
+Bộlọc theo project, task, model hoặc trạng thái
+Output:
+Danh sách thực nghiệm
+Thông tin chi tiết của từng run
+Trạng thái pin hoặc dữliệu so sánh
+
+===== PAGE 85 =====
+Đồán Công nghệphần mềm
+85
+4.4.6. Giao diện LabShell
+LabShell tại /app/lab là không gian làm việc chính cho quá trình cấu hình và huấn
+luyện mô hình GNN. Giao diện này cho phép người dùng chọn bài toán, mô hình, siêu
+tham sốvà theo dõi trực tiếp topology, embedding và metric theo từng epoch. Đây là
+thành phần quan trọng nhất trong toàn bộhệthống GNN-Insight.
+Input:
+Bài toán GNN được chọn
+Mô hình và siêu tham số
+Dataset version đang hoạt động
+Output:
+Phiên huấn luyện được khởi tạo
+Dữliệu trực quan hóa theo thời gian thực
+Trạng thái huấn luyện và kết quảtừng epoch
+
+===== PAGE 86 =====
+Đồán Công nghệphần mềm
+86
+4.4.7. Giao diện dashboard quản trịAdmin
+Giao diện dashboard quản trịtại /admin/overview cung cấp cái nhìn tổng quan vềtrạng
+thái hoạt động của hệthống, bao gồm sốlượng người dùng, dựán, dataset, thực
+nghiệm và các phiên huấn luyện. Màn hình này giúp quản trịviên theo dõi nhanh tình
+trạng vận hành chung của nền tảng.
+Input:
+Dữliệu thống kê tổng hợp từhệthống
+Output:
+Dashboard tổng quan của Admin
+Các chỉsốphục vụgiám sát hệthống
+
+===== PAGE 87 =====
+Đồán Công nghệphần mềm
+87
+4.4.8. Giao diện quản lý người dùng
+Giao diện quản lý người dùng tại /admin/users cho phép quản trịviên xem danh sách
+tài khoản, cập nhật vai trò và kiểm soát trạng thái hoạt động của người dùng. Đây là
+màn hình chính đểthực hiện phân quyền giữa Viewer, Researcher và Admin.
+Input:
+Thông tin tài khoản người dùng
+Thao tác cập nhật vai trò hoặc trạng thái
+Output:
+Danh sách người dùng
+Kết quảthay đổi thông tin hoặc phân quyền
+
+===== PAGE 88 =====
+Đồán Công nghệphần mềm
+88
+4.4.9. Giao diện quản lý phiên huấn luyện
+Giao diện quản lý phiên huấn luyện tại /admin/sessions hỗtrợquản trịviên theo dõi
+các session đang chạy, kiểm tra trạng thái và can thiệp khi cần thiết. Màn hình này
+giúp kiểm soát tốt hơn quá trình vận hành hệthống, đặc biệt trong các trường hợp cần
+dừng hoặc giám sát phiên huấn luyện.
+Input:
+Dữliệu vềcác phiên huấn luyện trong hệthống
+Output:
+Danh sách session và trạng thái tương ứng
+Thông tin phục vụgiám sát và quản trịvận hành
+
+===== PAGE 89 =====
+Đồán Công nghệphần mềm
+89
+4.2. Kết quảthực thi hệthống
+Sau khi hoàn thiện hệthống GNN-Insight, nhóm tiến hành thực thi và đánh giá các
+chức năng chính nhằm kiểm tra mức độđáp ứng yêu cầu đặt ra. Quá trình đánh giá
+được thực hiện trên môi trường triển khai thực tếthông qua các trường hợp kiểm thử
+tiêu biểu, tập trung vào tính chính xác, độổn định và khảnăng vận hành của các chức
+năng cốt lõi như quản lý dựán, quản lý dữliệu, huấn luyện mô hình, trực quan hóa
+thời gian thực, replay thực nghiệm và quản trịhệthống.
+Các chức năng được thực thi và đánh giá bao gồm:
+Đăng nhập hệthống
+Đăng ký tài khoản
+Quản lý dựán
+Quản lý dữliệu và phiên bản dataset
+Khởi tạo và điều khiển phiên huấn luyện
+Trực quan hóa dữliệu thời gian thực
+Replay và Resume thực nghiệm
+Quản trịhệthống
+
+===== PAGE 90 =====
+Đồán Công nghệphần mềm
+90
+4.2.1. Kết quảthực thi chức năng đăng nhập
+Chức năng đăng nhập cho phép người dùng nhập email hoặc tên đăng nhập cùng mật
+khẩu đểtruy cập vào hệthống GNN-Insight. Khi thông tin xác thực hợp lệ, hệthống
+cho phép truy cập vào giao diện chính. Ngược lại, nếu thông tin không chính xác hoặc
+bỏtrống các trường bắt buộc, hệthống sẽhiển thịthông báo lỗi tương ứng đểngười
+dùng kiểm tra và nhập lại.
+Bảng 4.1. Kết quảkiểm thửchức năng đăng nhập
+Mã test
+case
+Nội dung kiểm tra
+Kết quảmong
+đợi
+Kết quảthực tế
+Trạng
+thái
+TC_DN_01
+Đăng nhập với tài khoản hợp
+lệ
+Đăng nhập
+thành công
+Hệthống cho
+phép truy cập
+Pass
+TC_DN_02
+Đăng nhập sai mật khẩu
+Hiển thị
+thông báo lỗi
+Hệthống báo
+lỗi xác thực
+Pass
+TC_DN_03
+Đăng nhập với email hoặc
+tên đăng nhập không tồn tại
+Hiển thị
+thông báo lỗi
+Hệthống từ
+chối đăng nhập
+Pass
+TC_DN_04
+Bỏtrống email hoặc tên
+đăng nhập
+Yêu cầu nhập
+thông tin
+Hệthống hiển
+thịcảnh báo
+Pass
+TC_DN_05
+Bỏtrống mật khẩu
+Yêu cầu nhập
+mật khẩu
+Hệthống hiển
+thịcảnh báo
+Pass
+4.2.2. Kết quảthực thi chức năng đăng ký
+Chức năng đăng ký cho phép người dùng tạo tài khoản mới đểtruy cập hệthống
+GNN-Insight. Hệthống kiểm tra tính hợp lệcủa thông tin và ngăn chặn các trường hợp
+trùng lặp tài khoản trước khi tạo mới.
+Kết quảkiểm thửcho thấy chức năng hoạt động ổn định, xửlý chính xác các trường
+hợp hợp lệvà không hợp lệ, góp phần đảm bảo tính nhất quán của dữliệu người dùng.
+
+===== PAGE 91 =====
+Đồán Công nghệphần mềm
+91
+Bảng 4.2. Kết quảkiểm thửchức năng đăng ký
+Mã test
+case
+Nội dung kiểm tra
+Kết quảmong đợi
+Kết quảthực tế
+Trạng
+thái
+TC_DK_01
+Đăng ký với thông tin
+hợp lệ
+Tạo tài khoản
+thành công
+Hệthống tạo
+mới tài khoản
+Pass
+TC_DK_02
+Đăng ký với email đã
+tồn tại
+Hiển thịthông báo
+lỗi
+Hệthống từchối
+đăng ký
+Pass
+TC_DK_03
+Đăng ký với tên đăng
+nhập đã tồn tại
+Hiển thịthông báo
+lỗi
+Hệthống từchối
+đăng ký
+Pass
+TC_DK_04
+Bỏtrống thông tin bắt
+buộc
+Yêu cầu nhập đầy
+đủthông tin
+Hệthống hiển thị
+cảnh báo
+Pass
+TC_DK_05
+Nhập dữliệu không
+hợp lệ
+Hiển thịthông báo
+lỗi
+Hệthống từchối
+đăng ký
+Pass
+4.2.3. Kết quảthực thi chức năng quản lý dựán
+Chức năng quản lý dựán cho phép người dùng tạo mới, chỉnh sửa, xóa và lựa chọn dự
+án đang làm việc. Kết quảkiểm thửcho thấy hệthống xửlý đúng các thao tác cơ bản
+và cập nhật dữliệu dựán ổn định.
+Bảng 4.3. Kết quảkiểm thửchức năng quản lý dựán
+Mã test
+case
+Nội dung kiểm tra
+Kết quảmong đợi
+Kết quảthực tế
+Trạng
+thái
+TC_DA_01
+Tạo mới dựán với
+thông tin hợp lệ
+Tạo dựán thành
+công
+Hệthống thêm dựán
+vào danh sách
+Pass
+TC_DA_02
+Chỉnh sửa tên
+Thông tin dựán
+Hệthống lưu và hiển
+Pass
+
+===== PAGE 92 =====
+Đồán Công nghệphần mềm
+92
+Mã test
+case
+Nội dung kiểm tra
+Kết quảmong đợi
+Kết quảthực tế
+Trạng
+thái
+hoặc mô tảdựán
+được cập nhật
+thịdữliệu mới
+TC_DA_03
+Xóa dựán
+Dựán bịxóa khỏi
+hệthống
+Dựán không còn
+trong danh sách
+Pass
+TC_DA_04
+Tạo dựán khi bỏ
+trống thông tin bắt
+buộc
+Hiển thịthông
+báo lỗi
+Hệthống từchối lưu
+dữliệu
+Pass
+TC_DA_05
+Chọn một dựán
+đểlàm việc
+Dựán được đặt
+làm ngữcảnh hiện
+hành
+Workspace cập nhật
+đúng dựán đang chọn
+Pass
+4.2.4. Kết quảthực thi chức năng quản lý dữliệu và phiên bản dataset
+Chức năng này cho phép người dùng tải dữliệu lên, tạo phiên bản dataset mới, kiểm
+định dữliệu và quản lý vòng đời của từng phiên bản. Kết quảkiểm thửcho thấy hệ
+thống xửlý đúng các thao tác chính và hỗtrợtốt cho việc chuẩn bịdữliệu trước huấn
+luyện.
+Bảng 4.4. Kết quảkiểm thửchức năng quản lý dữliệu
+Mã test
+case
+Nội dung kiểm tra
+Kết quảmong
+đợi
+Kết quảthực tế
+Trạng
+thái
+TC_DS_01
+Tạo mới dataset với
+thông tin hợp lệ
+Dataset được tạo
+thành công
+Hệthống hiển thị
+dataset trong danh
+sách
+Pass
+TC_DS_02
+Tải tệp dữliệu hợp
+Tệp được tiếp
+Hệthống lưu dữliệu
+Pass
+
+===== PAGE 93 =====
+Đồán Công nghệphần mềm
+93
+Mã test
+case
+Nội dung kiểm tra
+Kết quảmong
+đợi
+Kết quảthực tế
+Trạng
+thái
+lệlên hệthống
+nhận thành công
+và cập nhật trạng thái
+TC_DS_03
+Tạo phiên bản
+dataset mới
+Version mới
+được tạo thành
+công
+Dataset version hiển
+thịđúng trong giao
+diện
+Pass
+TC_DS_04
+Kiểm định schema
+dữliệu hợp lệ
+Trảvềtrạng thái
+hợp lệ
+Hệthống xác nhận dữ
+liệu đạt yêu cầu
+Pass
+TC_DS_05
+Publish dataset
+version
+Phiên bản được
+phát hành
+Trạng thái version
+chuyển sang published
+Pass
+TC_DS_06
+Deprecate dataset
+version
+Phiên bản bịthu
+hồi
+Trạng thái version
+chuyển sang
+deprecated
+Pass
+TC_DS_07
+Tạo dataset khi
+thiếu thông tin bắt
+buộc
+Hiển thịthông
+báo lỗi
+Hệthống từchối lưu
+dữliệu
+Pass
+4.2.5. Kết quảthực thi chức năng khởi tạo và điều khiển phiên huấn luyện
+Chức năng này cho phép người dùng lựa chọn bài toán, mô hình và siêu tham sốđể
+khởi tạo phiên huấn luyện mới, đồng thời hỗtrợđiều khiển trạng thái phiên trong quá
+trình chạy. Kết quảkiểm thửcho thấy hệthống có thểtạo session, bắt đầu huấn luyện
+và xửlý thao tác dừng phiên đúng như mong đợi.
+Bảng 4.5. Kết quảkiểm thửchức năng điều khiển phiên huấn luyện
+Mã test
+case
+Nội dung kiểm tra
+Kết quảmong
+đợi
+Kết quảthực tế
+Trạng
+thái
+
+===== PAGE 94 =====
+Đồán Công nghệphần mềm
+94
+Mã test
+case
+Nội dung kiểm tra
+Kết quảmong
+đợi
+Kết quảthực tế
+Trạng
+thái
+TC_HL_01
+Khởi tạo phiên huấn
+luyện với cấu hình hợp
+lệ
+Session được
+tạo thành công
+Hệthống trảvề
+session và trạng
+thái khởi tạo
+Pass
+TC_HL_02
+Chọn mô hình GCN và
+bắt đầu huấn luyện
+Phiên huấn
+luyện được
+thực thi
+Hệthống chạy
+huấn luyện bình
+thường
+Pass
+TC_HL_03
+Chọn mô hình
+GraphSAGE và bắt đầu
+huấn luyện
+Phiên huấn
+luyện được
+thực thi
+Hệthống chạy
+huấn luyện bình
+thường
+Pass
+TC_HL_04
+Chọn mô hình GAT và
+bắt đầu huấn luyện
+Phiên huấn
+luyện được
+thực thi
+Hệthống chạy
+huấn luyện bình
+thường
+Pass
+TC_HL_05
+Khởi tạo phiên khi thiếu
+cấu hình bắt buộc
+Hiển thịthông
+báo lỗi
+Hệthống từchối
+tạo session
+Pass
+TC_HL_06
+Dừng phiên huấn luyện
+đang chạy
+Phiên được
+dừng đúng
+cách
+Hệthống cập nhật
+trạng thái dừng
+thành công
+Pass
+4.2.6. Kết quảthực thi chức năng trực quan hóa thời gian thực
+Chức năng trực quan hóa thời gian thực cho phép hệthống cập nhật đồng thời
+topology, embedding và metric trong quá trình huấn luyện thông qua WebSocket. Kết
+quảkiểm thửcho thấy dữliệu được truyền và hiển thịổn định theo từng epoch, hỗtrợ
+người dùng theo dõi tiến trình huấn luyện một cách trực quan.
+
+===== PAGE 95 =====
+Đồán Công nghệphần mềm
+95
+Bảng 4.6. Kết quảkiểm thửchức năng trực quan hóa thời gian thực
+Mã test
+case
+Nội dung kiểm tra
+Kết quảmong đợi
+Kết quảthực tế
+Trạng
+thái
+TC_TG_01
+Thiết lập kết nối
+WebSocket sau
+khi tạo session
+Kết nối thành
+công
+Frontend nhận được
+luồng dữliệu huấn
+luyện
+Pass
+TC_TG_02
+Nhận dữliệu
+topology theo
+từng epoch
+Topology được
+cập nhật liên tục
+Hệthống hiển thịđúng
+trạng thái đồthị
+Pass
+TC_TG_03
+Nhận dữliệu
+embedding theo
+từng epoch
+Embedding view
+được cập nhật
+Embedding view cập
+nhật chưa đồng bộở
+một sốepoch khi dữ
+liệu lớn.
+Fail
+TC_TG_04
+Nhận metric huấn
+luyện theo từng
+epoch
+Biểu đồmetric
+được cập nhật liên
+tục
+Metrics panel hiển thị
+đúng dữliệu
+Pass
+TC_TG_05
+Kết thúc huấn
+luyện
+Giao diện dừng
+cập nhật và lưu
+trạng thái cuối
+Hệthống hiển thịđúng
+trạng thái hoàn tất
+Pass
+4.2.7. Kết quảthực thi chức năng Replay và Resume thực nghiệm
+Chức năng Replay và Resume cho phép người dùng khôi phục trạng thái thí nghiệm đã
+lưu hoặc tiếp tục theo dõi một phiên huấn luyện sau khi bịgián đoạn kết nối. Kết quả
+kiểm thửcho thấy hệthống có thểtái hiện đúng dữliệu tại từng epoch và hỗtrợkhôi
+phục trạng thái sửdụng một cách nhất quán.
+
+===== PAGE 96 =====
+Đồán Công nghệphần mềm
+96
+Bảng 4.7. Kết quảkiểm thửchức năng Replay và Resume thực nghiệm
+Mã test
+case
+Nội dung
+kiểm tra
+Kết quảmong
+đợi
+Kết quảthực tế
+Trạng
+thái
+TC_RP_01
+Mởreplay cho
+thực nghiệm
+đã lưu
+Dữliệu replay
+được tải thành
+công
+Hệthống khôi phục đúng lịch
+sửthực nghiệm
+Pass
+TC_RP_02
+Tua đến một
+epoch cụthể
+Giao diện hiển
+thịđúng trạng
+thái epoch đó
+Topology, embedding và
+metric đồng bộchính xác
+Pass
+TC_RP_03
+Tua tiến hoặc
+tua lùi nhiều
+lần
+Dữliệu được
+cập nhật đúng
+theo timeline
+Hệthống phát lại ổn định
+Pass
+TC_RP_04
+Resume một
+phiên sau gián
+đoạn kết nối
+Trạng thái
+phiên được
+khôi phục
+Hệthống khôi phục được
+session nhưng chưa đồng bộ
+lại đầy đủtrạng thái hiển thị
+trong một sốtrường hợp
+Fail
+TC_RP_05
+Replay thực
+nghiệm có
+nhiều epoch
+Toàn bộdữ
+liệu được phát
+lại đầy đủ
+Hệthống không mất snapshot
+trong quá trình phát lại
+Pass
+4.2.8. Kết quảthực thi chức năng quản trịhệthống
+Chức năng quản trịhệthống hỗtrợAdmin theo dõi tổng quan nền tảng, quản lý người
+dùng và giám sát các phiên huấn luyện. Kết quảkiểm thửcho thấy các chức năng quản
+trịchính hoạt động đúng, hỗtrợtốt cho việc vận hành và kiểm soát hệthống.
+
+===== PAGE 97 =====
+Đồán Công nghệphần mềm
+97
+Bảng 4.8. Kết quảkiểm thửchức năng quản trịhệthống
+Mã test
+case
+Nội dung kiểm tra
+Kết quảmong
+đợi
+Kết quảthực tế
+Trạng
+thái
+TC_QT_01
+Xem dashboard quản
+trị
+Hiển thịthông
+tin tổng quan hệ
+thống
+Dashboard tải và
+hiển thịđúng dữliệu
+Pass
+TC_QT_02
+Xem danh sách người
+dùng
+Hiển thịđầy đủ
+các tài khoản
+Hệthống trảvềđúng
+danh sách người
+dùng
+Pass
+TC_QT_03
+Tìm kiếm/lọc người
+dùng
+Hiển thịđúng
+các tài khoản
+phù hợp
+Kết quảlọc hiển thị
+chính xác
+Pass
+TC_QT_04
+Tạo mới tài khoản
+người dùng từgiao
+diện quản trị
+Tài khoản mới
+được tạo thành
+công
+Hệthống thêm
+người dùng vào danh
+sách
+Pass
+TC_QT_05
+Cập nhật vai trò
+người dùng
+Vai trò được
+thay đổi thành
+công
+Hệthống lưu thay
+đổi đúng dữliệu
+Pass
+TC_QT_06
+Cập nhật trạng thái
+hoạt động của người
+dùng
+Trạng thái tài
+khoản được cập
+nhật
+Hệthống lưu thay
+đổi thành công
+Pass
+TC_QT_07
+Xem danh sách dựán
+từgiao diện quản trị
+Hiển thịđầy đủ
+các project trong
+hệthống
+Dữliệu project hiển
+thịđúng
+Pass
+TC_QT_08
+Xem danh sách
+dataset từgiao diện
+quản trị
+Hiển thịđầy đủ
+các dataset
+Dữliệu dataset hiển
+thịđúng
+Pass
+
+===== PAGE 98 =====
+Đồán Công nghệphần mềm
+98
+Mã test
+case
+Nội dung kiểm tra
+Kết quảmong
+đợi
+Kết quảthực tế
+Trạng
+thái
+TC_QT_09
+Xem danh sách thực
+nghiệm từgiao diện
+quản trị
+Hiển thịđầy đủ
+các experiment
+Dữliệu experiment
+hiển thịđúng
+Pass
+TC_QT_10
+Xem danh sách phiên
+huấn luyện
+Hiển thịđúng
+trạng thái
+session
+Dữliệu session hiển
+thịđầy đủ
+Pass
+TC_QT_11
+Dừng một phiên huấn
+luyện từgiao diện
+quản trị
+Phiên được
+dừng thành công
+Hệthống cập nhật
+đúng trạng thái
+phiên
+Pass
+TC_QT_12
+Retry một phiên huấn
+luyện từgiao diện
+quản trị
+Phiên được khởi
+tạo lại đúng yêu
+cầu
+Hệthống xửlý retry
+thành công
+Pass
+TC_QT_13
+Thực thi retention
+compaction
+Snapshot cũ
+được dọn dẹp
+theo chính sách
+Hệthống thực thi
+compaction nhưng
+chưa xóa đầy đủmột
+sốsnapshot theo
+chính sác
+Fail
+TC_QT_14
+Xem nhật ký hệthống
+(audit log)
+Hiển thịđầy đủ
+lịch sửthao tác
+quản trị
+Audit log tải và hiển
+thịđúng dữliệu
+Pass
+4.2.9. Tổng kết kết quảthực thi
+Sau khi kiểm thửcác chức năng chính của hệthống, nhóm tiến hành tổng hợp số
+lượng test case, sốtrường hợp đạt, sốtrường hợp chưa đạt và tỷlệhoàn thành tương
+ứng. Kết quảtổng hợp cho thấy phần lớn các chức năng của hệthống GNN-Insight
+
+===== PAGE 99 =====
+Đồán Công nghệphần mềm
+99
+hoạt động ổn định, trong khi một sốchức năng phức tạp như trực quan hóa thời gian
+thực và replay thực nghiệm vẫn còn một sốtình huống cần tiếp tục hoàn thiện.
+Bảng 4.9. Tổng kết kết quảthực thi các chức năng chính
+Nhóm chức năng
+Tổng sốtest case
+Pass
+Fail
+TỷlệPass
+Đăng nhập
+5
+5
+0
+100%
+Đăng ký
+5
+5
+0
+100%
+Quản lý dựán
+5
+5
+0
+100%
+Quản lý dữliệu và phiên bản dataset
+7
+7
+0
+100%
+Khởi tạo và điều khiển phiên huấn luyện
+6
+6
+0
+100%
+Trực quan hóa thời gian thực
+5
+4
+1
+80%
+Replay và Resume thực nghiệm
+5
+4
+1
+80%
+Quản trịhệthống
+14
+13
+1
+92.86%
+Tổng cộng
+52
+49
+3
+94.23%
+4.3. Kết quảtrực quan hóa và phân tích GNN
+Hệthống GNN-Insight hỗtrợnhiều bài toán học đồthịkhác nhau, trong đó mỗi bài
+toán có đặc trưng dữliệu, chỉsốđánh giá và cách trực quan hóa riêng. Thay vì sửdụng
+một khuôn hiển thịchung cho toàn bộtác vụ, hệthống tổchức các thành phần trực
+quan hóa theo hướng thích ứng với từng loại bài toán, bao gồm topology view,
+embedding view, metrics panel và các thành phần phân tích chuyên biệt. Trong phạm
+vi luận văn, phần này trình bày bốn bài toán tiêu biểu nhằm minh họa khảnăng trực
+quan hóa và hỗtrợphân tích của hệthống.
+
+===== PAGE 100 =====
+Đồán Công nghệphần mềm
+100
+4.3.1. Node Classification
+a) Giao diện trực quan hóa
+Đối với bài toán phân loại nút, giao diện trực quan hóa tập trung vào việc biểu diễn
+trạng thái dựđoán của từng nút trên chính cấu trúc đồthị. Hệthống cho phép người
+dùng quan sát đồng thời topology, embedding và các chỉsốhuấn luyện, từđó theo dõi
+cách mô hình dần phân tách các lớp nút theo từng epoch. Đây là một trong những bài
+toán thểhiện rõ nhất thếmạnh của GNN-Insight trong việc kết hợp giữa huấn luyện và
+giải thích trực quan.
+b) Kết quảTopology View
+Ởbài toán này, Topology View hiển thịrõ các nút, các cạnh liên kết và trạng thái phân
+lớp dựđoán trên đồthị. Màu sắc nút được sửdụng đểphản ánh nhãn hoặc trạng thái
+dựđoán, đồng thời người dùng có thểchọn một nút cụthểđểquan sát ngữcảnh lân
+cận và sựthay đổi dựđoán trong quá trình huấn luyện. Kết quảtrực quan hóa cho thấy
+
+===== PAGE 101 =====
+Đồán Công nghệphần mềm
+101
+Topology View hỗtrợtốt việc quan sát phân bốnhãn và nhận diện các nút dễbịnhầm
+lẫn.
+c) Kết quảEmbedding View
+Embedding View cho phép biểu diễn các vector đặc trưng học được của các nút trong
+không gian hai chiều. Qua các epoch, có thểquan sát quá trình các nút dần hình thành
+cụm theo nhãn, từtrạng thái phân bốlẫn lộn ban đầu đến khi có sựtách lớp rõ hơn.
+Thành phần này hỗtrợhiệu quảcho việc đánh giá chất lượng biểu diễn mà mô hình
+học được ởmức nút.
+d) Kết quảMetrics Panel
+Metrics Panel trong bài toán phân loại nút hiển thịcác chỉsốcơ bản như loss, accuracy,
+F1 và một sốthông tin chẩn đoán bổsung. Việc cập nhật liên tục theo epoch giúp
+người dùng đối chiếu trực tiếp giữa xu hướng hội tụcủa metric và sựthay đổi trong
+topology hoặc embedding. Nhờđó, việc đánh giá mô hình không chỉdừng ởsốliệu
+cuối cùng mà còn dựa trên toàn bộtiến trình học.
+
+===== PAGE 102 =====
+Đồán Công nghệphần mềm
+102
+4.3.2. Graph Classification
+a) Giao diện trực quan hóa
+Đối với bài toán phân loại đồthị, giao diện được tổchức theo hướng nhấn mạnh vào
+đơn vịdữliệu là từng đồthịthay vì từng nút riêng lẻ. Hệthống hỗtrợhiển thịtập các
+đồthị, nhãn dựđoán mức đồthị, xác suất phân lớp và embedding tương ứng. Điều này
+
+===== PAGE 103 =====
+Đồán Công nghệphần mềm
+103
+giúp người dùng đánh giá được cách mô hình ánh xạtừng đồthịvềkhông gian biểu
+diễn và đưa ra dựđoán cuối cùng.
+b) Kết quảTopology View
+Topology View trong bài toán phân loại đồthịkhông chỉđóng vai trò hiển thịcấu trúc
+bên trong của một đồthịcụthểmà còn hỗtrợquan sát các thành phần có ảnh hưởng
+đến quyết định phân loại. Người dùng có thểchọn một đồthịđểxem chi tiết cấu trúc,
+từđó đối chiếu giữa đặc trưng hình thái của đồthịvà kết quảdựđoán do mô hình trả
+về.
+c) Kết quảEmbedding View
+Embedding View ởbài toán này thểhiện các graph embedding trong không gian hai
+chiều, trong đó mỗi điểm tương ứng với một đồthị. Kết quảtrực quan hóa cho thấy
+các đồthịthuộc cùng lớp có xu hướng nằm gần nhau hơn sau quá trình huấn luyện.
+Điều này góp phần minh họa trực quan cho khảnăng học biểu diễn mức đồthịcủa mô
+hình.
+d) Kết quảMetrics Panel
+Metrics Panel trong bài toán phân loại đồthịhiển thịcác chỉsốnhư loss, accuracy và
+các thành phần phân tích nhầm lẫn hoặc độtin cậy của dựđoán. Khi kết hợp với graph
+embedding, người dùng có thểvừa đánh giá hiệu quảphân loại bằng sốliệu, vừa hiểu
+rõ hơn cách mô hình tổchức dữliệu trong không gian biểu diễn.
+4.3.3. Community Detection
+a) Giao diện trực quan hóa
+Bài toán phát hiện cộng đồng là một trong những tác vụcó giá trịtrực quan cao nhất
+trong hệthống. Giao diện được thiết kếđểngười dùng có thểtheo dõi các cộng đồng
+được hình thành trên đồthị, đồng thời phân tích các nút cầu nối, mức độổn định của
+cộng đồng và diễn biến phân cụm qua quá trình huấn luyện. Đây là bài toán thểhiện rõ
+tính “giải thích được” của nền tảng.
+b) Kết quảTopology View
+Topology View cho bài toán phát hiện cộng đồng sửdụng màu sắc đểphân biệt các
+cộng đồng khác nhau trên đồthị. Ngoài việc quan sát ranh giới phân cụm, người dùng
+
+===== PAGE 104 =====
+Đồán Công nghệphần mềm
+104
+còn có thểtheo dõi các nút đóng vai trò cầu nối giữa nhiều cộng đồng. Kết quảtrực
+quan hóa cho thấy thành phần này hỗtrợtốt việc nhận diện cấu trúc cộng đồng và các
+vùng chuyển tiếp quan trọng trong đồthị.
+c) Kết quảEmbedding View
+Embedding View cho phép quan sát sựphân tách của các nút theo cộng đồng trong
+không gian biểu diễn. Qua các epoch, các cụm tương ứng với cộng đồng trởnên rõ
+ràng hơn, đồng thời một sốnút nằm ởvùng biên có thểđược nhận diện như các bridge
+nodes hoặc nút dễdịch chuyển cộng đồng. Thành phần này bổsung góc nhìn rất hữu
+ích bên cạnh topology gốc.
+d) Kết quảMetrics Panel
+Metrics Panel trong bài toán phát hiện cộng đồng tập trung vào các chỉsốnhư
+modularity, stability và các thông tin chẩn đoán liên quan đến độbền của cộng đồng.
+So với các task phân loại truyền thống, nhóm metric này mang ý nghĩa cấu trúc nhiều
+hơn. Khi kết hợp với Topology View và Community Inspector, người dùng có thể
+đánh giá không chỉ“đúng/sai” mà còn đánh giá chất lượng phân cụm theo góc độtổ
+chức cộng đồng.
+4.3.4. Graph Generation
+a) Giao diện trực quan hóa
+Đối với bài toán sinh đồthị, giao diện trực quan hóa tập trung vào việc hiển thịcác
+graph được mô hình sinh ra và so sánh chúng với phân phối nguồn. Đây là tác vụcó
+đặc điểm khác biệt rõ so với các bài toán dựđoán, vì đầu ra không còn là nhãn hay xác
+suất mà là một cấu trúc đồthịmới. Giao diện của hệthống được tổchức đểngười
+dùng có thểđánh giá đồng thời tính hợp lệ, mức độđa dạng và chất lượng của graph
+sinh ra.
+b) Kết quảTopology View
+Trong bài toán này, Topology View được sửdụng đểhiển thịtrực tiếp các đồthịđược
+sinh ra, cho phép người dùng quan sát hình thái, sốlượng nút, sốlượng cạnh và một số
+đặc điểm cấu trúc cơ bản. Kết quảtrực quan hóa cho thấy hệthống có thểhỗtrợso
+
+===== PAGE 105 =====
+Đồán Công nghệphần mềm
+105
+sánh trực tiếp giữa graph nguồn và graph sinh ra, từđó giúp người dùng đánh giá mức
+độhợp lý của đầu ra mô hình.
+c) Kết quảEmbedding View
+Embedding hoặc latent view trong bài toán sinh đồthịhỗtrợquan sát sựphân bốcủa
+các mẫu sinh ra trong không gian biểu diễn. Thành phần này đặc biệt hữu ích khi
+người dùng muốn phân tích mức độphân tán, sựlặp lại hoặc hiện tượng mô hình chỉ
+ghi nhớdữliệu nguồn thay vì thực sựsinh ra các cấu trúc mới. Đây là lớp trực quan
+hóa quan trọng đểđánh giá chất lượng mô hình sinh.
+d) Kết quảMetrics Panel
+Metrics Panel trong bài toán sinh đồthịhiển thịcác chỉsốnhư validity, uniqueness,
+novelty, reconstruction loss và một sốtín hiệu chẩn đoán liên quan đến memorization
+hoặc invalidity reasons. Kết quảthực thi cho thấy panel này cung cấp nền tảng định
+lượng cần thiết đểngười dùng không chỉnhìn graph sinh ra bằng mắt thường mà còn
+đánh giá được chất lượng đầu ra một cách có hệthống.
+Nhận xét chung cho phần trực quan hóa
+Kết quảtriển khai cho thấy hệthống GNN-Insight có khảnăng trực quan hóa tốt cho
+nhiều dạng bài toán học đồthịkhác nhau. Mỗi bài toán đều được hỗtrợbởi sựkết hợp
+giữa topology view, embedding view và metrics panel, đồng thời có các lớp phân tích
+bổsung phù hợp với bản chất của từng tác vụ. Điều này giúp hệthống không chỉđóng
+vai trò là môi trường huấn luyện mà còn là công cụhỗtrợquan sát, giải thích và phân
+tích hành vi mô hình GNN trong quá trình nghiên cứu.
+4.4. Kết quảchức năng AI hỗtrợphân tích và so sánh mô hình
+Chức năng AI trong GNN-Insight được tích hợp nhằm hỗtrợngười dùng diễn giải kết
+quảhuấn luyện và so sánh nhiều mô hình trên cùng một bài toán. Thay vì chỉhiển thị
+các chỉsốđịnh lượng như loss, accuracy hay F1, hệthống còn tổng hợp dữliệu huấn
+luyện và sinh ra các nhận định ngôn ngữtựnhiên, các chẩn đoán vềhành vi mô hình,
+các mẫu lỗi và các hồsơ mô hình phục vụphân tích sâu hơn. Kết quảtriển khai cho
+thấy chức năng này góp phần tăng tính dễhiểu và giá trịsửdụng của nền tảng trong
+bối cảnh nghiên cứu GNN.
+
+===== PAGE 106 =====
+Đồán Công nghệphần mềm
+106
+4.4.1. Kết quảAI phân tích thực nghiệm đơn
+Đối với một thí nghiệm đơn lẻ, AI Analyst hỗtrợsinh ra hai lớp nội dung chính là
+khuyến nghịvà ghi chú nghiên cứu. Ởgiao diện khuyến nghị, hệthống tổng hợp
+nhanh tình trạng huấn luyện, xác định vấn đềưu tiên và đưa ra gợi ý điều chỉnh siêu
+tham sốnhư dropout hoặc weight decay. Ởgiao diện ghi chú nghiên cứu, hệthống
+diễn giải lại quá trình huấn luyện dưới dạng các mục tóm tắt, quan sát, nguyên nhân
+khảdĩ và bối cảnh dữliệu. Cách trình bày này giúp người dùng nhanh chóng nắm
+được các vấn đềnổi bật của thí nghiệm mà không phải tựphân tích toàn bộsốliệu thô.
+Hình 4.x. Giao diện AI Analyst với chếđộkhuyến nghị.
+Hình 4.x. Giao diện AI Analyst với chếđộghi chú nghiên cứu.
+
+===== PAGE 107 =====
+Đồán Công nghệphần mềm
+107
+4.4.2. Kết quảAI so sánh mô hình GCN, GAT và GraphSAGE
+Khi người dùng chọn nhiều phiên huấn luyện thuộc cùng một bài toán, hệthống kích
+hoạt chếđộphân tích chéo giữa các mô hình. Kết quảAI so sánh thểhiện mô hình nào
+hội tụnhanh hơn, mô hình nào ổn định hơn và mô hình nào phù hợp hơn với đặc trưng
+dữliệu đang xét. Trong ví dụminh họa, hệthống đưa ra kết luận tổng quát rằng GAT
+đạt cân bằng tốt giữa độchính xác validation và độổn định huấn luyện, trong khi GCN
+thểhiện đường học ổn định hơn ởvai trò baseline. Chức năng này giúp việc so sánh
+mô hình trởnên trực quan và có tính diễn giải cao hơn so với cách chỉđối chiếu bảng
+metric thông thường.
+Hình 4.x. Giao diện AI so sánh nhiều mô hình trên cùng một bài toán.
+Hình 4.x. Kết quảtóm tắt phân tích chéo giữa GCN, GAT và GraphSAGE.
+4.4.3. Kết quảtrực quan hóa so sánh đa mô hình
+Một thành phần nổi bật của chức năng AI là phần trực quan hóa so sánh đa mô hình.
+Radar chart được sửdụng đểso sánh đồng thời nhiều tiêu chí như tốc độhội tụ, độổn
+định, nguy cơ quá khớp, rủi ro over-smoothing và mức độphù hợp với dữliệu. Dưới
+
+===== PAGE 108 =====
+Đồán Công nghệphần mềm
+108
+biểu đồradar, hệthống còn hiển thịcác thẻtóm tắt cho từng mô hình, cho phép người
+dùng xem nhanh các đặc trưng quan trọng mà không cần đọc toàn bộphần diễn giải.
+Cách trực quan hóa này phù hợp với nhu cầu đối chiếu nhiều mô hình trong cùng một
+thí nghiệm.
+Hình 4.x. Radar so sánh các mô hình GCN, GAT và GraphSAGE.
+4.4.4. Kết quảphân tích lỗi và mẫu thất bại
+Ngoài việc so sánh mức hiệu năng tổng quát, hệthống còn hỗtrợphân tích các mẫu lỗi
+của từng mô hình thông qua ma trận mẫu lỗi. Thành phần này cho phép người dùng
+quan sát các nhóm vấn đềnhư over-smoothing, quá khớp, lỗi vùng biên, độổn định,
+chất lượng embedding hoặc một sốhiện tượng bất thường khác. Kết quảminh họa cho
+thấy hệthống có thểđánh dấu trực tiếp mô hình nào đang gặp vấn đềởtiêu chí nào, từ
+đó giúp người dùng xác định rủi ro chính thay vì chỉsuy luận từmetric tổng hợp.
+
+===== PAGE 109 =====
+Đồán Công nghệphần mềm
+109
+Hình 4.x. Ma trận mẫu lỗi trong chức năng AI Analyst.
+4.4.5. Kết quảhồsơ phân tích mô hình
+Hệthống cũng hỗtrợsinh hồsơ phân tích riêng cho từng mô hình dưới dạng model
+profile. Với mỗi kiến trúc như GCN hoặc GAT, AI Analyst tổng hợp ba nhóm nội
+dung gồm điểm mạnh, điểm yếu và bối cảnh phù hợp nhất. Đây là lớp diễn giải có giá
+trịthực tiễn cao, vì nó chuyển các đặc trưng kỹthuật của mô hình sang ngôn ngữgần
+với quyết định sửdụng hơn, chẳng hạn mô hình phù hợp với đồthịhomophily cao, đồ
+thịheterophily hay các tác vụcần attention-based explanation.
+
+===== PAGE 110 =====
+Đồán Công nghệphần mềm
+110
+Hình 4.x. Hồsơ phân tích mô hình GCN và GAT.
+Hình 4.x. Giao diện tổng hợp model profile trong AI Analyst.
+4.4.6. Nhận xét vềchức năng AI hỗtrợphân tích
+Kết quảtriển khai cho thấy chức năng AI hỗtrợphân tích và so sánh mô hình mang lại
+giá trịrõ rệt trong quá trình nghiên cứu GNN. Thay vì chỉdựa trên các chỉsốđịnh
+lượng rời rạc, người dùng có thểtiếp cận thêm lớp diễn giải ngữnghĩa, nhận diện
+nhanh các rủi ro huấn luyện và so sánh nhiều mô hình một cách trực quan hơn. Dù bản
+chất của thành phần này là tích hợp dịch vụAI thông qua API, kết quảsửdụng thực tế
+cho thấy đây là một phần mởrộng hữu ích, góp phần nâng cao khảnăng phân tích và
+ra quyết định trong hệthống GNN-Insight.
+
+===== PAGE 111 =====
+Đồán Công nghệphần mềm
+111
+4.5. Nhận xét và đánh giá
+4.5.1. Mức độhoàn thành yêu cầu chức năng
+Qua quá trình triển khai và kiểm thử, hệthống GNN-Insight đã hiện thực đầy đủcác
+chức năng cốt lõi được đềra trong giai đoạn phân tích yêu cầu, bao gồm: quản lý dự
+án và tập dữliệu, khởi tạo và giám sát phiên huấn luyện, trực quan hóa thời gian thực,
+replay thực nghiệm, quản trịhệthống và phân tích hỗtrợbằng AI. Ngoài việc đảm bảo
+quy trình huấn luyện mô hình GNN, hệthống còn tích hợp các công cụtheo dõi, so
+sánh và quản lý thực nghiệm theo hướng có cấu trúc — đây là điểm khác biệt so với
+các công cụhuấn luyện đơn thuần.
+4.5.2. Tính khảthi kỹthuật
+Vềnền tảng công nghệ, các lựa chọn kỹthuật được thực hiện có chủđích và phù hợp
+với đặc thù của bài toán học trên dữliệu đồthị. Backend xây dựng trên FastAPI kết
+hợp PyTorch Geometric cho phép xửlý luồng dữliệu huấn luyện theo thời gian thực
+với độtrễthấp. Giao diện người dùng được phát triển bằng React, đảm bảo tính phản
+hồi và khảnăng tương tác cao trong các tác vụtrực quan hóa động. Vềlưu trữ, kiến
+trúc đa tầng kết hợp MySQL (metadata quan hệ), MongoDB (snapshot huấn luyện
+dạng document), Redis (bộnhớđệm và pub/sub) và Blob Storage (dữliệu đồthịkích
+thước lớn) tạo nên một nền tảng lưu trữlinh hoạt, có khảnăng xửlý song song nhiều
+loại dữliệu với đặc tính truy cập khác nhau.
+4.5.3. Tính khảthi vận hành
+Từgóc độngười dùng cuối, hệthống được tổchức theo hai không gian làm việc tách
+biệt — Researcher và Admin — giúp phân tách rõ ràng quyền hạn và luồng thao tác.
+Giao diện được thiết kếtheo hướng hỗtrợtoàn bộvòng đời thực nghiệm: từcấu hình,
+thực thi, quan sát trực tiếp đến hồi tưởng lại quá trình huấn luyện và phân tích kết quả.
+Cách tiếp cận này giúp giảm đáng kểchi phí chuyển đổi công cụvà tăng tính liên tục
+trong quy trình nghiên cứu.
+4.5.4. Khảnăng mởrộng
+Hệthống được thiết kếtheo kiến trúc mô-đun ởcảtầng frontend lẫn backend, trong đó
+các thành phần như bộbài toán GNN, panel trực quan hóa, API phân tích và module
+
+===== PAGE 112 =====
+Đồán Công nghệphần mềm
+112
+quản trịđược tổchức tương đối độc lập vềphụthuộc. Thiết kếnày tạo điều kiện thuận
+lợi đểbổsung mô hình mới, tích hợp metric đánh giá bổsung hoặc mởrộng các chức
+năng phân tích mà không yêu cầu tái cấu trúc toàn hệthống. GNN-Insight do đó không
+chỉđóng vai trò là một nguyên mẫu chức năng mà còn có tiềm năng phát triển thành
+nền tảng nghiên cứu toàn diện hơn trong các giai đoạn tiếp theo.
+4.5.5. Đánh giá theo từng mô hình GNN
+Việc hỗtrợđồng thời nhiều kiến trúc GNN trong cùng một môi trường thực nghiệm
+cho phép người dùng thực hiện so sánh trực tiếp vềtốc độhội tụ, độổn định huấn
+luyện và chất lượng biểu diễn. Kết hợp với chức năng phân tích hỗtrợAI, hệthống
+giúp làm rõ sựkhác biệt giữa các mô hình một cách có hệthống, hỗtrợngười dùng
+đưa ra quyết định lựa chọn cấu hình phù hợp với từng bài toán cụthể.
+a) GCN
+GCN thểhiện ưu thếởtính đơn giản, ổn định và phù hợp đểlàm baseline so sánh. Mô
+hình cho thấy tốc độhội tụtốt trên các đồthịcó cấu trúc đồng nhất, đồng thời dễtích
+hợp và tái sửdụng trong nhiều cấu hình thực nghiệm khác nhau. Hạn chếchính của
+GCN nằm ởhiện tượng over-smoothing khi tăng sốtầng, cũng như khảnăng biểu diễn
+hạn chếtrên các đồthịcó quan hệphức tạp hoặc không đồng nhất.
+b) GraphSAGE
+GraphSAGE đạt được sựcân bằng tốt giữa khảnăng biểu diễn và tính mởrộng. Cơ
+chếlấy mẫu lân cận ngẫu nhiên giúp mô hình hoạt động hiệu quảtrên các đồthịlớn và
+thích nghi tốt với bài toán học quy nạp (inductive learning), nơi các nút mới có thể
+xuất hiện ởthời điểm suy luận. Trong môi trường GNN-Insight, GraphSAGE tương
+thích tốt với các thành phần trực quan hóa và phân tích quá trình huấn luyện.
+c) GAT
+GAT nổi bật nhờcơ chếattention cho phép mô hình học trọng sốtầm quan trọng của
+từng lân cận một cách thích nghi, từđó hỗtrợtốt hơn cho các yêu cầu giải thích và
+phân tích quan hệgiữa các nút. Kết quảtrực quan hóa của GAT trong hệthống thường
+mang giá trịdiễn giải cao hơn, đặc biệt trong các bài toán đòi hỏi phân tích cấu trúc đồ
+thịchi tiết. Tuy nhiên, GAT có chi phí tính toán cao hơn GCN và GraphSAGE, đồng
+
+===== PAGE 113 =====
+Đồán Công nghệphần mềm
+113
+thời độổn định huấn luyện có thểnhạy cảm hơn với các siêu tham sốnhư sốlượng
+attention head và learning rate.
+4.5.6. Hạn chếhiện tại
+Bên cạnh những kết quảđạt được, hệthống vẫn tồn tại một sốhạn chếcần được ghi
+nhận. Thứnhất, hiệu năng trực quan hóa và đồng bộthời gian thực có thểsuy giảm khi
+làm việc với các đồthịcó kích thước lớn hoặc khi sốlượng snapshot tích lũy vượt
+ngưỡng nhất định, do giới hạn băng thông WebSocket và chi phí render phía client.
+Thứhai, một sốchức năng như replay thực nghiệm và phân tích AI phụthuộc vào tính
+đầy đủcủa dữliệu được ghi nhận trong quá trình huấn luyện, cũng như tính ổn định
+của các dịch vụtích hợp bên ngoài. Thứba, việc hỗtrợđồng thời nhiều loại bài toán
+và kiến trúc mô hình làm tăng độphức tạp trong quản lý trạng thái hệthống, đặt ra yêu
+cầu cao hơn vềkiểm thửvà bảo trì liên tục.
+4.5.7. Nhận xét tổng quát
+Tổng thể, GNN-Insight đã được triển khai thành công như một nền tảng tích hợp hỗ
+trợtoàn bộvòng đời thực nghiệm GNN — từcấu hình và thực thi đến quan sát, phân
+tích và lưu trữkết quả. Hệthống không chỉđáp ứng các yêu cầu chức năng cơ bản mà
+còn thểhiện giá trịthực tiễn rõ nét thông qua các tính năng trực quan hóa thời gian
+thực, replay thực nghiệm và phân tích hỗtrợAI. Những kết quảnày khẳng định tính
+khảthi của đềtài và tạo nền tảng vững chắc đểtiếp tục hoàn thiện hệthống trong các
+hướng phát triển tiếp theo
+5. KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+5.1. Kết luận
+Sau quá trình nghiên cứu, phân tích, thiết kế, xây dựng và đánh giá, nhóm đã hoàn
+thành hệthống GNN-Insight với mục tiêu hỗtrợtrực quan hóa và phân tích thí
+nghiệm Graph Neural Network trên nền tảng web. Hệthống được xây dựng nhằm giải
+quyết bài toán theo dõi và diễn giải quá trình huấn luyện GNN theo hướng trực quan,
+có tổchức và dễkhai thác hơn so với cách làm truyền thống chỉdựa trên log, script rời
+rạc hoặc notebook thí nghiệm.
+
+===== PAGE 114 =====
+Đồán Công nghệphần mềm
+114
+- Vềgiai đoạn khảo sát và phân tích yêu cầu: Nhóm đã tiến hành khảo sát các nhu
+cầu thực tếtrong quá trình nghiên cứu và thực nghiệm GNN, từđó xác định các yêu
+cầu cốt lõi của hệthống như quản lý tài khoản, quản lý dựán, quản lý dataset và phiên
+bản dữliệu, khởi tạo phiên huấn luyện, theo dõi thời gian thực, replay thực nghiệm,
+quản trịhệthống và hỗtrợphân tích bằng AI. Các yêu cầu này được hình thành trên
+cơ sởbám sát quy trình nghiên cứu mô hình GNN trong thực tế, đồng thời hướng đến
+việc xây dựng một môi trường làm việc tập trung cho cảhuấn luyện, giám sát và đánh
+giá.
+- Vềgiai đoạn phân tích và thiết kếhệthống: Nhóm đã xây dựng được mô hình
+phân tích chức năng, các use case chính, luồng xửlý nghiệp vụ, thiết kếdữliệu và
+kiến trúc tổng thểcủa hệthống. Cấu trúc hệthống được tổchức theo mô hình client-
+server, trong đó frontend đảm nhiệm giao diện trực quan và tương tác người dùng,
+backend phụtrách nghiệp vụ, điều phối huấn luyện và cung cấp API/WebSocket, còn
+tầng lưu trữđược thiết kếtheo hướng lai nhằm phù hợp với metadata, snapshot huấn
+luyện và dữliệu đồthịcó kích thước lớn. Việc thiết kếtheo hướng mô-đun giúp hệ
+thống vừa rõ ràng vềmặt chức năng, vừa thuận lợi cho mởrộng vềsau.
+- Vềgiai đoạn triển khai xây dựng: Hệthống đã được hiện thực thành công bằng các
+công nghệphù hợp với bài toán GNN. Backend sửdụng FastAPI kết hợp với PyTorch
+Geometric đểtriển khai các luồng huấn luyện và phát dữliệu thời gian thực. Frontend
+sửdụng React đểxây dựng các không gian làm việc cho Researcher và Admin, đồng
+thời tích hợp các thành phần trực quan hóa như topology view, embedding view,
+metrics panel và các giao diện quản trị. Bên cạnh đó, hệthống còn hỗtrợcác chức
+năng bổsung như replay thực nghiệm, báo cáo PDF và AI Analyst đểtăng giá trịsử
+dụng trong nghiên cứu.
+- Vềgiai đoạn kiểm thửvà đánh giá: Kết quảthực thi cho thấy phần lớn các chức
+năng chính của hệthống hoạt động ổn định và đáp ứng tốt yêu cầu đặt ra. Hệthống đã
+hỗtrợđược các bài toán GNN tiêu biểu, cho phép quan sát trực tiếp quá trình huấn
+luyện thông qua topology, embedding và metric theo từng epoch. Ngoài ra, chức năng
+AI hỗtrợphân tích và so sánh mô hình cũng góp phần nâng cao khảnăng diễn giải kết
+
+===== PAGE 115 =====
+Đồán Công nghệphần mềm
+115
+quả, giúp người dùng không chỉxem sốliệu mà còn có thêm nhận định ởmức ngữ
+nghĩa.
+Tổng thể, GNN-Insight đã đạt được mục tiêu chính của đềtài là xây dựng một nền
+tảng hỗtrợhuấn luyện, trực quan hóa và phân tích thí nghiệm GNN theo hướng trực
+quan, có tổchức và có khảnăng mởrộng. Kết quảnày cho thấy đềtài có tính khảthi
+cảvềmặt kỹthuật lẫn giá trịứng dụng trong nghiên cứu học sâu trên dữliệu đồthị.
+5.2. Hướng phát triển
+Dựa trên nền tảng đã hoàn thiện, nhóm đềxuất một sốhướng phát triển tiếp theo nhằm
+nâng cao tính ổn định, khảnăng mởrộng và giá trịứng dụng thực tếcủa hệthống.
+- Ngắn hạn - Hoàn thiện và ổn định hệthống:
+Mởrộng bộkiểm thửtựđộng cho backend và frontend, đặc biệt đối với các luồng
+thời gian thực như WebSocket, replay và các chức năng quản trị.
+Hoàn thiện hơn cơ chếđồng bộtrạng thái giữa topology view, embedding view và
+metrics panel trong các trường hợp dữliệu lớn hoặc kết nối không ổn định.
+Tối ưu nội dung và giao diện của chức năng AI hỗtrợphân tích, giúp kết quảsinh
+ra tựnhiên hơn, nhất quán hơn và dễsửdụng hơn trong báo cáo nghiên cứu.
+Hoàn thiện các chức năng quản trịnhư retention compaction, audit log và quản lý
+session đểtăng độtin cậy trong vận hành hệthống lâu dài.
+- Trung hạn - Mởrộng tính năng phân tích và trực quan hóa:
+Bổsung thêm các kỹthuật trực quan hóa nâng cao cho từng bài toán GNN, đặc
+biệt là các công cụhỗtrợgiải thích mô hình như attention inspection, class-
+boundary analysis hoặc embedding evolution theo nhiều góc nhìn hơn.
+Mởrộng khảnăng so sánh đa thực nghiệm, cho phép đối chiếu không chỉgiữa các
+mô hình mà còn giữa các cấu hình siêu tham số, dataset version hoặc chiến lược
+huấn luyện khác nhau.
+Nâng cấp chức năng AI hỗtrợđểkhông chỉsinh nhận xét văn bản mà còn hỗtrợ
+phân tích sâu hơn vềnguyên nhân lỗi, mẫu thất bại, dấu hiệu overfitting hoặc over-
+smoothing theo từng bài toán.
+
+===== PAGE 116 =====
+Đồán Công nghệphần mềm
+116
+Bổsung thêm các dạng báo cáo xuất bản như báo cáo so sánh mô hình, báo cáo
+theo project hoặc báo cáo tổng hợp theo từng task nghiên cứu.
+- Dài hạn - Nâng cấp kiến trúc và mởrộng phạm vi ứng dụng:
+Mởrộng hệthống đểhỗtrợthêm nhiều kiến trúc GNN mới ngoài GCN,
+GraphSAGE và GAT, chẳng hạn như GIN, APPNP, Graph Transformer hoặc các
+mô hình chuyên biệt cho heterophily.
+Nâng cấp nền tảng theo hướng hỗtrợnhiều người dùng cộng tác tốt hơn, phục vụ
+các nhóm nghiên cứu hoặc phòng thí nghiệm cùng khai thác trên một hệthống
+chung.
+Cải thiện khảnăng mởrộng và hiệu năng đểxửlý tốt hơn các đồthịlớn, nhiều
+snapshot và nhiều phiên huấn luyện đồng thời.
+Tích hợp sâu hơn với các dịch vụAI bên ngoài đểnâng cao chất lượng phân tích
+tựđộng, hỗtrợmạnh hơn cho việc diễn giải kết quảvà ra quyết định lựa chọn mô
+hình.
+Phát triển hệthống theo hướng một nền tảng nghiên cứu GNN hoàn chỉnh, không
+chỉphục vụhuấn luyện và trực quan hóa mà còn hỗtrợquản lý tri thức thực
+nghiệm, lưu trữkết quảvà tái sửdụng các cấu hình nghiên cứu trong tương lai.
+
+===== PAGE 117 =====
+Đồán Công nghệphần mềm
+117
+TÀI LIỆU THAM KHẢO
+
+===== PAGE 118 =====
+Đồán Công nghệphần mềm
+118
+PHỤLỤC
+Sinh viên bỏCode từng phần vào đây.{
+I.
+

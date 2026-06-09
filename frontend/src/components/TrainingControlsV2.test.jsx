@@ -78,6 +78,7 @@ describe('TrainingControlsV2', () => {
     gnnState.hyperparams = { epochs: 10, lr: 0.01, hidden: 64, dataset: 'cora' }
     gnnState.uploadedFilePath = 'datasets/runtime/test-graph.pt'
     gnnState.taskConfig = null
+    gnnState.uploadMetadata = null
     sessionState.sessionId = 'sess-123'
     sessionState.createSession = vi.fn()
     sessionState.setStatus = vi.fn()
@@ -301,6 +302,40 @@ describe('TrainingControlsV2', () => {
       task2_temperature_max: 1.5,
     }))
     expect(startEvent?.detail).not.toHaveProperty('task2_early_stop_patience')
+  })
+
+  it('relaxes the Task 2 recipe for small graph collections', async () => {
+    gnnState.isTraining = false
+    gnnState.selectedTask = 2
+    gnnState.selectedModel = 'SAGE'
+    gnnState.hyperparams = { epochs: 40, lr: 0.008, hidden: 32, dataset: 'MUTAG' }
+    gnnState.uploadMetadata = { num_graphs: 36, num_classes: 2 }
+    sessionState.createSession = vi.fn().mockResolvedValue({ session_id: 'sess-small-sage' })
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+
+    render(<TrainingControlsV2 />)
+    window.dispatchEvent(new CustomEvent('gnn:request-start-training'))
+
+    await waitFor(() => {
+      expect(sessionState.createSession).toHaveBeenCalled()
+    })
+
+    const startEvent = dispatchSpy.mock.calls
+      .map(([event]) => event)
+      .filter((event) => event?.type === 'gnn:start-training')
+      .at(-1)
+
+    expect(startEvent?.detail).toEqual(expect.objectContaining({
+      task: 2,
+      model: 'SAGE',
+      task2_focal_gamma: 1.25,
+      task2_label_smoothing: 0.01,
+      task2_edge_dropout: 0.08,
+      task2_readout_entropy_weight: 0.004,
+      task2_density_contrastive_weight: 0.008,
+      task2_temperature_min: 0.9,
+      task2_temperature_max: 2.0,
+    }))
   })
 
   it('dispatches the GraphSAGE Task 1 boundary-rescue recipe for live training', async () => {

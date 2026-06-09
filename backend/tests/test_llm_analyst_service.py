@@ -216,6 +216,58 @@ def test_generate_research_notes_returns_none_without_sections(monkeypatch):
     assert result is None
 
 
+def test_generate_comparison_brief_parses_openai_compatible_response(monkeypatch):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_PROVIDER", "deepseek")
+    monkeypatch.delenv("MIMO_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+
+    class MockResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                '{"summary":"GCN is the safer winner because it gives up less quality late in training.",'
+                                '"findings":["GCN has the cleaner quality-to-risk balance."],'
+                                '"next_steps":["Use GCN as the reference run for replay."],'
+                                '"insights":['
+                                '{"type":"performance","title":"Overall Recommendation","finding":"GCN is the best current choice.","details":["GCN stays stable later in training."],"recommendation":"Promote GCN.","significance":"high"},'
+                                '{"type":"overfitting","title":"Generalization Risk","finding":"GAT gives back score late in training.","details":["Late decline is visible."],"recommendation":"Add early stopping for GAT.","significance":"moderate"},'
+                                '{"type":"convergence","title":"Convergence Trade-Off","finding":"GAT starts faster but GCN finishes safer.","details":["GAT peaks earlier."],"recommendation":"Keep GAT as a fast baseline.","significance":"moderate"}'
+                                ']}'
+                            )
+                        }
+                    }
+                ]
+            }
+
+    monkeypatch.setattr(llm_analyst_service.httpx, "post", lambda *args, **kwargs: MockResponse())
+
+    result = llm_analyst_service.generate_comparison_brief(
+        comparison_payload={
+            "summary": "fallback summary",
+            "winner": {"label": "GCN Stable"},
+            "leaderboard": [{"label": "GCN Stable", "composite_score": 87.0}],
+            "insights": [{"title": "Overall Recommendation", "finding": "fallback"}],
+            "next_steps": ["fallback step"],
+        },
+        lang="en",
+    )
+
+    assert result["source"] == "llm"
+    assert result["summary"].startswith("GCN is the safer winner")
+    assert result["next_steps"] == ["Use GCN as the reference run for replay."]
+    assert len(result["insights"]) == 3
+    assert result["insights"][0]["title"] == "Overall Recommendation"
+
+
 def test_mimo_401_auth_failure_is_circuit_broken(monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "mimo")
     monkeypatch.setenv("LLM_API_KEY", "bad-key")
@@ -263,7 +315,7 @@ def test_mimo_401_auth_failure_is_circuit_broken(monkeypatch):
 
     assert first is None
     assert second is None
-    assert call_count["value"] == 1
+    assert call_count["value"] == 3
     status = llm_analyst_service.get_public_status()
     assert status["enabled"] is False
     assert status["configured"] is True

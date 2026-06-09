@@ -193,3 +193,43 @@ def test_generate_comparison_insights_returns_winner_leaderboard_and_next_steps(
     assert payload["leaderboard"][0]["composite_score"] > payload["leaderboard"][1]["composite_score"]
     assert payload["next_steps"]
     assert payload["insights"][0]["title"] == "Overall Recommendation"
+
+
+def test_generate_comparison_insights_merges_llm_brief(monkeypatch):
+    monkeypatch.setattr(
+        analytics_service.llm_analyst_service,
+        "get_public_status",
+        lambda: {"enabled": True, "provider": "deepseek", "model": "deepseek-chat"},
+    )
+    monkeypatch.setattr(
+        analytics_service.llm_analyst_service,
+        "generate_comparison_brief",
+        lambda payload, lang="en": {
+            "summary": "LLM comparison summary",
+            "insights": [{"type": "performance", "title": "Overall Recommendation", "finding": "LLM says pick GCN.", "details": [], "recommendation": "Promote GCN.", "significance": "high"}],
+            "next_steps": ["Replay GCN first."],
+            "source": "llm",
+            "llm": {"enabled": True, "provider": "deepseek", "model": "deepseek-chat"},
+        },
+    )
+
+    result = analytics_service.generate_comparison_insights(
+        results=[
+            {
+                "experiment": {"id": 1, "title": "Run A", "model_type": "GCN", "accuracy": 0.8, "loss": 0.2, "best_epoch": 1},
+                "metrics": {"history": {"primary_score": [0.6, 0.8]}},
+                "snapshots": [{"val_acc": 0.6, "train_acc": 0.61}, {"val_acc": 0.8, "train_acc": 0.81}],
+            },
+            {
+                "experiment": {"id": 2, "title": "Run B", "model_type": "GAT", "accuracy": 0.78, "loss": 0.22, "best_epoch": 1},
+                "metrics": {"history": {"primary_score": [0.62, 0.78]}},
+                "snapshots": [{"val_acc": 0.62, "train_acc": 0.65}, {"val_acc": 0.78, "train_acc": 0.85}],
+            },
+        ],
+        graph_payload=None,
+        lang="en",
+    )
+
+    assert result["source"] == "llm"
+    assert result["summary"] == "LLM comparison summary"
+    assert result["next_steps"] == ["Replay GCN first."]

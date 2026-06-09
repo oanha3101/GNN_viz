@@ -312,7 +312,11 @@ export default function TrainingControlsV2() {
         alert(t('lab.alert_dataset_task_issue', { issue: datasetTaskIssue }))
         return
       }
-      const taskTrainingDefaults = buildTaskTrainingDefaults(selectedTask, gnnState.selectedModel)
+      const taskTrainingDefaults = buildTaskTrainingDefaults(
+        selectedTask,
+        gnnState.selectedModel,
+        gnnState.uploadMetadata,
+      )
       let sessionId = useSessionStore.getState().sessionId
       try {
         const session = await createSession({

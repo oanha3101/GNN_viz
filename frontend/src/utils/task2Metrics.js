@@ -255,6 +255,53 @@ export function bucketTask2Clustering(value) {
   return 'high'
 }
 
+function computeGraphStructuralFallback(graph = {}) {
+  const nodes = Array.isArray(graph.nodes) ? graph.nodes : []
+  const links = Array.isArray(graph.links) ? graph.links : []
+  const nodeIds = nodes.length
+    ? nodes.map((node, index) => node?.id ?? index)
+    : Array.from({ length: Number(graph.numNodes || 0) }, (_, index) => index)
+  const n = nodeIds.length
+  const adjacency = new Map(nodeIds.map((id) => [id, new Set()]))
+  const edgeKeys = new Set()
+
+  for (const link of links) {
+    const source = typeof link?.source === 'object' ? link.source.id : link?.source
+    const target = typeof link?.target === 'object' ? link.target.id : link?.target
+    if (source == null || target == null || source === target) continue
+    if (!adjacency.has(source)) adjacency.set(source, new Set())
+    if (!adjacency.has(target)) adjacency.set(target, new Set())
+    const key = source < target ? `${source}-${target}` : `${target}-${source}`
+    if (edgeKeys.has(key)) continue
+    edgeKeys.add(key)
+    adjacency.get(source).add(target)
+    adjacency.get(target).add(source)
+  }
+
+  const m = edgeKeys.size || Number(graph.numEdges || 0)
+  const possibleEdges = n > 1 ? (n * (n - 1)) / 2 : 0
+  const clusteringValues = nodeIds.map((id) => {
+    const neighbors = [...(adjacency.get(id) || [])]
+    const degree = neighbors.length
+    if (degree < 2) return 0
+    let neighborEdges = 0
+    for (let i = 0; i < neighbors.length; i += 1) {
+      for (let j = i + 1; j < neighbors.length; j += 1) {
+        if (adjacency.get(neighbors[i])?.has(neighbors[j])) {
+          neighborEdges += 1
+        }
+      }
+    }
+    return neighborEdges / ((degree * (degree - 1)) / 2)
+  })
+
+  return {
+    density: possibleEdges > 0 ? m / possibleEdges : 0,
+    avg_clustering: clusteringValues.length ? average(clusteringValues) : 0,
+    avg_degree: n > 0 ? (2 * m) / n : 0,
+  }
+}
+
 export function bucketTask2ReadoutConcentration(value) {
   if (!Number.isFinite(value)) return 'diffuse'
   if (value >= 0.7) return 'concentrated'
@@ -546,7 +593,13 @@ export function buildTask2GraphDescriptors({ snapshot, graphs = [], classNames =
     const predicted = snapshot?.graph_predictions?.[sourceIndex] ?? null
     const confidence = snapshot?.graph_confidences?.[sourceIndex] ?? null
     const margin = snapshot?.confidence_margins?.[sourceIndex] ?? null
-    const structural = snapshot?.graph_structural_metrics?.[sourceIndex] || null
+    const structuralFallback = computeGraphStructuralFallback(graph)
+    const emittedStructural = snapshot?.graph_structural_metrics?.[sourceIndex] || {}
+    const structural = {
+      density: Number.isFinite(emittedStructural.density) ? emittedStructural.density : structuralFallback.density,
+      avg_clustering: Number.isFinite(emittedStructural.avg_clustering) ? emittedStructural.avg_clustering : structuralFallback.avg_clustering,
+      avg_degree: Number.isFinite(emittedStructural.avg_degree) ? emittedStructural.avg_degree : structuralFallback.avg_degree,
+    }
     const contributions = snapshot?.node_contributions?.[sourceIndex] || []
     const entropy = snapshot?.attention_entropy?.[sourceIndex] ?? computeEntropy(contributions)
     const readout = computeTask2ReadoutConcentration(contributions)

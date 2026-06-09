@@ -829,7 +829,10 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
     readout_entropy_weight = float(config.get('task2_readout_entropy_weight', 0.01 if (is_gcn or is_gat or is_sage) else 0.02))
     contrastive_weight = float(config.get('task2_density_contrastive_weight', 0.02 if is_gcn else 0.03 if is_gat else 0.02 if is_sage else 0.025))
     attn_dropout = float(config.get('task2_attn_dropout', config.get('attn_dropout', defaults.get('attn_dropout', config.get('dropout', defaults['dropout'])))))
-    early_stop_patience = int(config.get('task2_early_stop_patience', 0))
+    # Preserve model-specific default early stopping unless the caller
+    # explicitly overrides it. Leaving this at 0 made Task 2 run the full
+    # schedule even after validation quality stopped improving.
+    early_stop_patience = int(config.get('task2_early_stop_patience', defaults['early_stop_patience']))
     temperature_min = float(config.get('task2_temperature_min', 1.0 if is_sage else 0.8))
     temperature_max = float(config.get('task2_temperature_max', 1.5 if is_sage else 3.0))
     danger_threshold = float(config.get('task2_danger_threshold', 0.85))

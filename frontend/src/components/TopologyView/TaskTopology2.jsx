@@ -1,9 +1,7 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
-import ForceGraph2D from 'react-force-graph-2d'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
 import { useLanguage } from '../../contexts/LanguageContext'
-import NodeHoverCard from './NodeHoverCard'
 import { interpolateSnapshots } from '../../engine/interpolate'
 import {
   buildTask2FocusBuckets,
@@ -12,6 +10,107 @@ import {
   sortTask2Descriptors,
 } from '../../utils/task2Metrics'
 import { localizeTask2Element } from '../../utils/task2ReportI18n'
+
+function buildDetailGraphStructureKey(graph) {
+  if (!graph) return null
+  const nodeKey = graph.nodes
+    .map((node) => node.id)
+    .sort((a, b) => a - b)
+    .join(',')
+  const linkKey = graph.links
+    .map((link) => {
+      const source = typeof link.source === 'object' ? link.source.id : link.source
+      const target = typeof link.target === 'object' ? link.target.id : link.target
+      return source < target ? `${source}-${target}` : `${target}-${source}`
+    })
+    .sort()
+    .join('|')
+  return `${graph.originalGraphId}:${nodeKey}:${linkKey}`
+}
+
+function createStableDetailGraphData(graph) {
+  if (!graph) return null
+  const total = Math.max(graph.nodes.length, 1)
+  const radius = Math.max(70, Math.min(180, total * 12))
+  const nodes = graph.nodes.map((node, index) => {
+    const angle = (index / total) * Math.PI * 2 - Math.PI / 2
+    return {
+      ...node,
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle) * radius,
+    }
+  })
+  const nodeById = new Map(nodes.map((node) => [node.id, node]))
+  const links = graph.links.map((link) => ({ ...link }))
+  const area = Math.max(220 * 220, total * 4600)
+  const k = Math.sqrt(area / total)
+
+  for (let iter = 0; iter < 110; iter += 1) {
+    const cooling = 1 - iter / 110
+    const disp = new Map(nodes.map((node) => [node.id, { x: 0, y: 0 }]))
+
+    for (let i = 0; i < nodes.length; i += 1) {
+      for (let j = i + 1; j < nodes.length; j += 1) {
+        const a = nodes[i]
+        const b = nodes[j]
+        const dx = a.x - b.x
+        const dy = a.y - b.y
+        const dist = Math.max(8, Math.hypot(dx, dy))
+        const force = (k * k) / dist
+        const fx = (dx / dist) * force
+        const fy = (dy / dist) * force
+        disp.get(a.id).x += fx
+        disp.get(a.id).y += fy
+        disp.get(b.id).x -= fx
+        disp.get(b.id).y -= fy
+      }
+    }
+
+    links.forEach((link) => {
+      const source = typeof link.source === 'object' ? link.source.id : link.source
+      const target = typeof link.target === 'object' ? link.target.id : link.target
+      const a = nodeById.get(source)
+      const b = nodeById.get(target)
+      if (!a || !b) return
+      const dx = a.x - b.x
+      const dy = a.y - b.y
+      const dist = Math.max(8, Math.hypot(dx, dy))
+      const force = (dist * dist) / k
+      const fx = (dx / dist) * force
+      const fy = (dy / dist) * force
+      disp.get(a.id).x -= fx
+      disp.get(a.id).y -= fy
+      disp.get(b.id).x += fx
+      disp.get(b.id).y += fy
+    })
+
+    nodes.forEach((node) => {
+      const delta = disp.get(node.id)
+      const length = Math.max(1, Math.hypot(delta.x, delta.y))
+      const step = Math.min(length, 14 * cooling)
+      node.x += (delta.x / length) * step
+      node.y += (delta.y / length) * step
+    })
+  }
+
+  const centerX = nodes.reduce((sum, node) => sum + node.x, 0) / total
+  const centerY = nodes.reduce((sum, node) => sum + node.y, 0) / total
+  const maxDistance = Math.max(
+    1,
+    ...nodes.map((node) => Math.hypot(node.x - centerX, node.y - centerY))
+  )
+  const targetRadius = Math.max(70, Math.min(210, total * 11))
+  const scale = targetRadius / maxDistance
+  nodes.forEach((node) => {
+    node.x = (node.x - centerX) * scale
+    node.y = (node.y - centerY) * scale
+  })
+
+  return {
+    nodes,
+    links,
+  }
+}
 
 function buildGraphClassNames(graphs = [], taskClassNames = []) {
   if (Array.isArray(taskClassNames) && taskClassNames.length) {
@@ -128,6 +227,115 @@ function MiniGraphSVG({ nodes, links, contributions, modelSignature = null, size
   )
 }
 
+function DetailGraphSVG({ graph, contributions = [], modelSignature = null, onNodeHover }) {
+  const positions = useMemo(() => {
+    const map = {}
+    graph.nodes.forEach((node) => {
+      map[node.id] = { x: node.x || 0, y: node.y || 0 }
+    })
+    return map
+  }, [graph.nodes])
+  const bounds = useMemo(() => {
+    const xs = graph.nodes.map((node) => Number.isFinite(node.x) ? node.x : 0)
+    const ys = graph.nodes.map((node) => Number.isFinite(node.y) ? node.y : 0)
+    const minX = Math.min(...xs, -80)
+    const maxX = Math.max(...xs, 80)
+    const minY = Math.min(...ys, -80)
+    const maxY = Math.max(...ys, 80)
+    const pad = 58
+    return {
+      x: minX - pad,
+      y: minY - pad,
+      width: Math.max(180, maxX - minX + pad * 2),
+      height: Math.max(180, maxY - minY + pad * 2),
+    }
+  }, [graph.nodes])
+
+  return (
+    <svg
+      width="100%"
+      height="100%"
+      viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+      preserveAspectRatio="xMidYMid meet"
+      className="drop-shadow-[0_24px_60px_rgba(8,47,73,0.28)]"
+      role="img"
+      aria-label={`Graph ${graph.originalGraphId} structure`}
+    >
+      <defs>
+        <filter id={`task2-node-glow-${graph.originalGraphId}`} x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="7" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      {graph.links.map((link, index) => {
+        const source = typeof link.source === 'object' ? link.source.id : link.source
+        const target = typeof link.target === 'object' ? link.target.id : link.target
+        const from = positions[source]
+        const to = positions[target]
+        if (!from || !to) return null
+        const weight = ((contributions[source] || 0) + (contributions[target] || 0)) / 2
+        return (
+          <line
+            key={`${source}-${target}-${index}`}
+            x1={from.x}
+            y1={from.y}
+            x2={to.x}
+            y2={to.y}
+            stroke={weight > 0.55 ? 'rgba(34,211,238,0.44)' : 'rgba(59,130,246,0.24)'}
+            strokeWidth={2.2 + weight * 2.2}
+            strokeLinecap="round"
+          />
+        )
+      })}
+      {graph.nodes.map((node) => {
+        const point = positions[node.id]
+        const weight = Math.max(0, Math.min(1, contributions[node.id] || 0))
+        const isFocus = weight >= 0.55
+        const fill = modelSignature?.id === 'SAGE'
+          ? (isFocus ? '#34d399' : '#60a5fa')
+          : isFocus
+            ? '#fbbf24'
+            : '#3b82f6'
+        const size = 11 + weight * 11
+        const label = node.original_id !== undefined ? node.original_id : node.id
+        return (
+          <g
+            key={node.id}
+            onMouseEnter={() => onNodeHover?.(node.id)}
+            onMouseLeave={() => onNodeHover?.(null)}
+            className="cursor-default"
+          >
+            <circle
+              cx={point.x}
+              cy={point.y}
+              r={size + 12}
+              fill={fill}
+              opacity={isFocus ? 0.16 : 0.08}
+              filter={`url(#task2-node-glow-${graph.originalGraphId})`}
+            />
+            <circle cx={point.x} cy={point.y} r={size} fill={fill} stroke="rgba(226,232,240,0.55)" strokeWidth="1.5" />
+            <text
+              x={point.x}
+              y={point.y + 0.5}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill={isFocus ? '#0f172a' : '#ffffff'}
+              fontSize={Math.max(9, size * 0.78)}
+              fontWeight="800"
+              fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            >
+              {label}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
 function useResponsiveGridCols(ref) {
   const [cols, setCols] = useState(3)
 
@@ -165,6 +373,7 @@ export default function TaskTopology2({
   showFullCollection = false,
   showGalleryOnly = false,
   reportMode = false,
+  analysisMode = false,
 }) {
   const { lang } = useLanguage()
   const reportLang = lang
@@ -183,11 +392,12 @@ export default function TaskTopology2({
   const setClassFilter = useGNNStore((state) => state.setTask2ClassFilter)
   const selectedCell = useGNNStore((state) => state.task2SelectedCell)
 
-  const fgRefDetail = useRef(null)
   const panelRootRef = useRef(null)
   const gridRef = useRef(null)
+  const detailGraphKeyRef = useRef(null)
   const cols = useResponsiveGridCols(gridRef)
   const [page, setPage] = useState(1)
+  const [stableDetailGraphData, setStableDetailGraphData] = useState(null)
 
   const graphs = taskData?.graphs || []
   const indexedGraphs = useMemo(
@@ -288,82 +498,22 @@ export default function TaskTopology2({
     [showGalleryOnly, descriptors, selectedNodeId]
   )
 
-  const detailGraphData = useMemo(() => {
-    if (!selectedGraph) return null
-    return {
-      nodes: selectedGraph.nodes.map((node) => ({ ...node })),
-      links: selectedGraph.links.map((link) => ({ ...link })),
-    }
-  }, [selectedGraph])
+  const detailGraphKey = useMemo(() => buildDetailGraphStructureKey(selectedGraph), [selectedGraph])
 
   const contributions = snap?.node_contributions || []
 
-  const renderNodeDetail = useCallback(
-    (node, ctx, globalScale) => {
-      if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
-      const graphContribs = contributions[selectedGraph?.sourceIndex ?? -1] || []
-      const weight = graphContribs[node.id] || 0
-      const isGat = modelSignature.id === 'GAT'
-      const isSage = modelSignature.id === 'SAGE'
-      const color = isSage
-        ? (weight > 0.6 ? '#86efac' : '#22c55e')
-        : weight > 0.8
-          ? '#ffffff'
-          : weight > 0.5
-            ? '#f59e0b'
-            : '#3b82f6'
-      const size = (modelSignature.id === 'GCN' ? 5 + weight * 8 : 4 + weight * 12) / Math.sqrt(globalScale)
-
-      ctx.save()
-      const glowRadius = size * 3
-      const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowRadius)
-      gradient.addColorStop(0, weight > 0.5 ? `${color}44` : `${color}22`)
-      gradient.addColorStop(1, 'transparent')
-      ctx.beginPath()
-      ctx.arc(node.x, node.y, glowRadius, 0, 2 * Math.PI)
-      ctx.fillStyle = gradient
-      ctx.fill()
-      if (isSage && weight > 0.35) {
-        ctx.beginPath()
-        ctx.arc(node.x, node.y, glowRadius * 1.25, 0, 2 * Math.PI)
-        ctx.strokeStyle = 'rgba(34,197,94,0.28)'
-        ctx.lineWidth = 1 / Math.sqrt(globalScale)
-        ctx.setLineDash([4 / Math.sqrt(globalScale), 4 / Math.sqrt(globalScale)])
-        ctx.stroke()
-        ctx.setLineDash([])
-      }
-      if (isGat && weight > 0.65) {
-        ctx.beginPath()
-        ctx.arc(node.x, node.y, glowRadius * 0.78, 0, 2 * Math.PI)
-        ctx.strokeStyle = 'rgba(245,158,11,0.55)'
-        ctx.lineWidth = 2 / Math.sqrt(globalScale)
-        ctx.stroke()
-      }
-      ctx.restore()
-
-      ctx.beginPath()
-      ctx.arc(node.x, node.y, size, 0, 2 * Math.PI)
-      ctx.fillStyle = color
-      ctx.fill()
-
-      const fontSize = Math.max(7, 10 / Math.sqrt(globalScale))
-      ctx.font = `bold ${fontSize}px monospace`
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillStyle = weight > 0.6 ? '#0f172a' : '#fff'
-      ctx.fillText(`${node.id}`, node.x, node.y)
-    },
-    [selectedGraph, contributions, modelSignature]
-  )
-
   useEffect(() => {
-    if (!selectedGraph || !fgRefDetail.current) return
-    const graphRef = fgRefDetail.current
-    graphRef.d3Force('charge').strength(-100).distanceMax(250)
-    graphRef.d3Force('link').distance(40)
-    graphRef.d3Force('center').strength(0.1)
-    graphRef.d3ReheatSimulation()
-  }, [selectedGraph])
+    if (!selectedGraph || !detailGraphKey) {
+      detailGraphKeyRef.current = null
+      setStableDetailGraphData(null)
+      return
+    }
+
+    if (detailGraphKeyRef.current === detailGraphKey) return
+
+    detailGraphKeyRef.current = detailGraphKey
+    setStableDetailGraphData(createStableDetailGraphData(selectedGraph))
+  }, [detailGraphKey, selectedGraph])
 
   useEffect(() => {
     if (reportLang !== 'vi' || !panelRootRef.current) return undefined
@@ -393,61 +543,68 @@ export default function TaskTopology2({
     )
   }
 
-  if (selectedGraph && detailGraphData) {
+  if (selectedGraph && stableDetailGraphData) {
     const predictionLabel = selectedGraph.predicted != null
       ? labelForClass(selectedGraph.predicted)
       : 'Pending'
 
     return (
-      <div ref={panelRootRef} className="w-full h-full relative bg-panel overflow-hidden">
-        <div className="absolute inset-0" style={{ zIndex: 1 }}>
-          <ForceGraph2D
-            ref={fgRefDetail}
-            graphData={detailGraphData}
-            nodeCanvasObject={renderNodeDetail}
-            nodeCanvasObjectMode={() => 'replace'}
-            onNodeHover={(node) => setHoveredNode(node?.id ?? null)}
-            linkColor={() => 'rgba(59, 130, 246, 0.15)'}
-            linkWidth={1.5}
-            backgroundColor="transparent"
-            onEngineStop={() => {
-              if (fgRefDetail.current) fgRefDetail.current.zoomToFit(400, 30)
-            }}
-          />
-        </div>
-
-        <NodeHoverCard />
-
-        <div className="absolute top-3 left-3 z-50">
-          <button
-            type="button"
-            onClick={() => setSelectedNode(null)}
-            className="px-3 py-1.5 rounded-md text-micro font-bold tracking-wide bg-deep/90 text-slate-200 hover:bg-nebula transition-colors border border-line-default/60 uppercase shadow-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-          >
-            Back to gallery
-          </button>
-        </div>
-
-        <div className="absolute top-3 right-3 z-50 flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-md bg-nebula border border-line-subtle text-micro font-mono text-slate-300 shadow-lg">
-          <span className="text-nano uppercase tracking-ultra text-slate-500">#{selectedGraph.originalGraphId}</span>
-          <span className="text-slate-200">{labelForClass(selectedGraph.groundTruth)}</span>
-          <span className={selectedGraph.correct === 1 ? 'text-emerald-300' : 'text-red-300'}>
-            {predictionLabel}
-          </span>
-          <span className="text-slate-400">{((selectedGraph.confidence ?? 0) * 100).toFixed(0)}%</span>
-        </div>
-
-        <div className="absolute bottom-4 left-4 z-50 max-w-sm rounded-2xl border border-cyan-500/20 bg-nebula/82 px-4 py-3 text-left shadow-xl backdrop-blur-md">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[10px] font-black uppercase tracking-ultra text-cyan-300">{modelSignature.primaryLabel}</span>
-            <span className="font-mono text-[11px] font-bold text-slate-200">{(modelSignature.currentScore * 100).toFixed(0)}%</span>
+      <div ref={panelRootRef} className="w-full h-full overflow-hidden bg-[linear-gradient(180deg,#07111f,#081322)] p-6 pt-16">
+        <div className="grid h-full min-h-0 grid-rows-[auto_1fr_auto] gap-4">
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-line-subtle bg-deep/72 px-4 py-3 shadow-lg backdrop-blur">
+            <button
+              type="button"
+              onClick={() => setSelectedNode(null)}
+              className="shrink-0 rounded-full border border-line-default/70 bg-nebula px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-slate-200 transition-colors hover:border-cyan-400/50 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+            >
+              Back to gallery
+            </button>
+            <div className="min-w-0 flex-1 text-center">
+              <div className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-500">Selected graph</div>
+              <div className="mt-0.5 truncate text-sm font-black tracking-tight text-white">{`Graph #${selectedGraph.originalGraphId}`}</div>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 text-[10px] font-mono text-slate-300">
+              <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2.5 py-1 text-cyan-200">{`#${selectedGraph.originalGraphId}`}</span>
+              <span className="rounded-full border border-line-subtle bg-nebula px-2.5 py-1">GT {labelForClass(selectedGraph.groundTruth)}</span>
+              <span className={`rounded-full border px-2.5 py-1 ${selectedGraph.correct === 1 ? 'border-emerald-400/25 bg-emerald-500/10 text-emerald-300' : 'border-rose-400/25 bg-rose-500/10 text-rose-300'}`}>
+                <span className="text-slate-500">Pred</span> <b>{predictionLabel}</b>
+              </span>
+              <span className="rounded-full border border-line-subtle bg-nebula px-2.5 py-1">{((selectedGraph.confidence ?? 0) * 100).toFixed(0)}%</span>
+            </div>
           </div>
-          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{modelSignature.explanation}</p>
+
+          <div className="relative min-h-0 overflow-hidden rounded-[28px] border border-cyan-300/18 bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.10),transparent_46%),rgba(15,23,42,0.30)]">
+            <div className="pointer-events-none absolute inset-5 rounded-[24px] border border-white/5" />
+            <div className="absolute inset-x-8 inset-y-6 z-10">
+              <DetailGraphSVG
+                graph={{ ...selectedGraph, nodes: stableDetailGraphData.nodes, links: stableDetailGraphData.links }}
+                contributions={contributions[selectedGraph.sourceIndex] || []}
+                modelSignature={modelSignature}
+                onNodeHover={setHoveredNode}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="rounded-2xl border border-cyan-300/18 bg-deep/72 px-4 py-3 shadow-lg backdrop-blur">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">{modelSignature.primaryLabel}</span>
+                <span className="font-mono text-[11px] font-bold text-slate-200">{(modelSignature.currentScore * 100).toFixed(0)}%</span>
+              </div>
+              <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-400">{modelSignature.explanation}</p>
+            </div>
+            <div className="rounded-2xl border border-line-subtle bg-deep/72 px-4 py-3 text-[11px] font-semibold text-slate-400 shadow-lg backdrop-blur">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-500">Nodes / edges</span>
+                <span className="font-mono text-cyan-200">{selectedGraph.nodes.length} / {selectedGraph.links.length}</span>
+              </div>
+              <div className="mt-2 line-clamp-2 text-slate-500">{selectedGraph.motifSignature}</div>
+            </div>
+          </div>
         </div>
       </div>
     )
   }
-
   const classFilterOptions = Array.from(
     new Set(descriptors.map((descriptor) => descriptor.groundTruth).filter(Number.isInteger))
   ).sort((a, b) => a - b)

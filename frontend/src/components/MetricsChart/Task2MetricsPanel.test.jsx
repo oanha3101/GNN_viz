@@ -201,6 +201,17 @@ describe('Task2MetricsPanel', () => {
     expect(screen.getAllByText(/Độ tập trung attention|Attention focus/i).length).toBeGreaterThan(0)
   })
 
+  it('shows the model mechanism lens with evidence graphs', () => {
+    render(<Task2MetricsPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Mechanism|Cơ chế học/i }))
+
+    expect(screen.getByText(/Model mechanism lens/i)).toBeInTheDocument()
+    expect(screen.getByText(/GAT learns by locking attention onto decisive motifs|GAT học bằng cách khóa attention/i)).toBeInTheDocument()
+    expect(screen.getByText(/Mechanism evidence graphs|Graph chứng minh cơ chế học/i)).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /Readout/i }).length).toBeGreaterThan(0)
+  })
+
   it('surfaces research signals in the overview', () => {
     render(<Task2MetricsPanel />)
 

@@ -1,0 +1,1355 @@
+P0002	Normal	TRƯỜNG ĐẠI HỌC BÁCH KHOA
+P0003	Normal	KHOA CÔNG NGHỆ THÔNG TIN
+P0009	Normal	PBL5: ĐỒ ÁN CÔNG NGHỆ PHẦN MỀM
+P0011	Normal	XÂY DỰNG HỆ THỐNG TRỰC QUAN HÓA QUÁ TRÌNH HUẤN LUYỆN MÔ HÌNH GRAPH NEURAL NETWORK
+P0013	Normal	Người hướng dẫn:           TS.PHẠM MINH TUẤN
+P0014	Normal	Sinh viên thực hiện:
+P0015	Normal	Hà Thị Kim Oanh  LỚP: 23T_Nhat2
+P0016	Normal	Nguyễn Thanh Huyền      LỚP: 23T_Nhat2
+P0017	Normal	Nhóm: 23.99A
+P0022	Normal	Đà Nẵng, 6/2026
+P0023	Heading 1	MỤC LỤC
+P0024	toc 1	MỤC LỤC 2
+P0025	toc 1	DANH MỤC HÌNH VẼ 8
+P0026	toc 1	MỞ ĐẦU 11
+P0027	toc 1	1. TỔNG QUAN ĐỀ TÀI 13
+P0028	toc 2	1.1. Đặt vấn đề 13
+P0029	toc 2	1.2. Mục tiêu đề tài 13
+P0030	toc 2	1.3. Đối tượng và phạm vi nghiên cứu 14
+P0031	toc 2	1.4. Phương pháp nghiên cứu 15
+P0032	toc 2	1.5. Ý nghĩa khoa học và thực tiễn 16
+P0033	toc 3	1.5.1. Ý nghĩa khoa học 16
+P0034	toc 3	1.5.2. Ý nghĩa thực tiễn 16
+P0035	toc 1	2. CƠ SỞ LÝ THUYẾT 17
+P0036	toc 2	2.1. Tổng quan về dữ liệu đồ thị 17
+P0037	toc 3	2.1.1. Khái niệm và định nghĩa hình thức 17
+P0038	toc 3	2.1.2. Phân loại đồ thị 17
+P0039	toc 3	2.1.3. Đặc tính phi Euclid của dữ liệu đồ thị 18
+P0040	toc 3	2.1.4. Ứng dụng thực tế của dữ liệu đồ thị 18
+P0041	toc 2	2.2. Tổng quan về Graph Neural Network 19
+P0042	toc 3	2.2.1. Lịch sử hình thành và phát triển 19
+P0043	toc 3	2.2.2. Cơ chế Message Passing — Truyền thông điệp 19
+P0044	toc 3	2.2.3. Neighborhood Aggregation và Receptive Field 21
+P0045	toc 3	2.2.4. Embedding trong Graph Neural Network 21
+P0046	toc 3	2.2.5. Hiện tượng Over-smoothing 22
+P0047	toc 3	2.2.6. Pipeline huấn luyện mô hình GNN 23
+P0048	toc 2	2.3. Một số mô hình GNN phổ biến 24
+P0049	toc 3	2.3.1. Graph Convolutional Network (GCN) 24
+P0050	toc 3	a) Bối cảnh ra đời 24
+P0051	toc 3	2.3.2. GraphSAGE (Graph Sample and Aggregate) 26
+P0052	toc 3	2.3.3. Graph Attention Network (GAT) 28
+P0053	toc 2	2.4. Quy trình huấn luyện mô hình Graph Neural Network 30
+P0054	toc 3	2.4.1. Chuẩn bị dữ liệu và phân chia tập 30
+P0055	toc 3	2.4.2. Hàm mất mát theo từng bài toán 31
+P0056	toc 3	2.4.3. Theo dõi các chỉ số trong quá trình huấn luyện 31
+P0057	toc 3	2.4.4. Kỹ thuật tối ưu và điều chuẩn hóa 32
+P0058	toc 2	2.5. Các bài toán phổ biến trong Graph Neural Network 32
+P0059	toc 3	2.5.1. Phân loại nút (Node Classification) 32
+P0060	toc 3	2.5.2. Phân loại đồ thị (Graph Classification) 33
+P0061	toc 3	2.5.3. Dự đoán liên kết (Link Prediction) 34
+P0062	toc 3	2.5.4. Phát hiện cộng đồng (Community Detection) 35
+P0063	toc 3	2.5.5. Nhúng đồ thị (Graph Embedding) 36
+P0064	toc 3	2.5.6. Sinh đồ thị (Graph Generation) 37
+P0065	toc 2	2.6. Trực quan hóa trong quá trình huấn luyện mô hình 38
+P0066	toc 3	2.6.1. Vai trò của trực quan hóa trong học máy 38
+P0067	toc 3	2.6.2. Đặc thù của trực quan hóa trong Graph Learning 38
+P0068	toc 3	2.6.3. Metric Dashboard — Bảng điều khiển chỉ số 39
+P0069	toc 3	2.6.4. Topology Visualization — Trực quan hóa cấu trúc đồ thị 39
+P0070	toc 3	2.6.5. Embedding Visualization — Trực quan hóa không gian ẩn 40
+P0071	toc 3	2.6.6. Realtime Monitoring — Theo dõi thời gian thực 41
+P0072	toc 3	2.6.7. Replay Experiment — Phát lại thí nghiệm 41
+P0073	toc 3	2.6.8. Model Comparison — So sánh thí nghiệm 42
+P0074	toc 1	3. PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG 43
+P0075	toc 2	3.1. Phát biểu yêu cầu hệ thống 43
+P0076	toc 3	3.1.1. Đối tượng người dùng 43
+P0077	toc 3	3.1.2. Yêu cầu chức năng (Functional Requirements) 45
+P0078	toc 3	3.1.3. Yêu cầu phi chức năng (Non-Functional Requirements) 49
+P0079	toc 2	3.2. Phân tích use case 49
+P0080	toc 3	3.2.1. Xác định tác nhân 49
+P0081	toc 3	3.2.2. Biểu đồ Usecase tổng quát 50
+P0082	toc 3	3.2.3. Mô tả các Usecase chính 50
+P0083	toc 2	3.3. Đặc tả các use case chính 51
+P0084	toc 3	3.3.1. UC01 — Đăng nhập vào hệ thống 51
+P0085	toc 3	3.3.2. UC02 — Quản lý dự án 52
+P0086	toc 3	3.3.3. UC03 — Quản lý dataset và tạo phiên bản 53
+P0087	toc 3	3.3.4. UC04 — Khởi tạo phiên huấn luyện 54
+P0088	toc 3	3.3.5. UC05 — Theo dõi huấn luyện thời gian thực 55
+P0089	toc 3	3.3.6. UC06 — Replay và Resume thực nghiệm 56
+P0090	toc 3	3.3.7. UC07 — So sánh thực nghiệm 58
+P0091	toc 3	3.3.8. UC08 — Quản trị hệ thống 59
+P0092	toc 2	3.4. Biểu đồ động mô tả luồng xử lý hệ thống 60
+P0093	toc 3	3.4.1. Luồng tải và cấu hình dữ liệu 60
+P0094	toc 3	3.4.2. Luồng huấn luyện mô hình 61
+P0095	toc 3	3.4.3. Luồng truyền dữ liệu thời gian thực qua WebSocket 61
+P0096	toc 3	3.4.4. Luồng Replay và Resume thực nghiệm 61
+P0097	toc 3	3.4.5. Luồng quản trị và Retention 62
+P0098	toc 2	3.5. Thiết kế cơ sở dữ liệu 62
+P0099	toc 3	3.5.1. Biểu đồ thực thể - liên kết (ERD) 63
+P0100	toc 3	3.5.2. Thiết kế dữ liệu quan hệ 63
+P0101	toc 3	3.5.3. Thiết kế MongoDB 71
+P0102	toc 3	3.5.4. Thiết kế Blob Storage 72
+P0103	toc 2	3.6. Kiến trúc hệ thống 72
+P0104	toc 3	3.6.1. Kiến trúc tổng thể 72
+P0105	toc 2	3.7. Thiết kế giao diện hệ thống 73
+P0106	toc 3	3.7.1. Giao diện quản lý dự án 73
+P0107	toc 3	3.7.3. Giao diện LabShell 75
+P0108	toc 3	3.7.4. Giao diện Experiment Hub 75
+P0109	toc 3	3.7.5. Giao diện quản trị 76
+P0110	toc 2	3.8. Các công nghệ sử dụng 77
+P0111	toc 3	3.8.1. Frontend — Giao diện người dùng 77
+P0112	toc 3	3.8.2. Backend — Xử lý nghiệp vụ 77
+P0113	toc 3	3.8.3. WebSocket — Truyền dữ liệu thời gian thực 78
+P0114	toc 3	3.8.4. Cơ sở dữ liệu và lưu trữ 78
+P0115	toc 1	4. TRIỂN KHAI VÀ ĐÁNH GIÁ KẾT QUẢ 80
+P0116	toc 2	4.1. Giao diện chính 80
+P0117	toc 3	4.1.1. Giao diện đăng nhập 80
+P0118	toc 3	4.4.2. Giao diện dashboard tổng quan của Researcher 81
+P0119	toc 3	4.4.3. Giao diện quản lý dự án 82
+P0120	toc 3	4.4.4. Giao diện quản lý dữ liệu và phiên bản dataset 83
+P0121	toc 3	4.4.5. Giao diện Experiment Hub 84
+P0122	toc 3	4.4.6. Giao diện LabShell 85
+P0123	toc 3	4.4.7. Giao diện dashboard quản trị Admin 86
+P0124	toc 3	4.4.8. Giao diện quản lý người dùng 87
+P0125	toc 3	4.4.9. Giao diện quản lý phiên huấn luyện 88
+P0126	toc 2	4.2. Kết quả thực thi hệ thống 89
+P0127	toc 3	4.2.1. Kết quả thực thi chức năng đăng nhập 90
+P0128	toc 3	4.2.2. Kết quả thực thi chức năng đăng ký 90
+P0129	toc 3	4.2.3. Kết quả thực thi chức năng quản lý dự án 91
+P0130	toc 3	4.2.4. Kết quả thực thi chức năng quản lý dữ liệu và phiên bản dataset 92
+P0131	toc 3	4.2.5. Kết quả thực thi chức năng khởi tạo và điều khiển phiên huấn luyện 93
+P0132	toc 3	4.2.6. Kết quả thực thi chức năng trực quan hóa thời gian thực 94
+P0133	toc 3	4.2.7. Kết quả thực thi chức năng Replay và Resume thực nghiệm 95
+P0134	toc 3	4.2.8. Kết quả thực thi chức năng quản trị hệ thống 96
+P0135	toc 3	4.2.9. Tổng kết kết quả thực thi 98
+P0136	toc 2	4.3. Kết quả trực quan hóa và phân tích GNN 99
+P0137	toc 3	4.3.1. Node Classification 100
+P0138	toc 3	4.3.2. Graph Classification 102
+P0139	toc 3	4.3.3. Community Detection 103
+P0140	toc 3	4.3.4. Graph Generation 104
+P0141	toc 2	4.4. Kết quả chức năng AI hỗ trợ phân tích và so sánh mô hình 105
+P0142	toc 3	4.4.1. Kết quả AI phân tích thực nghiệm đơn 106
+P0143	toc 3	4.4.2. Kết quả AI so sánh mô hình GCN, GAT và GraphSAGE 107
+P0144	toc 3	4.4.3. Kết quả trực quan hóa so sánh đa mô hình 107
+P0145	toc 3	4.4.4. Kết quả phân tích lỗi và mẫu thất bại 108
+P0146	toc 3	4.4.5. Kết quả hồ sơ phân tích mô hình 109
+P0147	toc 3	4.4.6. Nhận xét về chức năng AI hỗ trợ phân tích 110
+P0148	toc 2	4.5. Nhận xét và đánh giá 111
+P0149	toc 3	4.5.1. Mức độ hoàn thành yêu cầu chức năng 111
+P0150	toc 3	4.5.2. Tính khả thi kỹ thuật 111
+P0151	toc 3	4.5.3. Tính khả thi vận hành 111
+P0152	toc 3	4.5.4. Khả năng mở rộng 111
+P0153	toc 3	4.5.5. Đánh giá theo từng mô hình GNN 112
+P0154	toc 3	4.5.6. Hạn chế hiện tại 113
+P0155	toc 3	4.5.7. Nhận xét tổng quát 113
+P0156	toc 1	5.  KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN 113
+P0157	toc 2	5.1. Kết luận 113
+P0158	toc 2	5.2. Hướng phát triển 115
+P0159	toc 1	PHỤ LỤC 118
+P0162	Heading 1	DANH MỤC HÌNH VẼ
+P0165	Normal	DANH MỤC BẢNG BIỂU
+P0168	table of figures	Bảng 2.1 . So sánh tổng quan 3 mô hình GNN 30
+P0169	table of figures	Bảng 3.1 . Các tác nhân tham gia hệ thống 43
+P0170	table of figures	Bảng 3.2 . Ma trận phân quyền chi tiết (RBAC Matrix) 44
+P0171	table of figures	Bảng 3.3 . Phát biểu yêu cầu Input / Output theo chức năng 45
+P0172	table of figures	Bảng 3.4 . Phân hệ Quản lý Tài nguyên Nghiên cứu 46
+P0173	table of figures	Bảng 3.5 . Phân hệ Huấn luyện Thời gian thực 46
+P0174	table of figures	Bảng 3.6 . Phân hệ Quản lý Thực nghiệm và Replay 47
+P0175	table of figures	Bảng 3.7 . Phân hệ Quản trị Hệ thống 48
+P0176	table of figures	Bảng 3.8 . Yêu cầu phi chức năng của hệ thống 49
+P0177	table of figures	Bảng 3.9 . Đặc tả chi tiết use case UC01 51
+P0178	table of figures	Bảng 3.10 . Đặc tả chi tiết use case UC02 52
+P0179	table of figures	Bảng 3.11 . Đặc tả chi tiết use case UC03 53
+P0180	table of figures	Bảng 3.12 . Đặc tả chi tiết use case UC04 54
+P0181	table of figures	Bảng 3.13 . Đặc tả chi tiết use case UC05 55
+P0182	table of figures	Bảng 3.14 . Đặc tả chi tiết use case UC06 57
+P0183	table of figures	Bảng 3.15 . Đặc tả chi tiết use case UC07 58
+P0184	table of figures	Bảng 3.16 . Đặc tả chi tiết use case UC08 59
+P0185	table of figures	Bảng 3.17 . Cấu trúc bảng urses 64
+P0186	table of figures	Bảng 3.18 . Cấu trúc bảng projects 64
+P0187	table of figures	Bảng 3.19 . Cấu trúc bảng datasets 65
+P0188	table of figures	Bảng 3.20 . Cấu trúc bảng datasets_versions 66
+P0189	table of figures	Bảng 3.21 . Cấu trúc bảng experiments 67
+P0190	table of figures	Bảng 3.22 . Cấu trúc bảng  training_sessions 68
+P0191	table of figures	Bảng 3.23 . Cấu trúc bảng session_snapshots 69
+P0192	table of figures	Bảng 3.24 . Cấu trúc bảng audit_log 71
+P0193	table of figures	Bảng 3.25 . So sánh và lý do lựa chọn công nghệ theo từng tầng kiến trúc 72
+P0194	table of figures	Bảng 3.26 . Tóm tắt các màn hình chính của hệ thống GNN-Insight 73
+P0195	table of figures	Bảng 3.27 . Tóm tắt stack công nghệ của hệ thống GNN Insight 79
+P0196	table of figures	Bảng 4.1 . Kết quả kiểm thử chức năng đăng nhập 90
+P0197	table of figures	Bảng 4.2 . Kết quả kiểm thử chức năng đăng ký 91
+P0198	table of figures	Bảng 4.3 . Kết quả kiểm thử chức năng quản lý dự án 91
+P0199	table of figures	Bảng 4.4 . Kết quả kiểm thử chức năng quản lý dữ liệu 92
+P0200	table of figures	Bảng 4.5 . Kết quả kiểm thử chức năng điều khiển phiên huấn luyện 93
+P0201	table of figures	Bảng 4.6 . Kết quả kiểm thử chức năng trực quan hóa thời gian thực 95
+P0202	table of figures	Bảng 4.7 . Kết quả kiểm thử chức năng Replay và Resume thực nghiệm 96
+P0203	table of figures	Bảng 4.8 . Kết quả kiểm thử chức năng quản trị hệ thống 97
+P0204	table of figures	Bảng 4.9 . Tổng kết kết quả thực thi các chức năng chính 99
+P0206	Heading 1	MỞ ĐẦU
+P0208	Normal (Web)	Trong những năm gần đây, cùng với sự phát triển mạnh mẽ của trí tuệ nhân tạo (Artificial Intelligence – AI) và học sâu (Deep Learning), nhu cầu khai thác và phân tích các dạng dữ liệu có cấu trúc ngày càng gia tăng. Bên cạnh dữ liệu dạng bảng, văn bản hay hình ảnh, dữ liệu dạng đồ thị xuất hiện phổ biến trong nhiều lĩnh vực như mạng xã hội, mạng giao thông, hệ thống gợi ý, mạng trích dẫn khoa học, sinh học phân tử và nhiều bài toán có tính quan hệ phức tạp khác. Để xử lý hiệu quả loại dữ liệu này, Graph Neural Network (GNN) đã trở thành một trong những hướng nghiên cứu nổi bật nhờ khả năng học đồng thời từ thuộc tính của các thực thể và mối quan hệ giữa chúng.
+P0209	Normal (Web)	Các mô hình GNN đã đạt được nhiều thành tựu trong các bài toán như phân loại nút (Node Classification), phân loại đồ thị (Graph Classification), dự đoán liên kết (Link Prediction) và phát hiện cộng đồng. Tuy nhiên, quá trình huấn luyện GNN thường diễn ra phức tạp, đòi hỏi người dùng phải theo dõi đồng thời nhiều yếu tố như sự thay đổi của cấu trúc đồ thị, biểu diễn embedding, quá trình lan truyền thông tin giữa các nút và hiệu năng của mô hình theo từng giai đoạn huấn luyện. Trong khi đó, các công cụ hiện có chủ yếu tập trung vào việc hiển thị các chỉ số tổng quát như Loss hoặc Accuracy, chưa hỗ trợ đầy đủ việc trực quan hóa các đặc trưng riêng của dữ liệu đồ thị và hành vi học của mô hình GNN. Điều này gây khó khăn cho việc phân tích, đánh giá và tối ưu mô hình trong quá trình nghiên cứu cũng như phát triển ứng dụng thực tế.
+P0210	Normal (Web)	Xuất phát từ thực tế trên, đề tài “Xây dựng hệ thống trực quan hóa và theo dõi quá trình huấn luyện cho Graph Neural Network” được thực hiện nhằm xây dựng một nền tảng hỗ trợ quan sát trực quan toàn bộ quá trình huấn luyện GNN trên môi trường web. Hệ thống cho phép theo dõi các chỉ số huấn luyện theo thời gian thực, trực quan hóa dữ liệu đồ thị và không gian biểu diễn, lưu trữ và phát lại các thí nghiệm đã thực hiện, đồng thời hỗ trợ so sánh kết quả giữa các mô hình khác nhau. Thông qua đó, đề tài góp phần nâng cao khả năng quan sát, phân tích và đánh giá quá trình huấn luyện GNN, hỗ trợ hiệu quả cho hoạt động học tập, nghiên cứu và phát triển các ứng dụng trí tuệ nhân tạo trên dữ liệu đồ thị.
+P0211	Normal (Web)	Ngoài phần mở đầu và tài liệu tham khảo, nội dung báo cáo được tổ chức thành 5 chương như sau:
+P0212	Normal (Web)	Chương 1: Tổng quan đề tài giới thiệu bối cảnh nghiên cứu, lý do lựa chọn đề tài, bài toán đặt ra, mục tiêu thực hiện và ý nghĩa của đề tài.
+P0213	Normal (Web)	Chương 2: Cơ sở lý thuyết trình bày các kiến thức nền tảng liên quan đến lý thuyết đồ thị, Graph Neural Network (GNN), quy trình huấn luyện mô hình và các phương pháp trực quan hóa dữ liệu.
+P0214	Normal (Web)	Chương 3: Phân tích và thiết kế hệ thống tập trung phân tích yêu cầu, xây dựng kiến trúc tổng thể, thiết kế cơ sở dữ liệu, mô tả các luồng xử lý và giao diện của hệ thống.
+P0215	Normal (Web)	Chương 4: Triển khai và đánh giá kết quả mô tả quá trình xây dựng hệ thống, cài đặt các chức năng chính, trình bày kết quả đạt được và đánh giá hiệu quả hoạt động của hệ thống.
+P0216	Normal (Web)	Chương 5: Kết luận và hướng phát triển tổng kết những kết quả đã đạt được, nêu ra các hạn chế còn tồn tại và đề xuất các hướng nghiên cứu, phát triển trong tương lai.
+P0219	Heading 1	1. TỔNG QUAN ĐỀ TÀI
+P0220	Heading 2	Đặt vấn đề
+P0221	Normal	Trong bối cảnh trí tuệ nhân tạo ngày càng phát triển mạnh mẽ, các bài toán học máy không còn chỉ giới hạn trên dữ liệu dạng bảng, chuỗi hay hình ảnh, mà đã mở rộng sang nhiều loại dữ liệu có cấu trúc phức tạp hơn. Một trong những dạng dữ liệu quan trọng đó là dữ liệu đồ thị, trong đó các đối tượng không tồn tại độc lập mà có mối liên hệ chặt chẽ với nhau thông qua các cạnh kết nối. Dữ liệu đồ thị xuất hiện rộng rãi trong thực tế, chẳng hạn như mạng xã hội, mạng giao thông, mạng lưới viễn thông, dữ liệu phân tử, dữ liệu sinh học, hệ thống gợi ý và mạng trích dẫn khoa học.
+P0222	Normal	Để giải quyết hiệu quả các bài toán trên dữ liệu đồ thị, Graph Neural Network (GNN) đã trở thành một trong những hướng tiếp cận nổi bật trong lĩnh vực học sâu. Khác với các mô hình truyền thống, GNN cho phép khai thác đồng thời cả thông tin thuộc tính của các nút lẫn thông tin cấu trúc của toàn bộ đồ thị. Nhờ đó, GNN đã đạt được nhiều kết quả tích cực trong các bài toán như phân loại nút, phân loại đồ thị, dự đoán liên kết, phát hiện cộng đồng, nhúng đồ thị và sinh đồ thị.
+P0223	Normal	Tuy nhiên, quá trình huấn luyện mô hình GNN thường tương đối phức tạp. Ngoài các chỉ số cơ bản như loss, accuracy hay các metric đánh giá khác, người dùng còn cần quan sát được sự thay đổi của cấu trúc dữ liệu, trạng thái dự đoán, embedding và các tín hiệu đặc trưng của mô hình qua từng epoch. Trong nhiều trường hợp, việc chỉ theo dõi các giá trị số không đủ để phản ánh đầy đủ cách mô hình học và hội tụ. Điều này gây khó khăn cho việc phân tích kết quả, phát hiện bất thường, đánh giá chất lượng mô hình cũng như hỗ trợ học tập và nghiên cứu.
+P0224	Normal	Từ thực tế đó, việc xây dựng một hệ thống trực quan hóa và theo dõi quá trình huấn luyện cho Graph Neural Network là cần thiết. Một hệ thống như vậy không chỉ giúp hiển thị trực quan tiến trình huấn luyện theo thời gian thực mà còn hỗ trợ người dùng quan sát sâu hơn vào hành vi của mô hình, từ đó nâng cao hiệu quả nghiên cứu, phát triển và ứng dụng các bài toán học trên dữ liệu đồ thị.
+P0225	Heading 2	Mục tiêu đề tài
+P0226	Normal	Đề tài được thực hiện nhằm xây dựng một hệ thống hỗ trợ trực quan hóa và theo dõi quá trình huấn luyện cho Graph Neural Network trên môi trường web. Hệ thống hướng đến việc giúp người dùng dễ dàng quan sát, phân tích và đánh giá diễn biến huấn luyện của mô hình thông qua các biểu diễn trực quan thay vì chỉ dựa trên các chỉ số số học đơn lẻ.
+P0227	Normal	Mục tiêu tổng quát của đề tài là xây dựng một nền tảng phần mềm cho phép quản lý, hiển thị và theo dõi tiến trình huấn luyện của các mô hình GNN, đồng thời hỗ trợ lưu trữ và xem lại kết quả thí nghiệm sau khi quá trình huấn luyện kết thúc.
+P0228	Normal	Để đạt được mục tiêu trên, đề tài đặt ra các mục tiêu cụ thể như sau:
+P0229	Normal	Nghiên cứu cơ sở lý thuyết liên quan đến dữ liệu đồ thị, Graph Neural Network và các phương pháp trực quan hóa trong học máy.
+P0230	Normal	Khảo sát nhu cầu theo dõi và phân tích quá trình huấn luyện đối với các bài toán học trên dữ liệu đồ thị.
+P0231	Normal	Phân tích yêu cầu và thiết kế kiến trúc cho hệ thống trực quan hóa và theo dõi huấn luyện GNN.
+P0232	Normal	Xây dựng hệ thống web cho phép người dùng khởi tạo, theo dõi và quản lý các phiên huấn luyện.
+P0233	Normal	Hiển thị trực quan các chỉ số huấn luyện, topology đồ thị, embedding và các thông tin liên quan đến từng bài toán GNN.
+P0234	Normal	Hỗ trợ lưu trữ, phát lại (Replay) và so sánh các kết quả thí nghiệm.
+P0235	Normal	Đánh giá hiệu quả hoạt động của hệ thống sau khi triển khai.
+P0236	Heading 2	Đối tượng và phạm vi nghiên cứu
+P0237	Normal	Đối tượng nghiên cứu của đề tài là quá trình huấn luyện các mô hình Graph Neural Network và các phương pháp trực quan hóa phục vụ cho việc theo dõi, phân tích kết quả huấn luyện. Đồng thời, đề tài cũng nghiên cứu các công nghệ và phương pháp xây dựng hệ thống phần mềm hỗ trợ hiển thị dữ liệu thời gian thực trên nền tảng web.
+P0238	Normal	Về mặt nội dung, đề tài tập trung vào các bài toán tiêu biểu trong Graph Neural Network gồm:
+P0239	Normal	Phân loại nút (Node Classification).
+P0240	Normal	Phân loại đồ thị (Graph Classification).
+P0241	Normal	Dự đoán liên kết (Link Prediction).
+P0242	Normal	Phát hiện cộng đồng (Community Detection).
+P0243	Normal	Nhúng đồ thị (Graph Embedding).
+P0244	Normal	Sinh đồ thị (Graph Generation).
+P0245	Normal	Hệ thống được xây dựng nhằm hỗ trợ hiển thị các metric huấn luyện, trực quan hóa topology, embedding, trạng thái dự đoán và dữ liệu replay của thí nghiệm.
+P0246	Normal	Về mặt phạm vi, đề tài tập trung vào khía cạnh trực quan hóa, theo dõi và quản lý quá trình huấn luyện mô hình, không đi sâu vào việc nghiên cứu hoặc đề xuất các thuật toán GNN mới. Ngoài ra, hệ thống được xây dựng chủ yếu phục vụ mục đích học tập, nghiên cứu và minh họa nên các nội dung như tối ưu hiệu năng ở quy mô rất lớn, triển khai thương mại hoặc mở rộng hạ tầng phân tán chưa phải là trọng tâm chính của đề tài.
+P0248	Normal	Hình 1. Hình ảnh minh họa về các bài toán tiêu biểu trong Graph Neural Network
+P0249	Heading 2	Phương pháp nghiên cứu
+P0250	Normal	Để thực hiện đề tài, nhóm sử dụng kết hợp giữa phương pháp nghiên cứu lý thuyết và phương pháp xây dựng phần mềm.
+P0251	Normal	Trước hết, nhóm tiến hành nghiên cứu các kiến thức nền tảng liên quan đến lý thuyết đồ thị, Graph Neural Network, quy trình huấn luyện mô hình học sâu và các phương pháp trực quan hóa dữ liệu. Đây là cơ sở để xác định đúng bài toán và định hướng xây dựng hệ thống phù hợp.
+P0252	Normal	Tiếp theo, nhóm thực hiện phân tích yêu cầu hệ thống dựa trên mục tiêu đề tài và đặc trưng của các bài toán GNN. Từ đó, nhóm tiến hành thiết kế kiến trúc tổng thể, thiết kế cơ sở dữ liệu, xây dựng các thành phần frontend, backend và cơ chế truyền dữ liệu thời gian thực.
+P0253	Normal	Sau giai đoạn thiết kế, hệ thống được triển khai bằng các công nghệ phù hợp cho ứng dụng web hiện đại. Trong quá trình phát triển, các chức năng được kiểm thử và đánh giá liên tục nhằm đảm bảo khả năng đáp ứng các yêu cầu đã đặt ra. Cuối cùng, dựa trên kết quả thực nghiệm, nhóm tiến hành phân tích, đánh giá hiệu quả hoạt động của hệ thống và đề xuất các hướng cải tiến trong tương lai.
+P0254	Heading 2	Ý nghĩa khoa học và thực tiễn
+P0255	Heading 3	Ý nghĩa khoa học
+P0256	Normal	Đề tài góp phần hệ thống hóa các kiến thức liên quan đến dữ liệu đồ thị, Graph Neural Network và các phương pháp trực quan hóa trong quá trình huấn luyện mô hình. Việc kết hợp giữa học sâu trên dữ liệu đồ thị và trực quan hóa giúp làm rõ hơn cách mô hình học, cách các chỉ số thay đổi theo thời gian cũng như cách biểu diễn dữ liệu phản ánh trạng thái huấn luyện.
+P0257	Normal	Bên cạnh đó, đề tài góp phần nâng cao khả năng giải thích và phân tích hành vi của mô hình GNN, hỗ trợ cho các hoạt động nghiên cứu và phát triển trong lĩnh vực học sâu trên dữ liệu có cấu trúc.
+P0258	Heading 3	Ý nghĩa thực tiễn
+P0259	Normal	Hệ thống được xây dựng có thể hỗ trợ sinh viên, giảng viên và nhà nghiên cứu trong việc quan sát trực quan quá trình huấn luyện các mô hình GNN, từ đó thuận tiện hơn trong việc học tập, giảng dạy, thực nghiệm và đánh giá kết quả.
+P0260	Normal	Ngoài ra, hệ thống góp phần giảm bớt sự phụ thuộc vào các chỉ số số học đơn thuần bằng cách cung cấp các biểu diễn trực quan dễ theo dõi và dễ phân tích hơn. Đây cũng có thể là nền tảng để phát triển các công cụ hỗ trợ nghiên cứu nâng cao trong tương lai đối với các bài toán học sâu trên dữ liệu đồ thị.
+P0264	Heading 1	CƠ SỞ LÝ THUYẾT
+P0265	Heading 2	2.1. Tổng quan về dữ liệu đồ thị
+P0266	Heading 3	2.1.1. Khái niệm và định nghĩa hình thức
+P0267	Normal	Đồ thị (graph) là một cấu trúc toán học dùng để mô hình hóa các mối quan hệ giữa các đối tượng trong thế giới thực. Về mặt hình thức, một đồ thị G được định nghĩa là một cặp (V, E), trong đó V = {v₁, v₂, ..., vₙ} là tập hợp các đỉnh (vertices) hay nút (nodes) biểu diễn các thực thể, và E ⊆ V × V là tập hợp các cạnh (edges) biểu diễn mối quan hệ giữa các thực thể đó.
+P0268	Normal	Trong nhiều bài toán thực tế, mỗi nút vᵢ được gắn kèm một vector đặc trưng xᵢ ∈ ℝᵈ, và mỗi cạnh (vᵢ, vⱼ) cũng có thể mang vector thuộc tính eᵢⱼ ∈ ℝᵏ. Dạng đầy đủ của đồ thị có thuộc tính được ký hiệu là G = (V, E, X, E_attr), trong đó X ∈ ℝⁿˣᵈ là ma trận đặc trưng nút.
+P0269	Normal	Cấu trúc đồ thị thường được biểu diễn qua ma trận kề (adjacency matrix) A ∈ {0,1}ⁿˣⁿ, trong đó Aᵢⱼ = 1 nếu tồn tại cạnh giữa vᵢ và vⱼ, ngược lại Aᵢⱼ = 0. Với đồ thị có trọng số, Aᵢⱼ mang giá trị trọng số của cạnh tương ứng. Ngoài ra, ma trận bậc (degree matrix) D là ma trận đường chéo với Dᵢᵢ = Σⱼ Aᵢⱼ là bậc của nút vᵢ.
+P0270	Heading 3	2.1.2. Phân loại đồ thị
+P0271	Normal	Đồ thị vô hướng và có hướng: Trong đồ thị vô hướng (undirected graph), cạnh (vᵢ, vⱼ) có tính đối xứng — nếu vᵢ kết nối với vⱼ thì vⱼ cũng kết nối lại với vᵢ, và ma trận kề là đối xứng (A = Aᵀ). Trong đồ thị có hướng (directed graph), mỗi cạnh mang hướng xác định từ nút nguồn tới nút đích, phản ánh quan hệ bất đối xứng như mối quan hệ theo dõi trong mạng xã hội hay luồng thông tin trong mạng máy tính.
+P0272	Normal	Đồ thị đồng nhất và không đồng nhất: Đồ thị đồng nhất (homogeneous graph) chứa một loại nút và một loại cạnh. Đồ thị không đồng nhất (heterogeneous graph) bao gồm nhiều loại nút và nhiều loại cạnh với ngữ nghĩa khác nhau — ví dụ, một mạng tri thức bao gồm thực thể người, địa điểm, sự kiện cùng các quan hệ phong phú giữa chúng.
+P0273	Normal	Đồ thị tĩnh và động: Đồ thị tĩnh (static graph) có cấu trúc cố định theo thời gian. Đồ thị động (dynamic graph) có cấu trúc thay đổi theo thời gian — ví dụ, mạng giao dịch tài chính hay mạng tương tác người dùng trực tuyến.
+P0274	Heading 3	2.1.3. Đặc tính phi Euclid của dữ liệu đồ thị
+P0275	Normal	Khác với dữ liệu dạng ảnh hay chuỗi thời gian — vốn tồn tại trên lưới đều (regular grid) với cấu trúc láng giềng xác định — dữ liệu đồ thị có tính phi Euclid (non-Euclidean). Cụ thể, số lượng nút lân cận của mỗi nút là khác nhau và không cố định; không có thứ tự không gian chuẩn giữa các nút; và không thể áp dụng trực tiếp phép tích chập (convolution) tiêu chuẩn được thiết kế cho lưới đều.
+P0276	Normal	Chính đặc điểm phi Euclid này là lý do tại sao các mô hình học máy truyền thống như CNN hay RNN gặp khó khăn khi xử lý đồ thị, từ đó thúc đẩy sự ra đời và phát triển của Graph Neural Network như một hướng tiếp cận chuyên biệt.
+P0277	Heading 3	2.1.4. Ứng dụng thực tế của dữ liệu đồ thị
+P0278	Normal	Dữ liệu đồ thị xuất hiện phổ biến trong nhiều lĩnh vực khoa học và công nghiệp:
+P0279	Normal	Mạng xã hội: Người dùng là nút, mối quan hệ kết bạn hoặc theo dõi là cạnh. Bài toán điển hình gồm phát hiện cộng đồng, gợi ý kết bạn, phát hiện tài khoản giả mạo.
+P0280	Normal	Hóa sinh và y tế: Phân tử được mô hình hóa là đồ thị với nguyên tử là nút và liên kết hóa học là cạnh. GNN đã được áp dụng thành công trong phát hiện thuốc mới và dự đoán tính chất phân tử.
+P0281	Normal	Mạng giao thông: Giao lộ là nút, tuyến đường là cạnh. Các mô hình GNN được dùng để dự đoán lưu lượng và tối ưu điều phối giao thông.
+P0282	Normal	Hệ thống gợi ý: Người dùng và sản phẩm là nút, tương tác (mua, đánh giá) là cạnh. GNN học được sở thích người dùng thông qua cấu trúc đồ thị tương tác.
+P0283	Normal	Mạng tri thức: Thực thể là nút, quan hệ ngữ nghĩa là cạnh. Ứng dụng trong hệ thống hỏi đáp và hoàn thiện tri thức (knowledge completion).
+P0284	Heading 2	2.2. Tổng quan về Graph Neural Network
+P0285	Heading 3	2.2.1. Lịch sử hình thành và phát triển
+P0286	Normal	Ý tưởng áp dụng mạng nơ-ron cho dữ liệu đồ thị được đề xuất lần đầu bởi Gori và cộng sự (2005) và sau đó được hệ thống hóa bởi Scarselli và cộng sự (2009) trong công trình "The Graph Neural Network Model". Tuy nhiên, giai đoạn đầu GNN hoạt động theo nguyên lý lan truyền thông tin lặp đến hội tụ, gặp nhiều hạn chế về hiệu quả tính toán.
+P0287	Normal	Bước ngoặt quan trọng xảy ra trong giai đoạn 2016–2018, khi hàng loạt kiến trúc hiện đại được đề xuất: GCN (Kipf & Welling, 2017), GraphSAGE (Hamilton et al., 2017), và GAT (Veličković et al., 2018). Các mô hình này đã giải quyết được nhiều hạn chế của thế hệ đầu, nhanh chóng chứng minh hiệu quả vượt trội trên các benchmark chuẩn, và trở thành nền tảng cho phần lớn nghiên cứu GNN hiện đại.
+P0288	Heading 3	2.2.2. Cơ chế Message Passing — Truyền thông điệp
+P0289	Normal	Message Passing là cơ chế cốt lõi chi phối cách thức học biểu diễn trong hầu hết các mô hình GNN hiện đại. Ý tưởng cơ bản là: mỗi nút tổng hợp thông tin từ các nút lân cận của nó để cập nhật biểu diễn của chính mình. Quá trình này được lặp lại qua nhiều lớp, cho phép thông tin lan truyền xa dần trong đồ thị. Một lớp Message Passing tổng quát bao gồm ba bước chính:
+P0290	Normal	Bước 1 — Message: Tạo thông điệp
+P0291	Normal	Mỗi nút vⱼ thuộc vùng lân cận N(vᵢ) của nút vᵢ tạo ra một thông điệp mᵢⱼ gửi tới vᵢ:
+P0292	Normal	Trong đó: h(l-1)i là embedding của nút vᵢ tại lớp l-1; h(l-1)j là embedding của nút lân cận vⱼ; eij là thuộc tính của cạnh (vᵢ, vⱼ); MSG(l) là hàm tạo thông điệp, có thể là phép tích tuyến tính, MLP hoặc hàm tùy chỉnh.
+P0293	Normal	Bước 2 — Aggregation: Tổng hợp thông điệp
+P0294	Normal	Nút vᵢ tổng hợp tất cả thông điệp nhận được từ các nút lân cận:
+P0295	Normal	Hàm AGG phải là hàm bất biến với thứ tự đầu vào (permutation-invariant) vì tập lân cận không có thứ tự xác định. Các lựa chọn phổ biến gồm: phép tổng (Sum), trung bình (Mean), cực đại (Max), hoặc LSTM kết hợp với hoán vị ngẫu nhiên.
+P0296	Normal	Bước 3 — Update: Cập nhật biểu diễn
+P0297	Normal	Nút vᵢ kết hợp thông tin tổng hợp từ lân cận với biểu diễn hiện tại của chính nó để tạo ra biểu diễn mới:
+P0298	Normal	Trong đó W(l) và b(l) là các tham số học được tại lớp l; σ là hàm kích hoạt phi tuyến (thường dùng ReLU hoặc ELU); CONCAT ký hiệu phép nối (concatenation) hai vector.
+P0300	Normal	Hình 2.2. Cơ chế Message Passing trong một lớp GNN
+P0301	Normal	=> MSG → AGG → UPDATE. Nút trung tâm tổng hợp thông tin từ các nút lân cận để cập nhật biểu diễn.
+P0302	Heading 3	2.2.3. Neighborhood Aggregation và Receptive Field
+P0303	Normal	Sau k lớp GNN, biểu diễn của nút vᵢ bao gồm thông tin từ tất cả các nút nằm trong vùng k-hop (khoảng cách đồ thị không quá k từ vᵢ). Đây được gọi là receptive field của nút, tương tự khái niệm tương ứng trong CNN nhưng được định nghĩa theo cấu trúc đồ thị thay vì lưới đều:
+P0304	Normal	Sau lớp 1: vᵢ nhận thông tin từ các nút trong N¹(vᵢ) — hàng xóm trực tiếp.
+P0305	Normal	Sau lớp 2: vᵢ nhận thông tin từ N²(vᵢ) — hàng xóm của hàng xóm.
+P0306	Normal	Sau lớp k: vᵢ nhận thông tin từ toàn bộ Nᵏ(vᵢ).
+P0307	Normal	Số lớp k ảnh hưởng trực tiếp đến lượng thông tin ngữ cảnh mà mỗi nút có thể tiếp cận. Tuy nhiên, k quá lớn dẫn đến hiện tượng over-smoothing, trong khi k quá nhỏ sẽ hạn chế khả năng học thông tin toàn cục. Thực tiễn cho thấy với hầu hết các bộ dữ liệu, k = 2 đến 3 cho kết quả tốt nhất.
+P0308	Heading 3	2.2.4. Embedding trong Graph Neural Network
+P0309	Normal	Node Embedding là quá trình ánh xạ mỗi nút vᵢ từ không gian đặc trưng thô sang một vector biểu diễn zᵢ ∈ ℝᵈ trong không gian ẩn (latent space), sao cho các nút có đặc trưng và cấu trúc lân cận tương tự sẽ có vector biểu diễn gần nhau trong không gian ẩn, và khoảng cách trong không gian ẩn phản ánh mức độ tương đồng trong đồ thị gốc.
+P0310	Normal	Sau L lớp GNN, embedding cuối cùng của nút vᵢ là zᵢ = h(L)i. Các embedding này có thể được sử dụng trực tiếp cho nhiều tác vụ downstream. Graph-level Embedding tổng hợp toàn bộ embedding của các nút thành một vector đại diện cho cả đồ thị thông qua hàm Readout:
+P0311	Normal	Hàm Readout phổ biến gồm: tổng (Sum), trung bình (Mean), hay các phương pháp phức tạp hơn như Hierarchical Pooling hay DiffPool. Chất lượng của embedding quyết định trực tiếp hiệu quả của các tác vụ downstream, và trực quan hóa embedding (qua t-SNE hay PCA) là một công cụ quan trọng để đánh giá chất lượng học biểu diễn — đây chính là một trong những tính năng cốt lõi của hệ thống GNN Insight được xây dựng trong đề tài này.
+P0312	Heading 3	2.2.5. Hiện tượng Over-smoothing
+P0313	Normal	Over-smoothing là hiện tượng xảy ra khi mô hình GNN có quá nhiều lớp: các nút ở xa nhau trong đồ thị dần hội tụ về cùng một biểu diễn, khiến khả năng phân biệt giữa các nút giảm đi nghiêm trọng. Về mặt lý thuyết, Li et al. (2018) chứng minh rằng khi số lớp k → ∞, kết quả của phép nhân ma trận kề chuẩn hóa lặp đi lặp lại hội tụ về một giá trị cố định:
+P0314	Normal	trong đó Â là ma trận kề được chuẩn hóa. Kết quả là mọi nút đều có biểu diễn gần như giống nhau bất kể vị trí trong đồ thị. Một số kỹ thuật được đề xuất để giảm thiểu over-smoothing bao gồm: DropEdge, Residual Connection (kết nối tắt), PairNorm, JK-Net (Jumping Knowledge Network).
+P0316	Normal	Hình 2.3. Minh họa hiện tượng Over-smoothing trong GNN— biểu diễn embedding của các nút (màu sắc = lớp thực) hội tụ về một điểm khi số lớp GNN tăng từ 2 đến 8 lớp.
+P0317	Normal	Hình 2.3 minh họa hiện tượng này trong không gian embedding hai chiều. Khi số lớp GNN tăng từ 2 lên 8 lớp, các cụm embedding ban đầu tách biệt rõ ràng dần chồng lấn và cuối cùng hội tụ về cùng một vùng trong không gian đặc trưng. Điều này cho thấy khả năng phân biệt giữa các lớp suy giảm đáng kể khi mạng trở nên quá sâu.
+P0318	Normal	Để giảm thiểu hiện tượng over-smoothing, nhiều phương pháp đã được đề xuất như DropEdge, Residual Connection, PairNorm và Jumping Knowledge Network (JK-Net). Các kỹ thuật này giúp duy trì sự đa dạng của embedding giữa các nút và cho phép xây dựng các mô hình GNN sâu hơn mà không làm mất khả năng biểu diễn.
+P0319	Heading 3	2.2.6. Pipeline huấn luyện mô hình GNN
+P0320	Normal	Quá trình huấn luyện một mô hình GNN bao gồm các bước được lặp lại qua từng epoch:
+P0321	Normal	Chuẩn bị dữ liệu: Xây dựng đồ thị G = (V, E, X), phân chia train/validation/test mask, chuẩn hóa đặc trưng đầu vào.
+P0322	Normal	Khởi tạo mô hình: Chọn kiến trúc GNN, số lớp L, chiều ẩn d, hàm kích hoạt, dropout rate; khởi tạo tham số ngẫu nhiên.
+P0323	Normal	Forward Pass: H⁰ = X → H(l) = f(l)(H(l-1), A) với l = 1,...,L → Ŷ = Classifier(H(L)).
+P0324	Normal	Tính hàm mất mát: Tùy bài toán (phân loại, dự đoán liên kết,...) chọn hàm loss phù hợp.
+P0325	Normal	Backward Pass: Tính gradient ∇θℒ thông qua backpropagation.
+P0326	Normal	Cập nhật tham số: θ ← θ − η · ∇θℒ bằng Adam hoặc SGD.
+P0327	Normal	Ghi nhận và đánh giá: Tính metric trên tập validation; lưu snapshot embedding và metric cho trực quan hóa.
+P0329	Normal	Hình 2.4. Pipeline huấn luyện tổng quát của mô hình GNN theo từng epoch
+P0330	Heading 2	2.3. Một số mô hình GNN phổ biến
+P0331	Normal	Trong quá trình phát triển của Graph Neural Network, nhiều kiến trúc khác nhau đã được đề xuất. Phần này trình bày chi tiết ba mô hình nền tảng và phổ biến nhất, được sử dụng làm backbone trong hệ thống GNN Insight: GCN, GraphSAGE và GAT.
+P0332	Heading 3	2.3.1. Graph Convolutional Network (GCN)
+P0333	Heading 3	a) Bối cảnh ra đời
+P0334	Normal	GCN được đề xuất bởi Kipf và Welling vào năm 2017 trong bài báo "Semi-Supervised Classification with Graph Convolutional Networks". Trước đó, các phương pháp phân loại nút dựa vào lan truyền nhãn hoặc học biểu diễn hai bước riêng biệt, không được tối ưu đầu-cuối. GCN ra đời nhằm thống nhất hai bước này vào một khung học sâu có thể huấn luyện theo cơ chế bán giám sát (semi-supervised), trong đó chỉ cần một phần nhỏ nút có nhãn (thường 1–10%) để huấn luyện toàn bộ mô hình.
+P0335	Heading 4	b) Ý tưởng chính và nền tảng lý thuyết
+P0336	Normal	GCN áp dụng phép tích chập lên đồ thị bằng cách khai thác ma trận kề và ma trận bậc để tổng hợp thông tin từ các nút lân cận. Xuất phát từ lý thuyết tín hiệu đồ thị (graph signal processing), GCN thực hiện phép tích chập trong miền phổ (spectral domain) thông qua biến đổi Laplacian chuẩn hóa, sau đó được Kipf & Welling xấp xỉ hóa thành phép tích chập cục bộ hiệu quả hơn.
+P0337	Normal	Nền tảng lý thuyết: Laplacian chuẩn hóa của đồ thị được định nghĩa là L = Iₙ − D^(-1/2) A D^(-1/2), với các giá trị riêng λ ∈ [0, 2]. GCN xấp xỉ phép lọc phổ bậc nhất (first-order approximation) để tránh tính toán phân tích phổ tốn kém:
+P0338	Normal	Để tránh gradient bùng nổ, Kipf & Welling áp dụng thủ thuật chuẩn hóa lại (renormalization trick) bằng cách thêm self-loop: Ã = A + Iₙ, D̃ᵢᵢ = Σⱼ Ãᵢⱼ.
+P0339	Heading 4	c) Kiến trúc và công thức toán học
+P0340	Normal	Quy tắc lan truyền của một lớp GCN được định nghĩa như sau:
+P0341	Normal	Trong đó:
+P0342	Normal	Ã = A + Iₙ: Ma trận kề được thêm self-loop, đảm bảo mỗi nút tổng hợp cả thông tin của chính mình.
+P0343	Normal	D̃ᵢᵢ = Σⱼ Ãᵢⱼ: Ma trận bậc của Ã.
+P0344	Normal	D̃^(-1/2) Ã D̃^(-1/2): Phép chuẩn hóa đối xứng (symmetric normalization) đảm bảo đóng góp của nút vⱼ vào cập nhật vᵢ được cân nhắc theo bậc của cả hai nút: Âᵢⱼ = Ãᵢⱼ / √(D̃ᵢᵢ · D̃ⱼⱼ).
+P0345	Normal	H(l) ∈ ℝᴺˣᵈˡ: Ma trận embedding ở lớp l; H(0) = X là ma trận đặc trưng đầu vào.
+P0346	Normal	W(l) ∈ ℝᵈˡˣᵈˡ⁺¹: Ma trận trọng số học được tại lớp l.
+P0347	Normal	σ: Hàm kích hoạt phi tuyến, thường dùng ReLU.
+P0348	Normal	Đối với bài toán phân loại nút, mô hình GCN hai lớp đầy đủ có dạng:
+P0349	Normal	với hàm mất mát Cross-Entropy trên tập nút có nhãn VL:
+P0350	Normal	Trong đó Yᵢc = 1 nếu nút vᵢ thuộc lớp c, Zᵢc là xác suất dự đoán tương ứng.
+P0351	Heading 4	d) Ưu điểm, nhược điểm và ứng dụng
+P0352	Normal	Ưu điểm: Kiến trúc đơn giản, hiệu quả tính toán cao; hoạt động tốt trên đồ thị có cấu trúc đồng nhất; dễ tích hợp vào các pipeline học sâu; có nền tảng lý thuyết phổ vững chắc.
+P0353	Normal	Nhược điểm: Yêu cầu toàn bộ đồ thị trong bộ nhớ (transductive learning); không thể suy diễn trên nút mới chưa thấy trong huấn luyện; nhạy cảm với over-smoothing; không phân biệt mức quan trọng của các hàng xóm (mọi hàng xóm đóng góp đều nhau theo bậc).
+P0354	Normal	Ứng dụng tiêu biểu: Phân loại nút trong mạng trích dẫn học thuật (Cora, Citeseer, PubMed), phân loại tài liệu, phân tích mạng xã hội, dự đoán tương tác protein.
+P0355	Heading 3	2.3.2. GraphSAGE (Graph Sample and Aggregate)
+P0356	Heading 4	a) Bối cảnh ra đời
+P0357	Normal	GraphSAGE được đề xuất bởi Hamilton và cộng sự (2017) trong bài báo "Inductive Representation Learning on Large Graphs". Động lực chính là khắc phục hai hạn chế cơ bản của GCN: (1) chỉ hoạt động theo kiểu transductive — không tổng quát hóa sang nút mới; và (2) không mở rộng được (không scalable) với đồ thị quy mô lớn hàng triệu nút do yêu cầu toàn bộ ma trận kề trong bộ nhớ.
+P0358	Heading 4	b) Ý tưởng chính — Inductive Learning và Lấy mẫu
+P0359	Normal	GraphSAGE học một hàm aggregator thay vì embedding riêng cho từng nút. Thay vì sử dụng toàn bộ đồ thị, GraphSAGE lấy mẫu ngẫu nhiên một số lượng cố định Sl nút lân cận ở mỗi lớp l, sau đó áp dụng hàm aggregation lên tập mẫu này. Cách này kiểm soát được chi phí tính toán và cho phép mini-batch training trên đồ thị quy mô lớn. Vì hàm aggregator được học (không phải embedding cụ thể), nó có thể áp dụng cho bất kỳ nút mới nào — đây là bản chất của inductive learning.
+P0360	Heading 4	c) Kiến trúc và công thức toán học
+P0361	Normal	Quy tắc cập nhật của GraphSAGE tại lớp l cho nút vᵢ gồm ba bước:
+P0362	Normal	Bước 1 — Lấy mẫu và tổng hợp lân cận:
+P0363	Normal	Bước 2 — Nối và biến đổi tuyến tính:
+P0364	Normal	Bước 3 — Chuẩn hóa L2 (tùy chọn):
+P0365	Normal	Trong đó S(vᵢ) là tập mẫu ngẫu nhiên từ N(vᵢ) với kích thước cố định Sl. GraphSAGE đề xuất ba loại hàm AGG:
+P0366	Normal	Mean Aggregator: h_N(vᵢ)^(l) = mean({h^(l-1)_vⱼ : vⱼ ∈ S(vᵢ)}) — đơn giản, hiệu quả, không có tham số thêm. Đây là aggregator mặc định cho đồ thị lớn.
+P0367	Normal	LSTM Aggregator: Áp dụng LSTM trên hoán vị ngẫu nhiên của tập lân cận, cho phép học phụ thuộc thứ tự phức tạp hơn. Chi phí tính toán cao hơn Mean nhưng khả năng biểu diễn tốt hơn.
+P0368	Normal	Pooling Aggregator: h_N(vᵢ)^(l) = max({σ(W_pool h^(l-1)_vⱼ + b) : vⱼ ∈ S(vᵢ)}) — phép max-pooling sau phép biến đổi tuyến tính. Có thể nắm bắt các đặc trưng cực trị từ tập lân cận.
+P0369	Normal	Hàm mất mát không giám sát của GraphSAGE sử dụng negative sampling, tối ưu hóa để nút gần nhau trong đồ thị có embedding gần nhau trong không gian ẩn:
+P0370	Normal	Trong đó vⱼ là nút lân cận dương (positive sample), vₙ là nút âm lấy mẫu từ phân phối Pₙ (thường là phân phối đều trên các nút không liên kết), Q là số mẫu âm.
+P0371	Heading 4	d) Ưu điểm, nhược điểm và ứng dụng
+P0372	Normal	Ưu điểm: Hỗ trợ inductive learning — tổng quát hóa sang nút hoàn toàn mới; kiểm soát được chi phí tính toán qua lấy mẫu; phù hợp với đồ thị quy mô lớn; hỗ trợ mini-batch training.
+P0373	Normal	Nhược điểm: Kết quả bị ảnh hưởng bởi tính ngẫu nhiên trong lấy mẫu — không tái lặp hoàn toàn; không phân biệt tầm quan trọng của các hàng xóm (trong mean aggregator); cần điều chỉnh kích thước mẫu Sl cẩn thận.
+P0374	Normal	Ứng dụng tiêu biểu: Phân loại bài đăng Reddit (230,000 nút), phân tích đồ thị protein-protein, hệ thống gợi ý Pinterest (3 tỷ nút), suy diễn trên người dùng/sản phẩm mới.
+P0375	Heading 3	2.3.3. Graph Attention Network (GAT)
+P0376	Heading 4	a) Bối cảnh ra đời
+P0377	Normal	GAT được đề xuất bởi Veličković và cộng sự (2018) trong bài báo "Graph Attention Networks". GCN và GraphSAGE đối xử với tất cả nút lân cận đồng đều (hoặc theo bậc cố định), không phân biệt mức độ liên quan của từng mối quan hệ. GAT ra đời để khắc phục điều này bằng cách để mô hình tự học trọng số của từng mối quan hệ thông qua cơ chế attention — không cần thông tin cạnh trước (edge features không bắt buộc).
+P0378	Heading 4	b) Cơ chế Self-Attention trên đồ thị
+P0379	Normal	GAT áp dụng cơ chế self-attention — vốn thành công trong NLP (Transformer, Vaswani et al., 2017) — vào đồ thị. Với mỗi cặp nút (vᵢ, vⱼ) có cạnh kết nối, GAT tính toán hệ số chú ý αᵢⱼ đo lường mức độ quan trọng của nút vⱼ đối với việc cập nhật biểu diễn của vᵢ. Điểm đặc biệt: hệ số αᵢⱼ được học trực tiếp từ dữ liệu, không được xác định sẵn bởi cấu trúc đồ thị như trong GCN.
+P0380	Heading 4	c) Kiến trúc và công thức toán học
+P0381	Normal	Bước 1 — Biến đổi tuyến tính chia sẻ: Áp dụng cùng một ma trận W ∈ ℝᵈ'×ᵈ lên tất cả các nút: gᵢ = W hᵢ, gⱼ = W hⱼ.
+P0382	Normal	Bước 2 — Tính attention score thô (unnormalized):
+P0383	Normal	Trong đó a ∈ ℝ²ᵈ' là vector tham số học được (shared attention mechanism). LeakyReLU với negative slope = 0.2 được dùng để tránh mất thông tin gradient ở vùng âm.
+P0384	Normal	Bước 3 — Chuẩn hóa Softmax trong vùng lân cận:
+P0385	Normal	Phép chuẩn hóa này đảm bảo Σⱼ αᵢⱼ = 1 và αᵢⱼ ∈ (0,1), biểu diễn phân phối xác suất mức độ chú ý trên các hàng xóm.
+P0386	Normal	Bước 4 — Tổng hợp có trọng số và cập nhật:
+P0387	Normal	Multi-head Attention: GAT sử dụng K đầu attention độc lập để ổn định quá trình học và tăng khả năng biểu diễn. Tại các lớp ẩn, kết quả được nối:
+P0388	Normal	Tại lớp cuối cùng, thường dùng trung bình thay vì nối để kiểm soát chiều đầu ra:
+P0389	Heading 4	d) Ưu điểm, nhược điểm và ứng dụng
+P0390	Normal	Ưu điểm: Tự học trọng số mối quan hệ — không cần biết bậc đồ thị trước; hệ số attention αᵢⱼ có thể trực quan hóa và giải thích (interpretable); hỗ trợ inductive learning; xử lý tốt đồ thị không đồng nhất.
+P0391	Normal	Nhược điểm: Chi phí tính toán cao hơn GCN và GraphSAGE do tính attention cho từng cặp nút-hàng xóm O(|E|); với đồ thị rất dày (dense), số lượng attention coefficient rất lớn; cần điều chỉnh số đầu K cẩn thận.
+P0392	Normal	Ứng dụng tiêu biểu: Phân loại nút đòi hỏi tính giải thích (explainable AI), phân tích mạng không đồng nhất, hệ thống gợi ý cần cơ chế giải thích theo từng mối quan hệ, bài toán đồ thị phân tử phức tạp.
+P0394	Normal	Hình 2.5. So sánh cơ chế aggregation trong GCN, GraphSAGE và GAT; độ dày mũi tên trong GAT biểu diễn trọng số attention α_ij
+P0396	Caption	Bảng 2.1. So sánh tổng quan 3 mô hình GNN
+P0398	Heading 2	2.4. Quy trình huấn luyện mô hình Graph Neural Network
+P0399	Heading 3	2.4.1. Chuẩn bị dữ liệu và phân chia tập
+P0400	Normal	Dữ liệu đầu vào của GNN gồm đồ thị G = (V, E, X). Bước tiền xử lý bao gồm: chuẩn hóa đặc trưng (z-score hoặc min-max normalization trên ma trận X); xử lý đồ thị (thêm self-loop, chuẩn hóa ma trận kề, xử lý nút/cạnh bị thiếu); và phân chia theo nút (node mask) hoặc theo đồ thị (graph-level split), đảm bảo tỉ lệ cân bằng nhãn. Thông thường, tỉ lệ phân chia train/val/test là 60%/20%/20%.
+P0401	Normal	Trong bài toán bán giám sát (semi-supervised), tỉ lệ nút có nhãn có thể rất nhỏ (20 nút mỗi lớp với Cora). Kỹ thuật data augmentation trên đồ thị bao gồm DropEdge (loại ngẫu nhiên cạnh), NodeDrop (loại ngẫu nhiên nút) và FeatureMask (che một phần đặc trưng) nhằm tăng tính tổng quát hóa của mô hình.
+P0402	Heading 3	2.4.2. Hàm mất mát theo từng bài toán
+P0403	Normal	Phân loại nút (Node Classification): Cross-Entropy Loss trên tập nút có nhãn:
+P0404	Normal	Dự đoán liên kết (Link Prediction): Binary Cross-Entropy với negative sampling:
+P0405	Normal	Nhúng đồ thị không giám sát: Negative Sampling Loss (tương tự Word2Vec):
+P0406	Heading 3	2.4.3. Theo dõi các chỉ số trong quá trình huấn luyện
+P0407	Normal	Trong mỗi epoch, các đại lượng sau cần được theo dõi và ghi nhận để đánh giá toàn diện quá trình học:
+P0408	Normal	Training Loss / Validation Loss: Phát hiện overfitting khi validation loss tăng trong khi training loss giảm. Khoảng cách giữa hai đường này phản ánh mức độ tổng quát hóa.
+P0409	Normal	Accuracy, F1-score, AUC-ROC: Đánh giá chất lượng phân loại; cần tính cả trên tập train và tập validation. AUC-ROC đặc biệt quan trọng với tập dữ liệu mất cân bằng nhãn.
+P0410	Normal	Gradient norm: Phát hiện gradient explosion (norm quá lớn, >10) hoặc gradient vanishing (norm < 10⁻⁵). Theo dõi norm gradient giúp đánh giá hiệu quả của gradient clipping.
+P0411	Normal	Embedding statistics: Phân phối chuẩn của các embedding qua epoch — giúp phát hiện over-smoothing sớm khi variance giảm dần.
+P0412	Normal	Learning rate schedule: Theo dõi tốc độ học trong các chiến lược cosine annealing hoặc step decay.
+P0413	Normal	Ngoài ra, đối với bài toán đặc thù: Link Prediction cần MRR (Mean Reciprocal Rank) và Hits@K; Graph Generation cần Validity, Uniqueness, Novelty; Community Detection cần NMI (Normalized Mutual Information) và Modularity.
+P0414	Heading 3	2.4.4. Kỹ thuật tối ưu và điều chuẩn hóa
+P0415	Normal	Optimizer — Adam: Là lựa chọn phổ biến cho GNN với learning rate mặc định η = 10⁻³. Adam duy trì ước lượng moment bậc nhất (m̂ₜ) và bậc hai (v̂ₜ) để tự động điều chỉnh learning rate: θₜ₊₁ = θₜ − η · m̂ₜ/(√v̂ₜ + ε). AdamW bổ sung weight decay λ||θ||² vào objective để giảm overfitting.
+P0416	Normal	Dropout: Áp dụng sau mỗi lớp GNN với tỉ lệ p = 0.5 thông thường. DropEdge — một biến thể của Dropout dành riêng cho đồ thị — loại bỏ ngẫu nhiên các cạnh trong mỗi mini-batch để tăng tính tổng quát và giảm over-smoothing.
+P0417	Normal	Early Stopping: Dừng huấn luyện khi validation metric không cải thiện sau P epoch liên tiếp (thường P = 50–100). Lưu trữ checkpoint của mô hình tốt nhất (best_val_acc) thay vì mô hình ở epoch cuối.
+P0418	Normal	Batch Normalization / Layer Normalization: Ổn định phân phối activation giữa các lớp, đặc biệt quan trọng với mô hình sâu (>3 lớp). Layer Norm thường hiệu quả hơn Batch Norm cho GNN vì không phụ thuộc vào kích thước batch.
+P0419	Normal	Gradient Clipping: Giới hạn norm gradient bằng cách scale: g ← g · (c/||g||) nếu ||g|| > c (thường c = 1.0). Đây là kỹ thuật cần thiết khi gradient explosion xuất hiện.
+P0420	Heading 2	2.5. Các bài toán phổ biến trong Graph Neural Network
+P0421	Normal	Graph Neural Network được ứng dụng trong nhiều loại bài toán khác nhau tùy theo mục tiêu học và loại đầu ra mong muốn. Hệ thống GNN Insight được xây dựng trong đề tài hỗ trợ sáu bài toán tiêu biểu sau đây, mỗi bài toán có đặc trưng riêng về dữ liệu, hàm mục tiêu và cách đánh giá kết quả.
+P0422	Heading 3	2.5.1. Phân loại nút (Node Classification)
+P0423	Normal	Mục tiêu: Dự đoán nhãn yᵢ ∈ {1,...,C} cho mỗi nút vᵢ ∈ V dựa trên embedding học được từ GNN và cấu trúc đồ thị xung quanh nút đó.
+P0424	Normal	Đầu vào: Đồ thị G = (V, E, X); tập nút có nhãn VL ⊂ V (thường chỉ chiếm 1–10% tổng số nút trong bài toán bán giám sát).
+P0425	Normal	Đầu ra: Nhãn dự đoán ŷᵢ cho tất cả nút vᵢ ∈ V \ VL.
+P0426	Normal	Hàm mất mát (Cross-Entropy trên tập nhãn):
+P0427	Normal	Metric đánh giá: Accuracy, Macro-F1 (ưu tiên khi mất cân bằng nhãn), Micro-F1.
+P0428	Normal	Dataset phổ biến: Cora (2.708 nút, 5.429 cạnh, 7 lớp), Citeseer (3.327 nút, 4.732 cạnh, 6 lớp), PubMed (19.717 nút, 3 lớp), ogbn-arxiv (169.343 nút, 40 lớp).
+P0429	Normal	Ví dụ thực tế: Phân loại chủ đề bài báo khoa học trong mạng trích dẫn; phân loại loại tài khoản (bot/người dùng thực) trong mạng xã hội Twitter; phân loại loại tế bào trong mạng tương tác sinh học.
+P0431	Normal	Hình 2.6.Minh họa bài toán Node classification với GNN
+P0432	Normal	=> Sau quá trình message passing và huấn luyện, các nút chưa gán nhãn được dự đoán nhãn và các nút cùng lớp hình thành các cụm riêng trong không gian embedding.
+P0433	Heading 3	2.5.2. Phân loại đồ thị (Graph Classification)
+P0434	Normal	Mục tiêu: Dự đoán nhãn y_G cho toàn bộ đồ thị G, xem đồ thị như một mẫu dữ liệu hoàn chỉnh (ví dụ: phân tử này có độc tính hay không?).
+P0435	Normal	Đầu vào: Tập đồ thị {(G₁, y₁), (G₂, y₂), ..., (Gₙ, yₙ)}; mỗi đồ thị là một mẫu huấn luyện độc lập.
+P0436	Normal	Đầu ra: Nhãn đồ thị ŷ_Gᵢ.
+P0437	Normal	Pipeline: Node Embeddings → Readout (tổng hợp theo đồ thị) → Graph Embedding → Classifier → Label.
+P0438	Normal	Hàm Readout phổ biến:
+P0439	Normal	Hàm mất mát: Cross-Entropy cho phân loại đa lớp, Binary Cross-Entropy cho phân loại nhị phân.
+P0440	Normal	Dataset phổ biến: MUTAG (188 đồ thị phân tử, 2 lớp), IMDB-B (1.000 đồ thị mạng xã hội), PROTEINS (1.113 đồ thị protein), RDT-B (2.000 đồ thị Reddit), ogbg-molhiv (41.127 phân tử).
+P0441	Normal	Ví dụ thực tế: Dự đoán tính độc tính (mutagenicity) của hợp chất hóa học trong dược học; phân loại thể loại mạng tương tác xã hội; phân loại cấu trúc protein theo chức năng sinh học.
+P0442	Heading 3	2.5.3. Dự đoán liên kết (Link Prediction)
+P0443	Normal	Mục tiêu: Xác định xác suất tồn tại cạnh (vᵢ, vⱼ) ∉ E trong đồ thị — tức là dự đoán những mối quan hệ chưa quan sát được hoặc chưa xuất hiện.
+P0444	Normal	Đầu vào: Đồ thị G = (V, E, X); tập cạnh dương (vᵢ, vⱼ) ∈ E_train và tập cạnh âm được lấy mẫu ngẫu nhiên.
+P0445	Normal	Đầu ra: Điểm số ŝᵢⱼ ∈ [0,1] biểu diễn xác suất tồn tại cạnh.
+P0446	Normal	Decoder — Dot-product (phổ biến nhất):
+P0447	Normal	Decoder — MLP (phức tạp hơn): ŝᵢⱼ = MLP( CONCAT[zᵢ, zⱼ] )
+P0448	Normal	Hàm mất mát (Binary Cross-Entropy với negative sampling):
+P0449	Normal	Metric đánh giá: AUC-ROC, AP (Average Precision), Hits@K, MRR (Mean Reciprocal Rank).
+P0450	Normal	Dataset phổ biến: Cora, Citeseer (phân chia tập cạnh train/test), ogbl-collab (hợp tác nghiên cứu khoa học), ogbl-ddi (tương tác thuốc-thuốc), ogbl-citation2.
+P0451	Normal	Ví dụ thực tế: Gợi ý kết bạn/theo dõi trên mạng xã hội (Facebook, Twitter); dự đoán tương tác thuốc-thuốc (drug-drug interaction) trong y học; phát hiện quan hệ tiềm ẩn trong mạng tri thức.
+P0453	Normal	Hình 2.6. Minh họa bài toán Graph Classification với GNN
+P0454	Normal	=> Mỗi đồ thị được ánh xạ thành embedding mức nút, sau đó tổng hợp bởi hàm readout để tạo graph embedding và đưa vào bộ phân loại nhằm dự đoán nhãn của toàn bộ đồ thị.
+P0455	Heading 3	2.5.4. Phát hiện cộng đồng (Community Detection)
+P0456	Normal	Mục tiêu: Chia các nút trong đồ thị thành các nhóm (cộng đồng) có mức liên kết nội bộ chặt chẽ hơn so với liên kết với các nhóm khác. Đây là bài toán phân cụm không giám sát (unsupervised clustering) trên đồ thị.
+P0457	Normal	Đầu vào: Đồ thị G = (V, E); số cộng đồng mong muốn K (hoặc tự động học).
+P0458	Normal	Đầu ra: Phân công cộng đồng C: V → {1,...,K}.
+P0459	Normal	Objective function — Modularity (Newman & Girvan, 2004):
+P0460	Normal	Trong đó m là tổng số cạnh; kᵢ là bậc của nút vᵢ; cᵢ là cộng đồng của vᵢ; δ là hàm Kronecker delta (1 nếu cᵢ = cⱼ, 0 nếu ngược lại). Modularity Q ∈ [-1, 1], giá trị Q > 0.3 được xem là cộng đồng rõ ràng.
+P0461	Normal	Metric đánh giá (có nhãn ground truth): NMI (Normalized Mutual Information), ARI (Adjusted Rand Index), Conductance (không cần nhãn).
+P0462	Normal	Ứng dụng: Phân tích nhóm người dùng trong mạng xã hội; phát hiện chức năng mô-đun trong mạng sinh học; phân tích cấu trúc tổ chức trong mạng tri thức.
+P0464	Normal	Hình 2.6. Minh họa bài toán Community Detection với GNN
+P0465	Heading 3	2.5.5. Nhúng đồ thị (Graph Embedding)
+P0466	Normal	Mục tiêu: Ánh xạ nút hoặc toàn bộ đồ thị sang không gian vector liên tục có chiều thấp hơn (d << n), giữ lại thông tin cấu trúc và ngữ nghĩa quan trọng. Biểu diễn này có thể được dùng cho nhiều tác vụ downstream.
+P0467	Normal	Objective function (bảo toàn cấu trúc lân cận):
+P0468	Normal	Trong đó:
+P0469	Normal	mô hình hóa xác suất nút vⱼ là hàng xóm của vᵢ trong không gian embedding. Vì tính toán mẫu số trên toàn bộ nút tốn kém, thực tế thường dùng negative sampling.
+P0470	Normal	Metric đánh giá: Khi embedding dùng cho classification: Accuracy, F1. Khi dùng cho link prediction: AUC, AP. Chất lượng định tính: quan sát sự phân tách lớp qua t-SNE/PCA.
+P0471	Normal	Trong hệ thống GNN Insight, embedding được trực quan hóa qua t-SNE/PCA theo từng epoch để người dùng quan sát quá trình học biểu diễn của mô hình theo thời gian thực, phát hiện sớm các vấn đề như over-smoothing hay embedding collapse.
+P0472	Heading 3	2.5.6. Sinh đồ thị (Graph Generation)
+P0473	Normal	Mục tiêu: Tạo ra các đồ thị mới sao cho chúng có những đặc trưng tương tự dữ liệu huấn luyện hoặc thỏa mãn một số ràng buộc nhất định (ví dụ: phân tử hợp lệ theo hóa học).
+P0474	Normal	Đầu vào: Tập đồ thị huấn luyện {G₁, G₂, ..., Gₙ}; (tùy chọn) điều kiện ngữ cảnh (conditional generation).
+P0475	Normal	Đầu ra: Đồ thị mới G_new thỏa mãn các tính chất mong muốn.
+P0476	Normal	Mô hình VGAE (Variational Graph Autoencoder — Kipf & Welling, 2016):
+P0477	Normal	Trong đó: vế đầu là reconstruction loss của ma trận kề (khả năng tái tạo cấu trúc đồ thị từ embedding Z); vế sau là KL divergence đảm bảo không gian latent có phân phối chuẩn hóa hợp lý (prior p(Z) = N(0,I)).
+P0478	Normal	Đánh giá chất lượng sinh đồ thị (ba chỉ số bắt buộc):
+P0479	Normal	Validity: Tỉ lệ đồ thị sinh ra thỏa mãn ràng buộc hợp lệ (ví dụ: phân tử có liên kết hóa học hợp lệ).
+P0480	Normal	Uniqueness: Tỉ lệ đồ thị sinh ra không trùng lặp với nhau trong tập sinh.
+P0481	Normal	Novelty: Tỉ lệ đồ thị sinh ra mới (không có trong tập huấn luyện).
+P0482	Normal	Ứng dụng: Thiết kế phân tử trong dược học và vật liệu mới; sinh cấu trúc mạng giao thông tối ưu; mô phỏng hệ thống phức tạp trong vật lý và sinh học.
+P0483	Heading 2	2.6. Trực quan hóa trong quá trình huấn luyện mô hình
+P0484	Heading 3	2.6.1. Vai trò của trực quan hóa trong học máy
+P0485	Normal	Trực quan hóa (visualization) là quá trình biểu diễn dữ liệu và thông tin bằng hình ảnh nhằm hỗ trợ con người quan sát, phân tích và ra quyết định hiệu quả hơn. Trong học máy nói chung, trực quan hóa đóng vai trò không thể thiếu ở ba giai đoạn: (1) khám phá dữ liệu (EDA) trước khi mô hình hóa, (2) theo dõi và gỡ lỗi trong quá trình huấn luyện, và (3) giải thích kết quả sau khi mô hình được triển khai.
+P0486	Normal	Trong học sâu, với hàng triệu tham số và quá trình huấn luyện phức tạp, trực quan hóa trở nên đặc biệt cần thiết để phát hiện sớm các vấn đề như gradient vanishing/explosion, overfitting hay mode collapse. Các công cụ như TensorBoard (Google), Weights & Biases, Neptune.ai hay MLflow đã chứng minh tầm quan trọng của việc theo dõi trực quan trong quá trình phát triển mô hình học sâu.
+P0487	Heading 3	2.6.2. Đặc thù của trực quan hóa trong Graph Learning
+P0488	Normal	So với các mô hình học sâu thông thường (CNN cho ảnh, Transformer cho văn bản), trực quan hóa cho GNN có những thách thức và yêu cầu đặc thù riêng:
+P0489	Normal	Trực quan hóa cấu trúc đồ thị: Không giống ảnh hay chuỗi, đồ thị không có vị trí không gian tự nhiên. Cần thuật toán bố cục đồ thị (layout algorithm) như Force-Directed, Kamada-Kawai hay Spring Layout để phân bổ nút trong không gian 2D.
+P0490	Normal	Trực quan hóa embedding không gian cao chiều: Embedding của GNN thường có 64–256 chiều, cần kỹ thuật giảm chiều (PCA, t-SNE, UMAP) để chiếu xuống 2D/3D cho người dùng quan sát.
+P0491	Normal	Trực quan hóa theo thời gian (temporal): Trong quá trình huấn luyện, cả embedding lẫn cấu trúc đồ thị thay đổi theo từng epoch. Cần hỗ trợ animation hoặc slider để quan sát sự thay đổi này.
+P0492	Normal	Trực quan hóa attention/salience: Với mô hình GAT, hệ số attention αᵢⱼ có thể được hiển thị dưới dạng độ dày/màu sắc cạnh để giải thích quyết định của mô hình.
+P0493	Heading 3	2.6.3. Metric Dashboard — Bảng điều khiển chỉ số
+P0494	Normal	Bảng điều khiển metric (Metric Dashboard) là thành phần trực quan hóa định lượng cốt lõi, hiển thị theo thời gian thực các chỉ số huấn luyện quan trọng dưới dạng biểu đồ đường (line chart) theo epoch.
+P0495	Normal	Các chỉ số cần thiết bao gồm: Training Loss và Validation Loss trên cùng một biểu đồ (phát hiện overfitting khi khoảng cách hai đường tăng); Accuracy/F1/AUC của tập train và validation; Learning Rate (để theo dõi hiệu quả lr scheduler); Gradient Norm (phát hiện bất ổn trong quá trình tối ưu); và Epoch Time (phát hiện bottleneck tính toán).
+P0496	Normal	Bên cạnh biểu đồ theo thời gian, Dashboard cần hiển thị bảng tóm tắt (summary table) trạng thái huấn luyện hiện tại: best validation metric, epoch hiện tại, tổng số epoch, thời gian chạy và estimated time to completion.
+P0497	Normal	Trong hệ thống GNN Insight, Metric Dashboard được cập nhật liên tục qua WebSocket — mỗi khi backend hoàn thành một epoch, dữ liệu metric được đẩy ngay lập tức đến frontend mà không cần người dùng tải lại trang.
+P0498	Heading 3	2.6.4. Topology Visualization — Trực quan hóa cấu trúc đồ thị
+P0499	Normal	Topology Visualization là thành phần quan trọng nhất và độc đáo nhất của hệ thống GNN Insight, cho phép người dùng trực tiếp quan sát đồ thị thay đổi theo từng epoch huấn luyện.
+P0500	Normal	Các yếu tố trực quan cần được cập nhật theo epoch bao gồm:
+P0501	Normal	Màu sắc nút (node color): Mã màu theo nhãn dự đoán (predicted label) hoặc nhãn thực (ground truth). Sự thay đổi màu sắc qua các epoch cho thấy mô hình đang học phân loại nút như thế nào.
+P0502	Normal	Kích thước nút (node size): Có thể ánh xạ theo confidence score (xác suất dự đoán cao nhất), bậc nút, hoặc chỉ số trung tâm (centrality).
+P0503	Normal	Màu sắc/độ dày cạnh: Với GAT, độ dày cạnh có thể ánh xạ theo hệ số attention αᵢⱼ — cạnh quan trọng hơn sẽ được tô đậm hơn.
+P0504	Normal	Nhóm cộng đồng (community coloring): Với bài toán Community Detection, các cộng đồng được tô màu khác nhau, cho thấy sự hình thành nhóm qua quá trình học.
+P0505	Normal	Về thuật toán bố cục: Force-Directed Layout (Fruchterman-Reingold) là lựa chọn phổ biến nhất — coi cạnh như lò xo và nút như điện tích, tự động sắp xếp nút để cạnh gần bằng nhau và tránh chồng chéo. Để đảm bảo tính ổn định qua các epoch (stable layout), vị trí nút từ epoch trước được dùng làm điểm khởi đầu cho epoch sau.
+P0506	Heading 3	2.6.5. Embedding Visualization — Trực quan hóa không gian ẩn
+P0507	Normal	Embedding Visualization chiếu không gian embedding nhiều chiều (thường 64–256D) xuống 2D để người dùng quan sát chất lượng biểu diễn của mô hình. Đây là công cụ quan trọng để đánh giá khả năng phân tách lớp và phát hiện sớm over-smoothing.
+P0508	Heading 4	a) PCA (Principal Component Analysis)
+P0509	Normal	PCA là phương pháp giảm chiều tuyến tính tìm các thành phần chính PC₁, PC₂,... sao cho phương sai được giữ lại là tối đa. Về mặt toán học, PCA giải bài toán phân tích giá trị riêng của ma trận hiệp phương sai:
+P0510	Normal	Trong đó W₂ ∈ ℝᵈˣ² là ma trận chứa hai vector riêng ứng với hai giá trị riêng lớn nhất. PCA có tính tái lặp hoàn toàn (deterministic), chi phí tính toán thấp O(nd²), phù hợp để theo dõi xu hướng embedding theo thời gian huấn luyện. Tuy nhiên, PCA chỉ nắm bắt được cấu trúc tuyến tính, có thể bỏ sót các nhóm phi tuyến phức tạp.
+P0511	Heading 4	b) t-SNE (t-Distributed Stochastic Neighbor Embedding)
+P0512	Normal	t-SNE là phương pháp phi tuyến bảo toàn cấu trúc cục bộ của dữ liệu, đặc biệt hiệu quả trong việc tạo ra sự phân tách trực quan rõ ràng giữa các nhóm. t-SNE tối thiểu hóa KL divergence giữa phân phối cao chiều và thấp chiều:
+P0513	Normal	Trong đó pᵢⱼ là xác suất tương đồng trong không gian cao chiều (Gaussian), qᵢⱼ là xác suất tương đồng trong không gian 2D (t-distribution bậc 1). Việc dùng t-distribution trong không gian thấp chiều giúp tránh hiện tượng "crowding problem" — các điểm xa nhau bị dồn lại gần nhau.
+P0514	Normal	t-SNE phù hợp để đánh giá chất lượng embedding cuối cùng và trong tính năng replay do chi phí tính toán cao hơn PCA. Tham số quan trọng cần điều chỉnh: perplexity (thường 5–50), learning rate, số bước tối ưu.
+P0515	Heading 4	c) Giải thích kết quả trực quan hóa embedding
+P0516	Normal	Một embedding tốt trong bài toán Node Classification sẽ thể hiện: (1) các nút cùng lớp tạo thành cụm tách biệt trong không gian 2D; (2) ranh giới giữa các lớp rõ ràng; (3) kích thước cụm tương đối đồng đều. Ngược lại, dấu hiệu over-smoothing là tất cả các cụm hội tụ về cùng một điểm, mất đi tính phân biệt lớp — đây là cảnh báo sớm rằng mô hình có quá nhiều lớp hoặc quá nhiều epoch.
+P0517	Heading 3	2.6.6. Realtime Monitoring — Theo dõi thời gian thực
+P0518	Normal	Realtime Monitoring là khả năng cập nhật liên tục thông tin huấn luyện đến người dùng ngay khi backend xử lý xong mỗi epoch, mà không cần người dùng phải tải lại trang hoặc gửi yêu cầu polling. Điều này được thực hiện thông qua giao thức WebSocket.
+P0519	Normal	Các sự kiện WebSocket trong hệ thống GNN Insight bao gồm: epoch_start (epoch bắt đầu), epoch_end (kèm metric snapshot), graph_update (cập nhật nhãn nút mới), embedding_update (vector embedding mới), training_complete (hoàn thành), và error_event (lỗi trong quá trình train).
+P0520	Normal	Ưu điểm của Realtime Monitoring: người dùng có thể can thiệp sớm nếu phát hiện vấn đề (dừng training sớm nếu loss phân kỳ, điều chỉnh learning rate khi plateau). Đây là điểm khác biệt quan trọng so với các công cụ log-based truyền thống yêu cầu phân tích sau khi huấn luyện kết thúc.
+P0521	Heading 3	2.6.7. Replay Experiment — Phát lại thí nghiệm
+P0522	Normal	Tính năng Replay cho phép người dùng xem lại toàn bộ diễn biến huấn luyện bất kỳ lúc nào sau khi thí nghiệm kết thúc. Điều này được thực hiện bằng cách backend lưu trữ một chuỗi epoch snapshot, mỗi snapshot chứa: metric tại epoch đó, trạng thái nhãn dự đoán của từng nút, và embedding vector tại thời điểm đó.
+P0523	Normal	Các tính năng của Replay: điều chỉnh tốc độ phát (0.5x, 1x, 2x, 4x); dừng tại bất kỳ epoch nào để phân tích chi tiết; nhảy tới epoch cụ thể (seek); so sánh song song snapshot của hai epoch bất kỳ.
+P0524	Normal	Replay đặc biệt hữu ích trong: phân tích sâu sau thí nghiệm để hiểu tại sao mô hình hội tụ hay không hội tụ; trình bày kết quả nghiên cứu trong báo cáo hoặc seminar; phục vụ mục đích giảng dạy khi muốn minh họa quá trình học của GNN cho sinh viên.
+P0525	Heading 3	2.6.8. Model Comparison — So sánh thí nghiệm
+P0526	Normal	Model Comparison hỗ trợ so sánh song song nhiều thí nghiệm (runs) với các cấu hình hyperparameter khác nhau. Giao diện hiển thị đồng thời đường cong loss/metric của từng thí nghiệm trên cùng một biểu đồ, cho phép người dùng nhanh chóng xác định cấu hình tốt nhất.
+P0527	Normal	Các trường hợp sử dụng điển hình: so sánh GCN vs GraphSAGE vs GAT trên cùng dataset; so sánh các learning rate khác nhau (1e-2, 1e-3, 1e-4); so sánh số lớp GNN khác nhau (2, 3, 4 lớp) để phân tích ảnh hưởng của over-smoothing; so sánh với/không có dropout.
+P0528	Normal	Model Comparison thay thế cho việc so sánh thủ công qua log file, tiết kiệm đáng kể thời gian phân tích và cho phép đưa ra quyết định về hyperparameter dựa trên bằng chứng trực quan rõ ràng.
+P0530	Normal	Hình 2.7. Tổng quan hệ thống trực quan hóa GNN Insight trong quá trình huấn luyện mô hình.
+P0531	Heading 1	PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
+P0532	Heading 2	3.1. Phát biểu yêu cầu hệ thống
+P0533	Normal	Hệ thống GNN-Insight được thiết kế nhằm giải quyết bài toán thiếu khả năng giải thích (black-box problem) trong quá trình huấn luyện và đánh giá các mô hình Graph Neural Network (GNN). Trong các nghiên cứu về học sâu trên dữ liệu đồ thị, việc chỉ theo dõi các chỉ số hiệu năng truyền thống như Accuracy, Loss hoặc F1-Score là chưa đủ để hiểu rõ cơ chế học tập và nguyên nhân dẫn đến thành công hoặc thất bại của mô hình.
+P0534	Normal	Do đó, hệ thống cần cung cấp khả năng giám sát trực quan toàn bộ quá trình huấn luyện thông qua việc theo dõi đồng thời các chỉ số hiệu năng, sự thay đổi cấu trúc topo của đồ thị, sự dịch chuyển của không gian biểu diễn nút (Node Embedding Space), cũng như các đặc trưng học được của mô hình qua từng epoch.
+P0535	Normal	Ngoài ra, hệ thống phải hỗ trợ so sánh nhiều kiến trúc GNN khác nhau như GCN, GAT và GraphSAGE trên cùng một tập dữ liệu; cung cấp các công cụ phân tích, trực quan hóa và diễn giải kết quả nhằm giúp người nghiên cứu đánh giá độ ổn định, khả năng hội tụ, mức độ phân tách lớp và các hiện tượng đặc trưng như over-smoothing, attention concentration hay neighborhood aggregation.
+P0536	Normal	Hệ thống cũng cần lưu trữ lịch sử thực nghiệm, hỗ trợ tái hiện (replay) quá trình huấn luyện, so sánh các lần chạy mô hình và tạo báo cáo phân tích tự động. Qua đó, GNN-Insight không chỉ đóng vai trò là công cụ huấn luyện mô hình mà còn là nền tảng hỗ trợ nghiên cứu, phân tích và giải thích hành vi của các mô hình học sâu trên dữ liệu đồ thị.
+P0537	Heading 3	3.1.1. Đối tượng người dùng
+P0539	Caption	Bảng 3.1. Các tác nhân tham gia hệ thống
+P0541	Caption	Bảng 3.2. Ma trận phân quyền chi tiết (RBAC Matrix)
+P0543	Heading 3	3.1.2. Yêu cầu chức năng (Functional Requirements)
+P0544	Normal	Bảng dưới đây tóm tắt các chức năng cốt lõi của hệ thống theo định dạng Input/Output:
+P0545	Caption	Bảng 3.3. Phát biểu yêu cầu Input / Output theo chức năng
+P0547	Normal	Yêu cầu chức năng được chia thành 04 phân hệ chính:
+P0548	Normal	Phân hệ Quản lý Tài nguyên Nghiên cứu
+P0549	Caption	Bảng 3.4. Phân hệ Quản lý Tài nguyên Nghiên cứu
+P0551	Normal	Phân hệ Huấn luyện Thời gian thực
+P0553	Caption	Bảng 3.5. Phân hệ Huấn luyện Thời gian thực
+P0555	Normal	C. Phân hệ Quản lý Thực nghiệm và Replay
+P0556	Caption	Bảng 3.6. Phân hệ Quản lý Thực nghiệm và Replay
+P0558	Normal	D. Phân hệ Quản trị Hệ thống
+P0559	Caption	Bảng 3.7. Phân hệ Quản trị Hệ thống
+P0562	Heading 3	3.1.3. Yêu cầu phi chức năng (Non-Functional Requirements)
+P0563	Caption	Bảng 3.8. Yêu cầu phi chức năng của hệ thống
+P0565	Heading 2	3.2. Phân tích use case
+P0566	Heading 3	3.2.1. Xác định tác nhân
+P0567	Normal	Hệ thống GNN-Insight xác định 03 tác nhân: Researcher, Viewer và Admin. Mỗi tác nhân tương ứng với một nhóm quyền hạn riêng biệt như đã mô tả ở mục 3.1.1.
+P0568	Heading 3	3.2.2. Biểu đồ Usecase tổng quát
+P0570	Normal	Hình 3.1. Biểu đồ Usecase tổng quát hệ thống GNN-Insight
+P0571	Heading 3	3.2.3. Mô tả các Usecase chính
+P0572	Normal	Hệ thống bao gồm 08 ca sử dụng cốt lõi chia thành 03 phân hệ:
+P0573	Normal	Phân hệ Không gian Nghiên cứu: UC01 (Đăng nhập), UC02 (Quản lý dự án), UC03 (Quản lý dataset), UC04 (Khởi tạo phiên huấn luyện), UC05 (Theo dõi thời gian thực).
+P0574	Normal	Phân hệ Thực nghiệm & Replay: UC06 (Replay và Resume), UC07 (So sánh thực nghiệm).
+P0575	Normal	Phân hệ Quản trị hệ thống: UC08 (Quản trị hệ thống).
+P0576	Heading 2	3.3. Đặc tả các use case chính
+P0577	Heading 3	3.3.1. UC01 — Đăng nhập vào hệ thống
+P0578	Normal	Mô tả nghiệp vụ: Cho phép tất cả người dùng xác thực thông tin tài khoản để lấy JWT Token và truy cập không gian làm việc tương ứng với vai trò.
+P0579	Caption	Bảng 3.9. Đặc tả chi tiết use case UC01
+P0581	Heading 3	3.3.2. UC02 — Quản lý dự án
+P0582	Normal	Mô tả nghiệp vụ: Researcher tạo mới và quản lý các dự án nghiên cứu nhằm nhóm các phiên huấn luyện và cấu hình dữ liệu liên quan.
+P0583	Caption	Bảng 3.10. Đặc tả chi tiết use case UC02
+P0585	Heading 3	3.3.3. UC03 — Quản lý dataset và tạo phiên bản
+P0586	Normal	Mô tả nghiệp vụ: Cho phép Researcher upload tệp dữ liệu đồ thị, hệ thống kiểm định cấu trúc và đóng gói thành phiên bản dữ liệu bất biến.
+P0587	Caption	Bảng 3.11. Đặc tả chi tiết use case UC03
+P0589	Heading 3	3.3.4. UC04 — Khởi tạo phiên huấn luyện
+P0590	Normal	Mô tả nghiệp vụ: Khởi tạo tiến trình huấn luyện mô hình GNN trên backend thông qua liên kết giữa dự án, siêu tham số và phiên bản dữ liệu.
+P0591	Caption	Bảng 3.12. Đặc tả chi tiết use case UC04
+P0593	Heading 3	3.3.5. UC05 — Theo dõi huấn luyện thời gian thực
+P0594	Normal	Mô tả nghiệp vụ: Nhận và xử lý luồng dữ liệu biểu thị biến đổi cấu trúc đồ thị, embeddings 2D và hiệu năng hội tụ qua WebSocket theo từng Epoch.
+P0595	Caption	Bảng 3.13. Đặc tả chi tiết use case UC05
+P0597	Heading 3	3.3.6. UC06 — Replay và Resume thực nghiệm
+P0598	Normal	Mô tả nghiệp vụ: Cho phép duyệt lại tiến trình huấn luyện theo từng Epoch hoặc khôi phục phiên bị gián đoạn do sự cố mạng.
+P0600	Caption	Bảng 3.14. Đặc tả chi tiết use case UC06
+P0602	Heading 3	3.3.7. UC07 — So sánh thực nghiệm
+P0603	Normal	Mô tả nghiệp vụ: Cho phép chọn nhiều thực nghiệm để so sánh song song chỉ số chất lượng và không gian biểu diễn vector.
+P0605	Caption	Bảng 3.15. Đặc tả chi tiết use case UC07
+P0607	Heading 3	3.3.8. UC08 — Quản trị hệ thống
+P0608	Normal	Mô tả nghiệp vụ: Cung cấp công cụ cho Admin giám sát máy chủ, quản lý phiên làm việc và thực thi chính sách dọn dẹp bộ nhớ.
+P0610	Caption	Bảng 3.16. Đặc tả chi tiết use case UC08
+P0612	Heading 2	3.4. Biểu đồ động mô tả luồng xử lý hệ thống
+P0613	Heading 3	3.4.1. Luồng tải và cấu hình dữ liệu
+P0614	Normal	Mô tả nghiệp vụ: Tiếp nhận tệp tin dữ liệu đồ thị thô từ client, thực hiện phân tích schema và kiểm định tính hợp lệ, sau đó phân phối metadata vào MySQL và dữ liệu vật lý vào Blob Storage.
+P0615	Normal	Dữ liệu vào: Bộ dữ liệu tích hợp sẵn hoặc tệp người dùng cung cấp (JSON, CSV, Excel, artifact runtime), tên dataset logic và định danh người dùng.
+P0616	Normal	Dữ liệu ra: Mã phiên bản dataset mới, thông báo trạng thái kiểm định.
+P0617	Normal	Thành phần tham gia: Dataset UI, Dataset Router, Dataset Service, Validation Engine, Blob Storage, MySQL.
+P0619	Normal	Hình 3.4. Sơ đồ hoạt động luồng tải và cấu hình dữ liệu.
+P0620	Heading 3	3.4.2. Luồng huấn luyện mô hình
+P0621	Normal	Mô tả nghiệp vụ: Khởi tạo tiến trình huấn luyện trên máy chủ, thiết lập vòng lặp huấn luyện nơ-ron đồ thị và lưu trữ checkpoint mô hình tốt nhất.
+P0622	Normal	Dữ liệu vào: Cấu hình siêu tham số, ID phiên bản dataset, kiến trúc mô hình được chọn.
+P0623	Normal	Dữ liệu ra: Epoch Snapshots, bản ghi thực nghiệm sau khi hoàn thành.
+P0624	Normal	Thành phần tham gia: Lab UI, Sessions API, Session Manager, Training Service, PyTorch GNN Core, Hybrid Store (MySQL & MongoDB).
+P0626	Normal	Hình 3.5. Sơ đồ trình tự khởi tạo và huấn luyện mô hình.
+P0627	Heading 3	3.4.3. Luồng truyền dữ liệu thời gian thực qua WebSocket
+P0628	Normal	Mô tả nghiệp vụ: Quản lý vòng đời kết nối WebSocket, nén dữ liệu nhị phân gzip ở backend, giải nén và phân phối cập nhật trạng thái giao diện trên frontend.
+P0629	Normal	Dữ liệu vào: Các cấu trúc dữ liệu thô từ tiến trình huấn luyện.
+P0630	Normal	Dữ liệu ra: Luồng dữ liệu thời gian thực giải nén trên trình duyệt.
+P0631	Normal	Thành phần tham gia: WebSocket Middleware, WS Zip Utility, Zustand State Store (useGNNStore), Topology View, Embedding View.
+P0633	Normal	Hình 3.6. Sơ đồ hoạt động luồng truyền tải và giải nén dữ liệu thời gian thực qua WebSocket.
+P0634	Heading 3	3.4.4. Luồng Replay và Resume thực nghiệm
+P0635	Normal	Mô tả nghiệp vụ: Khôi phục trạng thái giao diện từ dữ liệu lịch sử (Replay) hoặc tiếp tục huấn luyện sau sự cố mất kết nối (Resume).
+P0636	Normal	Dữ liệu vào: ID phiên cần Resume hoặc ID thực nghiệm cần Replay, số Epoch cần tua đến.
+P0637	Normal	Dữ liệu ra: Trạng thái trực quan hóa chính xác tại Epoch yêu cầu.
+P0638	Normal	Thành phần tham gia: Player Store, Replay API, Session Service, MongoDB, Zustand GNN Store.
+P0640	Normal	Hình 3.7. Sơ đồ trình tự luồng Replay và Resume.
+P0641	Heading 3	3.4.5. Luồng quản trị và Retention
+P0642	Normal	Mô tả nghiệp vụ: Thực hiện quét định kỳ hoặc kích hoạt thủ công tiến trình dọn dẹp snapshot chi tiết của các thực nghiệm cũ nhằm tiết kiệm tài nguyên.
+P0643	Normal	Dữ liệu vào: ID thực nghiệm cần dọn dẹp, cấu hình chính sách Retention.
+P0644	Normal	Dữ liệu ra: Danh sách snapshot bị xóa, dung lượng được g  iải phóng trong MongoDB.
+P0645	Normal	Thành phần tham gia: Admin UI, Admin Service, Retention Compactor, MongoDB, MySQL, Audit Log Service.
+P0647	Normal	Hình 3.8. Sơ đồ hoạt động luồng Retention Compaction.
+P0648	Heading 2	3.5. Thiết kế cơ sở dữ liệu
+P0649	Normal	Hệ thống GNN-Insight sử dụng kiến trúc lưu trữ lai (Hybrid Storage Architecture) kết hợp: Cơ sở dữ liệu quan hệ MySQL để quản trị cấu trúc nghiệp vụ, MongoDB để lưu các mảng JSON lớn của topo/embeddings theo epoch, và Blob Storage cho tệp dữ liệu đồ thị gốc và trọng số mô hình.
+P0650	Heading 3	3.5.1. Biểu đồ thực thể - liên kết (ERD)
+P0652	Normal	Hình 3.9. Sơ đồ ERD hệ thống GNN-Insight
+P0653	Heading 3	3.5.2. Thiết kế dữ liệu quan hệ
+P0654	Normal	Thiết kế tuân thủ chuẩn hóa 1NF → 2NF → 3NF: mọi bảng có khóa chính xác định, không tồn tại phụ thuộc hàm bộ phận hay bắc cầu, thông tin người dùng chỉ lưu khóa ngoại owner_id trong các bảng liên quan.
+P0657	Caption	Bảng 3.17. Cấu trúc bảng urses
+P0660	Caption	Bảng 3.18. Cấu trúc bảng projects
+P0663	Caption	Bảng 3.19. Cấu trúc bảng datasets
+P0666	Caption	Bảng 3.20. Cấu trúc bảng datasets_versions
+P0669	Caption	Bảng 3.21. Cấu trúc bảng experiments
+P0671	Caption	Bảng 3.22. Cấu trúc bảng  training_sessions
+P0674	Caption	Bảng 3.23. Cấu trúc bảng session_snapshots
+P0678	Caption	Bảng 3.24. Cấu trúc bảng audit_log
+P0680	Heading 3	3.5.3. Thiết kế MongoDB
+P0681	Normal	Do dữ liệu topo đồ thị và embeddings theo từng epoch chứa mảng rất lớn và thay đổi linh hoạt, hệ thống chọn MongoDB làm document store với ba bộ sưu tập chính:
+P0682	Normal	graph_payloads: Lưu topo gốc (Nodes & Links) của thực nghiệm để tránh lặp lại thông tin tĩnh ở mỗi epoch snapshot. Khóa chỉ mục: experiment_id (Unique).
+P0683	Normal	experiment_snapshots: Lưu trạng thái chi tiết không gian vector 2D và kết quả dự đoán từng nút tại từng Epoch. Khóa chỉ mục tổ hợp: {run_id: 1, epoch: 1}.
+P0684	Normal	experiment_metrics: Lưu tóm tắt chuỗi lịch sử Loss/Accuracy qua tất cả epoch phục vụ hiển thị biểu đồ hội tụ mà không cần truy xuất hàng trăm snapshot.
+P0685	Heading 3	3.5.4. Thiết kế Blob Storage
+P0686	Normal	Hệ thống tổ chức lưu trữ trên S3/MinIO theo cấu trúc phân cấp: gnn-insight/ → datasets/raw/, datasets/runtime/, models/weights/, reports/export/. Cấu trúc này tách biệt dữ liệu thô, dữ liệu đã xử lý, trọng số mô hình và báo cáo xuất.
+P0687	Heading 2	3.6. Kiến trúc hệ thống
+P0688	Normal	Hệ thống được thiết kế theo mô hình client-server, trong đó frontend đảm nhiệm giao diện và tương tác, backend cung cấp REST API và WebSocket, tầng lưu trữ lai kết hợp MySQL, MongoDB, Redis và Blob Storage.
+P0689	Normal	Hình 3.10. Sơ đồ kiến trúc tổng thể hệ thống GNN-Insight.
+P0690	Heading 3	3.6.1. Kiến trúc tổng thể
+P0691	Normal	Kiến trúc tổng thể bao gồm các tầng: tầng giao diện (ReactJS + Zustand), tầng backend (FastAPI + WebSocket), tầng xử lý (PyTorch GNN Core) và tầng lưu trữ lai. Redis đóng vai trò ephemeral cache giúp phục hồi phiên (Resume) tức thì sau gián đoạn mạng.
+P0693	Caption	Bảng 3.25. So sánh và lý do lựa chọn công nghệ theo từng tầng kiến trúc
+P0695	Heading 2	3.7. Thiết kế giao diện hệ thống
+P0696	Normal	Giao diện GNN-Insight được thiết kế tuân thủ các nguyên tắc công thái học phần mềm và UX heuristics, ưu tiên trải nghiệm mượt mà cho nhà nghiên cứu AI khi làm việc với cấu trúc đồ thị lớn.
+P0698	Caption	Bảng 3.26. Tóm tắt các màn hình chính của hệ thống GNN-Insight
+P0699	Heading 3	3.7.1. Giao diện quản lý dự án
+P0702	Normal	Hình 3.11. Giao diện quản lý dự án — Hiển thị danh sách dự án, thông tin loại nhiệm vụ GNN, trạng thái và tùy chọn tạo/chỉnh sửa.
+P0704	Normal	3.7.2. Giao diện quản lý dữ liệu
+P0706	Normal	Hình 3.12. Giao diện quản lý dữ liệu — Hiển thị danh sách Dataset, vòng đời phiên bản và các thao tác publish/deprecate.
+P0707	Heading 3	3.7.3. Giao diện LabShell
+P0708	Normal	Màn hình LabShell (/app/lab) được tổ chức theo bố cục ba cột (Three-column layout):
+P0709	Normal	Cột 1 — Control Panel: Cấu hình nhiệm vụ GNN, lựa chọn mô hình, thiết lập siêu tham số và nút Start/Stop.
+P0710	Normal	Cột 2 — Visualizations Canvas: Topology View (cấu trúc liên kết đồ thị, màu sắc nút theo nhãn dự đoán, attention weights động) và Embedding View (không gian vector 2D, phân cụm hội tụ theo epoch).
+P0711	Normal	Cột 3 — Metrics & Explainability: Biểu đồ loss/accuracy thời gian thực, chi tiết nút được chọn, danh sách lân cận và phân bố xác suất dự đoán. Thanh Player Timeline ở đáy màn hình hỗ trợ Replay và Resume.
+P0713	Normal	Hình 3.13. Wireframe bố cục màn hình LabShell.
+P0714	Heading 3	3.7.4. Giao diện Experiment Hub
+P0715	Normal	Màn hình Experiment Hub (/app/experiments) cho phép duyệt danh sách thực nghiệm, xem chi tiết siêu tham số và metric, pin thực nghiệm tốt nhất, mở Replay Shell và khởi tạo so sánh đa thực nghiệm.
+P0717	Normal	Hình 3.14. Wireframe giao diện Experiment Hub.
+P0718	Heading 3	3.7.5. Giao diện quản trị
+P0719	Normal	Giao diện Admin bao gồm các màn hình: /admin/overview (tổng quan tài nguyên), /admin/users (quản lý người dùng), /admin/sessions (giám sát phiên huấn luyện), /admin/retention (thiết lập chính sách dọn dẹp), /admin/audit (nhật ký kiểm thử bảo mật).
+P0721	Normal	Hình 3.15. Wireframe giao diện quản trị Admin.
+P0722	Heading 2	3.8. Các công nghệ sử dụng
+P0723	Normal	Để xây dựng hệ thống GNN Insight đáp ứng đầy đủ các yêu cầu về giao diện tương tác, xử lý nghiệp vụ, truyền dữ liệu thời gian thực và lưu trữ kết quả, đề tài sử dụng tập hợp các công nghệ được lựa chọn kỹ lưỡng, mỗi công nghệ đóng một vai trò cụ thể trong kiến trúc tổng thể.
+P0724	Heading 3	3.8.1. Frontend — Giao diện người dùng
+P0725	Normal	Frontend là thành phần chịu trách nhiệm hiển thị giao diện và tiếp nhận tương tác từ người dùng. Hệ thống GNN Insight được xây dựng theo kiến trúc SPA (Single Page Application) để giúp người dùng dễ dàng truy cập và quan sát dữ liệu trực quan ngay trên trình duyệt mà không cần cài đặt thêm phần mềm.
+P0726	Normal	Frontend đảm nhiệm các chức năng sau:
+P0727	Normal	Metric Dashboard: Biểu đồ đường tương tác hiển thị loss/accuracy/AUC theo epoch, sử dụng thư viện Chart.js hoặc Recharts.
+P0728	Normal	Topology Visualization: Trực quan hóa cấu trúc đồ thị tương tác với Force-Directed Layout, zoom/pan, highlight nút/cạnh, sử dụng D3.js hoặc Sigma.js.
+P0729	Normal	Embedding Visualization: Scatter plot 2D/3D tương tác cho embedding t-SNE/PCA, sử dụng Plotly.js hoặc Three.js.
+P0730	Normal	Replay Control: Timeline slider, nút play/pause/step, điều chỉnh tốc độ phát.
+P0731	Normal	Experiment Management: Giao diện quản lý dataset, cấu hình hyperparameter, danh sách thí nghiệm, so sánh runs.
+P0732	Normal	Kiến trúc frontend theo mô hình component-based (React/Vue) cho phép tái sử dụng code và dễ dàng mở rộng thêm tính năng mới. State management (Redux/Vuex) được dùng để quản lý trạng thái ứng dụng phức tạp.
+P0733	Heading 3	3.8.2. Backend — Xử lý nghiệp vụ
+P0734	Normal	Backend đảm nhiệm toàn bộ logic xử lý phía server: tiếp nhận yêu cầu từ người dùng qua REST API, khởi tạo và điều phối các phiên huấn luyện GNN, xử lý và chuẩn hóa dữ liệu đầu vào, quản lý trạng thái thí nghiệm, và cung cấp dữ liệu cho frontend qua cả REST API lẫn WebSocket.
+P0735	Normal	Kiến trúc backend gồm các module chính:
+P0736	Normal	Training Engine: Module thực hiện vòng lặp huấn luyện GNN (PyTorch + PyTorch Geometric), tính toán metric, lưu snapshot embedding sau mỗi epoch.
+P0737	Normal	WebSocket Server: Quản lý kết nối WebSocket, đẩy dữ liệu epoch_snapshot theo thời gian thực đến tất cả client đang kết nối.
+P0738	Normal	REST API Server: Endpoint CRUD cho dataset, experiment, run; API truy vấn lịch sử; API so sánh experiment.
+P0739	Normal	Storage Manager: Điều phối lưu trữ vào database (metadata) và file system (snapshot artifact).
+P0740	Normal	Framework Python phổ biến cho backend GNN bao gồm FastAPI (hiệu năng cao, hỗ trợ async/await tốt) hoặc Flask. PyTorch Geometric cung cấp đầy đủ các layer GNN (GCNConv, SAGEConv, GATConv) và benchmark dataset chuẩn.
+P0741	Heading 3	3.8.3. WebSocket — Truyền dữ liệu thời gian thực
+P0742	Normal	WebSocket (RFC 6455) là giao thức mạng hỗ trợ truyền dữ liệu hai chiều (full-duplex) theo thời gian thực giữa client và server trên một kết nối TCP duy nhất. Khác với HTTP truyền thống — chỉ hỗ trợ request-response (client chủ động gửi, server mới phản hồi) — WebSocket cho phép server chủ động đẩy (push) dữ liệu đến client bất kỳ lúc nào mà không cần client yêu cầu.
+P0743	Normal	Quá trình thiết lập kết nối WebSocket bắt đầu bằng HTTP Upgrade handshake, sau đó chuyển sang giao thức WebSocket duy trì kết nối liên tục (persistent connection). Điều này loại bỏ overhead của việc tạo TCP connection mới cho mỗi yêu cầu — rất quan trọng khi cần gửi dữ liệu liên tục với tần suất cao (mỗi epoch huấn luyện).
+P0744	Normal	Trong hệ thống GNN Insight, WebSocket đóng vai trò trung tâm: sau mỗi epoch, backend training engine gửi epoch_snapshot (kích thước ~10–100KB tùy đồ thị) qua WebSocket đến tất cả frontend client đang kết nối. Frontend nhận dữ liệu và cập nhật ngay lập tức tất cả các panel trực quan hóa — không cần polling hay tải lại trang.
+P0745	Heading 3	3.8.4. Cơ sở dữ liệu và lưu trữ
+P0746	Normal	Hệ thống cần hai lớp lưu trữ với yêu cầu và đặc điểm khác nhau:
+P0747	Normal	Cơ sở dữ liệu quan hệ (Relational DB): MY SQL lưu metadata có cấu trúc — thông tin người dùng, mô tả dataset, cấu hình experiment (hyperparameter, kiến trúc mô hình, dataset), lịch sử run (epoch count, best metric, thời gian chạy), trạng thái thí nghiệm. Ưu điểm: hỗ trợ truy vấn phức tạp (JOIN, GROUP BY) cho tính năng so sánh experiment; đảm bảo tính nhất quán dữ liệu (ACID).
+P0748	Normal	Lưu trữ blob / File System: Lưu các artifact có kích thước lớn và không cấu trúc — chuỗi epoch snapshot (embedding vectors, predicted labels, graph state), checkpoint mô hình (.pt file), log file chi tiết. Mỗi run được lưu trong một thư mục riêng với tên định danh duy nhất (UUID), các snapshot được lưu dưới dạng file JSON hoặc binary (NPY) theo số thứ tự epoch.
+P0749	Normal	Phân tầng lưu trữ này giúp hệ thống không chỉ hỗ trợ theo dõi trực tiếp mà còn tạo điều kiện cho việc xem lại (Replay), phân tích và so sánh kết quả bất kỳ lúc nào, bất kể người dùng có đang online tại thời điểm huấn luyện hay không. Tổng dung lượng lưu trữ một run điển hình (100 epoch, đồ thị 3.000 nút, embedding 128D) ước tính khoảng 200–500MB.
+P0751	Caption	Bảng 3.27. Tóm tắt stack công nghệ của hệ thống GNN Insight
+P0754	Heading 1	TRIỂN KHAI VÀ ĐÁNH GIÁ KẾT QUẢ
+P0755	Heading 2	4.1. Giao diện chính
+P0756	Normal	Hệ thống GNN-Insight được xây dựng dưới dạng ứng dụng web hỗ trợ huấn luyện, trực quan hóa và quản lý thí nghiệm GNN. Giao diện được tổ chức theo vai trò người dùng gồm Viewer, Researcher và Admin. Các màn hình chính bao gồm giao diện đăng nhập, dashboard tổng quan, quản lý dự án, quản lý dataset, LabShell huấn luyện và trực quan hóa, Experiment Hub, hồ sơ người dùng và cụm giao diện quản trị hệ thống. Toàn bộ các màn hình này được hiện thực dựa trên thiết kế giao diện đã trình bày ở chương trước, đồng thời được tối ưu để hỗ trợ theo dõi thời gian thực, replay thí nghiệm và phân tích kết quả huấn luyện.
+P0757	Heading 3	4.1.1. Giao diện đăng nhập
+P0758	Normal	Sau khi đăng nhập thành công, hệ thống xác thực tài khoản và phân quyền người dùng để điều hướng đến giao diện tương ứng. Người dùng thuộc nhóm Researcher hoặc Viewer được chuyển đến workspace chính, trong khi Admin được chuyển đến giao diện quản trị. Nếu thông tin đăng nhập không chính xác, hệ thống sẽ trả về thông báo lỗi phù hợp.
+P0759	Normal	Input:
+P0760	Normal	Email hoặc tên đăng nhập
+P0761	Normal	Mật khẩu
+P0762	Normal	Output:
+P0763	Normal	Đăng nhập thành công
+P0764	Normal	Điều hướng đến giao diện phù hợp với vai trò người dùng
+P0765	Normal	Thông báo lỗi nếu thông tin không hợp lệ
+P0768	Normal	Hình 33. Giao diện đăng nhập
+P0769	Heading 3	4.4.2. Giao diện dashboard tổng quan của Researcher
+P0770	Normal	Sau khi đăng nhập thành công, người dùng thuộc nhóm Researcher được chuyển đến không gian làm việc chính dưới nhánh /app/*. Dashboard tổng quan giúp người dùng theo dõi nhanh các thành phần quan trọng như dự án, dataset, thực nghiệm và các lối tắt đến LabShell hoặc Experiment Hub. Giao diện này đóng vai trò là điểm vào trung tâm cho toàn bộ quy trình nghiên cứu và huấn luyện GNN.
+P0771	Normal	Input:
+P0772	Normal	Tài khoản người dùng đã xác thực
+P0773	Normal	Dữ liệu tổng hợp từ hệ thống
+P0774	Normal	Output:
+P0775	Normal	Màn hình tổng quan workspace của Researcher
+P0776	Normal	Điều hướng đến các chức năng chính
+P0780	Normal	Hình 33. Giao diện Dashboard Research
+P0781	Heading 3	4.4.3. Giao diện quản lý dự án
+P0782	Normal	Giao diện quản lý dự án tại /app/projects cho phép người dùng tạo mới, chỉnh sửa, xóa và lựa chọn dự án đang làm việc. Mỗi dự án đóng vai trò là đơn vị tổ chức các dataset, phiên huấn luyện và thực nghiệm liên quan. Giao diện này hỗ trợ việc quản lý nghiên cứu theo từng nhóm bài toán hoặc mục tiêu cụ thể.
+P0783	Normal	Input:
+P0785	Normal	Tên dự án
+P0786	Normal	Mô tả dự án
+P0787	Normal	Trạng thái công khai hoặc riêng tư
+P0788	Normal	Output:
+P0789	Normal	Danh sách dự án
+P0790	Normal	Thông tin dự án được tạo mới hoặc cập nhật
+P0791	Normal	Project đang hoạt động trong workspace
+P0793	Normal	Hình 33. Giao diện Dashboard Research
+P0794	Heading 3	4.4.4. Giao diện quản lý dữ liệu và phiên bản dataset
+P0795	Normal	Giao diện quản lý dữ liệu tại /app/datasets hỗ trợ tải dữ liệu lên, tạo phiên bản mới, kiểm định schema và điều khiển vòng đời dataset version như publish hoặc deprecate. Đây là màn hình kết nối trực tiếp giữa dữ liệu đầu vào và quá trình huấn luyện trong LabShell.
+P0796	Normal	Input:
+P0797	Normal	Tệp dữ liệu đầu vào
+P0798	Normal	Tên dataset và mô tả
+P0799	Normal	Thao tác tạo phiên bản hoặc phát hành dữ liệu
+P0800	Normal	Output:
+P0801	Normal	Danh sách dataset và các phiên bản
+P0802	Normal	Trạng thái lifecycle của dataset version
+P0803	Normal	Dataset version được chọn để huấn luyện
+P0805	Heading 3	4.4.5. Giao diện Experiment Hub
+P0806	Normal	Experiment Hub tại /app/experiments cho phép người dùng duyệt danh sách thí nghiệm, xem siêu tham số, metric, đánh dấu thực nghiệm tốt nhất và chuẩn bị dữ liệu cho tác vụ so sánh. Đây là không gian quản lý và phân tích kết quả sau huấn luyện.
+P0807	Normal	Input:
+P0808	Normal	Danh sách experiment đã lưu
+P0809	Normal	Bộ lọc theo project, task, model hoặc trạng thái
+P0810	Normal	Output:
+P0811	Normal	Danh sách thực nghiệm
+P0812	Normal	Thông tin chi tiết của từng run
+P0813	Normal	Trạng thái pin hoặc dữ liệu so sánh
+P0815	Heading 3	4.4.6. Giao diện LabShell
+P0816	Normal	LabShell tại /app/lab là không gian làm việc chính cho quá trình cấu hình và huấn luyện mô hình GNN. Giao diện này cho phép người dùng chọn bài toán, mô hình, siêu tham số và theo dõi trực tiếp topology, embedding và metric theo từng epoch. Đây là thành phần quan trọng nhất trong toàn bộ hệ thống GNN-Insight.
+P0817	Normal	Input:
+P0818	Normal	Bài toán GNN được chọn
+P0819	Normal	Mô hình và siêu tham số
+P0820	Normal	Dataset version đang hoạt động
+P0821	Normal	Output:
+P0822	Normal	Phiên huấn luyện được khởi tạo
+P0823	Normal	Dữ liệu trực quan hóa theo thời gian thực
+P0824	Normal	Trạng thái huấn luyện và kết quả từng epoch
+P0826	Heading 3	4.4.7. Giao diện dashboard quản trị Admin
+P0827	Normal	Giao diện dashboard quản trị tại /admin/overview cung cấp cái nhìn tổng quan về trạng thái hoạt động của hệ thống, bao gồm số lượng người dùng, dự án, dataset, thực nghiệm và các phiên huấn luyện. Màn hình này giúp quản trị viên theo dõi nhanh tình trạng vận hành chung của nền tảng.
+P0828	Normal	Input:
+P0829	Normal	Dữ liệu thống kê tổng hợp từ hệ thống
+P0830	Normal	Output:
+P0831	Normal	Dashboard tổng quan của Admin
+P0832	Normal	Các chỉ số phục vụ giám sát hệ thống
+P0835	Heading 3	4.4.8. Giao diện quản lý người dùng
+P0836	Normal	Giao diện quản lý người dùng tại /admin/users cho phép quản trị viên xem danh sách tài khoản, cập nhật vai trò và kiểm soát trạng thái hoạt động của người dùng. Đây là màn hình chính để thực hiện phân quyền giữa Viewer, Researcher và Admin.
+P0837	Normal	Input:
+P0838	Normal	Thông tin tài khoản người dùng
+P0839	Normal	Thao tác cập nhật vai trò hoặc trạng thái
+P0840	Normal	Output:
+P0841	Normal	Danh sách người dùng
+P0842	Normal	Kết quả thay đổi thông tin hoặc phân quyền
+P0845	Heading 3	4.4.9. Giao diện quản lý phiên huấn luyện
+P0846	Normal	Giao diện quản lý phiên huấn luyện tại /admin/sessions hỗ trợ quản trị viên theo dõi các session đang chạy, kiểm tra trạng thái và can thiệp khi cần thiết. Màn hình này giúp kiểm soát tốt hơn quá trình vận hành hệ thống, đặc biệt trong các trường hợp cần dừng hoặc giám sát phiên huấn luyện.
+P0847	Normal	Input:
+P0848	Normal	Dữ liệu về các phiên huấn luyện trong hệ thống
+P0849	Normal	Output:
+P0850	Normal	Danh sách session và trạng thái tương ứng
+P0851	Normal	Thông tin phục vụ giám sát và quản trị vận hành
+P0854	Heading 2	4.2. Kết quả thực thi hệ thống
+P0855	Normal	Sau khi hoàn thiện hệ thống GNN-Insight, nhóm tiến hành thực thi và đánh giá các chức năng chính nhằm kiểm tra mức độ đáp ứng yêu cầu đặt ra. Quá trình đánh giá được thực hiện trên môi trường triển khai thực tế thông qua các trường hợp kiểm thử tiêu biểu, tập trung vào tính chính xác, độ ổn định và khả năng vận hành của các chức năng cốt lõi như quản lý dự án, quản lý dữ liệu, huấn luyện mô hình, trực quan hóa thời gian thực, replay thực nghiệm và quản trị hệ thống.
+P0856	Normal	Các chức năng được thực thi và đánh giá bao gồm:
+P0857	Normal	Đăng nhập hệ thống
+P0858	Normal	Đăng ký tài khoản
+P0859	Normal	Quản lý dự án
+P0860	Normal	Quản lý dữ liệu và phiên bản dataset
+P0861	Normal	Khởi tạo và điều khiển phiên huấn luyện
+P0862	Normal	Trực quan hóa dữ liệu thời gian thực
+P0863	Normal	Replay và Resume thực nghiệm
+P0864	Normal	Quản trị hệ thống
+P0865	Heading 3	4.2.1. Kết quả thực thi chức năng đăng nhập
+P0866	Normal	Chức năng đăng nhập cho phép người dùng nhập email hoặc tên đăng nhập cùng mật khẩu để truy cập vào hệ thống GNN-Insight. Khi thông tin xác thực hợp lệ, hệ thống cho phép truy cập vào giao diện chính. Ngược lại, nếu thông tin không chính xác hoặc bỏ trống các trường bắt buộc, hệ thống sẽ hiển thị thông báo lỗi tương ứng để người dùng kiểm tra và nhập lại.
+P0868	Caption	Bảng 4.1. Kết quả kiểm thử chức năng đăng nhập
+P0870	Heading 3	4.2.2. Kết quả thực thi chức năng đăng ký
+P0871	Normal	Chức năng đăng ký cho phép người dùng tạo tài khoản mới để truy cập hệ thống GNN-Insight. Hệ thống kiểm tra tính hợp lệ của thông tin và ngăn chặn các trường hợp trùng lặp tài khoản trước khi tạo mới.
+P0872	Normal	Kết quả kiểm thử cho thấy chức năng hoạt động ổn định, xử lý chính xác các trường hợp hợp lệ và không hợp lệ, góp phần đảm bảo tính nhất quán của dữ liệu người dùng.
+P0874	Caption	Bảng 4.2. Kết quả kiểm thử chức năng đăng ký
+P0876	Heading 3	4.2.3. Kết quả thực thi chức năng quản lý dự án
+P0877	Normal	Chức năng quản lý dự án cho phép người dùng tạo mới, chỉnh sửa, xóa và lựa chọn dự án đang làm việc. Kết quả kiểm thử cho thấy hệ thống xử lý đúng các thao tác cơ bản và cập nhật dữ liệu dự án ổn định.
+P0878	Caption	Bảng 4.3. Kết quả kiểm thử chức năng quản lý dự án
+P0880	Heading 3	4.2.4. Kết quả thực thi chức năng quản lý dữ liệu và phiên bản dataset
+P0881	Normal	Chức năng này cho phép người dùng tải dữ liệu lên, tạo phiên bản dataset mới, kiểm định dữ liệu và quản lý vòng đời của từng phiên bản. Kết quả kiểm thử cho thấy hệ thống xử lý đúng các thao tác chính và hỗ trợ tốt cho việc chuẩn bị dữ liệu trước huấn luyện.
+P0884	Caption	Bảng 4.4. Kết quả kiểm thử chức năng quản lý dữ liệu
+P0886	Heading 3	4.2.5. Kết quả thực thi chức năng khởi tạo và điều khiển phiên huấn luyện
+P0887	Normal	Chức năng này cho phép người dùng lựa chọn bài toán, mô hình và siêu tham số để khởi tạo phiên huấn luyện mới, đồng thời hỗ trợ điều khiển trạng thái phiên trong quá trình chạy. Kết quả kiểm thử cho thấy hệ thống có thể tạo session, bắt đầu huấn luyện và xử lý thao tác dừng phiên đúng như mong đợi.
+P0889	Caption	Bảng 4.5. Kết quả kiểm thử chức năng điều khiển phiên huấn luyện
+P0891	Heading 3	4.2.6. Kết quả thực thi chức năng trực quan hóa thời gian thực
+P0892	Normal	Chức năng trực quan hóa thời gian thực cho phép hệ thống cập nhật đồng thời topology, embedding và metric trong quá trình huấn luyện thông qua WebSocket. Kết quả kiểm thử cho thấy dữ liệu được truyền và hiển thị ổn định theo từng epoch, hỗ trợ người dùng theo dõi tiến trình huấn luyện một cách trực quan.
+P0894	Caption	Bảng 4.6. Kết quả kiểm thử chức năng trực quan hóa thời gian thực
+P0896	Heading 3	4.2.7. Kết quả thực thi chức năng Replay và Resume thực nghiệm
+P0897	Normal	Chức năng Replay và Resume cho phép người dùng khôi phục trạng thái thí nghiệm đã lưu hoặc tiếp tục theo dõi một phiên huấn luyện sau khi bị gián đoạn kết nối. Kết quả kiểm thử cho thấy hệ thống có thể tái hiện đúng dữ liệu tại từng epoch và hỗ trợ khôi phục trạng thái sử dụng một cách nhất quán.
+P0898	Caption	Bảng 4.7. Kết quả kiểm thử chức năng Replay và Resume thực nghiệm
+P0900	Heading 3	4.2.8. Kết quả thực thi chức năng quản trị hệ thống
+P0901	Normal	Chức năng quản trị hệ thống hỗ trợ Admin theo dõi tổng quan nền tảng, quản lý người dùng và giám sát các phiên huấn luyện. Kết quả kiểm thử cho thấy các chức năng quản trị chính hoạt động đúng, hỗ trợ tốt cho việc vận hành và kiểm soát hệ thống.
+P0903	Caption	Bảng 4.8. Kết quả kiểm thử chức năng quản trị hệ thống
+P0905	Heading 3	4.2.9. Tổng kết kết quả thực thi
+P0906	Normal	Sau khi kiểm thử các chức năng chính của hệ thống, nhóm tiến hành tổng hợp số lượng test case, số trường hợp đạt, số trường hợp chưa đạt và tỷ lệ hoàn thành tương ứng. Kết quả tổng hợp cho thấy phần lớn các chức năng của hệ thống GNN-Insight hoạt động ổn định, trong khi một số chức năng phức tạp như trực quan hóa thời gian thực và replay thực nghiệm vẫn còn một số tình huống cần tiếp tục hoàn thiện.
+P0908	Caption	Bảng 4.9. Tổng kết kết quả thực thi các chức năng chính
+P0910	Heading 2	4.3. Kết quả trực quan hóa và phân tích GNN
+P0911	Normal	Hệ thống GNN-Insight hỗ trợ nhiều bài toán học đồ thị khác nhau, trong đó mỗi bài toán có đặc trưng dữ liệu, chỉ số đánh giá và cách trực quan hóa riêng. Thay vì sử dụng một khuôn hiển thị chung cho toàn bộ tác vụ, hệ thống tổ chức các thành phần trực quan hóa theo hướng thích ứng với từng loại bài toán, bao gồm topology view, embedding view, metrics panel và các thành phần phân tích chuyên biệt. Trong phạm vi luận văn, phần này trình bày bốn bài toán tiêu biểu nhằm minh họa khả năng trực quan hóa và hỗ trợ phân tích của hệ thống.
+P0912	Heading 3	4.3.1. Node Classification
+P0913	Normal	a) Giao diện trực quan hóa
+P0914	Normal	Đối với bài toán phân loại nút, giao diện trực quan hóa tập trung vào việc biểu diễn trạng thái dự đoán của từng nút trên chính cấu trúc đồ thị. Hệ thống cho phép người dùng quan sát đồng thời topology, embedding và các chỉ số huấn luyện, từ đó theo dõi cách mô hình dần phân tách các lớp nút theo từng epoch. Đây là một trong những bài toán thể hiện rõ nhất thế mạnh của GNN-Insight trong việc kết hợp giữa huấn luyện và giải thích trực quan.
+P0916	Normal	b) Kết quả Topology View
+P0917	Normal	Ở bài toán này, Topology View hiển thị rõ các nút, các cạnh liên kết và trạng thái phân lớp dự đoán trên đồ thị. Màu sắc nút được sử dụng để phản ánh nhãn hoặc trạng thái dự đoán, đồng thời người dùng có thể chọn một nút cụ thể để quan sát ngữ cảnh lân cận và sự thay đổi dự đoán trong quá trình huấn luyện. Kết quả trực quan hóa cho thấy Topology View hỗ trợ tốt việc quan sát phân bố nhãn và nhận diện các nút dễ bị nhầm lẫn.
+P0918	Normal	c) Kết quả Embedding View
+P0919	Normal	Embedding View cho phép biểu diễn các vector đặc trưng học được của các nút trong không gian hai chiều. Qua các epoch, có thể quan sát quá trình các nút dần hình thành cụm theo nhãn, từ trạng thái phân bố lẫn lộn ban đầu đến khi có sự tách lớp rõ hơn. Thành phần này hỗ trợ hiệu quả cho việc đánh giá chất lượng biểu diễn mà mô hình học được ở mức nút.
+P0921	Normal	d) Kết quả Metrics Panel
+P0922	Normal	Metrics Panel trong bài toán phân loại nút hiển thị các chỉ số cơ bản như loss, accuracy, F1 và một số thông tin chẩn đoán bổ sung. Việc cập nhật liên tục theo epoch giúp người dùng đối chiếu trực tiếp giữa xu hướng hội tụ của metric và sự thay đổi trong topology hoặc embedding. Nhờ đó, việc đánh giá mô hình không chỉ dừng ở số liệu cuối cùng mà còn dựa trên toàn bộ tiến trình học.
+P0924	Heading 3	4.3.2. Graph Classification
+P0925	Normal	a) Giao diện trực quan hóa
+P0926	Normal	Đối với bài toán phân loại đồ thị, giao diện được tổ chức theo hướng nhấn mạnh vào đơn vị dữ liệu là từng đồ thị thay vì từng nút riêng lẻ. Hệ thống hỗ trợ hiển thị tập các đồ thị, nhãn dự đoán mức đồ thị, xác suất phân lớp và embedding tương ứng. Điều này giúp người dùng đánh giá được cách mô hình ánh xạ từng đồ thị về không gian biểu diễn và đưa ra dự đoán cuối cùng.
+P0927	Normal	b) Kết quả Topology View
+P0928	Normal	Topology View trong bài toán phân loại đồ thị không chỉ đóng vai trò hiển thị cấu trúc bên trong của một đồ thị cụ thể mà còn hỗ trợ quan sát các thành phần có ảnh hưởng đến quyết định phân loại. Người dùng có thể chọn một đồ thị để xem chi tiết cấu trúc, từ đó đối chiếu giữa đặc trưng hình thái của đồ thị và kết quả dự đoán do mô hình trả về.
+P0929	Normal	c) Kết quả Embedding View
+P0930	Normal	Embedding View ở bài toán này thể hiện các graph embedding trong không gian hai chiều, trong đó mỗi điểm tương ứng với một đồ thị. Kết quả trực quan hóa cho thấy các đồ thị thuộc cùng lớp có xu hướng nằm gần nhau hơn sau quá trình huấn luyện. Điều này góp phần minh họa trực quan cho khả năng học biểu diễn mức đồ thị của mô hình.
+P0931	Normal	d) Kết quả Metrics Panel
+P0932	Normal	Metrics Panel trong bài toán phân loại đồ thị hiển thị các chỉ số như loss, accuracy và các thành phần phân tích nhầm lẫn hoặc độ tin cậy của dự đoán. Khi kết hợp với graph embedding, người dùng có thể vừa đánh giá hiệu quả phân loại bằng số liệu, vừa hiểu rõ hơn cách mô hình tổ chức dữ liệu trong không gian biểu diễn.
+P0933	Heading 3	4.3.3. Community Detection
+P0934	Normal	a) Giao diện trực quan hóa
+P0935	Normal	Bài toán phát hiện cộng đồng là một trong những tác vụ có giá trị trực quan cao nhất trong hệ thống. Giao diện được thiết kế để người dùng có thể theo dõi các cộng đồng được hình thành trên đồ thị, đồng thời phân tích các nút cầu nối, mức độ ổn định của cộng đồng và diễn biến phân cụm qua quá trình huấn luyện. Đây là bài toán thể hiện rõ tính “giải thích được” của nền tảng.
+P0936	Normal	b) Kết quả Topology View
+P0937	Normal	Topology View cho bài toán phát hiện cộng đồng sử dụng màu sắc để phân biệt các cộng đồng khác nhau trên đồ thị. Ngoài việc quan sát ranh giới phân cụm, người dùng còn có thể theo dõi các nút đóng vai trò cầu nối giữa nhiều cộng đồng. Kết quả trực quan hóa cho thấy thành phần này hỗ trợ tốt việc nhận diện cấu trúc cộng đồng và các vùng chuyển tiếp quan trọng trong đồ thị.
+P0938	Normal	c) Kết quả Embedding View
+P0939	Normal	Embedding View cho phép quan sát sự phân tách của các nút theo cộng đồng trong không gian biểu diễn. Qua các epoch, các cụm tương ứng với cộng đồng trở nên rõ ràng hơn, đồng thời một số nút nằm ở vùng biên có thể được nhận diện như các bridge nodes hoặc nút dễ dịch chuyển cộng đồng. Thành phần này bổ sung góc nhìn rất hữu ích bên cạnh topology gốc.
+P0940	Normal	d) Kết quả Metrics Panel
+P0941	Normal	Metrics Panel trong bài toán phát hiện cộng đồng tập trung vào các chỉ số như modularity, stability và các thông tin chẩn đoán liên quan đến độ bền của cộng đồng. So với các task phân loại truyền thống, nhóm metric này mang ý nghĩa cấu trúc nhiều hơn. Khi kết hợp với Topology View và Community Inspector, người dùng có thể đánh giá không chỉ “đúng/sai” mà còn đánh giá chất lượng phân cụm theo góc độ tổ chức cộng đồng.
+P0942	Heading 3	4.3.4. Graph Generation
+P0943	Normal	a) Giao diện trực quan hóa
+P0944	Normal	Đối với bài toán sinh đồ thị, giao diện trực quan hóa tập trung vào việc hiển thị các graph được mô hình sinh ra và so sánh chúng với phân phối nguồn. Đây là tác vụ có đặc điểm khác biệt rõ so với các bài toán dự đoán, vì đầu ra không còn là nhãn hay xác suất mà là một cấu trúc đồ thị mới. Giao diện của hệ thống được tổ chức để người dùng có thể đánh giá đồng thời tính hợp lệ, mức độ đa dạng và chất lượng của graph sinh ra.
+P0945	Normal	b) Kết quả Topology View
+P0946	Normal	Trong bài toán này, Topology View được sử dụng để hiển thị trực tiếp các đồ thị được sinh ra, cho phép người dùng quan sát hình thái, số lượng nút, số lượng cạnh và một số đặc điểm cấu trúc cơ bản. Kết quả trực quan hóa cho thấy hệ thống có thể hỗ trợ so sánh trực tiếp giữa graph nguồn và graph sinh ra, từ đó giúp người dùng đánh giá mức độ hợp lý của đầu ra mô hình.
+P0947	Normal	c) Kết quả Embedding View
+P0948	Normal	Embedding hoặc latent view trong bài toán sinh đồ thị hỗ trợ quan sát sự phân bố của các mẫu sinh ra trong không gian biểu diễn. Thành phần này đặc biệt hữu ích khi người dùng muốn phân tích mức độ phân tán, sự lặp lại hoặc hiện tượng mô hình chỉ ghi nhớ dữ liệu nguồn thay vì thực sự sinh ra các cấu trúc mới. Đây là lớp trực quan hóa quan trọng để đánh giá chất lượng mô hình sinh.
+P0949	Normal	d) Kết quả Metrics Panel
+P0950	Normal	Metrics Panel trong bài toán sinh đồ thị hiển thị các chỉ số như validity, uniqueness, novelty, reconstruction loss và một số tín hiệu chẩn đoán liên quan đến memorization hoặc invalidity reasons. Kết quả thực thi cho thấy panel này cung cấp nền tảng định lượng cần thiết để người dùng không chỉ nhìn graph sinh ra bằng mắt thường mà còn đánh giá được chất lượng đầu ra một cách có hệ thống.
+P0951	Normal	Nhận xét chung cho phần trực quan hóa
+P0952	Normal	Kết quả triển khai cho thấy hệ thống GNN-Insight có khả năng trực quan hóa tốt cho nhiều dạng bài toán học đồ thị khác nhau. Mỗi bài toán đều được hỗ trợ bởi sự kết hợp giữa topology view, embedding view và metrics panel, đồng thời có các lớp phân tích bổ sung phù hợp với bản chất của từng tác vụ. Điều này giúp hệ thống không chỉ đóng vai trò là môi trường huấn luyện mà còn là công cụ hỗ trợ quan sát, giải thích và phân tích hành vi mô hình GNN trong quá trình nghiên cứu.
+P0953	Heading 2	4.4. Kết quả chức năng AI hỗ trợ phân tích và so sánh mô hình
+P0954	Normal	Chức năng AI trong GNN-Insight được tích hợp nhằm hỗ trợ người dùng diễn giải kết quả huấn luyện và so sánh nhiều mô hình trên cùng một bài toán. Thay vì chỉ hiển thị các chỉ số định lượng như loss, accuracy hay F1, hệ thống còn tổng hợp dữ liệu huấn luyện và sinh ra các nhận định ngôn ngữ tự nhiên, các chẩn đoán về hành vi mô hình, các mẫu lỗi và các hồ sơ mô hình phục vụ phân tích sâu hơn. Kết quả triển khai cho thấy chức năng này góp phần tăng tính dễ hiểu và giá trị sử dụng của nền tảng trong bối cảnh nghiên cứu GNN.
+P0955	Heading 3	4.4.1. Kết quả AI phân tích thực nghiệm đơn
+P0956	Normal	Đối với một thí nghiệm đơn lẻ, AI Analyst hỗ trợ sinh ra hai lớp nội dung chính là khuyến nghị và ghi chú nghiên cứu. Ở giao diện khuyến nghị, hệ thống tổng hợp nhanh tình trạng huấn luyện, xác định vấn đề ưu tiên và đưa ra gợi ý điều chỉnh siêu tham số như dropout hoặc weight decay. Ở giao diện ghi chú nghiên cứu, hệ thống diễn giải lại quá trình huấn luyện dưới dạng các mục tóm tắt, quan sát, nguyên nhân khả dĩ và bối cảnh dữ liệu. Cách trình bày này giúp người dùng nhanh chóng nắm được các vấn đề nổi bật của thí nghiệm mà không phải tự phân tích toàn bộ số liệu thô.
+P0959	Normal	Hình 4.x. Giao diện AI Analyst với chế độ khuyến nghị.
+P0960	Normal	Hình 4.x. Giao diện AI Analyst với chế độ ghi chú nghiên cứu.
+P0961	Heading 3	4.4.2. Kết quả AI so sánh mô hình GCN, GAT và GraphSAGE
+P0962	Normal	Khi người dùng chọn nhiều phiên huấn luyện thuộc cùng một bài toán, hệ thống kích hoạt chế độ phân tích chéo giữa các mô hình. Kết quả AI so sánh thể hiện mô hình nào hội tụ nhanh hơn, mô hình nào ổn định hơn và mô hình nào phù hợp hơn với đặc trưng dữ liệu đang xét. Trong ví dụ minh họa, hệ thống đưa ra kết luận tổng quát rằng GAT đạt cân bằng tốt giữa độ chính xác validation và độ ổn định huấn luyện, trong khi GCN thể hiện đường học ổn định hơn ở vai trò baseline. Chức năng này giúp việc so sánh mô hình trở nên trực quan và có tính diễn giải cao hơn so với cách chỉ đối chiếu bảng metric thông thường.
+P0964	Normal	Hình 4.x. Giao diện AI so sánh nhiều mô hình trên cùng một bài toán.
+P0965	Normal	Hình 4.x. Kết quả tóm tắt phân tích chéo giữa GCN, GAT và GraphSAGE.
+P0966	Heading 3	4.4.3. Kết quả trực quan hóa so sánh đa mô hình
+P0967	Normal	Một thành phần nổi bật của chức năng AI là phần trực quan hóa so sánh đa mô hình. Radar chart được sử dụng để so sánh đồng thời nhiều tiêu chí như tốc độ hội tụ, độ ổn định, nguy cơ quá khớp, rủi ro over-smoothing và mức độ phù hợp với dữ liệu. Dưới biểu đồ radar, hệ thống còn hiển thị các thẻ tóm tắt cho từng mô hình, cho phép người dùng xem nhanh các đặc trưng quan trọng mà không cần đọc toàn bộ phần diễn giải. Cách trực quan hóa này phù hợp với nhu cầu đối chiếu nhiều mô hình trong cùng một thí nghiệm.
+P0969	Normal	Hình 4.x. Radar so sánh các mô hình GCN, GAT và GraphSAGE.
+P0970	Heading 3	4.4.4. Kết quả phân tích lỗi và mẫu thất bại
+P0971	Normal	Ngoài việc so sánh mức hiệu năng tổng quát, hệ thống còn hỗ trợ phân tích các mẫu lỗi của từng mô hình thông qua ma trận mẫu lỗi. Thành phần này cho phép người dùng quan sát các nhóm vấn đề như over-smoothing, quá khớp, lỗi vùng biên, độ ổn định, chất lượng embedding hoặc một số hiện tượng bất thường khác. Kết quả minh họa cho thấy hệ thống có thể đánh dấu trực tiếp mô hình nào đang gặp vấn đề ở tiêu chí nào, từ đó giúp người dùng xác định rủi ro chính thay vì chỉ suy luận từ metric tổng hợp.
+P0973	Normal	Hình 4.x. Ma trận mẫu lỗi trong chức năng AI Analyst.
+P0974	Heading 3	4.4.5. Kết quả hồ sơ phân tích mô hình
+P0975	Normal	Hệ thống cũng hỗ trợ sinh hồ sơ phân tích riêng cho từng mô hình dưới dạng model profile. Với mỗi kiến trúc như GCN hoặc GAT, AI Analyst tổng hợp ba nhóm nội dung gồm điểm mạnh, điểm yếu và bối cảnh phù hợp nhất. Đây là lớp diễn giải có giá trị thực tiễn cao, vì nó chuyển các đặc trưng kỹ thuật của mô hình sang ngôn ngữ gần với quyết định sử dụng hơn, chẳng hạn mô hình phù hợp với đồ thị homophily cao, đồ thị heterophily hay các tác vụ cần attention-based explanation.
+P0977	Normal	Hình 4.x. Hồ sơ phân tích mô hình GCN và GAT.
+P0978	Normal	Hình 4.x. Giao diện tổng hợp model profile trong AI Analyst.
+P0979	Heading 3	4.4.6. Nhận xét về chức năng AI hỗ trợ phân tích
+P0980	Normal	Kết quả triển khai cho thấy chức năng AI hỗ trợ phân tích và so sánh mô hình mang lại giá trị rõ rệt trong quá trình nghiên cứu GNN. Thay vì chỉ dựa trên các chỉ số định lượng rời rạc, người dùng có thể tiếp cận thêm lớp diễn giải ngữ nghĩa, nhận diện nhanh các rủi ro huấn luyện và so sánh nhiều mô hình một cách trực quan hơn. Dù bản chất của thành phần này là tích hợp dịch vụ AI thông qua API, kết quả sử dụng thực tế cho thấy đây là một phần mở rộng hữu ích, góp phần nâng cao khả năng phân tích và ra quyết định trong hệ thống GNN-Insight.
+P0981	Heading 2	4.5. Nhận xét và đánh giá
+P0982	Heading 3	4.5.1. Mức độ hoàn thành yêu cầu chức năng
+P0983	Normal	Qua quá trình triển khai và kiểm thử, hệ thống GNN-Insight đã hiện thực đầy đủ các chức năng cốt lõi được đề ra trong giai đoạn phân tích yêu cầu, bao gồm: quản lý dự án và tập dữ liệu, khởi tạo và giám sát phiên huấn luyện, trực quan hóa thời gian thực, replay thực nghiệm, quản trị hệ thống và phân tích hỗ trợ bằng AI. Ngoài việc đảm bảo quy trình huấn luyện mô hình GNN, hệ thống còn tích hợp các công cụ theo dõi, so sánh và quản lý thực nghiệm theo hướng có cấu trúc — đây là điểm khác biệt so với các công cụ huấn luyện đơn thuần.
+P0984	Heading 3	4.5.2. Tính khả thi kỹ thuật
+P0985	Normal	Về nền tảng công nghệ, các lựa chọn kỹ thuật được thực hiện có chủ đích và phù hợp với đặc thù của bài toán học trên dữ liệu đồ thị. Backend xây dựng trên FastAPI kết hợp PyTorch Geometric cho phép xử lý luồng dữ liệu huấn luyện theo thời gian thực với độ trễ thấp. Giao diện người dùng được phát triển bằng React, đảm bảo tính phản hồi và khả năng tương tác cao trong các tác vụ trực quan hóa động. Về lưu trữ, kiến trúc đa tầng kết hợp MySQL (metadata quan hệ), MongoDB (snapshot huấn luyện dạng document), Redis (bộ nhớ đệm và pub/sub) và Blob Storage (dữ liệu đồ thị kích thước lớn) tạo nên một nền tảng lưu trữ linh hoạt, có khả năng xử lý song song nhiều loại dữ liệu với đặc tính truy cập khác nhau.
+P0986	Heading 3	4.5.3. Tính khả thi vận hành
+P0987	Normal	Từ góc độ người dùng cuối, hệ thống được tổ chức theo hai không gian làm việc tách biệt — Researcher và Admin — giúp phân tách rõ ràng quyền hạn và luồng thao tác. Giao diện được thiết kế theo hướng hỗ trợ toàn bộ vòng đời thực nghiệm: từ cấu hình, thực thi, quan sát trực tiếp đến hồi tưởng lại quá trình huấn luyện và phân tích kết quả. Cách tiếp cận này giúp giảm đáng kể chi phí chuyển đổi công cụ và tăng tính liên tục trong quy trình nghiên cứu.
+P0988	Heading 3	4.5.4. Khả năng mở rộng
+P0989	Normal	Hệ thống được thiết kế theo kiến trúc mô-đun ở cả tầng frontend lẫn backend, trong đó các thành phần như bộ bài toán GNN, panel trực quan hóa, API phân tích và module quản trị được tổ chức tương đối độc lập về phụ thuộc. Thiết kế này tạo điều kiện thuận lợi để bổ sung mô hình mới, tích hợp metric đánh giá bổ sung hoặc mở rộng các chức năng phân tích mà không yêu cầu tái cấu trúc toàn hệ thống. GNN-Insight do đó không chỉ đóng vai trò là một nguyên mẫu chức năng mà còn có tiềm năng phát triển thành nền tảng nghiên cứu toàn diện hơn trong các giai đoạn tiếp theo.
+P0990	Heading 3	4.5.5. Đánh giá theo từng mô hình GNN
+P0991	Normal	Việc hỗ trợ đồng thời nhiều kiến trúc GNN trong cùng một môi trường thực nghiệm cho phép người dùng thực hiện so sánh trực tiếp về tốc độ hội tụ, độ ổn định huấn luyện và chất lượng biểu diễn. Kết hợp với chức năng phân tích hỗ trợ AI, hệ thống giúp làm rõ sự khác biệt giữa các mô hình một cách có hệ thống, hỗ trợ người dùng đưa ra quyết định lựa chọn cấu hình phù hợp với từng bài toán cụ thể.
+P0992	Normal	a) GCN
+P0993	Normal	GCN thể hiện ưu thế ở tính đơn giản, ổn định và phù hợp để làm baseline so sánh. Mô hình cho thấy tốc độ hội tụ tốt trên các đồ thị có cấu trúc đồng nhất, đồng thời dễ tích hợp và tái sử dụng trong nhiều cấu hình thực nghiệm khác nhau. Hạn chế chính của GCN nằm ở hiện tượng over-smoothing khi tăng số tầng, cũng như khả năng biểu diễn hạn chế trên các đồ thị có quan hệ phức tạp hoặc không đồng nhất.
+P0994	Normal	b) GraphSAGE
+P0995	Normal	GraphSAGE đạt được sự cân bằng tốt giữa khả năng biểu diễn và tính mở rộng. Cơ chế lấy mẫu lân cận ngẫu nhiên giúp mô hình hoạt động hiệu quả trên các đồ thị lớn và thích nghi tốt với bài toán học quy nạp (inductive learning), nơi các nút mới có thể xuất hiện ở thời điểm suy luận. Trong môi trường GNN-Insight, GraphSAGE tương thích tốt với các thành phần trực quan hóa và phân tích quá trình huấn luyện.
+P0996	Normal	c) GAT
+P0997	Normal	GAT nổi bật nhờ cơ chế attention cho phép mô hình học trọng số tầm quan trọng của từng lân cận một cách thích nghi, từ đó hỗ trợ tốt hơn cho các yêu cầu giải thích và phân tích quan hệ giữa các nút. Kết quả trực quan hóa của GAT trong hệ thống thường mang giá trị diễn giải cao hơn, đặc biệt trong các bài toán đòi hỏi phân tích cấu trúc đồ thị chi tiết. Tuy nhiên, GAT có chi phí tính toán cao hơn GCN và GraphSAGE, đồng thời độ ổn định huấn luyện có thể nhạy cảm hơn với các siêu tham số như số lượng attention head và learning rate.
+P0998	Heading 3	4.5.6. Hạn chế hiện tại
+P0999	Normal	Bên cạnh những kết quả đạt được, hệ thống vẫn tồn tại một số hạn chế cần được ghi nhận. Thứ nhất, hiệu năng trực quan hóa và đồng bộ thời gian thực có thể suy giảm khi làm việc với các đồ thị có kích thước lớn hoặc khi số lượng snapshot tích lũy vượt ngưỡng nhất định, do giới hạn băng thông WebSocket và chi phí render phía client. Thứ hai, một số chức năng như replay thực nghiệm và phân tích AI phụ thuộc vào tính đầy đủ của dữ liệu được ghi nhận trong quá trình huấn luyện, cũng như tính ổn định của các dịch vụ tích hợp bên ngoài. Thứ ba, việc hỗ trợ đồng thời nhiều loại bài toán và kiến trúc mô hình làm tăng độ phức tạp trong quản lý trạng thái hệ thống, đặt ra yêu cầu cao hơn về kiểm thử và bảo trì liên tục.
+P1000	Heading 3	4.5.7. Nhận xét tổng quát
+P1001	Normal	Tổng thể, GNN-Insight đã được triển khai thành công như một nền tảng tích hợp hỗ trợ toàn bộ vòng đời thực nghiệm GNN — từ cấu hình và thực thi đến quan sát, phân tích và lưu trữ kết quả. Hệ thống không chỉ đáp ứng các yêu cầu chức năng cơ bản mà còn thể hiện giá trị thực tiễn rõ nét thông qua các tính năng trực quan hóa thời gian thực, replay thực nghiệm và phân tích hỗ trợ AI. Những kết quả này khẳng định tính khả thi của đề tài và tạo nền tảng vững chắc để tiếp tục hoàn thiện hệ thống trong các hướng phát triển tiếp theo
+P1002	Heading 1	5.  KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+P1003	Heading 2	5.1. Kết luận
+P1004	Normal	Sau quá trình nghiên cứu, phân tích, thiết kế, xây dựng và đánh giá, nhóm đã hoàn thành hệ thống GNN-Insight với mục tiêu hỗ trợ trực quan hóa và phân tích thí nghiệm Graph Neural Network trên nền tảng web. Hệ thống được xây dựng nhằm giải quyết bài toán theo dõi và diễn giải quá trình huấn luyện GNN theo hướng trực quan, có tổ chức và dễ khai thác hơn so với cách làm truyền thống chỉ dựa trên log, script rời rạc hoặc notebook thí nghiệm.
+P1005	Normal	- Về giai đoạn khảo sát và phân tích yêu cầu: Nhóm đã tiến hành khảo sát các nhu cầu thực tế trong quá trình nghiên cứu và thực nghiệm GNN, từ đó xác định các yêu cầu cốt lõi của hệ thống như quản lý tài khoản, quản lý dự án, quản lý dataset và phiên bản dữ liệu, khởi tạo phiên huấn luyện, theo dõi thời gian thực, replay thực nghiệm, quản trị hệ thống và hỗ trợ phân tích bằng AI. Các yêu cầu này được hình thành trên cơ sở bám sát quy trình nghiên cứu mô hình GNN trong thực tế, đồng thời hướng đến việc xây dựng một môi trường làm việc tập trung cho cả huấn luyện, giám sát và đánh giá.
+P1006	Normal	- Về giai đoạn phân tích và thiết kế hệ thống: Nhóm đã xây dựng được mô hình phân tích chức năng, các use case chính, luồng xử lý nghiệp vụ, thiết kế dữ liệu và kiến trúc tổng thể của hệ thống. Cấu trúc hệ thống được tổ chức theo mô hình client-server, trong đó frontend đảm nhiệm giao diện trực quan và tương tác người dùng, backend phụ trách nghiệp vụ, điều phối huấn luyện và cung cấp API/WebSocket, còn tầng lưu trữ được thiết kế theo hướng lai nhằm phù hợp với metadata, snapshot huấn luyện và dữ liệu đồ thị có kích thước lớn. Việc thiết kế theo hướng mô-đun giúp hệ thống vừa rõ ràng về mặt chức năng, vừa thuận lợi cho mở rộng về sau.
+P1007	Normal	- Về giai đoạn triển khai xây dựng: Hệ thống đã được hiện thực thành công bằng các công nghệ phù hợp với bài toán GNN. Backend sử dụng FastAPI kết hợp với PyTorch Geometric để triển khai các luồng huấn luyện và phát dữ liệu thời gian thực. Frontend sử dụng React để xây dựng các không gian làm việc cho Researcher và Admin, đồng thời tích hợp các thành phần trực quan hóa như topology view, embedding view, metrics panel và các giao diện quản trị. Bên cạnh đó, hệ thống còn hỗ trợ các chức năng bổ sung như replay thực nghiệm, báo cáo PDF và AI Analyst để tăng giá trị sử dụng trong nghiên cứu.
+P1008	Normal	- Về giai đoạn kiểm thử và đánh giá: Kết quả thực thi cho thấy phần lớn các chức năng chính của hệ thống hoạt động ổn định và đáp ứng tốt yêu cầu đặt ra. Hệ thống đã hỗ trợ được các bài toán GNN tiêu biểu, cho phép quan sát trực tiếp quá trình huấn luyện thông qua topology, embedding và metric theo từng epoch. Ngoài ra, chức năng AI hỗ trợ phân tích và so sánh mô hình cũng góp phần nâng cao khả năng diễn giải kết quả, giúp người dùng không chỉ xem số liệu mà còn có thêm nhận định ở mức ngữ nghĩa.
+P1009	Normal	Tổng thể, GNN-Insight đã đạt được mục tiêu chính của đề tài là xây dựng một nền tảng hỗ trợ huấn luyện, trực quan hóa và phân tích thí nghiệm GNN theo hướng trực quan, có tổ chức và có khả năng mở rộng. Kết quả này cho thấy đề tài có tính khả thi cả về mặt kỹ thuật lẫn giá trị ứng dụng trong nghiên cứu học sâu trên dữ liệu đồ thị.
+P1010	Heading 2	5.2. Hướng phát triển
+P1011	Normal	Dựa trên nền tảng đã hoàn thiện, nhóm đề xuất một số hướng phát triển tiếp theo nhằm nâng cao tính ổn định, khả năng mở rộng và giá trị ứng dụng thực tế của hệ thống.
+P1012	Normal	- Ngắn hạn - Hoàn thiện và ổn định hệ thống:
+P1013	Normal	Mở rộng bộ kiểm thử tự động cho backend và frontend, đặc biệt đối với các luồng thời gian thực như WebSocket, replay và các chức năng quản trị.
+P1014	Normal	Hoàn thiện hơn cơ chế đồng bộ trạng thái giữa topology view, embedding view và metrics panel trong các trường hợp dữ liệu lớn hoặc kết nối không ổn định.
+P1015	Normal	Tối ưu nội dung và giao diện của chức năng AI hỗ trợ phân tích, giúp kết quả sinh ra tự nhiên hơn, nhất quán hơn và dễ sử dụng hơn trong báo cáo nghiên cứu.
+P1016	Normal	Hoàn thiện các chức năng quản trị như retention compaction, audit log và quản lý session để tăng độ tin cậy trong vận hành hệ thống lâu dài.
+P1017	Normal	- Trung hạn - Mở rộng tính năng phân tích và trực quan hóa:
+P1018	Normal	Bổ sung thêm các kỹ thuật trực quan hóa nâng cao cho từng bài toán GNN, đặc biệt là các công cụ hỗ trợ giải thích mô hình như attention inspection, class-boundary analysis hoặc embedding evolution theo nhiều góc nhìn hơn.
+P1019	Normal	Mở rộng khả năng so sánh đa thực nghiệm, cho phép đối chiếu không chỉ giữa các mô hình mà còn giữa các cấu hình siêu tham số, dataset version hoặc chiến lược huấn luyện khác nhau.
+P1020	Normal	Nâng cấp chức năng AI hỗ trợ để không chỉ sinh nhận xét văn bản mà còn hỗ trợ phân tích sâu hơn về nguyên nhân lỗi, mẫu thất bại, dấu hiệu overfitting hoặc over-smoothing theo từng bài toán.
+P1021	Normal	Bổ sung thêm các dạng báo cáo xuất bản như báo cáo so sánh mô hình, báo cáo theo project hoặc báo cáo tổng hợp theo từng task nghiên cứu.
+P1022	Normal	- Dài hạn - Nâng cấp kiến trúc và mở rộng phạm vi ứng dụng:
+P1023	Normal	Mở rộng hệ thống để hỗ trợ thêm nhiều kiến trúc GNN mới ngoài GCN, GraphSAGE và GAT, chẳng hạn như GIN, APPNP, Graph Transformer hoặc các mô hình chuyên biệt cho heterophily.
+P1024	Normal	Nâng cấp nền tảng theo hướng hỗ trợ nhiều người dùng cộng tác tốt hơn, phục vụ các nhóm nghiên cứu hoặc phòng thí nghiệm cùng khai thác trên một hệ thống chung.
+P1025	Normal	Cải thiện khả năng mở rộng và hiệu năng để xử lý tốt hơn các đồ thị lớn, nhiều snapshot và nhiều phiên huấn luyện đồng thời.
+P1026	Normal	Tích hợp sâu hơn với các dịch vụ AI bên ngoài để nâng cao chất lượng phân tích tự động, hỗ trợ mạnh hơn cho việc diễn giải kết quả và ra quyết định lựa chọn mô hình.
+P1027	Normal	Phát triển hệ thống theo hướng một nền tảng nghiên cứu GNN hoàn chỉnh, không chỉ phục vụ huấn luyện và trực quan hóa mà còn hỗ trợ quản lý tri thức thực nghiệm, lưu trữ kết quả và tái sử dụng các cấu hình nghiên cứu trong tương lai.
+P1030	Normal	TÀI LIỆU THAM KHẢO
+P1032	Title	PHỤ LỤC
+P1033	Normal	Sinh viên bỏ Code từng phần vào đây.{
+TABLE 1
+T01R01	m(l)ij = MSG(l)(h(l-1)i, h(l-1)j, eij)
+TABLE 2
+T02R01	a(l)i = AGG(l)({m(l)ij : vj ∈ N(vi)})
+TABLE 3
+T03R01	h(l)i = UPD(l)(h(l-1)i, a(l)i) = σ(W(l) · CONCAT[h(l-1)i, a(l)i] + b(l))
+TABLE 4
+T04R01	z_G = READOUT({h(L)i : vi ∈ V})
+TABLE 5
+T05R01	lim(k→∞) Â^k X = z_∞
+TABLE 6
+T06R01	g_θ ★ x ≈ θ(Iₙ + D^(-1/2) A D^(-1/2)) x
+TABLE 7
+T07R01	H(l+1) = σ( D̃^(-1/2) Ã D̃^(-1/2) H(l) W(l) )
+TABLE 8
+T08R01	Z = softmax( Â · ReLU(Â X W⁽⁰⁾) W⁽¹⁾ )
+TABLE 9
+T09R01	ℒ = − Σ(vᵢ ∈ VL) Σ(c=1..C) Yᵢc · ln Zᵢc
+TABLE 10
+T10R01	h_N(vᵢ)^(l) = AGG_l({ h^(l-1)_vⱼ : vⱼ ∈ S(vᵢ) })
+TABLE 11
+T11R01	h^(l)_vᵢ = σ( W^(l) · CONCAT[ h^(l-1)_vᵢ, h_N(vᵢ)^(l) ] )
+TABLE 12
+T12R01	h^(l)_vᵢ ← h^(l)_vᵢ / ||h^(l)_vᵢ||₂
+TABLE 13
+T13R01	ℒ = −log σ(z^T_vᵢ z_vⱼ) − Q · E_{vₙ~Pₙ}[ log σ(−z^T_vᵢ z_vₙ) ]
+TABLE 14
+T14R01	eᵢⱼ = LeakyReLU( aᵀ · CONCAT[gᵢ, gⱼ] )
+TABLE 15
+T15R01	αᵢⱼ = exp(eᵢⱼ) / Σ_{vₖ ∈ N(vᵢ)∪{vᵢ}} exp(eᵢₖ)
+TABLE 16
+T16R01	h'ᵢ = σ( Σ_{vⱼ ∈ N(vᵢ)∪{vᵢ}} αᵢⱼ W hⱼ )
+TABLE 17
+T17R01	h'ᵢ = ||_{k=1}^{K} σ( Σ_{vⱼ ∈ N(vᵢ)∪{vᵢ}} α^(k)ᵢⱼ W^(k) hⱼ )
+TABLE 18
+T18R01	h'ᵢ = σ( (1/K) Σ_{k=1}^{K} Σ_{vⱼ} α^(k)ᵢⱼ W^(k) hⱼ )
+TABLE 19
+T19R01	Tiêu chí || GCN || GraphSAGE || GAT
+T19R02	Cơ chế || Chuẩn hóa phổ || Lấy mẫu + tổng hợp || Attention học được
+T19R03	Transductive/Inductive || Transductive || Inductive || Inductive
+T19R04	Scalability || Thấp || Cao || Trung bình
+T19R05	Interpretability || Thấp || Thấp || Cao (qua αᵢⱼ)
+T19R06	Chi phí tính toán || O(|E|d) || O(Sl·L·d) || O(K·|E|·d)
+T19R07	Dataset điển hình || Cora, Citeseer || Reddit, Pinterest || Cora, PPI
+TABLE 20
+T20R01	ℒ_NC = −(1/|V_L|) Σ_{vᵢ ∈ V_L} Σ_{c=1}^{C} yᵢc log ŷᵢc
+TABLE 21
+T21R01	ℒ_LP = −Σ_{(i,j)∈E} log ŝᵢⱼ − Σ_{(i,k)∉E} log(1 − ŝᵢₖ)
+TABLE 22
+T22R01	ℒ_EMB = −Σ_{(vᵢ,vⱼ)∈E} log σ(z^T_i z_j) − Q · E_{vₙ~Pₙ}[log σ(−z^T_i z_n)]
+TABLE 23
+T23R01	ℒ_NC = −(1/|V_L|) Σ_{vᵢ ∈ V_L} Σ_{c=1}^{C} yᵢc log ŷᵢc
+TABLE 24
+T24R01	z_G = READOUT({h^(L)_i}_{vᵢ ∈ V}) = (1/|V|) Σ_{vᵢ ∈ V} h^(L)_i
+TABLE 25
+T25R01	ŝᵢⱼ = σ( z^T_i · z_j )
+TABLE 26
+T26R01	ℒ_LP = −Σ_{(i,j)∈E} log ŝᵢⱼ − Σ_{(i,k)∉E} log(1 − ŝᵢₖ)
+TABLE 27
+T27R01	Q = (1/2m) Σ_{i,j} [ Aᵢⱼ − kᵢkⱼ/(2m) ] δ(cᵢ, cⱼ)
+TABLE 28
+T28R01	ℒ_EMB = −Σ_{(vᵢ,vⱼ) ∈ E} log P(vⱼ | vᵢ)
+TABLE 29
+T29R01	P(vⱼ | vᵢ) = exp(z^T_i z_j) / Σ_k exp(z^T_i z_k)
+TABLE 30
+T30R01	ℒ_VGAE = E_q[log p(A|Z)] − KL[q(Z|X,A) || p(Z)]
+TABLE 31
+T31R01	Σ = (1/n) Z^T Z → Z_2D = Z W_2
+TABLE 32
+T32R01	ℒ_tSNE = KL(P || Q) = Σᵢ Σⱼ pᵢⱼ log(pᵢⱼ / qᵢⱼ)
+TABLE 33
+T33R01	STT || Tác nhân || Mô tả || Quyền hạn chính
+T33R02	1 || Researcher (Nhà nghiên cứu / Kỹ sư AI) || Tác nhân chính sử dụng hệ thống để thực hiện các nghiên cứu và thí nghiệm trên mô hình Graph Neural Network. || Quản lý dự án, quản lý bộ dữ liệu, cấu hình siêu tham số, khởi tạo huấn luyện, theo dõi tiến trình theo thời gian thực, trực quan hóa topo đồ thị và embeddings, lưu trữ thực nghiệm, so sánh kết quả và xuất báo cáo nghiên cứu.
+T33R03	2 || Viewer (Người quan sát) || Người dùng có quyền truy cập ở chế độ chỉ đọc nhằm theo dõi tiến trình nghiên cứu hoặc đánh giá kết quả. || Xem dự án, xem lịch sử huấn luyện, xem dashboard, trực quan hóa kết quả và báo cáo nghiên cứu; không được phép chỉnh sửa dữ liệu hoặc kích hoạt huấn luyện.
+T33R04	3 || Admin (Quản trị viên hệ thống) || Người chịu trách nhiệm vận hành và duy trì hoạt động của nền tảng GNN-Insight. || Quản lý người dùng, giám sát tài nguyên hệ thống, kiểm soát các phiên huấn luyện, thực hiện dừng khẩn cấp, quản lý chính sách lưu trữ dữ liệu (Retention Policy) và kiểm tra nhật ký hệ thống (Audit Log).
+TABLE 34
+T34R01	Nhóm chức năng || Quyền hạn chi tiết || Researcher || Viewer || Admin
+T34R02	Xác thực || Đăng nhập, đăng ký, cập nhật thông tin cá nhân || x || x || x
+T34R03	Dự án || Tạo mới, cập nhật, xóa dự án || x ||  || x
+T34R04	Dữ liệu || Upload dataset, tạo phiên bản, kiểm định schema || x ||  || x
+T34R05	Dữ liệu || Phát hành / Thu hồi dataset version || x ||  || x
+T34R06	Huấn luyện || Khởi tạo phiên huấn luyện (WebSocket Session) || x ||  || x
+T34R07	Huấn luyện || Can thiệp dừng khẩn cấp (Emergency stop) || x ||  || x
+T34R08	Thực nghiệm || Xem kết quả, chạy Replay theo từng epoch || x || x || x
+T34R09	Thực nghiệm || Pin thực nghiệm tốt nhất, ghi chú (Notes) || x ||  || x
+T34R10	Quản trị || Quản lý người dùng (khóa/mở, phân role) ||  ||  || x
+T34R11	Quản trị || Thực thi Retention Compaction ||  ||  || x
+T34R12	Quản trị || Truy xuất nhật ký hệ thống (Audit Log) ||  ||  || x
+TABLE 35
+T35R01	Mã UC || Tên chức năng || Input || Output
+T35R02	UC01 || Đăng nhập vào hệ thống || Email/Username, Password || JWT Token (24h), thông tin role và định tuyến màn hình
+T35R03	UC02 || Quản lý dự án || Tên dự án, mô tả, task_type, model_type || Bản ghi project mới trong MySQL, thư mục Blob Storage tương ứng
+T35R04	UC03 || Quản lý dataset và tạo phiên bản || Tệp dữ liệu đồ thị (JSON/CSV/Excel/artifact), tên dataset, dataset_id || dataset_version_id, trạng thái kiểm định (validated/draft), blob_key
+T35R05	UC04 || Khởi tạo phiên huấn luyện || project_id, dataset_version_id, kiến trúc mô hình, siêu tham số (lr, dropout, hidden_dim, epochs) || session_id (UUIDv4), WebSocket endpoint (ws_url), trạng thái pending
+T35R06	UC05 || Theo dõi huấn luyện thời gian thực || WebSocket stream: graph_data payload, epoch_snapshot (gzip nén) || Trực quan hóa topology, embeddings 2D, metric loss/accuracy cập nhật theo từng epoch
+T35R07	UC06 || Replay và Resume thực nghiệm || experiment_id hoặc session_id, số epoch cần tua đến || Trạng thái trực quan hóa chính xác tại epoch yêu cầu; hoặc khôi phục kết nối WebSocket nếu Resume
+T35R08	UC07 || So sánh thực nghiệm || Danh sách 2–4 experiment_id cùng project || Biểu đồ đối chiếu đa đường loss/accuracy, bảng ma trận so sánh siêu tham số
+T35R09	UC08 || Quản trị hệ thống || Cấu hình retention policy (epoch giữ lại), session_id cần dừng || Danh sách snapshot đã xóa, dung lượng giải phóng, bản ghi audit_log
+TABLE 36
+T36R01	Mã chức năng || Tên chức năng || Mô tả
+T36R02	F-01 || Quản lý dự án || Cho phép tạo không gian làm việc biệt lập cho từng đề tài nghiên cứu. Mỗi dự án được liên kết với một loại nhiệm vụ đồ thị cụ thể như Node Classification, Link Prediction hoặc Graph Classification.
+T36R03	F-02 || Quản lý dữ liệu đa phiên bản || Hỗ trợ tải lên dữ liệu đồ thị dưới nhiều định dạng như JSON, CSV, Excel hoặc Artifact Runtime; thực hiện kiểm định schema và đóng gói thành phiên bản dữ liệu sẵn sàng huấn luyện.
+TABLE 37
+T37R01	Mã chức năng || Tên chức năng || Mô tả
+T37R02	F-03 || Khởi tạo phiên huấn luyện || Cho phép Researcher lựa chọn siêu tham số và khởi động quá trình huấn luyện trên GPU hoặc CPU thông qua kết nối WebSocket.
+T37R03	F-04 || Truyền tải thời gian thực || Backend truyền luồng Epoch Snapshot đã nén qua WebSocket; Frontend tiếp nhận và cập nhật các panel metric, topology và embedding theo thời gian thực.
+T37R04	F-05 || Tương tác trực quan hóa nâng cao || Hỗ trợ hiển thị attention weights, phân cụm cộng đồng thời gian thực, lựa chọn nút và xem chi tiết thuộc tính, nhãn dự đoán và độ tin cậy của mô hình.
+TABLE 38
+T38R01	Mã chức năng || Tên chức năng || Mô tả
+T38R02	F-06 || Lưu trữ và khôi phục thực nghiệm || Tự động lưu phiên huấn luyện thành bản ghi thực nghiệm bất biến, bao gồm siêu tham số, metric và dữ liệu replay.
+T38R03	F-07 || Trình phát Replay || Cho phép người dùng tái dựng toàn bộ trạng thái huấn luyện tại bất kỳ epoch nào thông qua thanh điều khiển thời gian.
+T38R04	F-08 || Tiếp tục huấn luyện || Hỗ trợ khôi phục trạng thái phiên và dữ liệu replay khi kết nối WebSocket bị gián đoạn.
+T38R05	F-09 || So sánh thực nghiệm || Cho phép lựa chọn từ hai đến bốn thực nghiệm để so sánh biểu đồ hội tụ, siêu tham số và chất lượng mô hình trên cùng giao diện.
+TABLE 39
+T39R01	Mã chức năng || Tên chức năng || Mô tả
+T39R02	F-10 || Quản lý phiên huấn luyện || Hiển thị các tiến trình huấn luyện đang hoạt động và cho phép Admin thực hiện thao tác dừng hoặc khởi động lại.
+T39R03	F-11 || Quản lý dung lượng lưu trữ || Áp dụng chính sách Retention Policy nhằm tối ưu hóa dung lượng lưu trữ các thực nghiệm cũ.
+T39R04	F-12 || Audit Log || Ghi nhận các hoạt động quan trọng như thay đổi quyền, xóa thực nghiệm hoặc can thiệp phiên huấn luyện nhằm phục vụ giám sát và bảo mật hệ thống.
+TABLE 40
+T40R01	Mã yêu cầu || Tên yêu cầu || Mô tả
+T40R02	NF-01 || Độ trễ cập nhật trực quan hóa || Thời gian từ khi Backend hoàn tất một epoch đến khi Frontend hiển thị topology và embedding cần được tối ưu nhằm bảo đảm khả năng quan sát gần thời gian thực.
+T40R03	NF-02 || Hiệu quả lưu trữ dữ liệu || Dữ liệu snapshot phải được nén để giảm băng thông truyền tải và chi phí lưu trữ. Hệ thống áp dụng cơ chế Retention Compaction nhằm tiết kiệm dung lượng trong khi vẫn duy trì khả năng replay thực nghiệm.
+T40R04	NF-03 || Kiến trúc tách biệt || Frontend và Backend phải được tách biệt hoàn toàn. Backend cung cấp REST API và WebSocket để giao tiếp, cho phép triển khai lõi huấn luyện GNN trên máy chủ GPU độc lập.
+T40R05	NF-04 || Độ ổn định kết nối || Kết nối WebSocket phải hỗ trợ duy trì trạng thái phiên và cơ chế khôi phục khi xảy ra gián đoạn ngắn nhằm hạn chế mất dữ liệu theo dõi.
+T40R06	NF-05 || Tính an toàn và bảo mật || Tất cả API và kết nối WebSocket phải được xác thực bằng JWT. Người dùng có vai trò Viewer chỉ được phép xem dữ liệu và không được tạo, chỉnh sửa hoặc điều khiển phiên huấn luyện.
+TABLE 41
+T41R01	Mã Use case || UC01 || Tên Use case || Đăng nhập vào hệ thống
+T41R02	Tác nhân || Researcher, Viewer, Admin || Researcher, Viewer, Admin || Researcher, Viewer, Admin
+T41R03	Mô tả || Cho phép tất cả người dùng xác thực thông tin tài khoản để lấy mã Token (JWT), từ đó truy cập vào không gian làm việc hoặc trang quản trị tương ứng với vai trò của mình. || Cho phép tất cả người dùng xác thực thông tin tài khoản để lấy mã Token (JWT), từ đó truy cập vào không gian làm việc hoặc trang quản trị tương ứng với vai trò của mình. || Cho phép tất cả người dùng xác thực thông tin tài khoản để lấy mã Token (JWT), từ đó truy cập vào không gian làm việc hoặc trang quản trị tương ứng với vai trò của mình.
+T41R04	Tiền điều kiện || Người dùng đã đăng ký tài khoản hợp lệ trên hệ thống. || Người dùng đã đăng ký tài khoản hợp lệ trên hệ thống. || Người dùng đã đăng ký tài khoản hợp lệ trên hệ thống.
+T41R05	Luồng sự kiện chính (Thành công) || STT || Thực hiện bởi || Hành động
+T41R06	Luồng sự kiện chính (Thành công) || 1 || Người dùng || Mở trang đăng nhập trên Web Browser.
+T41R07	Luồng sự kiện chính (Thành công) || 2 || Hệ thống || Hiển thị biểu mẫu đăng nhập (Email/Username và Password).
+T41R08	Luồng sự kiện chính (Thành công) || 3 || Người dùng || Nhập thông tin đăng nhập và bấm "Sign In".
+T41R09	Luồng sự kiện chính (Thành công) || 4 || Hệ thống || Kiểm định tài khoản thông qua API POST /api/auth/login.
+T41R10	Luồng sự kiện chính (Thành công) || 5 || Hệ thống || Xác nhận thông tin hợp lệ, trả về JWT Token và thông tin định danh.
+T41R11	Luồng sự kiện chính (Thành công) || 6 || Frontend || Lưu JWT vào localStorage/Zustand Store và điều hướng đến route bảo mật.
+T41R12	Luồng sự kiện thay thế || STT || Thực hiện bởi || Hành động
+T41R13	Luồng sự kiện thay thế || 1a || Hệ thống || Tại bước 6, nếu role == 'admin', hệ thống điều hướng trực tiếp đến /admin/overview.
+T41R14	Luồng ngoại lệ || STT || Thực hiện bởi || Hành động
+T41R15	Luồng ngoại lệ || 1a || Hệ thống || Trả về HTTP 401 Unauthorized. Frontend hiển thị thông báo lỗi tương ứng.
+T41R16	Luồng ngoại lệ || 2a || Hệ thống || Nếu is_active == False, báo lỗi HTTP 403 Forbidden và thông báo tài khoản đã bị khóa.
+T41R17	Hậu điều kiện || Hệ thống cấp một JWT Token có thời hạn 24 giờ, định tuyến người dùng về /app/dashboard hoặc /admin/overview dựa trên thuộc tính role. || Hệ thống cấp một JWT Token có thời hạn 24 giờ, định tuyến người dùng về /app/dashboard hoặc /admin/overview dựa trên thuộc tính role. || Hệ thống cấp một JWT Token có thời hạn 24 giờ, định tuyến người dùng về /app/dashboard hoặc /admin/overview dựa trên thuộc tính role.
+TABLE 42
+T42R01	Mã Use case || UC02 || Tên Use case || Quản lý dự án
+T42R02	Tác nhân || Researcher, Admin || Researcher, Admin || Researcher, Admin
+T42R03	Mô tả || Researcher tạo mới các dự án nghiên cứu để nhóm các phiên huấn luyện và cấu hình dữ liệu liên quan. || Researcher tạo mới các dự án nghiên cứu để nhóm các phiên huấn luyện và cấu hình dữ liệu liên quan. || Researcher tạo mới các dự án nghiên cứu để nhóm các phiên huấn luyện và cấu hình dữ liệu liên quan.
+T42R04	Tiền điều kiện || Người dùng đã đăng nhập với vai trò researcher hoặc admin. || Người dùng đã đăng nhập với vai trò researcher hoặc admin. || Người dùng đã đăng nhập với vai trò researcher hoặc admin.
+T42R05	Luồng sự kiện chính (Thành công) || STT || Thực hiện bởi || Hành động
+T42R06	Luồng sự kiện chính (Thành công) || 1 || Người dùng || Truy cập trang /app/projects.
+T42R07	Luồng sự kiện chính (Thành công) || 2 || Hệ thống || Hiển thị danh sách các dự án đang sở hữu.
+T42R08	Luồng sự kiện chính (Thành công) || 3 || Người dùng || Bấm "Create New Project".
+T42R09	Luồng sự kiện chính (Thành công) || 4 || Hệ thống || Hiển thị Form yêu cầu nhập: Tên dự án, Mô tả, Loại nhiệm vụ GNN và Loại mô hình mặc định.
+T42R10	Luồng sự kiện chính (Thành công) || 5 || Người dùng || Nhập thông tin và xác nhận.
+T42R11	Luồng sự kiện chính (Thành công) || 6 || Frontend || Gửi yêu cầu POST /api/projects kèm cấu hình dự án.
+T42R12	Luồng sự kiện chính (Thành công) || 7 || Backend || Lưu thông tin vào bảng projects trong MySQL.
+T42R13	Luồng sự kiện chính (Thành công) || 8 || Hệ thống || Phản hồi thành công và danh sách dự án được tải lại.
+T42R14	Luồng sự kiện thay thế || STT || Thực hiện bởi || Hành động
+T42R15	Luồng sự kiện thay thế || 1a || Người dùng || Chọn dự án hiện có và sửa tên/mô tả. Hệ thống gửi request PUT /api/projects/{id}.
+T42R16	Luồng ngoại lệ || STT || Thực hiện bởi || Hành động
+T42R17	Luồng ngoại lệ || 1a || Hệ thống || Trả về lỗi HTTP 400 Bad Request kèm thông tin chi tiết lỗi kiểm định.
+T42R18	Hậu điều kiện || Bản ghi dự án mới được tạo trong MySQL, các thư mục con tương ứng được khởi tạo trong Blob Storage. || Bản ghi dự án mới được tạo trong MySQL, các thư mục con tương ứng được khởi tạo trong Blob Storage. || Bản ghi dự án mới được tạo trong MySQL, các thư mục con tương ứng được khởi tạo trong Blob Storage.
+TABLE 43
+T43R01	Mã Use case || UC03 || Tên Use case || Quản lý dataset và tạo phiên bản
+T43R02	Tác nhân || Researcher || Researcher || Researcher
+T43R03	Mô tả || Cho phép Researcher tạo Dataset logic và phiên bản dữ liệu mới, hệ thống thực hiện kiểm định cấu trúc và lưu trữ phù hợp. || Cho phép Researcher tạo Dataset logic và phiên bản dữ liệu mới, hệ thống thực hiện kiểm định cấu trúc và lưu trữ phù hợp. || Cho phép Researcher tạo Dataset logic và phiên bản dữ liệu mới, hệ thống thực hiện kiểm định cấu trúc và lưu trữ phù hợp.
+T43R04	Tiền điều kiện || Người dùng đã đăng nhập với vai trò researcher. || Người dùng đã đăng nhập với vai trò researcher. || Người dùng đã đăng nhập với vai trò researcher.
+T43R05	Luồng sự kiện chính (Thành công) || STT || Thực hiện bởi || Hành động
+T43R06	Luồng sự kiện chính (Thành công) || 1 || Người dùng || Truy cập trang /app/datasets, tạo mới Dataset logic hoặc chọn Dataset đã có.
+T43R07	Luồng sự kiện chính (Thành công) || 2 || Người dùng || Tạo phiên bản dữ liệu mới và cung cấp dữ liệu dưới định dạng phù hợp: JSON, CSV, Excel hoặc artifact runtime.
+T43R08	Luồng sự kiện chính (Thành công) || 3 || Frontend || Gửi metadata qua POST /api/datasets và yêu cầu tạo phiên bản qua POST /api/datasets/{dataset_id}/versions.
+T43R09	Luồng sự kiện chính (Thành công) || 4 || Backend || Kiểm định cấu trúc dữ liệu, lưu metadata vào MySQL và dữ liệu vật lý vào Blob Storage.
+T43R10	Luồng sự kiện chính (Thành công) || 5 || Hệ thống || Tạo bản ghi dataset_versions mới với trạng thái ban đầu là draft hoặc validated.
+T43R11	Luồng sự kiện thay thế || STT || Thực hiện bởi || Hành động
+T43R12	Luồng sự kiện thay thế || 1a || Researcher || Chọn phiên bản validated và nhấn Publish. Hệ thống cập nhật trường lifecycle thành published.
+T43R13	Luồng ngoại lệ || STT || Thực hiện bởi || Hành động
+T43R14	Luồng ngoại lệ || 1a || Backend || Trả về mã lỗi kèm danh sách chi tiết cảnh báo dạng JSON. Bản ghi được đánh dấu trạng thái draft.
+T43R15	Hậu điều kiện || Metadata Dataset và Dataset Version được lưu trong MySQL; dữ liệu vật lý được lưu tại Blob Storage; phiên bản được ghi nhận với trạng thái phù hợp (draft, validated, published hoặc deprecated). || Metadata Dataset và Dataset Version được lưu trong MySQL; dữ liệu vật lý được lưu tại Blob Storage; phiên bản được ghi nhận với trạng thái phù hợp (draft, validated, published hoặc deprecated). || Metadata Dataset và Dataset Version được lưu trong MySQL; dữ liệu vật lý được lưu tại Blob Storage; phiên bản được ghi nhận với trạng thái phù hợp (draft, validated, published hoặc deprecated).
+TABLE 44
+T44R01	Mã Use case || UC04 || Tên Use case || Khởi tạo phiên huấn luyện
+T44R02	Tác nhân || Researcher || Researcher || Researcher
+T44R03	Mô tả || Khởi tạo tiến trình huấn luyện mô hình GNN trên backend thông qua liên kết giữa dự án, cấu hình siêu tham số và phiên bản dữ liệu đã lựa chọn. || Khởi tạo tiến trình huấn luyện mô hình GNN trên backend thông qua liên kết giữa dự án, cấu hình siêu tham số và phiên bản dữ liệu đã lựa chọn. || Khởi tạo tiến trình huấn luyện mô hình GNN trên backend thông qua liên kết giữa dự án, cấu hình siêu tham số và phiên bản dữ liệu đã lựa chọn.
+T44R04	Tiền điều kiện || Đã có ít nhất một dự án và một phiên bản dữ liệu được phát hành (lifecycle là published). || Đã có ít nhất một dự án và một phiên bản dữ liệu được phát hành (lifecycle là published). || Đã có ít nhất một dự án và một phiên bản dữ liệu được phát hành (lifecycle là published).
+T44R05	Luồng sự kiện chính (Thành công) || STT || Thực hiện bởi || Hành động
+T44R06	Luồng sự kiện chính (Thành công) || 1 || Người dùng || Mở màn hình làm việc /app/lab.
+T44R07	Luồng sự kiện chính (Thành công) || 2 || Người dùng || Chọn Dự án, phiên bản Dataset, loại kiến trúc mô hình và cấu hình siêu tham số.
+T44R08	Luồng sự kiện chính (Thành công) || 3 || Người dùng || Nhấn nút "Start Training".
+T44R09	Luồng sự kiện chính (Thành công) || 4 || Frontend || Thực hiện POST /api/sessions để tạo phiên huấn luyện.
+T44R10	Luồng sự kiện chính (Thành công) || 5 || Backend || Khởi tạo bản ghi training_sessions với ID dạng UUIDv4 và trả về {session_id, ws_url}.
+T44R11	Luồng sự kiện chính (Thành công) || 6 || Frontend || Nhận phản hồi và tự động mở kết nối WebSocket đến ws://backend-url/ws/train.
+T44R12	Luồng sự kiện thay thế || STT || Thực hiện bởi || Hành động
+T44R13	Luồng sự kiện thay thế || 1a || Hệ thống || Tự động copy lại config_json cũ và khởi tạo phiên huấn luyện mới kế thừa cấu hình gốc.
+T44R14	Luồng ngoại lệ || STT || Thực hiện bởi || Hành động
+T44R15	Luồng ngoại lệ || 1a || Backend || Trả về lỗi HTTP 503 Service Unavailable. Phiên làm việc chuyển sang trạng thái failed kèm thông tin lỗi.
+T44R16	Hậu điều kiện || Bản ghi training_sessions được khởi tạo ở trạng thái pending. Hệ thống cấp phát endpoint WebSocket bảo mật. || Bản ghi training_sessions được khởi tạo ở trạng thái pending. Hệ thống cấp phát endpoint WebSocket bảo mật. || Bản ghi training_sessions được khởi tạo ở trạng thái pending. Hệ thống cấp phát endpoint WebSocket bảo mật.
+TABLE 45
+T45R01	Mã Use case || UC05 || Tên Use case || Theo dõi huấn luyện thời gian thực
+T45R02	Tác nhân || Researcher, Viewer || Researcher, Viewer || Researcher, Viewer
+T45R03	Mô tả || Nhận và xử lý luồng dữ liệu biểu thị biến đổi cấu trúc đồ thị, biểu diễn embeddings 2D và hiệu năng hội tụ được truyền tải liên tục qua WebSocket theo từng Epoch. || Nhận và xử lý luồng dữ liệu biểu thị biến đổi cấu trúc đồ thị, biểu diễn embeddings 2D và hiệu năng hội tụ được truyền tải liên tục qua WebSocket theo từng Epoch. || Nhận và xử lý luồng dữ liệu biểu thị biến đổi cấu trúc đồ thị, biểu diễn embeddings 2D và hiệu năng hội tụ được truyền tải liên tục qua WebSocket theo từng Epoch.
+T45R04	Tiền điều kiện || Đã thiết lập kết nối WebSocket thành công từ UC04. || Đã thiết lập kết nối WebSocket thành công từ UC04. || Đã thiết lập kết nối WebSocket thành công từ UC04.
+T45R05	Luồng sự kiện chính (Thành công) || STT || Thực hiện bởi || Hành động
+T45R06	Luồng sự kiện chính (Thành công) || 1 || Backend || Đóng gói dữ liệu cấu trúc đồ thị nền và gửi gói tin loại graph_data.
+T45R07	Luồng sự kiện chính (Thành công) || 2 || Frontend || Nhận gói tin, giải nén và cập nhật cấu trúc mạng lên thư viện render D3.js/Canvas.
+T45R08	Luồng sự kiện chính (Thành công) || 3 || Backend || Tại mỗi Epoch, đóng gói tin nhắn epoch_snapshot chứa embeddings 2D, attention weights, độ tự tin dự đoán.
+T45R09	Luồng sự kiện chính (Thành công) || 4 || Frontend || Liên tục đón nhận epoch_snapshot, cập nhật vị trí nút và màu sắc dựa trên nhãn dự đoán.
+T45R10	Luồng sự kiện chính (Thành công) || 5 || Backend || Khi kết thúc Epoch cuối, gửi tin nhắn training_complete và đóng kết nối an toàn.
+T45R11	Luồng sự kiện thay thế || STT || Thực hiện bởi || Hành động
+T45R12	Luồng sự kiện thay thế || 1a || Người dùng || Chuyển đổi giữa chế độ xem nhãn dự đoán (Prediction Mode) và chế độ trực quan sai số (Error Mode).
+T45R13	Luồng ngoại lệ || STT || Thực hiện bởi || Hành động
+T45R14	Luồng ngoại lệ || 1a || Hệ thống || Hiển thị cảnh báo "Mất kết nối. Đang tìm cách phục hồi..." và lưu session_id để sẵn sàng chuyển sang luồng Resume (UC06).
+T45R15	Hậu điều kiện || Trạng thái trực quan hóa trên Frontend được đồng bộ với mô hình đang huấn luyện ở Backend. || Trạng thái trực quan hóa trên Frontend được đồng bộ với mô hình đang huấn luyện ở Backend. || Trạng thái trực quan hóa trên Frontend được đồng bộ với mô hình đang huấn luyện ở Backend.
+TABLE 46
+T46R01	Mã Use case || UC06 || Tên Use case || Replay và Resume thực nghiệm
+T46R02	Tác nhân || Researcher, Viewer || Researcher, Viewer || Researcher, Viewer
+T46R03	Mô tả || Cho phép người dùng duyệt lại toàn bộ tiến trình huấn luyện theo từng Epoch, hoặc khôi phục tiến trình bị gián đoạn do sự cố mạng. || Cho phép người dùng duyệt lại toàn bộ tiến trình huấn luyện theo từng Epoch, hoặc khôi phục tiến trình bị gián đoạn do sự cố mạng. || Cho phép người dùng duyệt lại toàn bộ tiến trình huấn luyện theo từng Epoch, hoặc khôi phục tiến trình bị gián đoạn do sự cố mạng.
+T46R04	Tiền điều kiện || Đối với Replay: Thực nghiệm đã kết thúc và được lưu trữ hoàn toàn. Đối với Resume: Tiến trình vẫn đang chạy nhưng kết nối frontend bị đứt. || Đối với Replay: Thực nghiệm đã kết thúc và được lưu trữ hoàn toàn. Đối với Resume: Tiến trình vẫn đang chạy nhưng kết nối frontend bị đứt. || Đối với Replay: Thực nghiệm đã kết thúc và được lưu trữ hoàn toàn. Đối với Resume: Tiến trình vẫn đang chạy nhưng kết nối frontend bị đứt.
+T46R05	Luồng sự kiện chính (Thành công) || STT || Thực hiện bởi || Hành động
+T46R06	Luồng sự kiện chính (Thành công) || 1 || Người dùng || Mở trang Experiment Hub tại /app/experiments và chọn một thực nghiệm.
+T46R07	Luồng sự kiện chính (Thành công) || 2 || Hệ thống || Tải thông tin cấu hình và biểu đồ lịch sử từ MySQL.
+T46R08	Luồng sự kiện chính (Thành công) || 3 || Người dùng || Nhấn nút "Open Replay Shell".
+T46R09	Luồng sự kiện chính (Thành công) || 4 || Hệ thống || Tải gói dữ liệu cấu trúc đồ thị gốc từ MongoDB.
+T46R10	Luồng sự kiện chính (Thành công) || 5 || Người dùng || Tương tác với thanh trượt Epoch.
+T46R11	Luồng sự kiện chính (Thành công) || 6 || Hệ thống || Sử dụng API POST /api/experiments/{id}/replay để nạp lại dữ liệu trực quan hóa và lịch sử snapshot.
+T46R12	Luồng sự kiện chính (Thành công) || 7 || Frontend || Cập nhật lại tọa độ vector 2D, nhãn dự đoán và chỉ số hiệu năng.
+T46R13	Luồng sự kiện thay thế || STT || Thực hiện bởi || Hành động
+T46R14	Luồng sự kiện thay thế || 1 || Frontend || Tự động gửi GET /api/sessions/{session_id}/resume.
+T46R15	Luồng sự kiện thay thế || 2 || Backend || Kiểm tra trạng thái tiến trình và trả về toàn bộ dữ liệu lịch sử đến epoch hiện tại.
+T46R16	Luồng sự kiện thay thế || 3 || Frontend || Tái lập ngữ cảnh phiên làm việc, khôi phục dữ liệu replay và tiếp tục theo dõi qua WebSocket nếu phiên vẫn hoạt động.
+T46R17	Luồng ngoại lệ || STT || Thực hiện bởi || Hành động
+T46R18	Luồng ngoại lệ || 1a || Backend || Trả về HTTP 404 Not Found và đưa người dùng trở lại màn hình danh sách thực nghiệm.
+T46R19	Hậu điều kiện || Đối với Replay: Render trạng thái đồ thị tại Epoch được chọn. Đối với Resume: Frontend kết nối lại thành công mà không làm gián đoạn GPU. || Đối với Replay: Render trạng thái đồ thị tại Epoch được chọn. Đối với Resume: Frontend kết nối lại thành công mà không làm gián đoạn GPU. || Đối với Replay: Render trạng thái đồ thị tại Epoch được chọn. Đối với Resume: Frontend kết nối lại thành công mà không làm gián đoạn GPU.
+TABLE 47
+T47R01	Mã Use case || UC07 || Tên Use case || So sánh thực nghiệm
+T47R02	Tác nhân || Researcher, Viewer || Researcher, Viewer || Researcher, Viewer
+T47R03	Mô tả || Cho phép Researcher lựa chọn nhiều thực nghiệm trong dự án để so sánh song song các chỉ số chất lượng và không gian biểu diễn vector. || Cho phép Researcher lựa chọn nhiều thực nghiệm trong dự án để so sánh song song các chỉ số chất lượng và không gian biểu diễn vector. || Cho phép Researcher lựa chọn nhiều thực nghiệm trong dự án để so sánh song song các chỉ số chất lượng và không gian biểu diễn vector.
+T47R04	Tiền điều kiện || Có ít nhất 2 thực nghiệm thuộc cùng một Dự án nghiên cứu trong cơ sở dữ liệu. || Có ít nhất 2 thực nghiệm thuộc cùng một Dự án nghiên cứu trong cơ sở dữ liệu. || Có ít nhất 2 thực nghiệm thuộc cùng một Dự án nghiên cứu trong cơ sở dữ liệu.
+T47R05	Luồng sự kiện chính (Thành công) || STT || Thực hiện bởi || Hành động
+T47R06	Luồng sự kiện chính (Thành công) || 1 || Người dùng || Truy cập Experiment Hub tại /app/experiments và chọn các thực nghiệm cần so sánh.
+T47R07	Luồng sự kiện chính (Thành công) || 2 || Hệ thống || Hiển thị danh sách các thực nghiệm trong dự án.
+T47R08	Luồng sự kiện chính (Thành công) || 3 || Người dùng || Tích chọn từ 2 đến 4 thực nghiệm và bấm "Compare Selected Runs".
+T47R09	Luồng sự kiện chính (Thành công) || 4 || Frontend || Gửi danh sách ID thực nghiệm lên Backend qua POST /api/experiments/compare.
+T47R10	Luồng sự kiện chính (Thành công) || 5 || Backend || Truy xuất dữ liệu tóm tắt lịch sử từ MongoDB.
+T47R11	Luồng sự kiện chính (Thành công) || 6 || Frontend || Vẽ biểu đồ so sánh đa đường và bảng ma trận so sánh siêu tham số.
+T47R12	Luồng ngoại lệ || STT || Thực hiện bởi || Hành động
+T47R13	Luồng ngoại lệ || 1a || Backend || Trả về HTTP 400 Bad Request. Frontend hiển thị cảnh báo "Không thể so sánh các thực nghiệm thuộc các nhiệm vụ GNN khác nhau".
+T47R14	Hậu điều kiện || Biểu đồ đối chiếu đa đường và bảng đối chiếu siêu tham số được render song song trên giao diện. || Biểu đồ đối chiếu đa đường và bảng đối chiếu siêu tham số được render song song trên giao diện. || Biểu đồ đối chiếu đa đường và bảng đối chiếu siêu tham số được render song song trên giao diện.
+TABLE 48
+T48R01	Mã Use case || UC08 || Tên Use case || Quản trị hệ thống
+T48R02	Tác nhân || Admin || Admin || Admin
+T48R03	Mô tả || Cung cấp công cụ cho quản trị viên thực hiện giám sát trạng thái máy chủ, quản lý phiên làm việc và thực thi chính sách dọn dẹp bộ nhớ đĩa cứng. || Cung cấp công cụ cho quản trị viên thực hiện giám sát trạng thái máy chủ, quản lý phiên làm việc và thực thi chính sách dọn dẹp bộ nhớ đĩa cứng. || Cung cấp công cụ cho quản trị viên thực hiện giám sát trạng thái máy chủ, quản lý phiên làm việc và thực thi chính sách dọn dẹp bộ nhớ đĩa cứng.
+T48R04	Tiền điều kiện || Admin đã đăng nhập thành công (role == 'admin'). || Admin đã đăng nhập thành công (role == 'admin'). || Admin đã đăng nhập thành công (role == 'admin').
+T48R05	Luồng sự kiện chính (Thành công) || STT || Thực hiện bởi || Hành động
+T48R06	Luồng sự kiện chính (Thành công) || 1 || Admin || Truy cập trang /admin/retention.
+T48R07	Luồng sự kiện chính (Thành công) || 2 || Hệ thống || Hiển thị tổng dung lượng đĩa MySQL, MongoDB và Blob Storage.
+T48R08	Luồng sự kiện chính (Thành công) || 3 || Admin || Thiết lập quy tắc thu dọn (ví dụ: giữ snapshot tại Best Epoch và mỗi 10 Epochs).
+T48R09	Luồng sự kiện chính (Thành công) || 4 || Admin || Bấm nút "Execute Compaction".
+T48R10	Luồng sự kiện chính (Thành công) || 5 || Frontend || Gửi POST /api/admin/retention kèm cấu hình tham số hoặc chế độ dry run.
+T48R11	Luồng sự kiện chính (Thành công) || 6 || Backend || Quét bộ sưu tập experiment_snapshots và xóa các bản ghi không thỏa mãn điều kiện.
+T48R12	Luồng sự kiện chính (Thành công) || 7 || Hệ thống || Ghi bản ghi log trong audit_logs và trả về dung lượng đã giải phóng.
+T48R13	Luồng sự kiện thay thế || STT || Thực hiện bởi || Hành động
+T48R14	Luồng sự kiện thay thế || 1 || Admin || Truy cập /admin/sessions để xem tất cả phiên huấn luyện đang hoạt động.
+T48R15	Luồng sự kiện thay thế || 2 || Admin || Chọn phiên bất thường và bấm "Force Stop".
+T48R16	Luồng sự kiện thay thế || 3 || Backend || Gửi tín hiệu ngắt, đóng WebSocket, cập nhật trạng thái session thành stopped và tạo audit log.
+T48R17	Hậu điều kiện || Trạng thái các phiên huấn luyện được cập nhật; các snapshot dư thừa được xóa khỏi MongoDB theo đúng chính sách. || Trạng thái các phiên huấn luyện được cập nhật; các snapshot dư thừa được xóa khỏi MongoDB theo đúng chính sách. || Trạng thái các phiên huấn luyện được cập nhật; các snapshot dư thừa được xóa khỏi MongoDB theo đúng chính sách.
+TABLE 49
+T49R01	Tên cột || Kiểu dữ liệu || Nullable || Mặc định || Ý nghĩa
+T49R02	id || INT || Không || Auto-Inc || Khóa chính
+T49R03	email || VARCHAR(100) || Không ||  || Email đăng nhập (Unique)
+T49R04	username || VARCHAR(50) || Không ||  || Tên đăng nhập (Unique)
+T49R05	hashed_password || VARCHAR(200) || Không ||  || Mật khẩu băm (bcrypt)
+T49R06	full_name || VARCHAR(100) || Có || NULL || Họ và tên đầy đủ
+T49R07	role || VARCHAR(20) || Không || 'researcher' || Vai trò (admin, researcher, viewer)
+T49R08	is_active || BOOLEAN || Không || TRUE || Trạng thái kích hoạt tài khoản
+T49R09	is_superuser || BOOLEAN || Không || FALSE || Quyền siêu admin hệ thống
+T49R10	created_at || DateTime || Không || CURRENT_TIMESTAMP || Ngày giờ khởi tạo tài khoản
+TABLE 50
+T50R01	Tên cột || Kiểu dữ liệu || Nullable || Mặc định || Ý nghĩa
+T50R02	id || INT || Không || Auto-Inc || Khóa chính dự án
+T50R03	title || VARCHAR(100) || Không ||  || Tên dự án nghiên cứu
+T50R04	description || TEXT || Có || NULL || Mô tả chi tiết mục tiêu nghiên cứu
+T50R05	task_type || INT || Không || 1 || ID nhiệm vụ GNN (1: Node Classify,...)
+T50R06	model_type || VARCHAR(20) || Không || 'GCN' || Kiến trúc mô hình mặc định
+T50R07	is_public || BOOLEAN || Không || FALSE || Trạng thái công khai dự án
+T50R08	owner_id || INT || Có || NULL || Người sở hữu (FK → users.id)
+T50R09	created_at || DateTime || Không || CURRENT_TIMESTAMP || Ngày giờ khởi tạo dự án
+TABLE 51
+T51R01	Tên cột || Kiểu dữ liệu || Nullable || Mặc định || Ý nghĩa
+T51R02	id || INT || Không || Auto-Inc || Khóa chính Dataset
+T51R03	name || VARCHAR(150) || Không ||  || Tên gọi logic bộ dữ liệu
+T51R04	slug || VARCHAR(180) || Không ||  || Đường dẫn định danh URL (Unique)
+T51R05	description || TEXT || Có || NULL || Mô tả đặc tính dữ liệu đồ thị
+T51R06	owner_id || INT || Có || NULL || Người khởi tạo (FK → users.id)
+T51R07	is_public || BOOLEAN || Không || FALSE || Trạng thái chia sẻ công cộng
+T51R08	current_version_id || INT || Có || NULL || ID phiên bản hiện tại (FK → dataset_versions.id)
+T51R09	created_at || DateTime || Không || CURRENT_TIMESTAMP || Ngày khởi tạo
+TABLE 52
+T52R01	Tên cột || Kiểu dữ liệu || Nullable || Mặc định || Ý nghĩa
+T52R02	id || INT || Không || Auto-Inc || Khóa chính phiên bản
+T52R03	dataset_id || INT || Không ||  || ID Dataset logic (FK → datasets.id)
+T52R04	version || INT || Không || 1 || Số hiệu phiên bản (tăng dần)
+T52R05	lifecycle || VARCHAR(20) || Không || 'draft' || Vòng đời (draft, validated, published, deprecated)
+T52R06	schema_version || VARCHAR(20) || Không || '2.0' || Định dạng cấu trúc schema
+T52R07	summary_json || JSON || Có || NULL || Thống kê topo đồ thị
+T52R08	validation_json || JSON || Có || NULL || Nhật ký kiểm định lỗi
+T52R09	raw_blob_key || VARCHAR(500) || Có || NULL || Đường dẫn tệp thô trên MinIO/S3
+T52R10	processed_blob_key || VARCHAR(500) || Có || NULL || Đường dẫn tệp PyG đã chuẩn hóa
+T52R11	created_by || INT || Có || NULL || ID Researcher tải lên (FK → users.id)
+T52R12	created_at || DateTime || Không || CURRENT_TIMESTAMP || Ngày giờ tải lên
+TABLE 53
+T53R01	Tên cột || Kiểu dữ liệu || Nullable || Mặc định || Ý nghĩa
+T53R02	id || INT || Không || Auto-Inc || Khóa chính thực nghiệm
+T53R03	title || VARCHAR(200) || Không || 'Untitled Run' || Tiêu đề thực nghiệm
+T53R04	project_id || INT || Có || NULL || ID dự án (FK)
+T53R05	owner_id || INT || Có || NULL || ID chủ sở hữu (FK)
+T53R06	dataset_version_id || INT || Có || NULL || ID phiên bản Dataset (FK)
+T53R07	task_type || INT || Không || 1 || Loại nhiệm vụ GNN
+T53R08	model_type || VARCHAR(20) || Không || 'GCN' || Kiến trúc mô hình
+T53R09	epoch_count || INT || Không || 0 || Tổng số epoch đã chạy
+T53R10	learning_rate || FLOAT || Có || NULL || Siêu tham số Learning rate
+T53R11	accuracy || FLOAT || Có || NULL || Độ chính xác cao nhất
+T53R12	loss || FLOAT || Có || NULL || Giá trị hàm mất mát tại best epoch
+T53R13	best_epoch || INT || Không || 0 || Số epoch đạt kết quả cao nhất
+T53R14	status || VARCHAR(20) || Không || 'pending' || Trạng thái (completed, failed, stopped)
+T53R15	mongo_run_id || VARCHAR(100) || Có || NULL || ID liên kết NoSQL snapshots
+T53R16	retention_state || VARCHAR(20) || Không || 'full' || Trạng thái nén (full, compacted)
+T53R17	created_at || DateTime || Không || CURRENT_TIMESTAMP || Ngày giờ lưu trữ thực nghiệm
+TABLE 54
+T54R01	Tên cột || Kiểu dữ liệu || Nullable || Mặc định || Ý nghĩa
+T54R02	id || VARCHAR(36) || Không ||  || Khóa chính dạng UUIDv4
+T54R03	user_id || INT || Có || NULL || Kỹ sư chạy huấn luyện (FK)
+T54R04	project_id || INT || Có || NULL || ID dự án liên kết (FK)
+T54R05	experiment_id || INT || Có || NULL || ID thực nghiệm khi chốt chạy (FK)
+T54R06	dataset_version_id || INT || Có || NULL || ID Dataset version nạp vào GPU (FK)
+T54R07	config_json || JSON || Có || NULL || Siêu tham số khởi tạo phiên chạy
+T54R08	status || VARCHAR(20) || Không || 'pending' || Trạng thái (pending, running, completed, failed, stopped)
+T54R09	last_epoch || INT || Không || -1 || Epoch cuối cùng hoàn thành
+T54R10	total_epochs || INT || Không || 100 || Tổng số epoch cấu hình
+T54R11	started_at || DateTime || Không || CURRENT_TIMESTAMP || Ngày giờ bắt đầu
+T54R12	ended_at || DateTime || Có || NULL || Ngày kết thúc
+T54R13	error_message || TEXT || Có || NULL || Thông tin biệt lệ nếu lỗi
+TABLE 55
+T55R01	Tên cột || Kiểu dữ liệu || Nullable || Mặc định || Ý nghĩa
+T55R02	id || INT || Không || Auto-Inc || Khóa chính chỉ mục
+T55R03	session_id || VARCHAR(36) || Không ||  || ID phiên huấn luyện (FK)
+T55R04	experiment_id || INT || Có || NULL || ID thực nghiệm liên kết (FK)
+T55R05	epoch || INT || Không ||  || Số thứ tự epoch huấn luyện
+T55R06	mongo_doc_id || VARCHAR(100) || Có || NULL || ID tài liệu MongoDB chứa dữ liệu lớn
+T55R07	blob_ref || VARCHAR(500) || Có || NULL || Đường dẫn S3 nếu đẩy ra file vật lý
+T55R08	created_at || DateTime || Không || CURRENT_TIMESTAMP || Ngày tạo
+TABLE 56
+T56R01	Tên cột || Kiểu dữ liệu || Nullable || Mặc định || Ý nghĩa
+T56R02	id || INT || Không || Auto-Inc || Khóa chính nhật ký
+T56R03	actor_user_id || INT || Có || NULL || ID người thực hiện (FK)
+T56R04	action || VARCHAR(50) || Không ||  || Loại hành động (login, session_stopped,...)
+T56R05	target_type || VARCHAR(50) || Không ||  || Loại đối tượng (user, experiment, session,...)
+T56R06	target_id || VARCHAR(100) || Có || NULL || ID đối tượng bị tác động
+T56R07	details_json || JSON || Có || NULL || Chi tiết tham số hành động
+T56R08	created_at || DateTime || Không || CURRENT_TIMESTAMP || Ngày giờ phát sinh
+TABLE 57
+T57R01	Tầng || Công nghệ chọn || Lý do chính
+T57R02	Frontend || ReactJS + Zustand || D3.js ecosystem, cập nhật state không re-render toàn DOM
+T57R03	Backend || FastAPI (ASGI) || Bất đồng bộ mặc định, REST + WebSocket cùng framework
+T57R04	Training Core || PyTorch || Hỗ trợ GNN native (PyG), GPU acceleration
+T57R05	Relational DB || MySQL || Toàn vẹn nghiệp vụ, RBAC, transaction
+T57R06	Document DB || MongoDB || Snapshot JSON lớn, index {run_id, epoch} hiệu quả
+T57R07	Cache || Redis || Ephemeral state cho Resume tức thì
+T57R08	Blob Storage || MinIO/S3 || Tệp nhị phân lớn, chi phí đĩa thấp
+TABLE 58
+T58R01	Màn hình || Route || Tác nhân || Chức năng chính
+T58R02	Dashboard || /app/dashboard || Researcher, Viewer || Tổng quan dự án và thực nghiệm
+T58R03	LabShell || /app/lab || Researcher || Cấu hình + huấn luyện thời gian thực
+T58R04	Experiment Hub || /app/experiments || Researcher, Viewer || Replay, so sánh, pin thực nghiệm
+T58R05	Quản lý dự án || /app/projects || Researcher || Tạo, chỉnh sửa, xoá dự án nghiên cứu
+T58R06	Quản lý dữ liệu || /app/datasets || Researcher || Upload, phát hành, quản lý phiên bản dữ liệu
+T58R07	Quản trị Admin || /admin/* || Admin || Giám sát tài nguyên, người dùng, audit log, retention
+TABLE 59
+T59R01	Thành phần || Công nghệ || Vai trò chính
+T59R02	Frontend || React/Vue + D3.js/Sigma.js + Plotly.js || Giao diện trực quan hóa, tương tác người dùng
+T59R03	Backend API || FastAPI / Flask (Python) || REST API, điều phối huấn luyện, quản lý thí nghiệm
+T59R04	Training Engine || PyTorch + PyTorch Geometric || Vòng lặp huấn luyện GNN, tính metric, tạo snapshot
+T59R05	Realtime || WebSocket (Socket.IO) || Đẩy epoch snapshot theo thời gian thực đến frontend
+T59R06	Database || My SQL || Lưu metadata thí nghiệm, cấu hình, lịch sử run
+T59R07	Storage || File System / Object Storage || Lưu epoch snapshot, checkpoint mô hình, artifact
+TABLE 60
+T60R01	Mã test case || Nội dung kiểm tra || Kết quả mong đợi || Kết quả thực tế || Trạng thái
+T60R02	TC_DN_01 || Đăng nhập với tài khoản hợp lệ || Đăng nhập thành công || Hệ thống cho phép truy cập || Pass
+T60R03	TC_DN_02 || Đăng nhập sai mật khẩu || Hiển thị thông báo lỗi || Hệ thống báo lỗi xác thực || Pass
+T60R04	TC_DN_03 || Đăng nhập với email hoặc tên đăng nhập không tồn tại || Hiển thị thông báo lỗi || Hệ thống từ chối đăng nhập || Pass
+T60R05	TC_DN_04 || Bỏ trống email hoặc tên đăng nhập || Yêu cầu nhập thông tin || Hệ thống hiển thị cảnh báo || Pass
+T60R06	TC_DN_05 || Bỏ trống mật khẩu || Yêu cầu nhập mật khẩu || Hệ thống hiển thị cảnh báo || Pass
+TABLE 61
+T61R01	Mã test case || Nội dung kiểm tra || Kết quả mong đợi || Kết quả thực tế || Trạng thái
+T61R02	TC_DK_01 || Đăng ký với thông tin hợp lệ || Tạo tài khoản thành công || Hệ thống tạo mới tài khoản || Pass
+T61R03	TC_DK_02 || Đăng ký với email đã tồn tại || Hiển thị thông báo lỗi || Hệ thống từ chối đăng ký || Pass
+T61R04	TC_DK_03 || Đăng ký với tên đăng nhập đã tồn tại || Hiển thị thông báo lỗi || Hệ thống từ chối đăng ký || Pass
+T61R05	TC_DK_04 || Bỏ trống thông tin bắt buộc || Yêu cầu nhập đầy đủ thông tin || Hệ thống hiển thị cảnh báo || Pass
+T61R06	TC_DK_05 || Nhập dữ liệu không hợp lệ || Hiển thị thông báo lỗi || Hệ thống từ chối đăng ký || Pass
+TABLE 62
+T62R01	Mã test case || Nội dung kiểm tra || Kết quả mong đợi || Kết quả thực tế || Trạng thái
+T62R02	TC_DA_01 || Tạo mới dự án với thông tin hợp lệ || Tạo dự án thành công || Hệ thống thêm dự án vào danh sách || Pass
+T62R03	TC_DA_02 || Chỉnh sửa tên hoặc mô tả dự án || Thông tin dự án được cập nhật || Hệ thống lưu và hiển thị dữ liệu mới || Pass
+T62R04	TC_DA_03 || Xóa dự án || Dự án bị xóa khỏi hệ thống || Dự án không còn trong danh sách || Pass
+T62R05	TC_DA_04 || Tạo dự án khi bỏ trống thông tin bắt buộc || Hiển thị thông báo lỗi || Hệ thống từ chối lưu dữ liệu || Pass
+T62R06	TC_DA_05 || Chọn một dự án để làm việc || Dự án được đặt làm ngữ cảnh hiện hành || Workspace cập nhật đúng dự án đang chọn || Pass
+TABLE 63
+T63R01	Mã test case || Nội dung kiểm tra || Kết quả mong đợi || Kết quả thực tế || Trạng thái
+T63R02	TC_DS_01 || Tạo mới dataset với thông tin hợp lệ || Dataset được tạo thành công || Hệ thống hiển thị dataset trong danh sách || Pass
+T63R03	TC_DS_02 || Tải tệp dữ liệu hợp lệ lên hệ thống || Tệp được tiếp nhận thành công || Hệ thống lưu dữ liệu và cập nhật trạng thái || Pass
+T63R04	TC_DS_03 || Tạo phiên bản dataset mới || Version mới được tạo thành công || Dataset version hiển thị đúng trong giao diện || Pass
+T63R05	TC_DS_04 || Kiểm định schema dữ liệu hợp lệ || Trả về trạng thái hợp lệ || Hệ thống xác nhận dữ liệu đạt yêu cầu || Pass
+T63R06	TC_DS_05 || Publish dataset version || Phiên bản được phát hành || Trạng thái version chuyển sang published || Pass
+T63R07	TC_DS_06 || Deprecate dataset version || Phiên bản bị thu hồi || Trạng thái version chuyển sang deprecated || Pass
+T63R08	TC_DS_07 || Tạo dataset khi thiếu thông tin bắt buộc || Hiển thị thông báo lỗi || Hệ thống từ chối lưu dữ liệu || Pass
+TABLE 64
+T64R01	Mã test case || Nội dung kiểm tra || Kết quả mong đợi || Kết quả thực tế || Trạng thái
+T64R02	TC_HL_01 || Khởi tạo phiên huấn luyện với cấu hình hợp lệ || Session được tạo thành công || Hệ thống trả về session và trạng thái khởi tạo || Pass
+T64R03	TC_HL_02 || Chọn mô hình GCN và bắt đầu huấn luyện || Phiên huấn luyện được thực thi || Hệ thống chạy huấn luyện bình thường || Pass
+T64R04	TC_HL_03 || Chọn mô hình GraphSAGE và bắt đầu huấn luyện || Phiên huấn luyện được thực thi || Hệ thống chạy huấn luyện bình thường || Pass
+T64R05	TC_HL_04 || Chọn mô hình GAT và bắt đầu huấn luyện || Phiên huấn luyện được thực thi || Hệ thống chạy huấn luyện bình thường || Pass
+T64R06	TC_HL_05 || Khởi tạo phiên khi thiếu cấu hình bắt buộc || Hiển thị thông báo lỗi || Hệ thống từ chối tạo session || Pass
+T64R07	TC_HL_06 || Dừng phiên huấn luyện đang chạy || Phiên được dừng đúng cách || Hệ thống cập nhật trạng thái dừng thành công || Pass
+TABLE 65
+T65R01	Mã test case || Nội dung kiểm tra || Kết quả mong đợi || Kết quả thực tế || Trạng thái
+T65R02	TC_TG_01 || Thiết lập kết nối WebSocket sau khi tạo session || Kết nối thành công || Frontend nhận được luồng dữ liệu huấn luyện || Pass
+T65R03	TC_TG_02 || Nhận dữ liệu topology theo từng epoch || Topology được cập nhật liên tục || Hệ thống hiển thị đúng trạng thái đồ thị || Pass
+T65R04	TC_TG_03 || Nhận dữ liệu embedding theo từng epoch || Embedding view được cập nhật || Embedding view cập nhật chưa đồng bộ ở một số epoch khi dữ liệu lớn. || Fail
+T65R05	TC_TG_04 || Nhận metric huấn luyện theo từng epoch || Biểu đồ metric được cập nhật liên tục || Metrics panel hiển thị đúng dữ liệu || Pass
+T65R06	TC_TG_05 || Kết thúc huấn luyện || Giao diện dừng cập nhật và lưu trạng thái cuối || Hệ thống hiển thị đúng trạng thái hoàn tất || Pass
+TABLE 66
+T66R01	Mã test case || Nội dung kiểm tra || Kết quả mong đợi || Kết quả thực tế || Trạng thái
+T66R02	TC_RP_01 || Mở replay cho thực nghiệm đã lưu || Dữ liệu replay được tải thành công || Hệ thống khôi phục đúng lịch sử thực nghiệm || Pass
+T66R03	TC_RP_02 || Tua đến một epoch cụ thể || Giao diện hiển thị đúng trạng thái epoch đó || Topology, embedding và metric đồng bộ chính xác || Pass
+T66R04	TC_RP_03 || Tua tiến hoặc tua lùi nhiều lần || Dữ liệu được cập nhật đúng theo timeline || Hệ thống phát lại ổn định || Pass
+T66R05	TC_RP_04 || Resume một phiên sau gián đoạn kết nối || Trạng thái phiên được khôi phục || Hệ thống khôi phục được session nhưng chưa đồng bộ lại đầy đủ trạng thái hiển thị trong một số trường hợp || Fail
+T66R06	TC_RP_05 || Replay thực nghiệm có nhiều epoch || Toàn bộ dữ liệu được phát lại đầy đủ || Hệ thống không mất snapshot trong quá trình phát lại || Pass
+TABLE 67
+T67R01	Mã test case || Nội dung kiểm tra || Kết quả mong đợi || Kết quả thực tế || Trạng thái
+T67R02	TC_QT_01 || Xem dashboard quản trị || Hiển thị thông tin tổng quan hệ thống || Dashboard tải và hiển thị đúng dữ liệu || Pass
+T67R03	TC_QT_02 || Xem danh sách người dùng || Hiển thị đầy đủ các tài khoản || Hệ thống trả về đúng danh sách người dùng || Pass
+T67R04	TC_QT_03 || Tìm kiếm/lọc người dùng || Hiển thị đúng các tài khoản phù hợp || Kết quả lọc hiển thị chính xác || Pass
+T67R05	TC_QT_04 || Tạo mới tài khoản người dùng từ giao diện quản trị || Tài khoản mới được tạo thành công || Hệ thống thêm người dùng vào danh sách || Pass
+T67R06	TC_QT_05 || Cập nhật vai trò người dùng || Vai trò được thay đổi thành công || Hệ thống lưu thay đổi đúng dữ liệu || Pass
+T67R07	TC_QT_06 || Cập nhật trạng thái hoạt động của người dùng || Trạng thái tài khoản được cập nhật || Hệ thống lưu thay đổi thành công || Pass
+T67R08	TC_QT_07 || Xem danh sách dự án từ giao diện quản trị || Hiển thị đầy đủ các project trong hệ thống || Dữ liệu project hiển thị đúng || Pass
+T67R09	TC_QT_08 || Xem danh sách dataset từ giao diện quản trị || Hiển thị đầy đủ các dataset || Dữ liệu dataset hiển thị đúng || Pass
+T67R10	TC_QT_09 || Xem danh sách thực nghiệm từ giao diện quản trị || Hiển thị đầy đủ các experiment || Dữ liệu experiment hiển thị đúng || Pass
+T67R11	TC_QT_10 || Xem danh sách phiên huấn luyện || Hiển thị đúng trạng thái session || Dữ liệu session hiển thị đầy đủ || Pass
+T67R12	TC_QT_11 || Dừng một phiên huấn luyện từ giao diện quản trị || Phiên được dừng thành công || Hệ thống cập nhật đúng trạng thái phiên || Pass
+T67R13	TC_QT_12 || Retry một phiên huấn luyện từ giao diện quản trị || Phiên được khởi tạo lại đúng yêu cầu || Hệ thống xử lý retry thành công || Pass
+T67R14	TC_QT_13 || Thực thi retention compaction || Snapshot cũ được dọn dẹp theo chính sách || Hệ thống thực thi compaction nhưng chưa xóa đầy đủ một số snapshot theo chính sác || Fail
+T67R15	TC_QT_14 || Xem nhật ký hệ thống (audit log) || Hiển thị đầy đủ lịch sử thao tác quản trị || Audit log tải và hiển thị đúng dữ liệu || Pass
+TABLE 68
+T68R01	Nhóm chức năng || Tổng số test case || Pass || Fail || Tỷ lệ Pass
+T68R02	Đăng nhập || 5 || 5 || 0 || 100%
+T68R03	Đăng ký || 5 || 5 || 0 || 100%
+T68R04	Quản lý dự án || 5 || 5 || 0 || 100%
+T68R05	Quản lý dữ liệu và phiên bản dataset || 7 || 7 || 0 || 100%
+T68R06	Khởi tạo và điều khiển phiên huấn luyện || 6 || 6 || 0 || 100%
+T68R07	Trực quan hóa thời gian thực || 5 || 4 || 1 || 80%
+T68R08	Replay và Resume thực nghiệm || 5 || 4 || 1 || 80%
+T68R09	Quản trị hệ thống || 14 || 13 || 1 || 92.86%
+T68R10	Tổng cộng || 52 || 49 || 3 || 94.23%

@@ -332,6 +332,32 @@ def _normalize_recommendations(values: Any, fallback: List[Dict[str, Any]]) -> L
     return normalized or fallback
 
 
+def _normalize_insights(values: Any, fallback: List[Dict[str, Any]], lang: str) -> List[Dict[str, Any]]:
+    if not isinstance(values, list):
+        return fallback
+
+    normalized = []
+    allowed_significance = {"high", "moderate", "low"}
+    for item in values:
+        if not isinstance(item, dict):
+            continue
+        title = _polish_text(item.get("title"), lang)
+        finding = _polish_text(item.get("finding"), lang)
+        if not title or not finding:
+            continue
+        normalized.append({
+            "type": str(item.get("type") or "llm").strip().lower() or "llm",
+            "title": title,
+            "finding": finding,
+            "details": _polish_lines(item.get("details"), lang),
+            "recommendation": _polish_text(item.get("recommendation"), lang),
+            "significance": str(item.get("significance") or "moderate").strip().lower()
+            if str(item.get("significance") or "moderate").strip().lower() in allowed_significance
+            else "moderate",
+        })
+    return normalized or fallback
+
+
 VI_TEXT_REPLACEMENTS = {
     "val_acc": "do chinh xac validation",
     "train_acc": "do chinh xac training",
@@ -403,7 +429,7 @@ def _build_auth_header_candidates(cfg: Dict[str, Any]) -> List[Dict[str, str]]:
     if provider != "mimo":
         return [{"Authorization": f"Bearer {api_key}"}]
 
-    auth_mode = str(os.getenv("MIMO_AUTH_MODE", "bearer")).strip().lower()
+    auth_mode = str(os.getenv("MIMO_AUTH_MODE", "auto")).strip().lower()
     if auth_mode == "api-key":
         return [{"api-key": api_key}]
     if auth_mode == "x-api-key":
@@ -549,6 +575,68 @@ def generate_recommendation_brief(
             "next_steps": _polish_lines(data.get("next_steps"), lang),
         },
         "detailed_analysis": _polish_sections(data.get("detailed_analysis"), lang),
+        "source": "llm",
+        "llm": {
+            "enabled": True,
+            "provider": data.get("_provider"),
+            "model": data.get("_model"),
+        },
+    }
+
+
+def generate_comparison_brief(
+    comparison_payload: Dict[str, Any],
+    lang: str = "en",
+) -> Optional[Dict[str, Any]]:
+    cfg = get_provider_config()
+    if not cfg["enabled"] or not comparison_payload:
+        return None
+
+    heuristic_insights = list(comparison_payload.get("insights") or [])
+    leaderboard = list(comparison_payload.get("leaderboard") or [])
+    prompt = {
+        "comparison_summary": comparison_payload.get("summary"),
+        "winner": comparison_payload.get("winner"),
+        "leaderboard": leaderboard[:4],
+        "heuristic_insights": heuristic_insights[:5],
+        "next_steps": comparison_payload.get("next_steps", []),
+        "language": "Vietnamese" if lang == "vi" else "English",
+    }
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "Return one valid JSON object only. Do not use markdown, prose, or code fences. "
+                "You are an explainable GNN comparison analyst. "
+                "Write in the requested language and stay faithful to the supplied numbers. "
+                "For Vietnamese, use natural, plain Vietnamese. "
+                "Do not invent metrics or claims that are not supported by the provided comparison payload. "
+                "Keep conclusions concrete and decisive, but short. "
+                "Required JSON keys: summary, findings, next_steps, insights. "
+                "insights must be a list of 3 to 5 objects with keys: type, title, finding, details, recommendation, significance. "
+                "Each finding should compare runs directly, not describe them in isolation."
+            ),
+        },
+        {
+            "role": "user",
+            "content": json.dumps(prompt, ensure_ascii=True),
+        },
+    ]
+
+    try:
+        data = _call_chat_completion(messages)
+    except Exception as exc:
+        log_fn = logger.info if "temporarily disabled" in str(exc) else logger.warning
+        log_fn("LLM comparison brief failed: %s", exc)
+        return None
+
+    return {
+        "summary": _polish_text(data.get("summary") or comparison_payload.get("summary") or "", lang),
+        "insights": _normalize_insights(data.get("insights"), heuristic_insights, lang),
+        "next_steps": _polish_lines(data.get("next_steps"), lang) or comparison_payload.get("next_steps", []),
+        "analyst_brief": {
+            "findings": _polish_lines(data.get("findings"), lang),
+        },
         "source": "llm",
         "llm": {
             "enabled": True,

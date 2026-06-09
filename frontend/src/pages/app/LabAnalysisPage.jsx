@@ -669,11 +669,11 @@ const VIEW_CONFIG = {
     icon: Network,
     render: () => (
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-        <div className="lab-report-panel-shell min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
-          <TopologyRouter />
+        <div className="lab-report-panel-shell h-[calc(100vh-230px)] min-h-[520px] max-h-[760px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
+          <TopologyRouter analysisMode />
         </div>
-        <div className="lab-report-panel-shell min-h-[620px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
-          <InfoRouter />
+        <div className="lab-report-panel-shell h-[calc(100vh-230px)] min-h-[520px] max-h-[760px] overflow-hidden rounded-xl border border-line-subtle/35 bg-deep/45">
+          <InfoRouter analysisMode />
         </div>
       </div>
     ),

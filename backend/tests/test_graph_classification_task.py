@@ -336,7 +336,7 @@ def test_sage_task2_runtime_defaults_rescue_class_collapse():
     assert websocket.messages
 
 
-def test_task2_strict_epoch_default_runs_all_requested_epochs():
+def test_task2_model_defaults_enable_early_stop_when_not_overridden():
     class DummyWebSocket:
         async def send_bytes(self, data):
             pass
@@ -356,12 +356,16 @@ def test_task2_strict_epoch_default_runs_all_requested_epochs():
         custom_graphs=graphs,
     ))
 
-    assert [snapshot['epoch'] for snapshot in snapshots] == list(range(12))
+    assert len(snapshots) <= 12
     assert snapshots[-1]['epochs_target'] == 12
-    assert snapshots[-1]['epochs_completed'] == 12
-    assert snapshots[-1]['early_stopped'] is False
-    assert snapshots[-1]['stop_reason'] is None
-    assert snapshots[-1]['model_hyperparams']['early_stop_patience'] == 0
+    assert snapshots[-1]['epochs_completed'] == len(snapshots)
+    assert snapshots[-1]['model_hyperparams']['early_stop_patience'] == 8
+    if len(snapshots) < 12:
+        assert snapshots[-1]['early_stopped'] is True
+        assert snapshots[-1]['stop_reason'] == 'early_stop'
+    else:
+        assert snapshots[-1]['early_stopped'] is False
+        assert snapshots[-1]['stop_reason'] is None
 
 
 def test_task2_explicit_early_stop_reports_stop_reason():
