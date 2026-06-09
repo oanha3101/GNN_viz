@@ -215,7 +215,7 @@ OBS_TEMPLATES_VI: List[tuple] = [
 
 # Summary template: "{model} trained for {n} epochs on {ds} dataset. ..."
 SUMMARY_TEMPLATE = re.compile(
-    r"^(?P<model>\S+) trained for (?P<epochs>\d+) epochs on (?P<dataset>\S+) dataset\. "
+    r"^(?P<model>\S+) trained for (?P<epochs>\d+) epochs on (?P<dataset>.+?) dataset\. "
     r"Final validation accuracy: (?P<acc>[\d.]+)%, training loss: (?P<loss>[\d.]+)\. "
     r"Best epoch: (?P<best>[\w/]+)\.$"
 )
@@ -248,8 +248,11 @@ SUMMARY_TOTAL = re.compile(r"^(?P<n>\d+) total recommendations across (?P<c>\d+)
 
 INSIGHT_TITLES_VI: Dict[str, str] = {
     "Convergence Speed": "Tốc độ hội tụ",
+    "Convergence Trade-Off": "Đánh đổi tốc độ hội tụ",
     "Training Stability": "Độ ổn định huấn luyện",
     "Best Performer": "Phiên tốt nhất",
+    "Overall Recommendation": "Khuyến nghị tổng quan",
+    "Generalization Risk": "Rủi ro tổng quát hóa",
     "Dataset-Model Compatibility": "Độ tương thích mô hình - dữ liệu",
     "Heterophilic Challenge": "Thách thức heterophilic",
     "Severe Over-Smoothing Detected": "Phát hiện over-smoothing nặng",
@@ -401,7 +404,10 @@ def translate_research_notes(payload: Dict[str, Any], lang: str) -> Dict[str, An
             if title == "Summary":
                 m = SUMMARY_TEMPLATE.match(content.strip())
                 if m:
-                    new["content"] = SUMMARY_VI.format(**m.groupdict())
+                    data = m.groupdict()
+                    if data.get("dataset", "").strip().lower() == "current dataset":
+                        data["dataset"] = "dữ liệu hiện tại"
+                    new["content"] = SUMMARY_VI.format(**data)
             elif title == "Observations":
                 # observations are space-joined sentences
                 joined = " ".join(

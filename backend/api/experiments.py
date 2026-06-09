@@ -264,7 +264,10 @@ def analyze_experiment(
     snapshots = detail.get("snapshots_json") or []
     graph_payload = detail.get("graph_payload") or {}
     model_type = detail.get("model_type", "GCN")
-    config = detail.get("config_json") or {}
+    config = dict(detail.get("config_json") or {})
+    if detail.get("dataset_name"):
+        config.setdefault("dataset", detail["dataset_name"])
+        config.setdefault("dataset_name", detail["dataset_name"])
 
     diagnostics = analytics_service.compute_structural_diagnostics(snapshots, graph_payload, model_type)
     failures = analytics_service.analyze_failure_patterns(snapshots, graph_payload, model_type)
@@ -328,14 +331,21 @@ def compare_insights(
             "snapshots": snapshots or [],
         })
 
-    insights = analytics_service.generate_comparison_insights(results, graph_payload)
+    insights = analytics_service.generate_comparison_insights(results, graph_payload, lang)
 
     # Add per-model diagnostics
     model_diagnostics = {}
+    seen_labels = {}
     for r in results:
-        model_type = r["experiment"]["model_type"]
+        experiment = r["experiment"]
+        model_type = experiment["model_type"]
         snapshots = r["snapshots"]
-        model_diagnostics[model_type] = {
+        label = analytics_service._run_label(experiment, seen_labels)
+        model_diagnostics[label] = {
+            "experiment_id": experiment["id"],
+            "title": experiment["title"],
+            "label": label,
+            "model_type": model_type,
             "diagnostics": analytics_service.compute_structural_diagnostics(snapshots, graph_payload, model_type),
             "profile": analytics_service.get_model_profile(model_type),
         }
@@ -359,7 +369,10 @@ def generate_research_notes(
     snapshots = detail.get("snapshots_json") or []
     graph_payload = detail.get("graph_payload") or {}
     model_type = detail.get("model_type", "GCN")
-    config = detail.get("config_json") or {}
+    config = dict(detail.get("config_json") or {})
+    if detail.get("dataset_name"):
+        config.setdefault("dataset", detail["dataset_name"])
+        config.setdefault("dataset_name", detail["dataset_name"])
 
     try:
         result = analytics_service.generate_research_notes(snapshots, model_type, config, graph_payload)
@@ -384,7 +397,9 @@ def get_recommendations(
     config = detail.get("config_json") or {}
 
     try:
-        result = analytics_service.generate_recommendations(snapshots, model_type, config, graph_payload)
+        result = analytics_service.generate_recommendations(snapshots, model_type, config, graph_payload, lang=lang)
+        if result.get("source") == "llm":
+            return result
         return analytics_i18n.translate_recommendations(result, lang)
     except Exception as exc:
         logger.exception("Recommendations generation failed for experiment %s", exp_id)

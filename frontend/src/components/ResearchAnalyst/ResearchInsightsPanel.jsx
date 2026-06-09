@@ -99,6 +99,11 @@ const ANALYST_COPY = {
     weaknesses: 'Weaknesses',
     bestFor: 'Best For',
     model: 'Model',
+    winner: 'Recommended Run',
+    leaderboard: 'Reliability Leaderboard',
+    nextSteps: 'Next Steps',
+    watchout: 'Watchout',
+    compositeScore: 'Composite score',
   },
   vi: {
     showDetails: 'Xem chi tiết',
@@ -121,6 +126,11 @@ const ANALYST_COPY = {
     weaknesses: 'Điểm yếu',
     bestFor: 'Phù hợp nhất',
     model: 'Mô hình',
+    winner: 'Phiên nên ưu tiên',
+    leaderboard: 'Bảng xếp hạng độ tin cậy',
+    nextSteps: 'Bước tiếp theo',
+    watchout: 'Điểm cần canh chừng',
+    compositeScore: 'Điểm tổng hợp',
   },
 }
 
@@ -130,6 +140,18 @@ function getColor(label) {
 
 function getAnalystCopy(lang) {
   return lang === 'vi' ? ANALYST_COPY.vi : ANALYST_COPY.en
+}
+
+function getRunColor(modelType, index = 0) {
+  const palette = {
+    GCN: '#22c55e',
+    GAT: '#f59e0b',
+    SAGE: '#06b6d4',
+    GRAPHSAGE: '#06b6d4',
+    GRAPH_SAGE: '#06b6d4',
+  }
+  const fallback = ['#a855f7', '#3b82f6', '#ec4899', '#14b8a6']
+  return palette[String(modelType || '').toUpperCase()] || fallback[index % fallback.length]
 }
 
 function formatMetricLabel(metric, lang) {
@@ -305,6 +327,10 @@ export default function ResearchInsightsPanel({ experimentIds, onClose }) {
 function InsightsTab({ data, t, lang }) {
   const insights = data?.insights?.insights || []
   const summary = data?.insights?.summary || ''
+  const winner = data?.insights?.winner || null
+  const leaderboard = data?.insights?.leaderboard || []
+  const nextSteps = data?.insights?.next_steps || []
+  const copy = getAnalystCopy(lang)
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
@@ -317,6 +343,66 @@ function InsightsTab({ data, t, lang }) {
           {summary || t('analyst.no_summary_yet')}
         </p>
       </div>
+
+      {winner ? (
+        <div className="grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-300 mb-3">
+              <CheckCircle2 size={14} /> {copy.winner}
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: getRunColor(winner.model_type) }} />
+              <div>
+                <div className="text-sm font-semibold text-slate-100">{winner.label}</div>
+                <div className="text-[11px] text-slate-400">{winner.model_type}</div>
+              </div>
+              <div className="ml-auto rounded-full bg-slate-950/60 px-3 py-1 text-[11px] font-semibold text-emerald-300">
+                {copy.compositeScore}: {winner.composite_score}
+              </div>
+            </div>
+            {winner.reason ? (
+              <p className="mt-3 text-xs leading-relaxed text-slate-300">
+                {copy.watchout}: {winner.reason}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+              {copy.leaderboard}
+            </div>
+            <div className="space-y-2">
+              {leaderboard.slice(0, 3).map((item, index) => (
+                <div key={`${item.experiment_id}-${item.rank}`} className="flex items-center gap-3 rounded-lg bg-slate-800/40 px-3 py-2">
+                  <div className="text-xs font-bold text-slate-500">#{item.rank}</div>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getRunColor(item.model_type, index) }} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-xs font-semibold text-slate-200">{item.label}</div>
+                    <div className="truncate text-[10px] text-slate-500">{item.reason}</div>
+                  </div>
+                  <div className="text-xs font-semibold text-slate-300">{item.composite_score}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {nextSteps.length ? (
+        <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-300 mb-3">
+            <Lightbulb size={14} /> {copy.nextSteps}
+          </div>
+          <ul className="space-y-2">
+            {nextSteps.map((step, index) => (
+              <li key={index} className="flex items-start gap-2 text-xs leading-relaxed text-slate-200">
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-cyan-300" />
+                <span>{step}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {/* Insight Cards */}
       <div className="grid gap-3">
@@ -429,7 +515,7 @@ function DiagnosticsTab({ data, t, lang }) {
     ]
     return metrics.map((metric) => {
       const row = { metric: formatMetricLabel(metric, lang) }
-      modelNames.forEach((model) => {
+      modelNames.forEach((model, index) => {
         const diag = modelDiags[model]?.diagnostics?.[metric]
         if (diag) {
           if (metric === 'convergence_speed') {
@@ -451,8 +537,6 @@ function DiagnosticsTab({ data, t, lang }) {
     })
   }, [modelDiags, modelNames])
 
-  const MODEL_COLORS = { GCN: '#22c55e', GAT: '#f59e0b', SAGE: '#06b6d4' }
-
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {/* Radar Comparison */}
@@ -464,13 +548,13 @@ function DiagnosticsTab({ data, t, lang }) {
               <PolarGrid stroke="var(--c-border)" />
               <PolarAngleAxis dataKey="metric" tick={{ fill: '#94a3b8', fontSize: 9 }} />
               <PolarRadiusAxis domain={[0, 1]} tick={false} axisLine={false} />
-              {modelNames.map((model) => (
+      {modelNames.map((model, index) => (
                 <Radar
                   key={model}
                   name={model}
                   dataKey={model}
-                  stroke={MODEL_COLORS[model] || '#a855f7'}
-                  fill={MODEL_COLORS[model] || '#a855f7'}
+                  stroke={getRunColor(modelDiags[model]?.model_type || model, index)}
+                  fill={getRunColor(modelDiags[model]?.model_type || model, index)}
                   fillOpacity={0.15}
                   strokeWidth={2}
                 />
@@ -486,10 +570,10 @@ function DiagnosticsTab({ data, t, lang }) {
 
       {/* Per-Model Diagnostic Cards */}
       <div className="grid gap-3 lg:grid-cols-2">
-        {modelNames.map((model) => {
+        {modelNames.map((model, index) => {
           const diag = modelDiags[model]?.diagnostics || {}
           return (
-            <DiagnosticCard key={model} model={model} diagnostics={diag} color={MODEL_COLORS[model]} lang={lang} />
+            <DiagnosticCard key={model} model={model} diagnostics={diag} color={getRunColor(modelDiags[model]?.model_type || model, index)} lang={lang} />
           )
         })}
       </div>
@@ -623,8 +707,6 @@ function FailuresTab({ data, t, lang }) {
     })
   }, [modelDiags, modelNames])
 
-  const MODEL_COLORS = { GCN: '#22c55e', GAT: '#f59e0b', SAGE: '#06b6d4' }
-
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {/* Failure Matrix */}
@@ -634,14 +716,14 @@ function FailuresTab({ data, t, lang }) {
       </div>
 
       {/* Per-Model Failure Cards */}
-      <div className="grid gap-3 lg:grid-cols-2">
-        {failureData.map(({ model, issues, diagnostics }) => (
-          <div key={model} className="rounded-xl border border-line-default bg-nebula p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: MODEL_COLORS[model] }} />
-              <h4 className="text-sm font-bold text-slate-100">{model}</h4>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-nebula text-slate-400">
-                {copy.issueCount(issues.length)}
+        <div className="grid gap-3 lg:grid-cols-2">
+          {failureData.map(({ model, issues, diagnostics }, index) => (
+            <div key={model} className="rounded-xl border border-line-default bg-nebula p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: getRunColor(modelDiags[model]?.model_type || model, index) }} />
+                <h4 className="text-sm font-bold text-slate-100">{model}</h4>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-nebula text-slate-400">
+                  {copy.issueCount(issues.length)}
               </span>
             </div>
 
@@ -688,11 +770,16 @@ function FailureMatrix({ failureData, lang }) {
             ))}
           </tr>
         </thead>
-        <tbody>
-          {failureData.map(({ model, issues }) => (
-            <tr key={model} className="border-t border-line-subtle">
-              <td className="py-2 px-2 font-semibold text-slate-200">{model}</td>
-              {allIssueTypes.map((type) => {
+          <tbody>
+            {failureData.map(({ model, issues }, index) => (
+              <tr key={model} className="border-t border-line-subtle">
+                <td className="py-2 px-2 font-semibold text-slate-200">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getRunColor(modelDiags[model]?.model_type || model, index) }} />
+                    {model}
+                  </span>
+                </td>
+                {allIssueTypes.map((type) => {
                 const issue = issues.find((i) => i.type === type)
                 return (
                   <td key={type} className="text-center py-2 px-1">

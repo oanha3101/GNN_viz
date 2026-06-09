@@ -6,6 +6,7 @@ import {
   FileText,
   Lightbulb,
   Loader2,
+  Save,
   Sparkles,
   Target,
   TrendingUp,
@@ -43,6 +44,8 @@ export default function RecommendationsPanel({ experimentId }) {
   const [data, setData] = useState(null)
   const [researchNotes, setResearchNotes] = useState(null)
   const [notesLoading, setNotesLoading] = useState(false)
+  const [saveLoading, setSaveLoading] = useState(false)
+  const [saveStatus, setSaveStatus] = useState(null)
   const [activeView, setActiveView] = useState('recommendations')
 
   const fetchData = useCallback(async () => {
@@ -94,6 +97,45 @@ export default function RecommendationsPanel({ experimentId }) {
     fetchData()
   }, [fetchData])
 
+  const saveAnalysisToNotes = useCallback(async () => {
+    if (!experimentId || !data) return
+    setSaveLoading(true)
+    setSaveStatus(null)
+    try {
+      const currentRes = await fetch(apiUrl(`/experiments/${experimentId}`), {
+        headers: { ...getAuthHeaders() },
+      })
+      const currentText = await currentRes.text()
+      if (!currentRes.ok) {
+        let detail = 'Không tải được ghi chú hiện tại.'
+        try { detail = JSON.parse(currentText).detail || detail } catch {}
+        throw new Error(detail)
+      }
+      const current = JSON.parse(currentText)
+      const existingNotes = current.notes || ''
+      const payload = activeView === 'notes' && researchNotes
+        ? formatResearchNotesForSave(researchNotes)
+        : formatRecommendationsForSave(data)
+      const nextNotes = [existingNotes.trim(), payload].filter(Boolean).join('\n\n')
+      const patchRes = await fetch(apiUrl(`/experiments/${experimentId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ notes: nextNotes }),
+      })
+      const patchText = await patchRes.text()
+      if (!patchRes.ok) {
+        let detail = 'Không lưu được phân tích AI.'
+        try { detail = JSON.parse(patchText).detail || detail } catch {}
+        throw new Error(detail)
+      }
+      setSaveStatus('saved')
+    } catch (err) {
+      setSaveStatus(err?.message || 'Không lưu được phân tích AI.')
+    } finally {
+      setSaveLoading(false)
+    }
+  }, [activeView, data, experimentId, getAuthHeaders, researchNotes])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -119,12 +161,17 @@ export default function RecommendationsPanel({ experimentId }) {
   const modRecs = recs.filter((r) => r.priority === 'moderate')
   const lowRecs = recs.filter((r) => r.priority === 'low')
   const analystSource = data.source === 'llm' ? t('analyst.ai_analyst') : t('analyst.heuristic_analyst')
+  const analystProvider = data?.llm?.provider
   const analystModel = data?.llm?.model
+  const analystLabel = data.source === 'llm' && analystProvider
+    ? `${analystProvider.toUpperCase()} Analyst`
+    : analystSource
 
   return (
     <div className="space-y-4">
       {/* View Toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
         <button
           onClick={() => setActiveView('recommendations')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -148,7 +195,26 @@ export default function RecommendationsPanel({ experimentId }) {
         >
           {t('analyst.research_notes')}
         </button>
+        </div>
+        <button
+          type="button"
+          onClick={saveAnalysisToNotes}
+          disabled={saveLoading || !data}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 transition hover:border-cyan-400/40 hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {saveLoading ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          {saveLoading ? 'Đang lưu' : 'Lưu phân tích'}
+        </button>
       </div>
+      {saveStatus ? (
+        <div className={`rounded-lg border px-3 py-2 text-xs ${
+          saveStatus === 'saved'
+            ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
+            : 'border-red-500/20 bg-red-500/10 text-red-200'
+        }`}>
+          {saveStatus === 'saved' ? 'Đã lưu phân tích AI vào ghi chú thí nghiệm.' : saveStatus}
+        </div>
+      ) : null}
 
       <AnimatePresence mode="wait">
         {activeView === 'recommendations' ? (
@@ -159,14 +225,14 @@ export default function RecommendationsPanel({ experimentId }) {
                 <Sparkles size={14} /> {t('analyst.analysis_summary')}
               </div>
               <div className="mb-2 text-[11px] text-slate-400">
-                {t('analyst.source')}: <span className="text-slate-200">{analystSource}</span>
-                {analystModel ? <span className="text-slate-500"> · {analystModel}</span> : null}
+                {t('analyst.source')}: <span className="text-slate-200">{analystLabel}</span>
+                {analystModel ? <span className="text-slate-500"> - {analystModel}</span> : null}
               </div>
               <p className="text-sm text-slate-200">{data.summary}</p>
               <div className="flex items-center gap-3 mt-3">
-                <PriorityBadge count={data.priority_counts?.high} priority="high" t={t} />
-                <PriorityBadge count={data.priority_counts?.moderate} priority="moderate" t={t} />
-                <PriorityBadge count={data.priority_counts?.low} priority="low" t={t} />
+                <PriorityBadge count={data.priority_counts?.high} priority="high" t={t} lang={lang} />
+                <PriorityBadge count={data.priority_counts?.moderate} priority="moderate" t={t} lang={lang} />
+                <PriorityBadge count={data.priority_counts?.low} priority="low" t={t} lang={lang} />
               </div>
             </div>
 
@@ -176,6 +242,10 @@ export default function RecommendationsPanel({ experimentId }) {
                 <BriefBlock title={t('analyst.main_risks')} items={data.analyst_brief.risks} />
                 <BriefBlock title={t('analyst.next_steps')} items={data.analyst_brief.next_steps} />
               </div>
+            ) : null}
+
+            {data.detailed_analysis?.length ? (
+              <DetailedAnalysis sections={data.detailed_analysis} />
             ) : null}
 
             {/* High Priority */}
@@ -219,13 +289,66 @@ export default function RecommendationsPanel({ experimentId }) {
   )
 }
 
-function PriorityBadge({ count, priority, t }) {
+function formatList(items = []) {
+  return items.filter(Boolean).map((item) => `- ${item}`).join('\n')
+}
+
+function formatRecommendationsForSave(data) {
+  const brief = data?.analyst_brief || {}
+  const llm = data?.llm || {}
+  const provider = llm.provider ? `${String(llm.provider).toUpperCase()} Analyst` : (data?.source || 'analyst')
+  const model = llm.model ? ` - ${llm.model}` : ''
+  const sections = (data?.detailed_analysis || [])
+    .map((section) => `### ${section.title}\n${section.body}`)
+    .join('\n\n')
+  const recs = (data?.recommendations || [])
+    .map((rec) => [
+      `- [${rec.priority || 'moderate'}] ${rec.action || ''}`,
+      rec.reason ? `  Lý do: ${rec.reason}` : '',
+      rec.expected_impact ? `  Tác động: ${rec.expected_impact}` : '',
+    ].filter(Boolean).join('\n'))
+    .join('\n')
+
+  return [
+    `## AI Analyst Snapshot (${new Date().toLocaleString()})`,
+    `Nguồn: ${provider}${model}`,
+    data?.summary ? `\n### Tóm tắt\n${data.summary}` : '',
+    brief.findings?.length ? `\n### Phát hiện chính\n${formatList(brief.findings)}` : '',
+    brief.risks?.length ? `\n### Rủi ro\n${formatList(brief.risks)}` : '',
+    brief.next_steps?.length ? `\n### Bước tiếp theo\n${formatList(brief.next_steps)}` : '',
+    sections ? `\n${sections}` : '',
+    recs ? `\n### Khuyến nghị\n${recs}` : '',
+  ].filter(Boolean).join('\n')
+}
+
+function formatResearchNotesForSave(notes) {
+  const llm = notes?.llm || {}
+  const provider = notes?.source === 'llm' && llm.provider ? `${String(llm.provider).toUpperCase()} Analyst` : (notes?.source || 'analyst')
+  const model = llm.model ? ` - ${llm.model}` : ''
+  const sections = notes?.sections?.length
+    ? notes.sections.map((section) => `### ${section.title}\n${section.content}`).join('\n\n')
+    : notes?.notes || ''
+
+  return [
+    `## AI Research Notes (${new Date().toLocaleString()})`,
+    `Nguồn: ${provider}${model}`,
+    sections,
+  ].filter(Boolean).join('\n')
+}
+
+function PriorityBadge({ count, priority, t, lang }) {
   const config = PRIORITY_CONFIG[priority]
   if (!count) return null
+  const baseLabel = t(config.labelKey).toLowerCase()
+  const label = lang === 'vi' && priority === 'low'
+    ? `gợi ý ${baseLabel}`
+    : lang === 'vi'
+      ? `ưu tiên ${baseLabel}`
+      : baseLabel
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${config.bg}`}>
       <config.icon size={10} style={{ color: config.color }} />
-      <span style={{ color: config.color }}>{count} {t(config.labelKey)}</span>
+      <span style={{ color: config.color }}>{count} {label}</span>
     </span>
   )
 }
@@ -290,7 +413,7 @@ function ResearchNotesDisplay({ notes, t }) {
     <div className="space-y-3">
       <div className="text-[11px] text-slate-400">
         {t('analyst.source')}: <span className="text-slate-200">{notes?.source === 'llm' ? t('analyst.ai_analyst') : t('analyst.heuristic_analyst')}</span>
-        {notes?.llm?.model ? <span className="text-slate-500"> · {notes.llm.model}</span> : null}
+        {notes?.llm?.model ? <span className="text-slate-500"> - {notes.llm.model}</span> : null}
       </div>
       {sections.map((section, i) => (
         <motion.div
@@ -304,6 +427,25 @@ function ResearchNotesDisplay({ notes, t }) {
           <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">
             {section.content}
           </div>
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+function DetailedAnalysis({ sections }) {
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      {sections.map((section, index) => (
+        <motion.div
+          key={`${section.title}-${index}`}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.05 }}
+          className="rounded-xl border border-cyan-500/15 bg-cyan-500/5 p-3"
+        >
+          <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-cyan-300">{section.title}</h4>
+          <p className="text-xs leading-relaxed text-slate-300">{section.body}</p>
         </motion.div>
       ))}
     </div>
@@ -325,3 +467,5 @@ function BriefBlock({ title, items }) {
     </div>
   )
 }
+
+

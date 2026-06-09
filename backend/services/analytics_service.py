@@ -113,7 +113,7 @@ def _compute_overfitting_risk(snapshots: List[Dict]) -> Dict:
     late_gap = sum(gaps[len(gaps)*2//3:]) / max(1, len(gaps) - len(gaps)*2//3)
     gap_trend = late_gap - early_gap
 
-    current_gap = gaps[-1] if gaps else 0
+    current_gap = max(gaps[-1], 0) if gaps else 0
 
     if current_gap > 0.2 or gap_trend > 0.1:
         return {"risk": "high", "gap": round(current_gap, 4), "trend": round(gap_trend, 4), "label": "overfitting"}
@@ -743,7 +743,16 @@ def analyze_dataset_topology(graph_payload: Dict, snapshots: List[Dict] = None) 
     if not graph_payload:
         return {"type": "unknown", "properties": {}}
 
-    graph_data = graph_payload.get("graph_data_json", {}) if isinstance(graph_payload, dict) else {}
+    graph_data = {}
+    if isinstance(graph_payload, dict):
+        for candidate in (
+            graph_payload.get("graph_data_json"),
+            graph_payload.get("graph_data"),
+            graph_payload,
+        ):
+            if isinstance(candidate, dict) and ("nodes" in candidate or "links" in candidate):
+                graph_data = candidate
+                break
     if not isinstance(graph_data, dict):
         return {"type": "unknown", "properties": {}}
 
@@ -874,151 +883,381 @@ def _dataset_recommendations(dataset_type: List[str], homophily: float, n_classe
     return recs
 
 
+def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
+    return max(low, min(high, value))
+
+
+def _safe_mean(values: List[float]) -> float:
+    clean = [float(v) for v in values if isinstance(v, (int, float))]
+    return sum(clean) / len(clean) if clean else 0.0
+
+
+def _run_label(exp: Dict[str, Any], seen: Dict[str, int]) -> str:
+    title = str(exp.get("title") or "").strip()
+    model_type = str(exp.get("model_type") or "Unknown").strip()
+    base = title or f"{model_type} run"
+    count = seen.get(base, 0) + 1
+    seen[base] = count
+    return base if count == 1 else f"{base} ({count})"
+
+
+def _history_scores(metrics: Dict[str, Any], snapshots: List[Dict[str, Any]], exp: Dict[str, Any]) -> List[float]:
+    history = metrics.get("history", {}) if isinstance(metrics, dict) else {}
+    primary = history.get("primary_score", [])
+    scores = [float(v) for v in primary if isinstance(v, (int, float))]
+    if scores:
+        return scores
+
+    fallback = []
+    for snap in snapshots or []:
+        for key in ("val_acc", "accuracy", "graph_accuracy", "macro_f1"):
+            value = snap.get(key)
+            if isinstance(value, (int, float)):
+                fallback.append(float(value))
+                break
+    if fallback:
+        return fallback
+
+    accuracy = exp.get("accuracy")
+    return [float(accuracy)] if isinstance(accuracy, (int, float)) else []
+
+
+def _build_run_assessment(
+    exp: Dict[str, Any],
+    metrics: Dict[str, Any],
+    snapshots: List[Dict[str, Any]],
+    graph_payload: Optional[Dict[str, Any]],
+    label: str,
+) -> Dict[str, Any]:
+    model_type = exp.get("model_type", "Unknown")
+    diagnostics = compute_structural_diagnostics(snapshots, graph_payload, model_type)
+    scores = _history_scores(metrics, snapshots, exp)
+    final_score = scores[-1] if scores else float(exp.get("accuracy") or 0.0)
+    best_score = max(scores) if scores else final_score
+    best_epoch = scores.index(best_score) if scores else int(exp.get("best_epoch") or 0)
+
+    if scores:
+        target = best_score * 0.95 if best_score > 0 else 0
+        convergence_epoch = next((i for i, value in enumerate(scores) if value >= target), len(scores) - 1)
+        peak_tail = scores[int(len(scores) * 0.9):] or [scores[-1]]
+        overfit_decline = max(best_score - _safe_mean(peak_tail), 0.0)
+    else:
+        convergence_epoch = int(exp.get("best_epoch") or 0)
+        overfit_decline = 0.0
+
+    epoch_count = max(len(scores), len(snapshots), 1)
+    stability_score = float(diagnostics.get("stability_score", {}).get("score") or 0.5)
+    boundary = diagnostics.get("boundary_accuracy", {})
+    boundary_score = float(boundary.get("score") or 0.6) if boundary.get("boundary_count", 0) else 0.6
+    overfit_gap = float(diagnostics.get("overfitting_risk", {}).get("gap") or 0.0)
+    smoothing_risk = diagnostics.get("over_smoothing_risk", {}).get("risk") or "unknown"
+    convergence_score = 1.0 - (convergence_epoch / max(epoch_count - 1, 1))
+    overfit_penalty = min(overfit_decline * 4.0, 0.6)
+    generalization_score = max(0.0, 1.0 - min(overfit_gap * 3.0 + overfit_penalty, 1.0))
+    performance_score = _clamp(best_score)
+
+    composite = (
+        performance_score * 0.45
+        + stability_score * 0.2
+        + convergence_score * 0.15
+        + generalization_score * 0.1
+        + boundary_score * 0.1
+    )
+
+    strengths = []
+    if convergence_score >= 0.75:
+        strengths.append("fast_start")
+    if stability_score >= 0.8:
+        strengths.append("stable_finish")
+    if boundary_score >= 0.7:
+        strengths.append("boundary_ready")
+    if generalization_score >= 0.75:
+        strengths.append("low_overfit_risk")
+
+    caution = "healthy"
+    if smoothing_risk in {"high", "moderate"}:
+        caution = "over_smoothing"
+    elif overfit_gap >= 0.12 or overfit_decline >= 0.04:
+        caution = "overfitting"
+    elif stability_score < 0.55:
+        caution = "unstable"
+    elif boundary.get("label") == "weak":
+        caution = "boundary"
+
+    return {
+        "experiment_id": exp.get("id"),
+        "label": label,
+        "title": exp.get("title") or label,
+        "model_type": model_type,
+        "accuracy": round(float(exp.get("accuracy") or final_score), 4),
+        "loss": round(float(exp.get("loss") or 0.0), 4),
+        "best_score": round(best_score, 4),
+        "best_epoch": int(best_epoch),
+        "epoch_count": epoch_count,
+        "convergence_epoch": int(convergence_epoch),
+        "overfit_decline": round(overfit_decline, 4),
+        "stability_score": round(stability_score, 4),
+        "boundary_score": round(boundary_score, 4),
+        "generalization_score": round(generalization_score, 4),
+        "composite_score": round(composite * 100, 1),
+        "strengths": strengths,
+        "caution": caution,
+        "diagnostics": diagnostics,
+    }
+
+
+def _comparison_copy(lang: str) -> Dict[str, Any]:
+    if lang == "vi":
+        return {
+            "select_runs": "Chọn ít nhất 2 phiên để AI có thể so sánh.",
+            "insufficient": "Chưa đủ tín hiệu để kết luận rõ ràng.",
+            "winner_title": "Overall Recommendation",
+            "convergence_title": "Convergence Trade-Off",
+            "stability_title": "Training Stability",
+            "risk_title": "Generalization Risk",
+            "dataset_fit_title": "Dataset-Model Compatibility",
+            "winner_finding": "{winner} hiện là lựa chọn đáng tin nhất với điểm tổng hợp {score}/100, nhỉnh hơn {runner_up} nhờ chất lượng tốt hơn và quỹ đạo huấn luyện an toàn hơn.",
+            "winner_details": [
+                "{label}: điểm tổng hợp {score}/100, best score {best_score:.1%}, ổn định {stability:.0%}, tổng quát hóa {generalization:.0%}.",
+            ],
+            "winner_recommendation": "Ưu tiên dùng {winner} làm mốc chính, sau đó tinh chỉnh thêm theo cảnh báo lớn nhất của nó.",
+            "tight_race": "Khoảng cách giữa hai phiên đầu chỉ là {gap:.1f} điểm, nên nên xác nhận thêm bằng replay và report trước khi chốt.",
+            "convergence_finding": "{fastest} vào form sớm nhất ở epoch {fastest_epoch}, còn {slowest} cần tới epoch {slowest_epoch}. Nếu cần thử nghiệm nhanh, {fastest} là baseline gọn hơn.",
+            "stability_finding": "{stable} có pha cuối ổn định nhất (CV thấp hơn), trong khi {fragile} dao động mạnh hơn và dễ tạo cảm giác kết quả đẹp nhưng khó lặp lại.",
+            "risk_finding_overfit": "{risky} đang có rủi ro quá khớp rõ hơn: điểm tốt nhất xuất hiện sớm nhưng giảm {decline:.1%} về cuối, nên không nên đọc riêng mỗi điểm đỉnh.",
+            "risk_finding_safe": "{safe} giữ được độ tổng quát hóa tốt nhất trong nhóm, nên phù hợp hơn nếu mục tiêu là chọn mô hình để triển khai hoặc làm mốc so sánh.",
+            "dataset_fit_homophily": "Dữ liệu có homophily cao ({homophily:.2f}), nên các mô hình gom lân cận đều được lợi. Hãy ưu tiên phiên nào vừa ổn định vừa ít overfitting hơn.",
+            "dataset_fit_heterophily": "Dữ liệu có xu hướng heterophily ({homophily:.2f}), nên attention hoặc cơ chế lấy mẫu chọn lọc sẽ đáng giá hơn việc chỉ làm mượt lân cận.",
+            "summary_single_winner": "{winner} hiện là lựa chọn tốt nhất vì vừa đạt chất lượng cao hơn vừa an toàn hơn ở cuối quá trình train.",
+            "summary_tradeoff": "{winner} đang dẫn đầu, nhưng {runner_up} bám khá sát. Điểm khác biệt chính nằm ở độ ổn định và rủi ro quá khớp chứ không chỉ ở score cuối.",
+            "summary_fast_baseline": "{fastest} vẫn là baseline vào form nhanh nhất nếu bạn cần lặp thử nghiệm gọn.",
+            "next_promote": "Dùng {winner} làm phiên chuẩn để replay, pin và so với các biến thể mới.",
+            "next_early_stop": "Thử early stopping quanh epoch {epoch} cho {label} để tránh mất chất lượng về cuối.",
+            "next_regularize": "Tăng regularization hoặc giảm độ sâu cho {label} trước khi kết luận mô hình này yếu hơn hẳn.",
+            "next_verify_close": "Hai phiên dẫn đầu đang sát nhau, nên kiểm tra thêm report chi tiết và confusion/failure view trước khi chốt.",
+            "reason_over_smoothing": "Cần theo dõi over-smoothing",
+            "reason_overfitting": "Cần chặn overfitting về cuối",
+            "reason_unstable": "Cần làm mượt quỹ đạo train",
+            "reason_boundary": "Còn yếu ở các điểm khó / biên",
+            "reason_healthy": "Có thể dùng làm mốc so sánh tiếp theo",
+        }
+    return {
+        "select_runs": "Select at least 2 runs to compare.",
+        "insufficient": "Not enough signal to produce a confident conclusion yet.",
+        "winner_title": "Overall Recommendation",
+        "convergence_title": "Convergence Trade-Off",
+        "stability_title": "Training Stability",
+        "risk_title": "Generalization Risk",
+        "dataset_fit_title": "Dataset-Model Compatibility",
+        "winner_finding": "{winner} is the most reliable choice right now with a composite score of {score}/100, edging out {runner_up} through a stronger quality-to-risk balance.",
+        "winner_details": [
+            "{label}: composite {score}/100, best score {best_score:.1%}, stability {stability:.0%}, generalization {generalization:.0%}.",
+        ],
+        "winner_recommendation": "Use {winner} as the current reference run, then tune against its biggest remaining risk.",
+        "tight_race": "The top two runs are only {gap:.1f} points apart, so confirm with replay and report reading before final promotion.",
+        "convergence_finding": "{fastest} reaches form earliest at epoch {fastest_epoch}, while {slowest} needs until epoch {slowest_epoch}. If you need a quick iteration baseline, {fastest} is the cleaner starting point.",
+        "stability_finding": "{stable} has the calmest late-stage trajectory, while {fragile} shows more variance and is harder to trust run-to-run.",
+        "risk_finding_overfit": "{risky} shows the clearest overfitting signal: it peaks early and gives back {decline:.1%} near the end, so the peak score alone is misleading.",
+        "risk_finding_safe": "{safe} preserves the best generalization profile in this group, making it safer for promotion or future comparisons.",
+        "dataset_fit_homophily": "This dataset is strongly homophilic ({homophily:.2f}), so neighborhood aggregation is naturally rewarded. Prefer the run that stays stable instead of only chasing the top score.",
+        "dataset_fit_heterophily": "This dataset leans heterophilic ({homophily:.2f}), so selective attention or sampling matters more than pure smoothing.",
+        "summary_single_winner": "{winner} is the best current choice because it combines stronger quality with a safer late-training profile.",
+        "summary_tradeoff": "{winner} is leading, but {runner_up} is still close. The real separator is stability and overfitting risk, not just the headline score.",
+        "summary_fast_baseline": "{fastest} still gives the quickest baseline if you need fast iteration.",
+        "next_promote": "Promote {winner} as the reference run for replay, pinning, and future challenger comparisons.",
+        "next_early_stop": "Try early stopping around epoch {epoch} for {label} to avoid late-stage regression.",
+        "next_regularize": "Increase regularization or reduce depth for {label} before concluding that this architecture is fundamentally weaker.",
+        "next_verify_close": "The top runs are still close, so review the detailed report and failure slices before making a final call.",
+        "reason_over_smoothing": "Watch for over-smoothing",
+        "reason_overfitting": "Control late-stage overfitting",
+        "reason_unstable": "Smooth the training trajectory",
+        "reason_boundary": "Still weak on hard boundary cases",
+        "reason_healthy": "Good candidate for the next reference run",
+    }
+
+
 # ---------------------------------------------------------------------------
 # AI Insight Generation
 # ---------------------------------------------------------------------------
 
-def generate_comparison_insights(results: List[Dict], graph_payload: Dict = None) -> Dict:
+def generate_comparison_insights(results: List[Dict], graph_payload: Dict = None, lang: str = "en") -> Dict:
     """Generate AI-powered comparison insights for multiple experiment runs."""
+    copy = _comparison_copy(lang)
     if not results or len(results) < 2:
-        return {"insights": [], "summary": "Select at least 2 runs to generate comparison insights."}
+        return {"insights": [], "summary": copy["select_runs"], "leaderboard": [], "next_steps": []}
 
-    insights = []
+    seen_labels: Dict[str, int] = {}
+    assessments = []
+    for result in results:
+        exp = result.get("experiment", {})
+        label = _run_label(exp, seen_labels)
+        assessments.append(
+            _build_run_assessment(
+                exp=exp,
+                metrics=result.get("metrics", {}) or {},
+                snapshots=result.get("snapshots", []) or [],
+                graph_payload=graph_payload,
+                label=label,
+            )
+        )
 
-    models = []
-    for r in results:
-        exp = r.get("experiment", {})
-        metrics = r.get("metrics", {})
-        snapshots = r.get("snapshots", [])
-        model = {
-            "id": exp.get("id"),
-            "model_type": exp.get("model_type", "Unknown"),
-            "accuracy": exp.get("accuracy", 0),
-            "loss": exp.get("loss", 0),
-            "best_epoch": exp.get("best_epoch", 0),
-            "history": metrics.get("history", {}),
-        }
-        models.append(model)
+    assessments.sort(key=lambda item: item["composite_score"], reverse=True)
+    winner = assessments[0]
+    runner_up = assessments[1] if len(assessments) > 1 else winner
+    score_gap = winner["composite_score"] - runner_up["composite_score"]
+    fastest = min(assessments, key=lambda item: item["convergence_epoch"])
+    slowest = max(assessments, key=lambda item: item["convergence_epoch"])
+    most_stable = max(assessments, key=lambda item: item["stability_score"])
+    least_stable = min(assessments, key=lambda item: item["stability_score"])
+    safest = max(assessments, key=lambda item: item["generalization_score"])
+    riskiest = max(assessments, key=lambda item: item["overfit_decline"] + (1 - item["generalization_score"]))
 
-    # Convergence comparison
-    convergence_models = []
-    for m in models:
-        scores = m["history"].get("primary_score", [])
-        if not scores:
-            continue
-        best = max(scores)
-        target = best * 0.95
-        conv_epoch = next((i for i, s in enumerate(scores) if s >= target), len(scores) - 1)
-        convergence_models.append({"model": m["model_type"], "epoch": conv_epoch, "id": m["id"]})
+    caution_reason_map = {
+        "over_smoothing": copy["reason_over_smoothing"],
+        "overfitting": copy["reason_overfitting"],
+        "unstable": copy["reason_unstable"],
+        "boundary": copy["reason_boundary"],
+        "healthy": copy["reason_healthy"],
+    }
 
-    if convergence_models:
-        fastest = min(convergence_models, key=lambda x: x["epoch"])
-        slowest = max(convergence_models, key=lambda x: x["epoch"])
-        insights.append({
-            "type": "convergence",
-            "title": "Convergence Speed",
-            "finding": f"{fastest['model']} converges fastest (epoch {fastest['epoch']}), while {slowest['model']} takes longest (epoch {slowest['epoch']}).",
-            "details": [f"{m['model']}: reaches 95% best at epoch {m['epoch']}" for m in sorted(convergence_models, key=lambda x: x["epoch"])],
-            "significance": "high" if fastest["epoch"] < slowest["epoch"] * 0.5 else "moderate",
+    leaderboard = []
+    for index, item in enumerate(assessments, start=1):
+        leaderboard.append({
+            "rank": index,
+            "experiment_id": item["experiment_id"],
+            "label": item["label"],
+            "title": item["title"],
+            "model_type": item["model_type"],
+            "composite_score": item["composite_score"],
+            "best_score": item["best_score"],
+            "stability_score": item["stability_score"],
+            "generalization_score": item["generalization_score"],
+            "caution": item["caution"],
+            "reason": caution_reason_map.get(item["caution"], copy["reason_healthy"]),
         })
 
-    # Stability comparison
-    stability_models = []
-    for m in models:
-        scores = m["history"].get("primary_score", [])
-        if len(scores) < 5:
-            continue
-        tail = scores[int(len(scores) * 0.7):]
-        if not tail:
-            continue
-        mean = sum(tail) / len(tail)
-        var = sum((x - mean) ** 2 for x in tail) / len(tail)
-        cv = math.sqrt(var) / (mean + 1e-10)
-        stability_models.append({"model": m["model_type"], "cv": cv, "id": m["id"]})
+    insights = [{
+        "type": "performance",
+        "title": copy["winner_title"],
+        "finding": copy["winner_finding"].format(
+            winner=winner["label"],
+            score=winner["composite_score"],
+            runner_up=runner_up["label"],
+        ),
+        "details": [
+            copy["winner_details"][0].format(
+                label=item["label"],
+                score=item["composite_score"],
+                best_score=item["best_score"],
+                stability=item["stability_score"],
+                generalization=item["generalization_score"],
+            )
+            for item in assessments[:3]
+        ],
+        "recommendation": copy["winner_recommendation"].format(winner=winner["label"]),
+        "significance": "high" if score_gap >= 4 else "moderate",
+    }]
 
-    if stability_models:
-        most_stable = min(stability_models, key=lambda x: x["cv"])
-        least_stable = max(stability_models, key=lambda x: x["cv"])
-        insights.append({
-            "type": "stability",
-            "title": "Training Stability",
-            "finding": f"{most_stable['model']} is most stable (CV={most_stable['cv']:.4f}), while {least_stable['model']} shows more variance (CV={least_stable['cv']:.4f}).",
-            "details": [f"{m['model']}: coefficient of variation = {m['cv']:.4f}" for m in sorted(stability_models, key=lambda x: x["cv"])],
-            "significance": "high" if most_stable["cv"] < least_stable["cv"] * 0.3 else "moderate",
-        })
-
-    # Overfitting comparison
-    overfit_models = []
-    for m in models:
-        scores = m["history"].get("primary_score", [])
-        if len(scores) < 5:
-            continue
-        last_10pct = scores[int(len(scores) * 0.9):]
-        peak = max(scores)
-        decline = peak - (sum(last_10pct) / len(last_10pct) if last_10pct else peak)
-        overfit_models.append({"model": m["model_type"], "decline": decline, "peak_epoch": scores.index(peak), "total_epochs": len(scores), "id": m["id"]})
-
-    for om in overfit_models:
-        if om["decline"] > 0.05 and om["peak_epoch"] < om["total_epochs"] * 0.8:
-            insights.append({
-                "type": "overfitting",
-                "title": f"{om['model']} Overfitting Signal",
-                "finding": f"{om['model']} peaked at epoch {om['peak_epoch']} then declined by {om['decline']*100:.1f}%. Suggests overfitting in later epochs.",
-                "recommendation": "Consider early stopping around the peak epoch.",
-                "significance": "moderate",
-            })
-
-    # Best performer
-    best_model = max(models, key=lambda x: x["accuracy"])
-    worst_model = min(models, key=lambda x: x["accuracy"])
-    acc_gap = best_model["accuracy"] - worst_model["accuracy"]
+    if score_gap <= 3:
+        insights[0]["details"].append(copy["tight_race"].format(gap=score_gap))
 
     insights.append({
-        "type": "performance",
-        "title": "Best Performer",
-        "finding": f"{best_model['model_type']} achieves the highest accuracy ({best_model['accuracy']*100:.1f}%), leading {worst_model['model_type']} by {acc_gap*100:.1f}%.",
-        "details": [f"{m['model_type']}: {m['accuracy']*100:.1f}% accuracy, {m['loss']:.4f} loss" for m in sorted(models, key=lambda x: -x["accuracy"])],
-        "significance": "high" if acc_gap > 0.05 else "moderate",
+        "type": "convergence",
+        "title": copy["convergence_title"],
+        "finding": copy["convergence_finding"].format(
+            fastest=fastest["label"],
+            fastest_epoch=fastest["convergence_epoch"],
+            slowest=slowest["label"],
+            slowest_epoch=slowest["convergence_epoch"],
+        ),
+        "details": [
+            f"{item['label']}: epoch {item['convergence_epoch']} / {item['epoch_count'] - 1}"
+            for item in assessments
+        ],
+        "significance": "high" if slowest["convergence_epoch"] - fastest["convergence_epoch"] >= 4 else "moderate",
     })
 
-    # Dataset-aware analysis
+    insights.append({
+        "type": "stability",
+        "title": copy["stability_title"],
+        "finding": copy["stability_finding"].format(
+            stable=most_stable["label"],
+            fragile=least_stable["label"],
+        ),
+        "details": [
+            f"{item['label']}: stability {item['stability_score']:.0%}"
+            for item in sorted(assessments, key=lambda entry: entry["stability_score"], reverse=True)
+        ],
+        "significance": "high" if most_stable["stability_score"] - least_stable["stability_score"] >= 0.2 else "moderate",
+    })
+
+    if riskiest["overfit_decline"] >= 0.02 or riskiest["caution"] == "overfitting":
+        risk_finding = copy["risk_finding_overfit"].format(
+            risky=riskiest["label"],
+            decline=riskiest["overfit_decline"],
+        )
+    else:
+        risk_finding = copy["risk_finding_safe"].format(safe=safest["label"])
+    insights.append({
+        "type": "overfitting",
+        "title": copy["risk_title"],
+        "finding": risk_finding,
+        "details": [
+            f"{item['label']}: generalization {item['generalization_score']:.0%}, decline {item['overfit_decline']:.1%}"
+            for item in sorted(assessments, key=lambda entry: entry["generalization_score"], reverse=True)
+        ],
+        "significance": "high" if riskiest["caution"] in {"overfitting", "over_smoothing"} else "moderate",
+    })
+
     if graph_payload:
         topo = analyze_dataset_topology(graph_payload)
         props = topo.get("properties", {})
-        homophily = props.get("homophily_estimate", 0.5)
-
+        homophily = float(props.get("homophily_estimate", 0.5) or 0.5)
         if homophily > 0.7:
-            favor = "GCN" if any(m["model_type"] == "GCN" for m in models) else "neighborhood aggregation models"
-            insights.append({
-                "type": "dataset_fit",
-                "title": "Dataset-Model Compatibility",
-                "finding": f"This dataset exhibits strong homophily ({homophily:.2f}), naturally favoring {favor}. The high neighbor-label agreement means simple aggregation captures class structure well.",
-                "significance": "high",
-            })
+            finding = copy["dataset_fit_homophily"].format(homophily=homophily)
         elif homophily < 0.4:
+            finding = copy["dataset_fit_heterophily"].format(homophily=homophily)
+        else:
+            finding = ""
+        if finding:
             insights.append({
                 "type": "dataset_fit",
-                "title": "Heterophilic Challenge",
-                "finding": f"This dataset is heterophilic (homophily={homophily:.2f}). Standard neighborhood aggregation may mix dissimilar features. GAT's attention or specialized heterophilic models may perform better.",
-                "significance": "high",
+                "title": copy["dataset_fit_title"],
+                "finding": finding,
+                "significance": "moderate",
             })
 
-    # Generate narrative summary
     summary_parts = []
-    if best_model:
-        summary_parts.append(f"{best_model['model_type']} currently achieves the best balance between validation accuracy and training stability.")
-    if convergence_models:
-        fastest = min(convergence_models, key=lambda x: x["epoch"])
-        summary_parts.append(f"{fastest['model']} converges the fastest and provides the cleanest baseline behavior.")
-    if stability_models:
-        most_stable = min(stability_models, key=lambda x: x["cv"])
-        summary_parts.append(f"{most_stable['model']} shows the most consistent training trajectory.")
+    if score_gap >= 4:
+        summary_parts.append(copy["summary_single_winner"].format(winner=winner["label"]))
+    else:
+        summary_parts.append(copy["summary_tradeoff"].format(winner=winner["label"], runner_up=runner_up["label"]))
+    if fastest["label"] != winner["label"]:
+        summary_parts.append(copy["summary_fast_baseline"].format(fastest=fastest["label"]))
+
+    next_steps = [copy["next_promote"].format(winner=winner["label"])]
+    if riskiest["caution"] == "overfitting":
+        next_steps.append(copy["next_early_stop"].format(epoch=riskiest["best_epoch"], label=riskiest["label"]))
+    if riskiest["caution"] in {"over_smoothing", "unstable"}:
+        next_steps.append(copy["next_regularize"].format(label=riskiest["label"]))
+    if score_gap <= 3:
+        next_steps.append(copy["next_verify_close"])
 
     return {
         "insights": insights,
         "insight_count": len(insights),
-        "summary": " ".join(summary_parts) if summary_parts else "Insufficient data for comprehensive analysis.",
-        "models_analyzed": [m["model_type"] for m in models],
+        "summary": " ".join(part for part in summary_parts if part).strip() or copy["insufficient"],
+        "models_analyzed": [item["model_type"] for item in assessments],
+        "leaderboard": leaderboard,
+        "winner": {
+            "experiment_id": winner["experiment_id"],
+            "label": winner["label"],
+            "title": winner["title"],
+            "model_type": winner["model_type"],
+            "composite_score": winner["composite_score"],
+            "reason": caution_reason_map.get(winner["caution"], copy["reason_healthy"]),
+        },
+        "next_steps": next_steps,
     }
 
 
@@ -1031,6 +1270,7 @@ def generate_recommendations(
     model_type: str = "GCN",
     config: Dict = None,
     graph_payload: Dict = None,
+    lang: str = "en",
 ) -> Dict:
     """Generate actionable recommendations for improving the experiment."""
     if not snapshots:
@@ -1176,6 +1416,7 @@ def generate_recommendations(
         config=config,
         graph_payload=graph_payload,
         heuristic_payload=result,
+        lang=lang,
     )
     if llm_result:
         result.update(llm_result)
@@ -1226,6 +1467,23 @@ def get_model_profile(model_type: str) -> Dict:
     })
 
 
+def _resolve_dataset_label(config: Dict[str, Any]) -> str:
+    """Return a readable dataset label for research-note summaries."""
+    config = config or {}
+    for key in ("dataset", "dataset_name"):
+        value = config.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return "current dataset"
+
+
+def _has_meaningful_dataset_context(props: Dict[str, Any]) -> bool:
+    """Guard against empty topology payloads surfacing as zeroed dataset context."""
+    if not isinstance(props, dict):
+        return False
+    return bool(props.get("n_nodes") or props.get("n_edges") or props.get("n_classes"))
+
+
 # ---------------------------------------------------------------------------
 # Research Notes Auto-Generation
 # ---------------------------------------------------------------------------
@@ -1248,13 +1506,14 @@ def generate_research_notes(
     last_snap = snapshots[-1]
     val_acc = last_snap.get("val_acc", 0)
     train_loss = last_snap.get("train_loss", 0)
+    dataset_label = _resolve_dataset_label(config)
 
     sections = []
 
     # Summary section
     sections.append({
         "title": "Summary",
-        "content": f"{model_type} trained for {len(snapshots)} epochs on {config.get('dataset', 'unknown')} dataset. "
+        "content": f"{model_type} trained for {len(snapshots)} epochs on {dataset_label} dataset. "
                    f"Final validation accuracy: {val_acc*100:.1f}%, training loss: {train_loss:.4f}. "
                    f"Best epoch: {diagnostics.get('convergence_speed', {}).get('epoch', 'N/A')}.",
     })
@@ -1289,10 +1548,14 @@ def generate_research_notes(
     if graph_payload:
         topo = analyze_dataset_topology(graph_payload, snapshots)
         props = topo.get("properties", {})
-        topo_desc = f"Dataset has {props.get('n_nodes', 0)} nodes, {props.get('n_edges', 0)} edges, {props.get('n_classes', 0)} classes. "
-        topo_desc += f"Estimated homophily: {props.get('homophily_estimate', 0):.2f}. "
-        topo_desc += f"Average degree: {props.get('avg_degree', 0):.1f}."
-        sections.append({"title": "Dataset Context", "content": topo_desc})
+        if _has_meaningful_dataset_context(props):
+            topo_desc = (
+                f"Dataset has {props.get('n_nodes', 0)} nodes, {props.get('n_edges', 0)} edges, "
+                f"{props.get('n_classes', 0)} classes. "
+                f"Estimated homophily: {props.get('homophily_estimate', 0):.2f}. "
+                f"Average degree: {props.get('avg_degree', 0):.1f}."
+            )
+            sections.append({"title": "Dataset Context", "content": topo_desc})
 
     # Suggested next experiments
     next_experiments = []

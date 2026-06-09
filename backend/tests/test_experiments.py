@@ -545,6 +545,77 @@ def test_compare_insights_handles_compact_graph_payload_shapes():
     assert client.delete(f"/api/experiments/{exp_b}").status_code == 200
 
 
+def test_compare_insights_keeps_duplicate_model_types_separate():
+    suffix = uuid.uuid4().hex[:8]
+    payloads = [
+        {
+            "title": f"Duplicate GCN A {suffix}",
+            "task_type": 1,
+            "model_type": "GCN",
+            "dataset_name": "dup_gcn_payload",
+            "epoch_count": 3,
+            "accuracy": 0.82,
+            "loss": 0.18,
+            "best_epoch": 2,
+            "is_mock": True,
+            "snapshots_json": [
+                {"epoch": 0, "val_acc": 0.62, "train_acc": 0.65, "majority_ratio": [0.8, 0.8], "node_correctness": [True, True]},
+                {"epoch": 1, "val_acc": 0.76, "train_acc": 0.77, "majority_ratio": [0.8, 0.8], "node_correctness": [True, True]},
+                {"epoch": 2, "val_acc": 0.82, "train_acc": 0.83, "majority_ratio": [0.8, 0.8], "node_correctness": [True, True]},
+            ],
+            "graph_data_json": {
+                "nodes": [{"id": 0, "groundTruth": 0}, {"id": 1, "groundTruth": 1}],
+                "links": [[0, 1]],
+            },
+            "ground_truth_json": [0, 1],
+            "task_data_json": {},
+        },
+        {
+            "title": f"Duplicate GCN B {suffix}",
+            "task_type": 1,
+            "model_type": "GCN",
+            "dataset_name": "dup_gcn_payload",
+            "epoch_count": 3,
+            "accuracy": 0.8,
+            "loss": 0.2,
+            "best_epoch": 1,
+            "is_mock": True,
+            "snapshots_json": [
+                {"epoch": 0, "val_acc": 0.64, "train_acc": 0.7, "majority_ratio": [0.55, 0.55], "node_correctness": [True, False]},
+                {"epoch": 1, "val_acc": 0.8, "train_acc": 0.9, "majority_ratio": [0.55, 0.55], "node_correctness": [True, False]},
+                {"epoch": 2, "val_acc": 0.74, "train_acc": 0.94, "majority_ratio": [0.55, 0.55], "node_correctness": [True, False]},
+            ],
+            "graph_data_json": {
+                "nodes": [{"id": 0, "groundTruth": 0}, {"id": 1, "groundTruth": 1}],
+                "links": [[0, 1]],
+            },
+            "ground_truth_json": [0, 1],
+            "task_data_json": {},
+        },
+    ]
+
+    created_ids = []
+    for payload in payloads:
+        response = client.post("/api/experiments", json=payload)
+        assert response.status_code == 200, response.text
+        created_ids.append(response.json()["id"])
+
+    compare_response = client.post(
+        "/api/experiments/compare-insights",
+        json={"experiment_ids": created_ids},
+    )
+    assert compare_response.status_code == 200, compare_response.text
+    data = compare_response.json()
+
+    diagnostics = data["model_diagnostics"]
+    assert len(diagnostics) == 2
+    assert len(set(diagnostics.keys())) == 2
+    assert all(item["model_type"] == "GCN" for item in diagnostics.values())
+
+    for exp_id in created_ids:
+        assert client.delete(f"/api/experiments/{exp_id}").status_code == 200
+
+
 def test_session_finalize_and_resume_contract_stays_consistent():
     suffix = uuid.uuid4().hex[:8]
     project_response = client.post(
