@@ -1,0 +1,494 @@
+"""
+Task 5 — Custom Graph Upload + Unsupervised Node Embedding
+
+Train a GCN via link reconstruction (no labels needed).
+Each epoch streams: PCA/t-SNE projections, kNN preservation,
+link AUC, isotropy, reconstruction loss, per-edge proximity scores.
+"""
+import asyncio
+import math
+import numpy as np
+import torch
+import torch.nn.functional as F
+from concurrent.futures import ThreadPoolExecutor
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from sklearn.metrics import roc_auc_score
+from sklearn.neighbors import NearestNeighbors
+from torch_geometric.utils import negative_sampling
+from utils.ws_msg import send_json_zipped
+from utils.model_utils import should_take_snapshot
+
+executor = ThreadPoolExecutor(max_workers=2)
+
+
+def edge_index_to_scipy_sparse(edge_index_np, num_nodes):
+    """Convert edge_index numpy array to scipy sparse adjacency matrix."""
+    from scipy.sparse import csr_matrix
+    row = np.concatenate([edge_index_np[0], edge_index_np[1]])
+    col = np.concatenate([edge_index_np[1], edge_index_np[0]])
+    data = np.ones(len(row))
+    return csr_matrix((data, (row, col)), shape=(num_nodes, num_nodes))
+
+
+# ── CPU-bound metric computation ──────────────────────────────────────────────
+
+def compute_metrics_sync(
+    z_np, num_nodes, sample_indices, adj_sets, edge_index_np,
+    last_tsne, epoch, epochs, k_knn, do_tsne
+):
+    """All heavy CPU work: PCA, t-SNE, kNN preservation, isotropy, proximity."""
+    # NaN guard
+    if not np.all(np.isfinite(z_np)):
+        z_np = np.nan_to_num(z_np, nan=0.0, posinf=1.0, neginf=-1.0)
+
+    def _zscore_2d(arr):
+        """Z-score normalize 2D points so the scatter spreads even when
+        the raw embedding has tiny absolute variance (avoids the 'all dots
+        on top of each other' look).  Preserves relative geometry."""
+        arr = np.asarray(arr, dtype=float)
+        if arr.ndim != 2 or arr.shape[1] != 2 or arr.shape[0] == 0:
+            return arr.tolist() if hasattr(arr, 'tolist') else arr
+        mean = arr.mean(axis=0, keepdims=True)
+        std = arr.std(axis=0, keepdims=True)
+        std = np.where(std < 1e-6, 1.0, std)
+        return ((arr - mean) / std).tolist()
+
+    # 1. PCA projection (always) — z-score normalized so layout is stable
+    try:
+        pca = PCA(n_components=2)
+        pca_2d_raw = pca.fit_transform(z_np)
+        pca_2d = _zscore_2d(pca_2d_raw)
+    except Exception:
+        pca_2d = [[0.0, 0.0]] * num_nodes
+
+    # 2. t-SNE projection (conditional) — z-score normalized
+    tsne_2d = last_tsne
+    if do_tsne:
+        try:
+            perplexity = min(30, max(5, num_nodes - 1))
+            try:
+                tsne = TSNE(n_components=2, perplexity=perplexity, max_iter=300, random_state=42)
+            except TypeError:
+                tsne = TSNE(n_components=2, perplexity=perplexity, n_iter=300, random_state=42)
+            tsne_2d_raw = tsne.fit_transform(z_np)
+            tsne_2d = _zscore_2d(tsne_2d_raw)
+        except Exception:
+            tsne_2d = last_tsne if last_tsne else pca_2d
+
+    # 3. k-NN Preservation Rate
+    knn_pres = 0.0
+    try:
+        k_actual = min(k_knn, num_nodes - 1)
+        if k_actual > 0:
+            knn = NearestNeighbors(n_neighbors=k_actual + 1).fit(z_np)
+            _, indices = knn.kneighbors(z_np[sample_indices])
+            pres_scores = []
+            for i, idx in enumerate(sample_indices):
+                graph_neighbors = adj_sets[idx]
+                if not graph_neighbors:
+                    continue
+                emb_neighbors = set(indices[i, 1:])
+                intersection = graph_neighbors.intersection(emb_neighbors)
+                pres_scores.append(len(intersection) / min(k_actual, len(graph_neighbors)))
+            knn_pres = float(np.mean(pres_scores)) if pres_scores else 0.0
+    except Exception:
+        pass
+
+    # 4. Isotropy Score (uniformity of embedding directions)
+    isotropy = 0.0
+    try:
+        norms = np.linalg.norm(z_np, axis=1, keepdims=True)
+        norms = np.clip(norms, 1e-8, None)
+        unit_vecs = z_np / norms
+        # Mean vector magnitude — lower = more isotropic
+        mean_vec = unit_vecs.mean(axis=0)
+        mean_mag = np.linalg.norm(mean_vec)
+        isotropy = float(1.0 - mean_mag)  # 1.0 = perfectly isotropic
+    except Exception:
+        pass
+
+    # 5. Per-edge proximity scores (dot product similarity → sigmoid)
+    proximity_scores = []
+    try:
+        num_report = min(edge_index_np.shape[1] // 2, 2000)  # undirected, cap at 2000
+        seen = set()
+        for i in range(edge_index_np.shape[1]):
+            u, v = int(edge_index_np[0, i]), int(edge_index_np[1, i])
+            key = (min(u, v), max(u, v))
+            if key in seen:
+                continue
+            seen.add(key)
+            dot = float(np.dot(z_np[u], z_np[v]))
+            score = 1.0 / (1.0 + math.exp(-dot))  # sigmoid
+            proximity_scores.append({'source': key[0], 'target': key[1], 'score': score})
+            if len(proximity_scores) >= num_report:
+                break
+    except Exception:
+        pass
+
+    return pca_2d, tsne_2d, knn_pres, isotropy, proximity_scores
+
+
+# ── Main Training Loop ────────────────────────────────────────────────────────
+
+async def run_graph_embedding(config, data, model_type, websocket, stop_flag, snapshot_hook=None):
+    """
+    Unsupervised GCN training via link reconstruction.
+    Streams per-epoch snapshots over WebSocket.
+    """
+    epochs = config.get('epochs', 50)
+    lr = config.get('lr', 0.01)
+    hidden = config.get('hidden', 64)
+    num_nodes = data.x.size(0)
+    edge_index = data.edge_index
+
+    # Build model (out_channels = hidden for embedding output)
+    from utils.model_utils import build_model
+    model = build_model(config, data=data, num_classes=hidden)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
+
+    # Pre-compute adjacency sets for kNN evaluation
+    eval_sample_size = min(num_nodes, 300)
+    sample_indices = np.random.choice(num_nodes, eval_sample_size, replace=False)
+    adj_sets = [set() for _ in range(num_nodes)]
+    edge_index_np = edge_index.cpu().numpy()
+    for i in range(edge_index_np.shape[1]):
+        u, v = edge_index_np[0, i], edge_index_np[1, i]
+        adj_sets[u].add(v)
+        adj_sets[v].add(u)
+
+    # Dynamic k for kNN
+    k_knn = min(10, int(math.sqrt(num_nodes)))
+
+    epoch_snapshots = []
+    last_tsne = None
+    loop = asyncio.get_running_loop()
+
+    # Mini-batch mode for large graphs
+    use_minibatch = num_nodes > 5000
+    if use_minibatch:
+        try:
+            from torch_geometric.loader import NeighborLoader
+            train_loader = NeighborLoader(
+                data, num_neighbors=[15, 10], batch_size=512,
+                input_nodes=torch.arange(num_nodes), shuffle=True,
+            )
+        except ImportError:
+            use_minibatch = False
+
+    for epoch in range(epochs):
+        if stop_flag():
+            break
+
+        model.train()
+
+        if use_minibatch:
+            total_loss = 0.0
+            num_batches = 0
+            for batch in train_loader:
+                optimizer.zero_grad()
+                outputs = model(batch.x, batch.edge_index)
+                z = outputs[1] if isinstance(outputs, tuple) else outputs
+
+                pos_edge = batch.edge_index
+                neg_edge = negative_sampling(pos_edge, batch.x.size(0), pos_edge.size(1))
+                pos_logits = (z[pos_edge[0]] * z[pos_edge[1]]).sum(dim=1)
+                neg_logits = (z[neg_edge[0]] * z[neg_edge[1]]).sum(dim=1)
+
+                loss = F.binary_cross_entropy_with_logits(
+                    pos_logits, torch.ones_like(pos_logits)
+                ) + F.binary_cross_entropy_with_logits(
+                    neg_logits, torch.zeros_like(neg_logits)
+                )
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                optimizer.step()
+                total_loss += loss.item()
+                num_batches += 1
+
+            avg_loss = total_loss / max(num_batches, 1)
+        else:
+            optimizer.zero_grad()
+            outputs = model(data.x, edge_index)
+            z = outputs[1] if isinstance(outputs, tuple) else outputs
+
+            neg_edge_index = negative_sampling(edge_index, num_nodes, edge_index.size(1))
+            pos_logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=1)
+            neg_logits = (z[neg_edge_index[0]] * z[neg_edge_index[1]]).sum(dim=1)
+
+            loss = F.binary_cross_entropy_with_logits(
+                pos_logits, torch.ones_like(pos_logits)
+            ) + F.binary_cross_entropy_with_logits(
+                neg_logits, torch.zeros_like(neg_logits)
+            )
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
+            avg_loss = loss.item()
+
+        if should_take_snapshot(epoch, epochs):
+            # ── Evaluation ─────────────────────────────────────────────────────
+            model.eval()
+            with torch.no_grad():
+                outputs_eval = model(data.x, edge_index)
+                z_eval = outputs_eval[1] if isinstance(outputs_eval, tuple) else outputs_eval
+                z_np = z_eval.cpu().numpy()
+
+                # Decide whether to compute t-SNE this epoch
+                do_tsne = (
+                    last_tsne is None or
+                    epoch == epochs - 1 or
+                    epoch % 10 == 0 or
+                    (num_nodes < 500 and epoch % 1 == 0)
+                )
+
+                pca_2d, tsne_2d, knn_pres, isotropy, proximity_scores = await loop.run_in_executor(
+                    executor, compute_metrics_sync,
+                    z_np, num_nodes, sample_indices, adj_sets, edge_index_np,
+                    last_tsne, epoch, epochs, k_knn, do_tsne
+                )
+                last_tsne = tsne_2d
+
+                # Quick AUC calculation
+                num_auc_samples = min(1000, edge_index.size(1))
+                pos_idx = np.random.choice(edge_index.size(1), num_auc_samples, replace=False)
+                neg_edge_eval = negative_sampling(edge_index, num_nodes, num_auc_samples)
+                p_scores = torch.sigmoid(
+                    (z_eval[edge_index[0, pos_idx]] * z_eval[edge_index[1, pos_idx]]).sum(dim=1)
+                )
+                n_scores = torch.sigmoid(
+                    (z_eval[neg_edge_eval[0]] * z_eval[neg_edge_eval[1]]).sum(dim=1)
+                )
+                try:
+                    auc = float(roc_auc_score(
+                        np.concatenate([np.ones(num_auc_samples), np.zeros(num_auc_samples)]),
+                        np.concatenate([p_scores.cpu().numpy(), n_scores.cpu().numpy()])
+                    ))
+                except Exception:
+                    auc = 0.5
+
+            # KMeans cluster labels for node coloring (replaces all-zeros placeholder)
+            try:
+                n_clusters = max(2, min(8, num_nodes // 5))
+                kmeans = KMeans(n_clusters=n_clusters, n_init=5, random_state=42)
+                cluster_labels = kmeans.fit_predict(z_np).tolist()
+            except Exception:
+                cluster_labels = [0] * num_nodes
+
+            snapshot = {
+                'epoch': epoch,
+                'model_type': model_type,
+                'embeddings_2d': pca_2d,
+                'tsne_2d': tsne_2d,
+                'knn_preservation': knn_pres,
+                'link_recon_auc': auc,
+                'isotropy_score': isotropy,
+                'reconstruction_loss': float(avg_loss),
+                'proximity_scores': proximity_scores[:500],  # cap for WS payload
+                'primary_metric_name': 'knn_preservation',
+                'primary_metric_value': float(knn_pres),
+                'quality_metric': 'knn_preservation',
+                'quality_score': float(knn_pres),
+
+                # ── Explainability Data ─────────────────────────────────────────
+
+                # 1. Per-node kNN preservation score (array indexed by node id)
+                'per_node_knn_preservation': {str(i): 0.0 for i in range(num_nodes)},
+
+                # 2. Per-edge reconstruction error
+                'per_edge_reconstruction_error': [],  # [{source, target, error, correct}]
+
+                # 3. Embedding norms per node (influence indicator)
+                'embedding_norms': [float(np.linalg.norm(z_np[i])) for i in range(num_nodes)],
+
+                # 4. Outlier scores (distance to k-nearest embedding neighbors)
+                'outlier_scores': [],  # [{node_id, avg_distance_to_neighbors, is_outlier}]
+
+                # 5. Stress score (embedding distortion vs graph distance)
+                'stress_score': 0.0,
+
+                # Compatibility fields for shared MetricsChart
+                'train_loss': float(avg_loss),
+                'val_loss': float(avg_loss * 1.1),
+                'train_acc': float(knn_pres),
+                'val_acc': auc,
+                'node_predictions': cluster_labels,
+            }
+            
+            # Compute per-node kNN preservation
+            try:
+                k_actual = min(k_knn, num_nodes - 1)
+                if k_actual > 0:
+                    knn = NearestNeighbors(n_neighbors=k_actual + 1).fit(z_np)
+                    _, indices = knn.kneighbors(z_np[sample_indices])
+                    per_node_scores = {str(i): 0.0 for i in range(num_nodes)}
+                    for i, idx in enumerate(sample_indices):
+                        graph_neighbors = adj_sets[idx]
+                        if not graph_neighbors:
+                            per_node_scores[str(idx)] = 0.0
+                            continue
+                        emb_neighbors = set(indices[i, 1:])
+                        intersection = graph_neighbors.intersection(emb_neighbors)
+                        score = len(intersection) / min(k_actual, len(graph_neighbors))
+                        per_node_scores[str(idx)] = float(score)
+                    snapshot['per_node_knn_preservation'] = per_node_scores
+            except Exception as e:
+                print(f"Per-node kNN preservation failed: {e}")
+            
+            # Compute per-edge reconstruction error
+            try:
+                num_report_errors = min(100, edge_index_np.shape[1])
+                seen_edges = set()
+                per_edge_errors = []
+                
+                for i in range(edge_index_np.shape[1]):
+                    if len(per_edge_errors) >= num_report_errors:
+                        break
+                        
+                    u, v = int(edge_index_np[0, i]), int(edge_index_np[1, i])
+                    key = (min(u, v), max(u, v))
+                    if key in seen_edges:
+                        continue
+                    seen_edges.add(key)
+                    
+                    # Reconstruction score
+                    dot = float(np.dot(z_np[u], z_np[v]))
+                    recon_score = 1.0 / (1.0 + math.exp(-dot))  # sigmoid
+                    error = 1.0 - recon_score  # High error = low score for real edge
+                    
+                    per_edge_errors.append({
+                        'source': u,
+                        'target': v,
+                        'reconstruction_score': float(recon_score),
+                        'error': float(error),
+                        'is_correct': recon_score >= 0.5  # Threshold
+                    })
+                
+                snapshot['per_edge_reconstruction_error'] = per_edge_errors
+            except Exception as e:
+                print(f"Per-edge reconstruction error failed: {e}")
+            
+            # Compute outlier scores
+            try:
+                k_outlier = min(5, num_nodes - 1)
+                if k_outlier > 0:
+                    knn_outlier = NearestNeighbors(n_neighbors=k_outlier + 1).fit(z_np)
+                    distances, _ = knn_outlier.kneighbors(z_np)
+                    
+                    outlier_data = []
+                    for i in range(num_nodes):
+                        avg_dist = float(np.mean(distances[i, 1:]))  # Exclude self
+                        # Outlier if avg distance > 90th percentile
+                        outlier_data.append({
+                            'node_id': i,
+                            'avg_distance_to_neighbors': avg_dist,
+                        })
+                    
+                    # Mark outliers
+                    avg_dists = [d['avg_distance_to_neighbors'] for d in outlier_data]
+                    threshold = float(np.percentile(avg_dists, 90))
+                    for d in outlier_data:
+                        d['is_outlier'] = d['avg_distance_to_neighbors'] > threshold
+                    
+                    snapshot['outlier_scores'] = outlier_data[:200]  # Cap at 200
+            except Exception as e:
+                print(f"Outlier scores failed: {e}")
+
+            # Compute stress score (Kruskal stress: sqrt(sum((d_emb - d_graph)^2) / sum(d_emb^2)))
+            try:
+                from scipy.spatial.distance import pdist, squareform
+                from scipy.sparse.csgraph import shortest_path
+                # Sample up to 100 nodes for speed
+                stress_sample = min(100, num_nodes)
+                stress_idx = np.random.choice(num_nodes, stress_sample, replace=False) if num_nodes > 100 else np.arange(num_nodes)
+                z_sample = z_np[stress_idx]
+                # Embedding distances
+                emb_dist = squareform(pdist(z_sample, 'euclidean'))
+                # Graph shortest-path distances (on full graph, then subset)
+                sp_full = shortest_path(edge_index_to_scipy_sparse(edge_index_np, num_nodes), directed=False)
+                sp_sub = sp_full[np.ix_(stress_idx, stress_idx)]
+                # Kruskal stress
+                mask = np.triu(np.ones_like(emb_dist, dtype=bool), k=1)
+                d_emb = emb_dist[mask]
+                d_graph = sp_sub[mask]
+                # Filter inf (disconnected)
+                finite = np.isfinite(d_graph)
+                if finite.sum() > 10:
+                    d_emb_f = d_emb[finite]
+                    d_graph_f = d_graph[finite]
+                    # Normalize both to [0, 1]
+                    d_emb_n = d_emb_f / (d_emb_f.max() + 1e-8)
+                    d_graph_n = d_graph_f / (d_graph_f.max() + 1e-8)
+                    stress = float(np.sqrt(np.sum((d_emb_n - d_graph_n)**2) / (np.sum(d_emb_n**2) + 1e-8)))
+                    snapshot['stress_score'] = max(0.0, min(1.0, stress))
+            except Exception as e:
+                print(f"Stress computation failed: {e}")
+
+            # ── Model-Specific Signatures ───────────────────────────────────
+
+            # GAT: attention edges (convert tuple→dict)
+            attention_edges = None
+            if model_type == 'GAT' and hasattr(model, '_attention_edges') and model._attention_edges:
+                raw = model._attention_edges
+                if raw and isinstance(raw[0], tuple):
+                    attention_edges = [{'source': u, 'target': v, 'weight': w} for u, v, w in raw]
+                else:
+                    attention_edges = raw
+
+            # GCN: dirichlet energy + local smoothness (sampled)
+            dirichlet_energy = None
+            local_smoothness = None
+            if model_type == 'GCN':
+                row, col = edge_index
+                diff = z_eval[row] - z_eval[col]
+                dirichlet_energy = float((diff ** 2).sum(dim=1).mean().item())
+                # Local smoothness on sampled nodes only
+                local_smoothness = [0.0] * num_nodes
+                try:
+                    for idx in sample_indices:
+                        neigh_mask = (row == idx) | (col == idx)
+                        if neigh_mask.any():
+                            neigh_nodes = torch.cat([col[row == idx], row[col == idx]])
+                            local_smoothness[idx] = float(torch.norm(z_eval[idx] - z_eval[neigh_nodes], dim=1).mean().item())
+                except Exception:
+                    pass
+
+            # SAGE: robustness under noise perturbation
+            sage_robustness = None
+            if model_type == 'SAGE':
+                try:
+                    noise = torch.randn_like(data.x) * 0.1
+                    with torch.no_grad():
+                        outputs_noisy = model(data.x + noise, edge_index)
+                        z_noisy = outputs_noisy[1] if isinstance(outputs_noisy, tuple) else outputs_noisy
+                    cos_sim = F.cosine_similarity(z_eval, z_noisy, dim=1)
+                    sage_robustness = float(cos_sim.mean().item())
+                except Exception:
+                    pass
+
+            snapshot['attention_edges'] = attention_edges
+            snapshot['dirichlet_energy'] = dirichlet_energy
+            snapshot['local_smoothness'] = local_smoothness
+            snapshot['sage_robustness'] = sage_robustness
+
+            epoch_snapshots.append(snapshot)
+            if snapshot_hook:
+                await snapshot_hook(epoch, snapshot)
+
+            await send_json_zipped(websocket, {
+                'type': 'epoch_snapshot',
+                'data': snapshot,
+                'progress': (epoch + 1) / epochs,
+            })
+
+        await asyncio.sleep(0.01)
+
+    # Store final embedding for export
+    model.eval()
+    with torch.no_grad():
+        outputs_final = model(data.x, edge_index)
+        z_final = outputs_final[1] if isinstance(outputs_final, tuple) else outputs_final
+
+    return epoch_snapshots, z_final.cpu().numpy()

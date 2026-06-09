@@ -1,0 +1,1015 @@
+import {
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  FolderKanban,
+  Globe,
+  Lock,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Sparkles,
+  TrendingUp,
+  Trash2,
+  X,
+  Check,
+  Database,
+  LayoutGrid,
+  List,
+} from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip } from 'recharts'
+import { AnimatePresence, motion } from 'framer-motion'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import EmptyState from '../../components/primitives/EmptyState'
+import ErrorState from '../../components/primitives/ErrorState'
+import LoadingState from '../../components/primitives/LoadingState'
+import useGNNStore from '../../store/useGNNStore'
+import { useLanguage } from '../../contexts/LanguageContext'
+import { apiJson, normalizeCollectionPayload } from '../../utils/api'
+
+const PAGE_SIZE = 9
+const TASK_LABELS = {
+  1: 'tasks_meta.node_classification',
+  2: 'tasks_meta.graph_classification',
+  3: 'tasks_meta.link_prediction',
+  4: 'tasks_meta.community_detection',
+  5: 'tasks_meta.graph_embedding',
+  6: 'tasks_meta.graph_generation',
+}
+
+function initialsFromTitle(title) {
+  return (title || 'P')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() || '')
+    .join('') || 'P'
+}
+
+function gradientFromId(id) {
+  const palettes = [
+    'linear-gradient(135deg, #fda4af 0%, #fb7185 100%)',
+    'linear-gradient(135deg, #fdba74 0%, #f87171 100%)',
+    'linear-gradient(135deg, #fca5a5 0%, #f97316 100%)',
+    'linear-gradient(135deg, #fbcfe8 0%, #f472b6 100%)',
+    'linear-gradient(135deg, #fde68a 0%, #fb923c 100%)',
+    'linear-gradient(135deg, #fecaca 0%, #ef4444 100%)',
+  ]
+  return palettes[Math.abs(Number(id) || 0) % palettes.length]
+}
+
+function formatDate(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function formatRelative(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  const diff = Date.now() - d.getTime()
+  const min = 60 * 1000
+  const hour = 60 * min
+  const day = 24 * hour
+  const week = 7 * day
+  if (diff < min) return 'Just now'
+  if (diff < hour) return `${Math.floor(diff / min)}m ago`
+  if (diff < day) return `${Math.floor(diff / hour)}h ago`
+  if (diff < week) return `${Math.floor(diff / day)}d ago`
+  if (diff < 4 * week) return `${Math.floor(diff / week)}w ago`
+  return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+export default function ProjectsPage() {
+  const activeProjectId = useGNNStore((s) => s.activeProjectId)
+  const setActiveProjectContext = useGNNStore((s) => s.setActiveProjectContext)
+  const { t } = useLanguage()
+
+  const VISIBILITY_FILTERS = [
+    { value: '', label: t('projects.vis_all') },
+    { value: 'public', label: t('projects.vis_public') },
+    { value: 'private', label: t('projects.vis_private') },
+  ]
+
+  const SORT_OPTIONS = [
+    { value: 'newest', label: t('projects.sort_newest') },
+    { value: 'oldest', label: t('projects.sort_oldest') },
+    { value: 'az', label: t('projects.sort_az') },
+    { value: 'za', label: t('projects.sort_za') },
+  ]
+
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [projects, setProjects] = useState([])
+  const [experiments, setExperiments] = useState([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(PAGE_SIZE)
+
+  const [search, setSearch] = useState('')
+  const [searchDebounced, setSearchDebounced] = useState('')
+  const [visibility, setVisibility] = useState('')
+  const [viewMode, setViewMode] = useState('grid')
+  const [sortBy, setSortBy] = useState('newest')
+
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [createForm, setCreateForm] = useState({ title: '', description: '', is_public: false })
+  const [submitting, setSubmitting] = useState(false)
+
+  const [editTarget, setEditTarget] = useState(null)
+  const [editForm, setEditForm] = useState({ title: '', description: '', is_public: false })
+
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchDebounced(search.trim()), 250)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  const loadProjects = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams()
+      params.set('page', String(page))
+      params.set('page_size', String(pageSize))
+      if (searchDebounced) params.set('search', searchDebounced)
+      if (visibility) params.set('visibility', visibility)
+      const [projectsPayload, experimentsPayload] = await Promise.all([
+        apiJson(`/projects?${params.toString()}`),
+        apiJson('/experiments?page_size=300').catch(() => ({ items: [] })),
+      ])
+      const normalized = normalizeCollectionPayload(projectsPayload)
+      setProjects(normalized.items)
+      setTotal(normalized.total)
+      setExperiments(normalizeCollectionPayload(experimentsPayload).items)
+    } catch (err) {
+      setError(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [page, pageSize, searchDebounced, visibility])
+
+  useEffect(() => { loadProjects() }, [loadProjects])
+
+  useEffect(() => { setPage(1) }, [searchDebounced, visibility])
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+
+  const handleCreate = useCallback(async () => {
+    if (!createForm.title.trim()) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      const project = await apiJson('/projects', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: createForm.title.trim(),
+          description: createForm.description.trim() || null,
+          is_public: !!createForm.is_public,
+        }),
+      })
+      setCreateForm({ title: '', description: '', is_public: false })
+      setIsCreateOpen(false)
+      setActiveProjectContext(project.id, project.title)
+      await loadProjects()
+    } catch (err) {
+      setError(err)
+    } finally {
+      setSubmitting(false)
+    }
+  }, [createForm, loadProjects, setActiveProjectContext])
+
+  const openEdit = useCallback((project) => {
+    setEditTarget(project)
+    setEditForm({
+      title: project.title || '',
+      description: project.description || '',
+      is_public: !!project.is_public,
+    })
+  }, [])
+
+  const handleEditSave = useCallback(async () => {
+    if (!editTarget) return
+    if (!editForm.title.trim()) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await apiJson(`/projects/${editTarget.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          title: editForm.title.trim(),
+          description: editForm.description.trim() || null,
+          is_public: !!editForm.is_public,
+        }),
+      })
+      setEditTarget(null)
+      await loadProjects()
+    } catch (err) {
+      setError(err)
+    } finally {
+      setSubmitting(false)
+    }
+  }, [editForm, editTarget, loadProjects])
+
+  const openDelete = useCallback((project) => {
+    setDeleteTarget(project)
+    setDeleteConfirmText('')
+  }, [])
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return
+    if (deleteConfirmText.trim() !== deleteTarget.title) return
+    setDeleting(true)
+    setError(null)
+    try {
+      await apiJson(`/projects/${deleteTarget.id}`, { method: 'DELETE' })
+      setDeleteTarget(null)
+      setDeleteConfirmText('')
+      if (activeProjectId === deleteTarget.id) {
+        setActiveProjectContext(null, null)
+      }
+      await loadProjects()
+    } catch (err) {
+      setError(err)
+    } finally {
+      setDeleting(false)
+    }
+  }, [deleteConfirmText, deleteTarget, activeProjectId, setActiveProjectContext, loadProjects])
+
+  const sortedProjects = useMemo(() => {
+    const list = [...projects]
+    switch (sortBy) {
+      case 'oldest':
+        return list.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
+      case 'az':
+        return list.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+      case 'za':
+        return list.sort((a, b) => (b.title || '').localeCompare(a.title || ''))
+      case 'newest':
+      default:
+        return list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+    }
+  }, [projects, sortBy])
+
+  const headerStats = useMemo(() => ({
+    visible: projects.length,
+    total,
+    activeName: projects.find((p) => p.id === activeProjectId)?.title || null,
+  }), [projects, total, activeProjectId])
+
+  const projectMetrics = useMemo(() => {
+    const byProject = new Map()
+    experiments.forEach((exp) => {
+      if (!exp.project_id) return
+      const existing = byProject.get(exp.project_id) || {
+        runCount: 0,
+        latestRun: null,
+      }
+      existing.runCount += 1
+      if (!existing.latestRun || new Date(exp.created_at || 0).getTime() > new Date(existing.latestRun.created_at || 0).getTime()) {
+        existing.latestRun = exp
+      }
+      byProject.set(exp.project_id, existing)
+    })
+    return byProject
+  }, [experiments])
+
+  if (loading && projects.length === 0) {
+    return <LoadingState title={t('projects.loading')} className="min-h-[480px]" />
+  }
+  if (error && projects.length === 0) {
+    return <ErrorState title={t('projects.load_error')} error={error} onRetry={loadProjects} className="min-h-[480px]" />
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <section className="surface-card p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="surface-eyebrow">{t('projects.workspace_eyebrow')}</div>
+            <h2 className="surface-title">{t('projects.page_title_count', { n: headerStats.total })}</h2>
+            <p className="surface-sub">
+              {t('projects.page_sub')}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={loadProjects} className="surface-action">
+              <RefreshCw size={13} /> {t('projects.refresh')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen(true)}
+              className="primary-cta inline-flex items-center gap-2"
+            >
+              <Plus size={14} /> {t('projects.create_project')}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <label className="relative flex min-w-[260px] flex-1 items-center">
+            <Search size={14} className="pointer-events-none absolute left-3 text-fg-faint" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t('projects.search_placeholder')}
+              className="w-full rounded-xl border border-line-subtle bg-bg pl-9 pr-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:border-primary focus:outline-none"
+            />
+          </label>
+          <div className="flex items-center gap-1.5 rounded-xl border border-line-subtle bg-bg p-1">
+            {VISIBILITY_FILTERS.map((option) => {
+              const isActive = visibility === option.value
+              let activeClass = ''
+              if (isActive) {
+                if (option.value === 'public') {
+                  activeClass = 'is-active-public'
+                } else if (option.value === 'private') {
+                  activeClass = 'is-active-private'
+                } else {
+                  activeClass = 'is-active-all'
+                }
+              }
+              return (
+                <button
+                  key={option.value || 'all'}
+                  type="button"
+                  onClick={() => setVisibility(option.value)}
+                  className={`visibility-filter-btn ${isActive ? activeClass : ''}`}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+          <select
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value)}
+            className="rounded-xl border border-line-subtle bg-bg px-3 py-2 text-xs font-semibold text-fg focus:border-primary focus:outline-none"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{t('projects.sort_label')} {opt.label}</option>
+            ))}
+          </select>
+        </div>
+      </section>
+
+      {/* Split layout: list (left) + insights (right) */}
+      {projects.length === 0 ? (
+        <EmptyState
+          icon={<FolderKanban size={26} />}
+          title={searchDebounced || visibility ? t('projects.no_match_title') : t('projects.no_yet_title')}
+          description={searchDebounced || visibility
+            ? t('projects.no_match_desc')
+            : t('projects.no_yet_desc')}
+          actionLabel={searchDebounced || visibility ? t('projects.clear_filters') : t('projects.create_project')}
+          onAction={() => {
+            if (searchDebounced || visibility) {
+              setSearch('')
+              setVisibility('')
+            } else {
+              setIsCreateOpen(true)
+            }
+          }}
+        />
+      ) : (
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
+          {/* LEFT — clean project list */}
+          <section className="surface-card overflow-hidden">
+            <div className="flex items-center justify-between border-b border-line-subtle px-5 py-3">
+              <div>
+                <div className="surface-eyebrow">{t('projects.title')}</div>
+                <div className="mt-0.5 text-sm font-bold text-fg">
+                  {t('projects.page_title_count', { n: sortedProjects.length })}
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                {/* View switcher */}
+                <div className="flex items-center gap-1 rounded-lg border border-line-subtle bg-bg p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grid')}
+                    className={`rounded p-1 transition-all ${
+                      viewMode === 'grid'
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-fg-muted hover:text-fg'
+                    }`}
+                    title={t('projects.grid_view')}
+                  >
+                    <LayoutGrid size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('list')}
+                    className={`rounded p-1 transition-all ${
+                      viewMode === 'list'
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-fg-muted hover:text-fg'
+                    }`}
+                    title={t('projects.list_view')}
+                  >
+                    <List size={14} />
+                  </button>
+                </div>
+                <div className="text-xs text-fg-muted">
+                  {t('common.page')} {page} / {totalPages}
+                </div>
+              </div>
+            </div>
+
+            {viewMode === 'grid' ? (
+              <ul className="project-grid">
+                <AnimatePresence>
+                  {sortedProjects.map((project) => {
+                    const isActive = activeProjectId === project.id
+                    const metrics = projectMetrics.get(project.id)
+                    const latestRun = metrics?.latestRun || null
+                    const latestTask = latestRun?.task_type
+                      ? (TASK_LABELS[latestRun.task_type] ? t(TASK_LABELS[latestRun.task_type]) : `Task ${latestRun.task_type}`)
+                      : null
+                    const latestModel = latestRun?.model_type || null
+                    return (
+                      <motion.li
+                        layout
+                        key={project.id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.18 }}
+                        className={`project-card ${isActive ? 'is-active' : ''}`}
+                      >
+                        <div className="project-card-header">
+                          <div className="project-card-info">
+                            <span className="project-row-avatar-md" style={{ background: gradientFromId(project.id) }}>
+                              {initialsFromTitle(project.title)}
+                            </span>
+                            <div className="project-card-title-group">
+                              <h3 className="project-card-title" title={project.title}>
+                                {project.title}
+                              </h3>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className={`project-vis-pill ${project.is_public ? 'is-public' : ''}`}>
+                                  {project.is_public ? <Globe size={9} /> : <Lock size={9} />}
+                                  {project.is_public ? t('projects.vis_public') : t('projects.vis_private')}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="project-card-actions">
+                            <button
+                              type="button"
+                              onClick={() => openEdit(project)}
+                              className="project-action-icon"
+                              aria-label={t('projects.edit')}
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openDelete(project)}
+                              className="project-action-icon project-action-danger"
+                              aria-label={t('projects.delete')}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="project-card-body">
+                          <div className="project-card-desc">
+                            {project.description || t('projects.no_description')}
+                          </div>
+
+                          <div className="project-card-meta">
+                            <span className="project-card-meta-item">#{project.id}</span>
+                            <span className="project-card-meta-item">
+                              {t('projects.owner')} #{project.owner_id ?? 'system'}
+                            </span>
+                            <span className="project-card-meta-item">
+                              {t('projects.experiments_count', { n: metrics?.runCount || 0 })}
+                            </span>
+                            <span className="project-card-meta-item">
+                              <Clock size={9} /> {formatRelative(project.updated_at || project.created_at)}
+                            </span>
+                          </div>
+
+                          {/* Latest run section */}
+                          <div className="project-card-latest-run">
+                            <div className="project-card-latest-run-title">
+                              {t('projects.last_run')}
+                            </div>
+                            {latestTask ? (
+                              <div className="project-card-run-details">
+                                <div className="project-card-run-row">
+                                  <span className="project-card-run-label">
+                                    {latestTask}
+                                  </span>
+                                  {latestModel && (
+                                    <span className="project-card-run-value bg-primary-softer text-primary px-1.5 py-0.5 rounded font-semibold text-[10px]">
+                                      {latestModel}
+                                    </span>
+                                  )}
+                                </div>
+                                {latestRun?.dataset_name && (
+                                  <div className="project-card-run-row text-fg-muted">
+                                    <span className="inline-flex items-center gap-1 text-[10px] truncate">
+                                      <Database size={9} />
+                                      {latestRun.dataset_name}
+                                    </span>
+                                    <span className="text-[10px] text-fg-faint">
+                                      {formatDate(latestRun.created_at)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-fg-faint italic py-1">
+                                {t('projects.no_runs_yet')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="project-card-footer">
+                          <button
+                            type="button"
+                            onClick={() => setActiveProjectContext(project.id, project.title)}
+                            disabled={isActive}
+                            className={`project-card-select-btn ${isActive ? 'is-active' : ''}`}
+                          >
+                            {isActive ? (
+                              <>
+                                <Check size={12} /> {t('projects.selected')}
+                              </>
+                            ) : (
+                              t('projects.select')
+                            )}
+                          </button>
+                        </div>
+                      </motion.li>
+                    )
+                  })}
+                </AnimatePresence>
+              </ul>
+            ) : (
+              <ul className="divide-y divide-line-subtle">
+                <AnimatePresence>
+                  {sortedProjects.map((project) => {
+                    const isActive = activeProjectId === project.id
+                    const metrics = projectMetrics.get(project.id)
+                    const latestRun = metrics?.latestRun || null
+                    const latestTask = latestRun?.task_type
+                      ? (TASK_LABELS[latestRun.task_type] ? t(TASK_LABELS[latestRun.task_type]) : `Task ${latestRun.task_type}`)
+                      : null
+                    const latestModel = latestRun?.model_type || null
+                    return (
+                      <motion.li
+                        layout
+                        key={project.id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.18 }}
+                        className={`project-row flex flex-wrap lg:flex-nowrap items-center gap-4 ${
+                          isActive ? 'project-row-active' : ''
+                        }`}
+                      >
+                        {/* Column 1: Info */}
+                        <div className="flex items-center gap-3 w-full lg:w-[260px] flex-shrink-0 min-w-0">
+                          <span className="project-row-avatar-md" style={{ background: gradientFromId(project.id) }}>
+                            {initialsFromTitle(project.title)}
+                          </span>
+                          <div className="min-w-0 flex-1 flex flex-col gap-1">
+                            <span className="truncate text-sm font-semibold text-fg" title={project.title}>
+                              {project.title}
+                            </span>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className={`project-vis-pill ${project.is_public ? 'is-public' : ''}`}>
+                                {project.is_public ? <Globe size={9} /> : <Lock size={9} />}
+                                {project.is_public ? t('projects.vis_public') : t('projects.vis_private')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Column 2: Description */}
+                        <div className="w-full lg:flex-1 min-w-0 text-xs text-fg-muted line-clamp-2">
+                          {project.description || t('projects.no_description')}
+                        </div>
+
+                        {/* Column 3: Stats */}
+                        <div className="flex flex-col gap-0.5 w-[140px] flex-shrink-0 text-left">
+                          <span className="text-xs font-semibold text-fg">
+                            {t('projects.experiments_count', { n: metrics?.runCount || 0 })}
+                          </span>
+                          <span className="text-[10px] text-fg-faint flex items-center gap-1">
+                            <Clock size={10} /> {t('projects.updated')} {formatRelative(project.updated_at || project.created_at)}
+                          </span>
+                        </div>
+
+                        {/* Column 4: Latest Run */}
+                        <div className="flex flex-col gap-0.5 w-[180px] flex-shrink-0 text-left min-w-0">
+                          {latestTask ? (
+                            <>
+                              <span className="text-xs font-semibold text-primary truncate" title={latestTask}>
+                                {latestTask}
+                              </span>
+                              <div className="text-[10px] text-fg-muted truncate flex items-center gap-1.5">
+                                {latestModel && <span className="font-semibold text-fg-faint">{latestModel}</span>}
+                                {latestRun?.dataset_name && (
+                                  <span className="flex items-center gap-0.5">
+                                    <Database size={9} />
+                                    {latestRun.dataset_name}
+                                  </span>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-xs text-fg-faint italic">{t('projects.no_runs_yet')}</span>
+                          )}
+                        </div>
+
+                        {/* Column 5: Actions */}
+                        <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setActiveProjectContext(project.id, project.title)}
+                            disabled={isActive}
+                            className={`project-row-set ${isActive ? 'is-active' : ''}`}
+                          >
+                            {isActive ? t('projects.selected') : t('projects.select')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(project)}
+                            className="project-action-icon"
+                            aria-label={t('projects.edit')}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openDelete(project)}
+                            className="project-action-icon project-action-danger"
+                            aria-label={t('projects.delete')}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </motion.li>
+                    )
+                  })}
+                </AnimatePresence>
+              </ul>
+            )}
+          </section>
+
+          {/* RIGHT — Insights side panel */}
+          <ProjectsInsightsPanel
+            total={total}
+            projects={projects}
+            activeProjectId={activeProjectId}
+            onCreate={() => setIsCreateOpen(true)}
+            t={t}
+          />
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between rounded-2xl border border-line-subtle bg-bg-elev px-4 py-3">
+          <div className="text-xs text-fg-muted">
+            <strong className="text-fg">{(page - 1) * pageSize + 1}</strong>–
+            <strong className="text-fg">{Math.min(total, page * pageSize)}</strong> / <strong className="text-fg">{total}</strong>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="pager-btn"
+            >
+              <ChevronLeft size={14} /> {t('common.previous')}
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 6).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setPage(n)}
+                className={`pager-btn ${page === n ? 'pager-btn-active' : ''}`}
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="pager-btn"
+            >
+              {t('common.next')} <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Create modal */}
+      <ProjectModal
+        open={isCreateOpen}
+        title={t('projects.create_project')}
+        eyebrow={t('projects.create_new')}
+        onClose={() => setIsCreateOpen(false)}
+        form={createForm}
+        setForm={setCreateForm}
+        submitting={submitting}
+        onSubmit={handleCreate}
+        submitLabel={t('projects.create_button')}
+        t={t}
+      />
+
+      {/* Edit modal */}
+      <ProjectModal
+        open={!!editTarget}
+        title={t('projects.edit') + ' — ' + (editTarget?.title || '')}
+        eyebrow={`#${editTarget?.id ?? ''}`}
+        onClose={() => setEditTarget(null)}
+        form={editForm}
+        setForm={setEditForm}
+        submitting={submitting}
+        onSubmit={handleEditSave}
+        submitLabel={t('projects.save_changes')}
+        t={t}
+      />
+
+      {/* Delete modal */}
+      <AnimatePresence>
+        {deleteTarget ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="modal-backdrop"
+            onClick={() => setDeleteTarget(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              className="modal-card modal-card-danger"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="modal-icon-danger"><AlertTriangle size={20} /></div>
+              <h3 className="modal-title">{t('projects.delete_confirm_title')}</h3>
+              <p className="modal-sub">
+                {t('projects.delete_confirm_desc', { name: deleteTarget.title })}
+              </p>
+              <input
+                value={deleteConfirmText}
+                onChange={(event) => setDeleteConfirmText(event.target.value)}
+                placeholder={deleteTarget.title}
+                className="modal-input"
+              />
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  className="modal-btn-ghost"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting || deleteConfirmText.trim() !== deleteTarget.title}
+                  onClick={handleDelete}
+                  className="modal-btn-danger disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deleting ? t('projects.deleting') : t('projects.delete_confirm_button')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function ProjectModal({ open, title, eyebrow, onClose, form, setForm, submitting, onSubmit, submitLabel, t }) {
+  return (
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="modal-backdrop"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 12 }}
+            className="modal-card"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="modal-eyebrow">{eyebrow}</div>
+                <h3 className="modal-title">{title}</h3>
+              </div>
+              <button type="button" onClick={onClose} className="modal-close" aria-label={t ? t('common.close') : 'Close'}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="mt-5 space-y-4">
+              <label className="modal-field">
+                <span className="modal-field-label">{t ? t('projects.form_title') : 'Title'}</span>
+                <input
+                  value={form.title}
+                  onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                  placeholder={t ? t('projects.form_title_placeholder') : ''}
+                  className="modal-input"
+                />
+              </label>
+              <label className="modal-field">
+                <span className="modal-field-label">{t ? t('common.description') : 'Description'}</span>
+                <textarea
+                  value={form.description}
+                  onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                  placeholder={t ? t('projects.form_description_placeholder') : ''}
+                  rows={3}
+                  className="modal-textarea"
+                />
+              </label>
+              <label className="modal-toggle">
+                <input
+                  type="checkbox"
+                  checked={!!form.is_public}
+                  onChange={(event) => setForm((prev) => ({ ...prev, is_public: event.target.checked }))}
+                />
+                <span className="modal-toggle-track" />
+                <span className="modal-field-label flex items-center gap-1.5">
+                  {form.is_public ? <Globe size={12} /> : <Lock size={12} />}
+                  {form.is_public ? (t ? t('projects.form_public_label') : 'Public') : (t ? t('projects.vis_private') : 'Private')}
+                </span>
+              </label>
+            </div>
+            <div className="modal-actions">
+              <button type="button" onClick={onClose} className="modal-btn-ghost">{t ? t('common.cancel') : 'Cancel'}</button>
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={submitting || !form.title.trim()}
+                className="modal-btn-primary disabled:opacity-50"
+              >
+                {submitting ? (t ? t('projects.saving') : 'Saving…') : submitLabel}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  )
+}
+
+function ProjectsInsightsPanel({ total, projects, activeProjectId, onCreate, t }) {
+  const stats = useMemo(() => {
+    const totalLoaded = projects.length
+    const publicCount = projects.filter((p) => p.is_public).length
+    const privateCount = totalLoaded - publicCount
+    const active = projects.find((p) => p.id === activeProjectId) || null
+    const newest = [...projects].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0] || null
+    return { totalLoaded, publicCount, privateCount, active, newest }
+  }, [projects, activeProjectId])
+
+  const donutData = useMemo(() => [
+    { name: t('projects.vis_public'), value: stats.publicCount },
+    { name: t('projects.vis_private'), value: stats.privateCount },
+  ], [stats.publicCount, stats.privateCount, t])
+
+  const COLORS = ['#10b981', '#f43f5e']
+  const hasData = stats.publicCount + stats.privateCount > 0
+
+  return (
+    <aside className="space-y-4">
+      {/* Active project card */}
+      <section className="surface-card p-5">
+        <div className="surface-eyebrow flex items-center gap-1">
+          <Sparkles size={11} /> {t('projects.active_project')}
+        </div>
+        {stats.active ? (
+          <div className="mt-3 space-y-2.5">
+            <div className="flex items-center gap-3">
+              <span className="project-row-avatar-md" style={{ background: gradientFromId(stats.active.id) }}>
+                {initialsFromTitle(stats.active.title)}
+              </span>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-bold text-fg">{stats.active.title}</div>
+                <div className="text-xs text-fg-muted">#{stats.active.id} · {t('projects.owner')} #{stats.active.owner_id ?? 'system'}</div>
+              </div>
+            </div>
+            <div className="text-xs text-fg-muted line-clamp-2">
+              {stats.active.description || t('projects.no_description')}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-3 rounded-xl border border-dashed border-line bg-bg p-4 text-xs text-fg-muted">
+            {t('projects.no_active_project')}
+          </div>
+        )}
+      </section>
+
+      {/* Donut: visibility */}
+      <section className="surface-card p-5">
+        <div className="flex items-center justify-between">
+          <div className="surface-eyebrow">{t('projects.visibility_mix')}</div>
+          <div className="text-xs font-semibold text-fg-muted">{stats.totalLoaded} {t('projects.loaded')}</div>
+        </div>
+        <div className="mt-3 grid grid-cols-[1fr_140px] items-center gap-3">
+          <div className="space-y-2">
+            <div className="insight-row">
+              <span className="insight-dot" style={{ background: COLORS[0] }} />
+              <span>{t('projects.vis_public')}</span>
+              <strong className="ml-auto">{stats.publicCount}</strong>
+            </div>
+            <div className="insight-row">
+              <span className="insight-dot" style={{ background: COLORS[1] }} />
+              <span>{t('projects.vis_private')}</span>
+              <strong className="ml-auto">{stats.privateCount}</strong>
+            </div>
+            <div className="insight-row">
+              <span className="insight-dot" style={{ background: 'var(--c-fg-muted)' }} />
+              <span>{t('projects.total_server')}</span>
+              <strong className="ml-auto">{total}</strong>
+            </div>
+          </div>
+          <div className="h-[120px]">
+            {hasData ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={donutData}
+                    dataKey="value"
+                    innerRadius={32}
+                    outerRadius={52}
+                    paddingAngle={2}
+                    stroke="var(--c-bg-elev)"
+                    strokeWidth={2}
+                  >
+                    {donutData.map((entry, idx) => (
+                      <Cell key={entry.name} fill={COLORS[idx % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <ReTooltip
+                    contentStyle={{
+                      background: 'var(--c-bg-elev)',
+                      border: '1px solid var(--c-border-subtle)',
+                      borderRadius: 10,
+                      fontSize: 11,
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="grid h-full place-items-center text-xs text-fg-faint">{t('projects.no_data')}</div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Quick action */}
+      <section className="surface-card p-5">
+        <div className="surface-eyebrow flex items-center gap-1">
+          <TrendingUp size={11} /> {t('projects.quick_start')}
+        </div>
+        {stats.newest ? (
+          <div className="mt-3 flex items-center gap-3">
+            <span className="project-row-avatar-md" style={{ background: gradientFromId(stats.newest.id) }}>
+              {initialsFromTitle(stats.newest.title)}
+            </span>
+            <div className="min-w-0">
+              <div className="text-xs text-fg-muted">{t('projects.last_added')}</div>
+              <div className="text-xs text-fg-muted">{formatRelative(stats.newest.created_at)}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-2 text-xs text-fg-muted">{t('projects.nothing_yet')}</div>
+        )}
+        <button
+          type="button"
+          onClick={onCreate}
+          className="primary-cta mt-4 inline-flex w-full items-center justify-center gap-2"
+        >
+          <Plus size={14} /> {t('projects.create_another')}
+        </button>
+      </section>
+    </aside>
+  )
+}

@@ -1,0 +1,345 @@
+import { create } from 'zustand'
+import usePlayerStore from './playerStore'
+
+const WORKSPACE_CONTEXT_KEY = 'gnn_workspace_context'
+
+function readWorkspaceContext() {
+  if (typeof localStorage === 'undefined') {
+    return {}
+  }
+  try {
+    const raw = localStorage.getItem(WORKSPACE_CONTEXT_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeWorkspaceContext(partial) {
+  if (typeof localStorage === 'undefined') {
+    return
+  }
+  try {
+    const current = readWorkspaceContext()
+    localStorage.setItem(WORKSPACE_CONTEXT_KEY, JSON.stringify({
+      ...current,
+      ...partial,
+    }))
+  } catch {
+    // Ignore storage failures and keep runtime state usable.
+  }
+}
+
+const persistedWorkspace = readWorkspaceContext()
+
+function resetPlaybackForConfigChange() {
+  usePlayerStore.getState().resetForTraining()
+}
+
+const useGNNStore = create((set, get) => ({
+  // ─── Config ──────────────────────────────────────────────────
+  selectedTask: persistedWorkspace.selectedTask ?? 1,
+  selectedModel: persistedWorkspace.selectedModel ?? 'GCN',
+  mockMode: persistedWorkspace.mockMode ?? true,
+  hyperparams: {
+    epochs: persistedWorkspace.hyperparams?.epochs ?? 100,
+    lr: persistedWorkspace.hyperparams?.lr ?? 0.01,
+    hidden: persistedWorkspace.hyperparams?.hidden ?? 64,
+    dropout: persistedWorkspace.hyperparams?.dropout ?? 0.5,
+    heads: persistedWorkspace.hyperparams?.heads ?? 4,
+    aggregator: persistedWorkspace.hyperparams?.aggregator ?? 'mean',
+  },
+
+  // ─── Training state ──────────────────────────────────────────
+  isTraining: false,
+  trainingProgress: 0,
+
+  // ─── Graph data ──────────────────────────────────────────────
+  graphData: null,
+  groundTruth: null,
+  trainMask: null,
+  taskData: null,
+  classNames: null,
+
+  // ─── Selection / UI ──────────────────────────────────────────
+  selectedNodeId: null,
+  selectedTargetNodeId: null, // Task 3 — target node for pair proximity
+  hoveredNodeId: null,      // NEW: track node currently under mouse
+  hoveredGraphId: null,
+  selectedCommunityId: null, // Task 4 — community selected via canvas click / metric table
+  focusedEdgeIdx: null,      // Task 3 — edge index a hard-edge row asks the canvas to focus
+  outlierPulseIdx: null,     // Task 5 — node id a metric row asks the canvas to pulse
+  task5SelectedNodeIds: [],   // Task 5 — brushed node ids from embedding space
+  viewMode: 'prediction',
+  attentionHead: 'avg',
+  configOpen: false,
+  reportOpen: false,
+
+  // ─── Task 5 specific ────────────────────────────────────────
+  task5Meta: null,     // { num_nodes, num_edges, has_features, feature_dim, has_labels, num_classes, ... }
+  task5Exporting: false,
+
+  // ─── Task 6 specific ────────────────────────────────────────
+  task2FocusMode: persistedWorkspace.task2FocusMode ?? 'all',
+  task2SelectedCell: persistedWorkspace.task2SelectedCell ?? null,
+  task2GallerySort: persistedWorkspace.task2GallerySort ?? 'priority',
+  task2ClassFilter: persistedWorkspace.task2ClassFilter ?? 'all',
+  task2EmbeddingColorMode: persistedWorkspace.task2EmbeddingColorMode ?? 'predicted',
+  task6FilterMode: 'all',   // all | valid | invalid | novel — drives grid filter
+
+  // ─── Uploaded file path (for custom datasets) ───────────────
+  uploadedFilePath: persistedWorkspace.uploadedFilePath ?? null,
+  datasetName: persistedWorkspace.datasetName ?? null,
+  activeProjectId: persistedWorkspace.activeProjectId ?? null,
+  activeProjectName: persistedWorkspace.activeProjectName ?? null,
+  activeDatasetId: persistedWorkspace.activeDatasetId ?? null,
+  activeDatasetVersionId: persistedWorkspace.activeDatasetVersionId ?? null,
+  activeDatasetVersionName: persistedWorkspace.activeDatasetVersionName ?? null,
+
+  // ─── Task-specific upload data ─────────────────────────────
+  communityGroundTruth: null,  // T4: array of community labels
+  numCommunities: null,        // T4: target cluster count
+  referenceGraph: null,        // T6: reference graph structure
+  uploadMetadata: persistedWorkspace.uploadMetadata ?? null,        // { schema_version, validation_warnings, ... }
+  taskConfig: persistedWorkspace.taskConfig ?? null,            // { edge_split_ratio, num_communities, has_community_gt, ... }
+
+  // ─── Actions: Config ─────────────────────────────────────────
+  setTask: (task) => {
+    const prevState = get()
+    const changed = prevState.selectedTask !== task
+    const needsReset = task === 2 || task === 6 || prevState.selectedTask === 2 || prevState.selectedTask === 6
+    const leavingTask5 = prevState.selectedTask === 5
+
+    if (changed) resetPlaybackForConfigChange()
+    writeWorkspaceContext({ selectedTask: task })
+    set({
+      selectedTask: task,
+      isTraining: false,
+      trainingProgress: 0,
+      selectedNodeId: null,
+      hoveredNodeId: null,
+      selectedTargetNodeId: null,
+      task2FocusMode: 'all',
+      task2SelectedCell: null,
+      task2GallerySort: 'priority',
+      task2ClassFilter: 'all',
+      task2EmbeddingColorMode: 'predicted',
+      task6FilterMode: 'all',
+      selectedCommunityId: null,
+      focusedEdgeIdx: null,
+      outlierPulseIdx: null,
+      task5SelectedNodeIds: [],
+      reportOpen: false,
+      // Clear data only if moving to/from tasks with incompatible graph formats
+      ...(needsReset ? {
+        graphData: null,
+        groundTruth: null,
+        trainMask: null,
+        taskData: null,
+        classNames: null,
+      } : {}),
+      // Clear task 5 meta when leaving
+      ...(leavingTask5 ? { task5Meta: null } : {}),
+    })
+  },
+  setSelectedTask: (task) => get().setTask(task),
+  setModel: (model) => {
+    const prevState = get()
+    const changed = prevState.selectedModel !== model
+
+    if (changed) resetPlaybackForConfigChange()
+    writeWorkspaceContext({ selectedModel: model })
+    set({
+      selectedModel: model,
+      graphData: null,
+      groundTruth: null,
+      trainMask: null,
+      taskData: null,
+      selectedNodeId: null,
+      hoveredNodeId: null,
+      task2FocusMode: 'all',
+      task2SelectedCell: null,
+      task2GallerySort: 'priority',
+      task2ClassFilter: 'all',
+      task2EmbeddingColorMode: 'predicted',
+      selectedCommunityId: null,
+      focusedEdgeIdx: null,
+      outlierPulseIdx: null,
+      task5SelectedNodeIds: [],
+      reportOpen: false,
+      isTraining: false,
+      trainingProgress: 0,
+    })
+  },
+  setMockMode: (mode) => {
+    writeWorkspaceContext({ mockMode: mode })
+    set({ mockMode: mode })
+  },
+  setHyperparams: (params) => set((s) => {
+    const nextHyperparams = { ...s.hyperparams, ...params }
+    writeWorkspaceContext({ hyperparams: nextHyperparams })
+    return { hyperparams: nextHyperparams }
+  }),
+
+  // ─── Actions: Data ───────────────────────────────────────────
+  setGraphData: (gd) => set({ graphData: gd }),
+  setGroundTruth: (gt) => set({ groundTruth: gt }),
+  setClassNames: (names) => set({ classNames: names }),
+  setTrainMask: (mask) => set({ trainMask: mask }),
+  setTaskData: (td) => set((s) => ({
+    taskData: {
+      ...(s.taskData || {}),
+      ...(td || {}),
+    },
+  })),
+  setSelectedNode: (id) => {
+    const current = get().selectedNodeId;
+    if (current !== id) {
+      set({ selectedNodeId: id, selectedTargetNodeId: null })
+    } else {
+      set({ selectedNodeId: id })
+    }
+  },
+  setSelectedTargetNode: (id) => set({ selectedTargetNodeId: id }),
+  setTask2FocusMode: (mode) => {
+    const nextMode = mode || 'all'
+    writeWorkspaceContext({ task2FocusMode: nextMode })
+    set({ task2FocusMode: nextMode })
+  },
+  setTask2SelectedCell: (cell) => {
+    writeWorkspaceContext({ task2SelectedCell: cell || null })
+    set({ task2SelectedCell: cell || null })
+  },
+  setTask2GallerySort: (sort) => {
+    const nextSort = sort || 'priority'
+    writeWorkspaceContext({ task2GallerySort: nextSort })
+    set({ task2GallerySort: nextSort })
+  },
+  setTask2ClassFilter: (filter) => {
+    const nextFilter = filter === undefined || filter === null ? 'all' : filter
+    writeWorkspaceContext({ task2ClassFilter: nextFilter })
+    set({ task2ClassFilter: nextFilter })
+  },
+  setTask2EmbeddingColorMode: (mode) => {
+    const nextMode = mode || 'predicted'
+    writeWorkspaceContext({ task2EmbeddingColorMode: nextMode })
+    set({ task2EmbeddingColorMode: nextMode })
+  },
+  setTask6FilterMode: (mode) => set({ task6FilterMode: mode || 'all' }),
+  setSelectedCommunity: (id) => set({ selectedCommunityId: id }),
+  setFocusedEdge: (idx) => set({ focusedEdgeIdx: idx }),
+  setOutlierPulse: (idx) => set({ outlierPulseIdx: idx }),
+
+  addInductiveNode: (newNode) => {
+    const { graphData } = get()
+    if (!graphData) return
+
+    const flavoredNode = {
+      ...newNode,
+      x: -500,
+      y: -500,
+      fx: null,
+      fy: null,
+      isInductive: true,
+      degree: newNode.links.length
+    }
+
+    const newLinks = newNode.links.map((targetId, i) => ({
+      source: newNode.id,
+      target: targetId,
+      _idx: graphData.links.length + i,
+      isInductive: true
+    }))
+
+    set({
+      graphData: {
+        nodes: [...graphData.nodes, flavoredNode],
+        links: [...graphData.links, ...newLinks]
+      },
+      selectedNodeId: newNode.id
+    })
+  },
+
+  // ─── Actions: UI ─────────────────────────────────────────────
+  setHoveredNode: (id) => set({ hoveredNodeId: id }),
+  setHoveredGraph: (id) => set({ hoveredGraphId: id }),
+  setViewMode: (mode) => set({ viewMode: mode }),
+  setAttentionHead: (head) => set({ attentionHead: head }),
+  setConfigOpen: (open) => set({ configOpen: open }),
+  setReportOpen: (open) => set({ reportOpen: open }),
+  setTraining: (isTraining, progress) => set({ isTraining, trainingProgress: progress ?? 0 }),
+
+  // ─── Task 5 Actions ────────────────────────────────────────
+  setTask5Meta: (meta) => set({ task5Meta: meta }),
+  setTask5Exporting: (v) => set({ task5Exporting: v }),
+  setTask5SelectedNodeIds: (ids) => set({
+    task5SelectedNodeIds: Array.isArray(ids)
+      ? ids.map((id) => Number(id)).filter(Number.isFinite)
+      : [],
+  }),
+  setUploadedFilePath: (path) => {
+    writeWorkspaceContext({ uploadedFilePath: path })
+    set({ uploadedFilePath: path })
+  },
+
+  // ─── Upload/Task-specific Actions ────────────────────────
+  setCommunityGroundTruth: (gt) => set({ communityGroundTruth: gt }),
+  setNumCommunities: (n) => set({ numCommunities: n }),
+  setReferenceGraph: (g) => set({ referenceGraph: g }),
+  setUploadMetadata: (meta) => {
+    writeWorkspaceContext({ uploadMetadata: meta })
+    set({ uploadMetadata: meta })
+  },
+  setTaskConfig: (cfg) => {
+    writeWorkspaceContext({ taskConfig: cfg })
+    set({ taskConfig: cfg })
+  },
+  setDatasetName: (name) => {
+    writeWorkspaceContext({ datasetName: name })
+    set({ datasetName: name })
+  },
+  setActiveProjectId: (id) => {
+    writeWorkspaceContext({ activeProjectId: id })
+    set({ activeProjectId: id })
+  },
+  setActiveProjectName: (name) => {
+    writeWorkspaceContext({ activeProjectName: name })
+    set({ activeProjectName: name })
+  },
+  setActiveDatasetId: (id) => {
+    writeWorkspaceContext({ activeDatasetId: id })
+    set({ activeDatasetId: id })
+  },
+  setActiveDatasetVersionId: (id) => {
+    writeWorkspaceContext({ activeDatasetVersionId: id })
+    set({ activeDatasetVersionId: id })
+  },
+  setActiveDatasetVersionName: (name) => {
+    writeWorkspaceContext({ activeDatasetVersionName: name })
+    set({ activeDatasetVersionName: name })
+  },
+  setActiveProjectContext: (id, name = null) => {
+    writeWorkspaceContext({
+      activeProjectId: id,
+      activeProjectName: name,
+    })
+    set({
+      activeProjectId: id,
+      activeProjectName: name,
+    })
+  },
+  setActiveDatasetContext: (datasetId, versionId, versionName = null) => {
+    writeWorkspaceContext({
+      activeDatasetId: datasetId,
+      activeDatasetVersionId: versionId,
+      activeDatasetVersionName: versionName,
+    })
+    set({
+      activeDatasetId: datasetId,
+      activeDatasetVersionId: versionId,
+      activeDatasetVersionName: versionName,
+    })
+  },
+}))
+
+export default useGNNStore

@@ -1,0 +1,28 @@
+
+> gnn-insight@1.0.0 build
+> vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 2181 modules transformed.
+x Build failed in 5.37s
+error during build:
+src/App.jsx (2:16): "PanelGroup" is not exported by "node_modules/react-resizable-panels/dist/react-resizable-panels.js", imported by "src/App.jsx".
+file: /Users/nguyenthanhhuyen/Downloads/TEST_GNN-oanh/frontend/src/App.jsx:2:16
+
+1: import { useEffect, useCallback, useState, useRef } from 'react'
+2: import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+                   ^
+3: import { motion, AnimatePresence } from 'framer-motion'
+4: import useGNNStore from './store/useGNNStore'
+
+    at getRollupError (file:///Users/nguyenthanhhuyen/Downloads/TEST_GNN-oanh/frontend/node_modules/rollup/dist/es/shared/parseAst.js:402:41)
+    at error (file:///Users/nguyenthanhhuyen/Downloads/TEST_GNN-oanh/frontend/node_modules/rollup/dist/es/shared/parseAst.js:398:42)
+    at Module.error (file:///Users/nguyenthanhhuyen/Downloads/TEST_GNN-oanh/frontend/node_modules/rollup/dist/es/shared/node-entry.js:17040:16)
+    at Module.traceVariable (file:///Users/nguyenthanhhuyen/Downloads/TEST_GNN-oanh/frontend/node_modules/rollup/dist/es/shared/node-entry.js:17452:29)
+    at ModuleScope.findVariable (file:///Users/nguyenthanhhuyen/Downloads/TEST_GNN-oanh/frontend/node_modules/rollup/dist/es/shared/node-entry.js:15070:39)
+    at FunctionScope.findVariable (file:///Users/nguyenthanhhuyen/Downloads/TEST_GNN-oanh/frontend/node_modules/rollup/dist/es/shared/node-entry.js:5673:38)
+    at FunctionBodyScope.findVariable (file:///Users/nguyenthanhhuyen/Downloads/TEST_GNN-oanh/frontend/node_modules/rollup/dist/es/shared/node-entry.js:5673:38)
+    at Identifier.bind (file:///Users/nguyenthanhhuyen/Downloads/TEST_GNN-oanh/frontend/node_modules/rollup/dist/es/shared/node-entry.js:5447:40)
+    at CallExpression.bind (file:///Users/nguyenthanhhuyen/Downloads/TEST_GNN-oanh/frontend/node_modules/rollup/dist/es/shared/node-entry.js:2825:28)
+    at CallExpression.bind (file:///Users/nguyenthanhhuyen/Downloads/TEST_GNN-oanh/frontend/node_modules/rollup/dist/es/shared/node-entry.js:12179:15)

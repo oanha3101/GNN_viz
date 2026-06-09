@@ -1,0 +1,178 @@
+import { Suspense, lazy, useEffect, useState } from 'react'
+import { Agentation } from 'agentation'
+import { Loader2 } from 'lucide-react'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import AdminLayout from './layouts/AdminLayout'
+import AppLayout from './layouts/AppLayout'
+import PublicAuthLayout from './layouts/PublicAuthLayout'
+import PublicLayout from './layouts/PublicLayout'
+import useAuthStore from './store/authStore'
+import { useLanguage } from './contexts/LanguageContext'
+import { getDefaultPathForUser, isAdminUser } from './utils/appRoutes'
+
+const LandingPage = lazy(() => import('./pages/public/LandingPage'))
+const AboutPage = lazy(() => import('./pages/public/AboutPage'))
+const AuthPage = lazy(() => import('./pages/AuthPage'))
+const ExperimentsPage = lazy(() => import('./pages/ExperimentsPage'))
+const LabShell = lazy(() => import('./LabShell'))
+const LabAnalysisPage = lazy(() => import('./pages/app/LabAnalysisPage'))
+const DashboardPage = lazy(() => import('./pages/app/DashboardPage'))
+const DatasetsPage = lazy(() => import('./pages/app/DatasetsPage'))
+const ProjectsPage = lazy(() => import('./pages/app/ProjectsPage'))
+const ProfilePage = lazy(() => import('./pages/app/ProfilePage'))
+const AdminOverviewPage = lazy(() => import('./pages/admin/AdminOverviewPage'))
+const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'))
+const AdminProjectsPage = lazy(() => import('./pages/admin/AdminProjectsPage'))
+const AdminDatasetsPage = lazy(() => import('./pages/admin/AdminDatasetsPage'))
+const AdminExperimentsPage = lazy(() => import('./pages/admin/AdminExperimentsPage'))
+const AdminSessionsPage = lazy(() => import('./pages/admin/AdminSessionsPage'))
+const AdminRetentionPage = lazy(() => import('./pages/admin/AdminRetentionPage'))
+const AdminAuditPage = lazy(() => import('./pages/admin/AdminAuditPage'))
+const showAgentation = import.meta.env.DEV
+const agentationEndpoint = import.meta.env.VITE_AGENTATION_ENDPOINT
+
+function FullscreenLoader() {
+  const { t } = useLanguage()
+  return (
+    <div className="min-h-screen bg-abyss text-starlight flex items-center justify-center">
+      <div className="inline-flex items-center gap-3 rounded-2xl border border-line-subtle bg-deep px-5 py-4 text-sm text-moonlight shadow-card">
+        <Loader2 size={16} className="animate-spin text-amethyst" />
+        {t('common.loading_workspace')}
+      </div>
+    </div>
+  )
+}
+
+function RouteLoader() {
+  const { t } = useLanguage()
+  return (
+    <div className="min-h-[320px] flex items-center justify-center">
+      <div className="inline-flex items-center gap-3 rounded-2xl border border-line-subtle bg-deep px-5 py-4 text-sm text-moonlight">
+        <Loader2 size={16} className="animate-spin text-amethyst" />
+        {t('common.loading')}
+      </div>
+    </div>
+  )
+}
+
+function LazyRoute({ children }) {
+  return <Suspense fallback={<RouteLoader />}>{children}</Suspense>
+}
+
+export default function App() {
+  const user = useAuthStore((s) => s.user)
+  const token = useAuthStore((s) => s.token)
+  const verifyToken = useAuthStore((s) => s.verifyToken)
+  const [authReady, setAuthReady] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    if (!token) {
+      setAuthReady(true)
+      return () => {
+        active = false
+      }
+    }
+
+    setAuthReady(false)
+    verifyToken()
+      .catch(() => false)
+      .finally(() => {
+        if (active) setAuthReady(true)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [token, verifyToken])
+
+  if (!authReady) {
+    return <FullscreenLoader />
+  }
+
+  return (
+    <>
+      <Routes future={{ v7_relativeSplatPath: true }}>
+        <Route element={<PublicOnlyGuard user={user} />}>
+          <Route element={<PublicAuthLayout />}>
+            <Route path="/login" element={<LazyRoute><AuthPage mode="login" /></LazyRoute>} />
+            <Route path="/register" element={<LazyRoute><AuthPage mode="register" /></LazyRoute>} />
+          </Route>
+        </Route>
+
+        <Route element={<PublicLayout />}>
+          <Route path="/about" element={<LazyRoute><AboutPage /></LazyRoute>} />
+          <Route path="/welcome" element={<LazyRoute><LandingPage /></LazyRoute>} />
+        </Route>
+
+        <Route element={<AppGuard user={user} />}>
+          <Route path="/app" element={<AppLayout />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<LazyRoute><DashboardPage /></LazyRoute>} />
+            <Route path="profile" element={<LazyRoute><ProfilePage /></LazyRoute>} />
+            <Route path="projects" element={<LazyRoute><ProjectsPage /></LazyRoute>} />
+            <Route path="datasets" element={<LazyRoute><DatasetsPage /></LazyRoute>} />
+            <Route path="experiments" element={<LazyRoute><ExperimentsPage /></LazyRoute>} />
+            <Route path="lab" element={<LazyRoute><LabShell /></LazyRoute>} />
+            <Route path="lab/analysis/:panel" element={<LazyRoute><LabAnalysisPage /></LazyRoute>} />
+            <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+          </Route>
+        </Route>
+
+        <Route element={<AdminGuard user={user} />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Navigate to="overview" replace />} />
+            <Route path="overview" element={<LazyRoute><AdminOverviewPage /></LazyRoute>} />
+            <Route path="users" element={<LazyRoute><AdminUsersPage /></LazyRoute>} />
+            <Route path="projects" element={<LazyRoute><AdminProjectsPage /></LazyRoute>} />
+            <Route path="datasets" element={<LazyRoute><AdminDatasetsPage /></LazyRoute>} />
+            <Route path="experiments" element={<LazyRoute><AdminExperimentsPage /></LazyRoute>} />
+            <Route path="sessions" element={<LazyRoute><AdminSessionsPage /></LazyRoute>} />
+            <Route path="retention" element={<LazyRoute><AdminRetentionPage /></LazyRoute>} />
+            <Route path="audit" element={<LazyRoute><AdminAuditPage /></LazyRoute>} />
+            <Route path="*" element={<Navigate to="/admin/overview" replace />} />
+          </Route>
+        </Route>
+
+        <Route element={<PublicLayout />}>
+          <Route
+            path="/"
+            element={
+              user ? (
+                <Navigate to={getDefaultPathForUser(user)} replace />
+              ) : (
+                <LazyRoute><LandingPage /></LazyRoute>
+              )
+            }
+          />
+        </Route>
+        <Route path="*" element={<Navigate to={getDefaultPathForUser(user)} replace />} />
+      </Routes>
+      {showAgentation ? <Agentation endpoint={agentationEndpoint || undefined} /> : null}
+    </>
+  )
+}
+
+function PublicOnlyGuard({ user }) {
+  if (user) {
+    return <Navigate to={getDefaultPathForUser(user)} replace />
+  }
+  return <Outlet />
+}
+
+function AppGuard({ user }) {
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+  return <Outlet />
+}
+
+function AdminGuard({ user }) {
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+  if (!isAdminUser(user)) {
+    return <Navigate to="/app/dashboard" replace />
+  }
+  return <Outlet />
+}
