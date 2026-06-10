@@ -76,17 +76,18 @@ export default function Task2Diagnostics({
     <div
       className="grid gap-4 h-full"
       style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}
+      role="region" aria-label="Diagnostics"
     >
       <section className="min-w-0">
-        <div className="flex items-baseline justify-between mb-2">
-          <h4 className="text-nano uppercase tracking-ultra text-slate-500">
+        <div className="flex items-baseline justify-between mb-3">
+          <h4 className="text-[10px] uppercase tracking-[0.14em] text-slate-400 font-bold">
             Confidence distribution
           </h4>
-          <span className="text-nano text-slate-600">
+          <span className="text-[10px] text-slate-600 font-medium">
             {points.length} graphs · 10 bins
           </span>
         </div>
-        <div className="flex items-end gap-0.5 h-24 rounded-md border border-line-subtle p-2 bg-deep">
+        <div className="flex items-end gap-0.5 h-24 rounded-xl border border-line-subtle/40 p-2.5 bg-gradient-to-b from-deep/60 to-deep/30">
           {hist.map((bin, index) => {
             const correctHeight = (bin.correct / maxBinCount) * 100
             const wrongHeight = (bin.wrong / maxBinCount) * 100
@@ -107,26 +108,26 @@ export default function Task2Diagnostics({
           <span>50%</span>
           <span>100%</span>
         </div>
-        <div className="flex gap-4 mt-1 text-nano text-slate-400">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" />Correct</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" />Wrong</span>
+        <div className="flex gap-4 mt-1.5 text-[10px] text-slate-400">
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.4)]" />Correct</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.4)]" />Wrong</span>
         </div>
       </section>
 
       {hasPoints && (
         <section className="min-w-0">
-          <div className="flex items-baseline justify-between mb-2 gap-3">
-            <h4 className="text-nano uppercase tracking-ultra text-slate-500">
+          <div className="flex items-baseline justify-between mb-3 gap-3">
+            <h4 className="text-[10px] uppercase tracking-[0.14em] text-slate-400 font-bold">
               Entropy × density
             </h4>
-            <span className="text-nano text-slate-600 font-mono">
+            <span className="text-[10px] text-slate-600 font-mono font-medium">
               [{entropyMin.toFixed(2)}, {entropyMax.toFixed(2)}] · [{densityMin.toFixed(2)}, {densityMax.toFixed(2)}]
             </span>
           </div>
           <p className="mb-2 text-[11px] leading-relaxed text-slate-400">
             {explanation}
           </p>
-          <div className="relative rounded-md border border-line-subtle bg-deep p-2">
+          <div className="relative rounded-xl border border-line-subtle/40 bg-gradient-to-b from-deep/60 to-deep/30 p-2.5">
             <svg viewBox={`-8 -4 ${scatterW + 12} ${scatterH + 16}`} className="w-full h-40" role="img" aria-label="entropy vs density scatter">
               <line x1="0" y1={scatterH} x2={scatterW} y2={scatterH} stroke="var(--c-border)" strokeWidth="0.4" />
               <line x1="0" y1="0" x2="0" y2={scatterH} stroke="var(--c-border)" strokeWidth="0.4" />

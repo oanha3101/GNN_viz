@@ -889,7 +889,7 @@ export default function TaskTopology2({
                   onWheel={handleGraphWheel}
                 />
               </div>
-              <div className="absolute right-5 top-5 z-20 flex items-center gap-1 rounded-full border border-white/10 bg-slate-950/45 p-1 text-[10px] font-black text-slate-200 shadow-[0_12px_40px_rgba(2,8,23,0.32)] backdrop-blur-xl">
+              <div className="absolute right-5 top-5 z-20 flex items-center gap-0.5 rounded-xl border border-white/10 bg-slate-950/55 p-1 text-[10px] font-black text-slate-200 shadow-[0_8px_32px_rgba(2,8,23,0.40)] backdrop-blur-2xl">
                 <button
                   type="button"
                   onClick={() => updateDetailZoom(-0.18)}
@@ -916,7 +916,7 @@ export default function TaskTopology2({
                 </button>
               </div>
               {detailOverlayOpen ? (
-                <div className="absolute bottom-2 right-5 z-20 w-[min(330px,calc(100%-40px))] rounded-[22px] border border-white/16 bg-slate-950/54 px-3.5 py-3 shadow-[0_20px_62px_rgba(2,8,23,0.50)] backdrop-blur-2xl transition-all duration-200">
+                <div className="absolute bottom-3 right-5 z-20 w-[min(340px,calc(100%-40px))] rounded-2xl border border-white/12 bg-gradient-to-b from-slate-950/65 to-slate-950/55 px-4 py-3.5 shadow-[0_16px_48px_rgba(2,8,23,0.55)] backdrop-blur-2xl transition-all duration-200">
                   <div className="mb-2.5 flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="truncate text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
@@ -929,7 +929,7 @@ export default function TaskTopology2({
                     <button
                       type="button"
                       onClick={() => setDetailOverlayOpen(false)}
-                      className="shrink-0 rounded-full border border-white/18 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-200 transition hover:border-cyan-300/60 hover:text-cyan-200"
+                      className="shrink-0 rounded-lg border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-200 transition-all hover:border-cyan-300/50 hover:text-cyan-200 hover:bg-white/[0.06]"
                     >
                       Thu gọn
                     </button>
@@ -948,7 +948,7 @@ export default function TaskTopology2({
                 <button
                   type="button"
                   onClick={() => setDetailOverlayOpen(true)}
-                  className="absolute bottom-2 right-5 z-20 rounded-full border border-cyan-200/20 bg-slate-950/55 px-3.5 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-cyan-100 shadow-[0_14px_45px_rgba(2,8,23,0.44)] backdrop-blur-xl transition hover:border-cyan-200/70 hover:bg-cyan-300 hover:text-slate-950"
+                  className="absolute bottom-3 right-5 z-20 rounded-xl border border-cyan-200/20 bg-slate-950/60 px-4 py-2 text-[9px] font-black uppercase tracking-[0.14em] text-cyan-100 shadow-[0_12px_40px_rgba(2,8,23,0.45)] backdrop-blur-2xl transition-all hover:border-cyan-200/60 hover:bg-gradient-to-r hover:from-cyan-400 hover:to-cyan-300 hover:text-slate-950"
                 >
                   Mở thông số · {(confidence * 100).toFixed(0)}%
                 </button>
@@ -998,28 +998,28 @@ export default function TaskTopology2({
         panelRootRef.current = node
         gridRef.current = node
       }}
-      className="w-full h-full overflow-y-auto bg-panel custom-scrollbar"
+      className="w-full h-full overflow-y-auto bg-gradient-to-b from-panel to-panel/80 custom-scrollbar"
     >
       <div className="pt-16 pb-6 px-6">
-        <div className="mb-4 flex flex-col gap-3 rounded-xl border border-line-subtle bg-nebula/35 px-4 py-3">
+        <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-line-default/50 bg-gradient-to-b from-nebula/50 to-nebula/25 px-5 py-4 backdrop-blur-sm shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-nano uppercase tracking-ultra text-slate-500">Graph collection</div>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-micro text-slate-300">
+              <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500 font-bold">Graph collection</div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-micro text-slate-300">
                 <span className="font-bold">{sortedDescriptors.length} graphs</span>
                 <span className="text-slate-600">·</span>
                 <span>{graphClassNames.length || 1} class profiles</span>
                 <span className="text-slate-600">·</span>
-                <span>{activeFocus.label}</span>
+                <span className="text-cyan-300/80">{activeFocus.label}</span>
               </div>
-              <div className="mt-1 text-[11px] leading-relaxed text-slate-500">
+              <div className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
                 {resolvedSelectedCell
                   ? `${selectedCellMatches.length} graphs match the active confusion cell. The rest stay visible so you can keep structural context.`
                   : activeFocus.description}
               </div>
             </div>
             {showFullCollection ? (
-              <div className="rounded-md border border-cyan-500/20 bg-cyan-500/8 px-3 py-1.5 text-micro font-semibold text-cyan-200">
+              <div className="rounded-lg border border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 to-cyan-500/5 px-3 py-1.5 text-micro font-bold text-cyan-200">
                 Showing the full collection in one view
               </div>
             ) : (
@@ -1028,7 +1028,7 @@ export default function TaskTopology2({
                   type="button"
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
                   disabled={currentPage === 1}
-                  className="rounded-md border border-line-default px-3 py-1.5 text-micro font-bold uppercase tracking-wide text-slate-400 transition-colors hover:border-line-default hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg border border-line-default/60 bg-white/[0.03] px-3 py-1.5 text-micro font-bold uppercase tracking-wide text-slate-400 transition-all hover:border-line-default hover:bg-white/[0.06] hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   Prev
                 </button>
@@ -1039,7 +1039,7 @@ export default function TaskTopology2({
                   type="button"
                   onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                   disabled={currentPage === totalPages}
-                  className="rounded-md border border-line-default px-3 py-1.5 text-micro font-bold uppercase tracking-wide text-slate-400 transition-colors hover:border-line-default hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg border border-line-default/60 bg-white/[0.03] px-3 py-1.5 text-micro font-bold uppercase tracking-wide text-slate-400 transition-all hover:border-line-default hover:bg-white/[0.06] hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   Next
                 </button>
@@ -1060,10 +1060,10 @@ export default function TaskTopology2({
                     key={value}
                     type="button"
                     onClick={() => setGallerySort(value)}
-                    className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors ${
+                    className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition-all duration-200 ${
                       activeGallerySort === value
-                        ? 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200'
-                        : 'border-line-default bg-nebula text-slate-400 hover:border-line-default hover:text-slate-200'
+                        ? 'border-cyan-400/25 bg-gradient-to-b from-cyan-500/14 to-cyan-500/6 text-cyan-200 shadow-[0_1px_4px_rgba(6,182,212,0.08)]'
+                        : 'border-line-default/50 bg-white/[0.02] text-slate-400 hover:border-line-default hover:text-slate-200 hover:bg-white/[0.04]'
                     }`}
                   >
                     {label}
@@ -1076,7 +1076,7 @@ export default function TaskTopology2({
                 <select
                   value={resolvedClassFilter}
                   onChange={(event) => setClassFilter(event.target.value === 'all' ? 'all' : Number(event.target.value))}
-                  className="rounded-md border border-line-default bg-nebula px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                  className="rounded-lg border border-line-default/50 bg-white/[0.04] px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 transition-colors hover:border-line-default"
                 >
                   <option value="all">All</option>
                   {classFilterOptions.map((classId) => (
@@ -1128,21 +1128,21 @@ export default function TaskTopology2({
                 type="button"
                 key={descriptor.originalGraphId}
                 onClick={() => setSelectedNode(descriptor.originalGraphId)}
-                className={`group relative rounded-lg border text-left transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${
+                className={`group relative rounded-2xl border text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 ${
                   selected
-                    ? 'ring-2 ring-cyan-500/35 bg-nebula'
-                    : `bg-nebula ${quickTone}`
-                } ${matched ? 'opacity-100' : 'opacity-45'}`}
+                    ? 'ring-2 ring-cyan-500/30 bg-gradient-to-b from-nebula/80 to-nebula/50 shadow-[0_4px_20px_rgba(6,182,212,0.10)]'
+                    : `bg-gradient-to-b from-nebula/60 to-nebula/30 ${quickTone}`
+                } ${matched ? 'opacity-100' : 'opacity-35'}`}
                 title={`G#${descriptor.originalGraphId} \u2014 ${statusLabel} (conf ${(confidence * 100).toFixed(0)}%)`}
               >
-                <div className="h-28 p-3 relative">
+                <div className="h-28 p-3 relative bg-gradient-to-b from-black/5 to-transparent rounded-t-2xl">
                   <MiniGraphSVG
                     nodes={descriptor.nodes}
                     links={descriptor.links}
                     contributions={contributions[descriptor.sourceIndex]}
                     modelSignature={modelSignature}
                   />
-                  <div className="absolute left-3 top-3 rounded-full border border-line-default bg-nebula/82 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-200">
+                  <div className="absolute left-3 top-3 rounded-lg border border-line-default/50 bg-slate-950/60 backdrop-blur-sm px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-200">
                     {modelSignature.shortLabel}
                   </div>
                   {modelSignature.id === 'SAGE' && modelSignature.unstableGraphIds.includes(descriptor.originalGraphId) && (
@@ -1152,7 +1152,7 @@ export default function TaskTopology2({
                   )}
                 </div>
 
-                <div className="px-3 py-2 border-t border-line-subtle">
+                <div className="px-3.5 py-2.5 border-t border-line-subtle/40">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-xs text-slate-100 font-semibold uppercase truncate tracking-wide">
@@ -1199,19 +1199,19 @@ export default function TaskTopology2({
                     )}
                   </div>
 
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    <span className="rounded-full border border-line-default bg-nebula px-2 py-0.5 text-[10px] text-slate-300">
+                  <div className="mt-2.5 flex flex-wrap gap-1">
+                    <span className="rounded-md border border-line-default/40 bg-black/15 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
                       margin {((descriptor.margin ?? 0) * 100).toFixed(0)}%
                     </span>
-                    <span className="rounded-full border border-line-default bg-nebula px-2 py-0.5 text-[10px] text-slate-300">
+                    <span className="rounded-md border border-line-default/40 bg-black/15 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
                       {descriptor.densityBucket}
                     </span>
-                    <span className="rounded-full border border-line-default bg-nebula px-2 py-0.5 text-[10px] text-slate-300">
+                    <span className="rounded-md border border-line-default/40 bg-black/15 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
                       {descriptor.entropyBucket}
                     </span>
                   </div>
 
-                  <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                  <p className="mt-2 text-[10px] leading-relaxed text-slate-500 line-clamp-1">
                     {descriptor.motifSignature} · {formatFailureTag(descriptor.failureTag)}
                   </p>
                 </div>

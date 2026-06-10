@@ -49,13 +49,18 @@ export default function Task2ConfusionMatrix({
 
   return (
     <div
-      className="grid gap-3 h-full"
+      className="grid gap-4 h-full"
       style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}
     >
       {/* Matrix */}
       <div className="flex flex-col items-start min-w-0">
-        <div className="text-nano uppercase tracking-ultra text-slate-500 mb-2">
-          Confusion Matrix · {scopeLabel} acc {(cm.accuracy * 100).toFixed(1)}%
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <span className="text-[10px] uppercase tracking-[0.14em] text-slate-500 font-bold">
+            Confusion Matrix
+          </span>
+          <span className="rounded-lg border border-emerald-500/20 bg-emerald-500/8 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+            {scopeLabel} acc {(cm.accuracy * 100).toFixed(1)}%
+          </span>
         </div>
         <div
           className="grid gap-1"
@@ -80,8 +85,8 @@ export default function Task2ConfusionMatrix({
                     key={`c-${i}-${j}`}
                     onClick={() => onSelectCell?.(i, j)}
                     style={cellStyle(i, j, val)}
-                    className={`rounded-md border text-center py-3 text-xs font-mono font-bold tabular-nums transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500/60 ${
-                      isActive ? 'border-cyan-400 ring-2 ring-cyan-400/60' : 'border-line-subtle hover:border-line-default'
+                    className={`rounded-lg border text-center py-3 text-xs font-mono font-bold tabular-nums transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 ${
+                      isActive ? 'border-cyan-400/80 ring-2 ring-cyan-400/40 shadow-[0_0_10px_rgba(34,211,238,0.12)]' : 'border-line-subtle/40 hover:border-line-default/60'
                     } ${i === j ? 'text-emerald-200' : val > 0 ? 'text-red-200' : 'text-slate-500'}`}
                     aria-label={`Predicted ${names[i]} actual ${names[j]}: ${val}`}
                   >
@@ -96,10 +101,10 @@ export default function Task2ConfusionMatrix({
 
       {/* Per-class metrics */}
       <div className="min-w-0">
-        <div className="text-nano uppercase tracking-ultra text-slate-500 mb-2">Per-class</div>
+        <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500 font-bold mb-3">Per-class</div>
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-nano text-slate-500 uppercase tracking-wide text-left">
+            <tr className="text-[10px] text-slate-500 uppercase tracking-wide text-left">
               <th className="font-normal pb-1">Class</th>
               <th className="font-normal pb-1 text-right">Support</th>
               <th className="font-normal pb-1 text-right">Precision</th>
@@ -109,7 +114,7 @@ export default function Task2ConfusionMatrix({
           </thead>
           <tbody className="font-mono tabular-nums">
             {names.map((n, i) => (
-              <tr key={i} className="border-t border-line-subtle">
+              <tr key={i} className="border-t border-line-subtle/40 hover:bg-white/[0.02] transition-colors">
                 <td className="py-1 text-slate-200">{n}</td>
                 <td className="py-1 text-right text-slate-400">{cm.support[i]}</td>
                 <td className="py-1 text-right text-slate-300">{(cm.precision[i] * 100).toFixed(1)}%</td>
