@@ -45,10 +45,10 @@ export default function Task2HardCases({
             <button
               type="button"
               onClick={() => onSelect?.(c.id)}
-              className={`w-full flex flex-col gap-1 px-2 py-1.5 rounded-md border text-left transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/60 ${
+              className={`w-full flex flex-col gap-1.5 px-2.5 py-2 rounded-xl border text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 ${
                 isSelected
-                  ? 'border-cyan-500/60 bg-cyan-500/10'
-                  : 'border-line-subtle hover:border-line-default hover:bg-nebula'
+                  ? 'border-cyan-500/40 bg-gradient-to-r from-cyan-500/10 to-cyan-500/5 shadow-[0_0_12px_rgba(6,182,212,0.08)]'
+                  : 'border-line-subtle/40 hover:border-line-default/60 hover:bg-white/[0.03]'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -68,9 +68,9 @@ export default function Task2HardCases({
                   {(margin * 100).toFixed(0)}%
                 </span>
               </div>
-              <div className="h-1 w-full bg-nebula rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-slate-950/40 rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${correct ? 'bg-emerald-500/70' : 'bg-red-500/70'}`}
+                  className={`h-full rounded-full transition-all duration-300 ${correct ? 'bg-gradient-to-r from-emerald-500/80 to-emerald-400/60' : 'bg-gradient-to-r from-red-500/80 to-red-400/60'}`}
                   style={{ width: `${Math.max(4, margin * 100)}%` }}
                 />
               </div>

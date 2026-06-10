@@ -361,39 +361,39 @@ export default function Task2MetricsPanel({
         ? `Chẩn đoán phân loại đồ thị cho ${datasetName || 'collection đang hoạt động'} qua độ tin cậy, lỗi, cấu trúc và hành vi readout.`
         : `Graph classification diagnostics for ${datasetName || 'the active collection'} across reliability, failures, structure, and readout behavior.`}
       padding="none"
-      className="border-line-subtle/35 bg-deep/45 shadow-none"
+      className="border-line-default/50 bg-gradient-to-b from-deep/60 to-deep/30 shadow-[0_4px_24px_rgba(0,0,0,0.12)]"
       actions={(
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <div className="rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 text-[11px] font-semibold text-cyan-300">
-            Epoch {epochInt}
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <div className="rounded-lg border border-cyan-500/25 bg-gradient-to-r from-cyan-500/12 to-cyan-500/6 px-2.5 py-1 text-[10px] font-bold tracking-wide text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.08)]">
+            E{epochInt}
           </div>
-          <div className="rounded-full border border-line-default bg-nebula px-2.5 py-1 text-[11px] font-semibold text-slate-300">
+          <div className="rounded-lg border border-line-default/60 bg-nebula/60 px-2.5 py-1 text-[10px] font-bold tracking-wide text-slate-300">
             {collectionSummary.totalGraphs} {isViReport ? 'đồ thị' : 'graphs'}
           </div>
           {currentAccuracy != null && (
-            <div className="rounded-full border border-emerald-500/20 bg-emerald-500/8 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
+            <div className="rounded-lg border border-emerald-500/25 bg-gradient-to-r from-emerald-500/12 to-emerald-500/6 px-2.5 py-1 text-[10px] font-bold tracking-wide text-emerald-300">
               {currentAccuracy.label} {currentAccuracy.value.toFixed(1)}%
               {currentAccuracy.secondary != null && (
-                <span className="ml-1 text-emerald-200/60">All {currentAccuracy.secondary.toFixed(1)}%</span>
+                <span className="ml-1 text-emerald-200/50">All {currentAccuracy.secondary.toFixed(1)}%</span>
               )}
             </div>
           )}
         </div>
       )}
       footer={(
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
-          <span>{translatedReliability?.readingGuide}</span>
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400">
+          <span className="line-clamp-1 leading-relaxed">{translatedReliability?.readingGuide}</span>
+          <div className="flex flex-wrap items-center gap-1.5">
             {resolvedSelectedCell && !forcedSelectedCell && (
               <button
                 type="button"
                 onClick={() => setSelectedCell(null)}
-                className="rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 font-semibold text-cyan-200 transition-colors hover:bg-cyan-500/12"
+                className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 font-bold tracking-wide text-cyan-200 transition-all hover:bg-cyan-500/16 hover:border-cyan-400/40"
               >
-                {isViReport ? 'Ô' : 'Cell'} {resolvedSelectedCell.pred} {'->'} {resolvedSelectedCell.gt}
+                {isViReport ? 'Ô' : 'Cell'} {resolvedSelectedCell.pred} {'→'} {resolvedSelectedCell.gt}
               </button>
             )}
-            <span className="rounded-full border border-line-default bg-nebula px-2.5 py-1 font-semibold text-slate-300">
+            <span className="rounded-lg border border-line-default/60 bg-nebula/50 px-2.5 py-1 font-bold tracking-wide text-slate-300">
               {isViReport ? 'Lát cắt' : 'Focus'}: {translatedActiveFocus.label} ({focusedDescriptors.length})
             </span>
           </div>
@@ -402,16 +402,16 @@ export default function Task2MetricsPanel({
       >
         <div className="flex h-full flex-col gap-3 p-3">
         {!hideTabControls && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center rounded-xl bg-slate-950/30 border border-line-subtle/25 p-1 w-fit">
             {TABS.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setTab(item.id)}
-                className={`rounded-full border px-3 py-1.5 text-nano font-bold uppercase tracking-ultra transition-colors ${
+                className={`relative rounded-lg px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] transition-all duration-200 ${
                   tab === item.id
-                    ? 'border-cyan-400/35 bg-cyan-500/12 text-cyan-300 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]'
-                    : 'border-line-default bg-nebula text-slate-500 hover:border-line-default hover:text-slate-300'
+                    ? 'bg-gradient-to-b from-cyan-500/20 to-cyan-500/10 text-cyan-300 shadow-[0_1px_6px_rgba(6,182,212,0.15),inset_0_1px_0_rgba(6,182,212,0.12)]'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]'
                 }`}
               >
                 {TASK2_TAB_LABELS[reportLang]?.[item.id] || item.label}
@@ -560,7 +560,7 @@ export default function Task2MetricsPanel({
 function FocusChipRow({ buckets, activeId, onChange }) {
   if (!buckets?.length) return null
   return (
-    <div className="flex flex-wrap gap-1.5 p-1 rounded-2xl bg-slate-950/45 border border-line-subtle/30 w-fit max-w-full">
+    <div className="flex flex-wrap gap-1 p-1 rounded-xl bg-slate-950/35 border border-line-subtle/20 w-fit max-w-full">
       {buckets.map((bucket) => {
         const active = bucket.id === activeId
         return (
@@ -569,15 +569,15 @@ function FocusChipRow({ buckets, activeId, onChange }) {
             type="button"
             onClick={() => onChange(bucket.id)}
             title={bucket.description}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
               active
-                ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/25 shadow-[0_2px_8px_rgba(6,182,212,0.15)]'
-                : 'text-slate-400 border border-transparent hover:text-slate-200 hover:bg-slate-900/40'
+                ? 'bg-gradient-to-b from-cyan-500/18 to-cyan-500/8 text-cyan-300 border border-cyan-500/20 shadow-[0_1px_4px_rgba(6,182,212,0.10)]'
+                : 'text-slate-500 border border-transparent hover:text-slate-300 hover:bg-white/[0.04]'
             }`}
           >
             <span>{bucket.label}</span>
             <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold ${
-              active ? 'bg-cyan-500/20 text-cyan-200' : 'bg-slate-900/60 text-slate-500'
+              active ? 'bg-cyan-500/18 text-cyan-200' : 'bg-slate-900/50 text-slate-500'
             }`}>
               {bucket.graphIds?.length ?? 0}
             </span>
@@ -773,7 +773,7 @@ function PerClassMetricsVisual({ perClass = [], classNames = [], reportLang = 'v
   return (
     <div className="rounded-2xl border border-line-default bg-nebula p-4 space-y-3.5">
       <div>
-        <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">
+        <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
           {isVi ? 'CHỈ SỐ THEO LỚP' : 'Per-class metrics'}
         </span>
         <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -827,7 +827,7 @@ function CollectionBalanceVisual({ classCounts = [], reportLang = 'vi' }) {
   return (
     <div className="rounded-2xl border border-line-default bg-nebula p-4 space-y-3">
       <div>
-        <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">
+        <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
           {isVi ? 'CÂN BẰNG COLLECTION' : 'Collection balance'}
         </span>
         <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -1115,10 +1115,10 @@ function MechanismTab({ signature, descriptors = [], snapshots = [], reportLang 
         ))}
       </div>
 
-      <div className="rounded-2xl border border-line-default bg-nebula p-3">
+      <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
               {isVi ? 'Bằng chứng theo epoch' : 'Epoch evidence'}
             </div>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
@@ -1147,9 +1147,9 @@ function MechanismTab({ signature, descriptors = [], snapshots = [], reportLang 
         </div>
       </div>
 
-      <div className="rounded-2xl border border-line-default bg-nebula p-3">
+      <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
         <div className="mb-3">
-          <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
             {isVi ? 'Graph chứng minh cơ chế học' : 'Mechanism evidence graphs'}
           </div>
           <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
@@ -1310,7 +1310,7 @@ function OverviewTab({
           {/* Shortcut Bias Horizontal Scale Gauges */}
           <div className="rounded-2xl border border-line-default bg-nebula p-4 space-y-3">
             <div>
-              <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">
+              <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
                 {reportLang === 'vi' ? 'THIÊN LỆCH SHORTCUT' : 'Shortcut bias'}
               </span>
               <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -1344,7 +1344,7 @@ function OverviewTab({
           {/* Training Trend Chart */}
           <div className="rounded-2xl border border-line-default bg-nebula p-4 space-y-2">
             <div>
-              <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">
+              <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
                 {reportLang === 'vi' ? 'XU HƯỚNG HUẤN LUYỆN' : 'Training trend'}
               </span>
               <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -1489,48 +1489,58 @@ function FocusRoutingCard({ story, weakClass, onJumpToWeakClass, onJumpToStructu
 
 function SignalCard({ signal, onAction, reportLang = 'vi' }) {
   const isVi = reportLang === 'vi'
-  const tone = signal.status === 'danger'
-    ? 'border-red-500/20 bg-red-500/7'
+  const toneMap = {
+    danger: {
+      card: 'border-red-500/25 bg-gradient-to-br from-red-500/8 to-red-500/3',
+      pill: 'border-red-400/30 bg-red-500/16 text-red-200',
+      dot: 'bg-red-400',
+    },
+    warn: {
+      card: 'border-amber-500/25 bg-gradient-to-br from-amber-500/8 to-amber-500/3',
+      pill: 'border-amber-400/30 bg-amber-500/16 text-amber-200',
+      dot: 'bg-amber-400',
+    },
+    ok: {
+      card: 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/8 to-emerald-500/3',
+      pill: 'border-emerald-400/25 bg-emerald-500/14 text-emerald-200',
+      dot: 'bg-emerald-400',
+    },
+  }
+  const t = toneMap[signal.status] || toneMap.ok
+  const label = signal.status === 'danger'
+    ? (isVi ? 'Rủi ro cao' : 'High risk')
     : signal.status === 'warn'
-      ? 'border-amber-500/20 bg-amber-500/7'
-      : 'border-emerald-500/18 bg-emerald-500/7'
-  const pill = signal.status === 'danger'
-    ? 'border-red-400/25 bg-red-500/14 text-red-200'
-    : signal.status === 'warn'
-      ? 'border-amber-400/25 bg-amber-500/14 text-amber-200'
-      : 'border-emerald-400/20 bg-emerald-500/12 text-emerald-200'
-      
-  const label = signal.status === 'danger' 
-    ? (isVi ? 'Rủi ro cao' : 'High risk') 
-    : signal.status === 'warn' 
-      ? (isVi ? 'Cần ngữ cảnh' : 'Needs context') 
+      ? (isVi ? 'Cần ngữ cảnh' : 'Needs context')
       : (isVi ? 'Ổn định' : 'Stable')
 
   return (
-    <div className={`flex flex-col justify-between rounded-xl border p-3.5 ${tone}`}>
+    <div className={`flex flex-col justify-between rounded-2xl border p-4 ${t.card}`}>
       <div>
-        <div className="flex items-center justify-between gap-2 border-b border-line-subtle/10 pb-2 mb-2">
-          <div className="text-[11px] font-bold text-slate-100 uppercase tracking-wide">{signal.title}</div>
-          <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${pill}`}>{label}</span>
-        </div>
-        <p className="text-[11px] leading-relaxed text-slate-300 font-semibold">{signal.summary}</p>
-        
-        <div className="mt-3.5 space-y-2.5 text-[11px] leading-relaxed">
-          <div>
-            <div className="text-[9px] uppercase tracking-ultra text-slate-500">{isVi ? 'BẰNG CHỨNG' : 'Evidence'}</div>
-            <p className="mt-0.5 text-slate-400 leading-normal">{signal.evidence}</p>
+        <div className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-white/[0.04]">
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${t.dot} shadow-[0_0_6px_currentColor]`} />
+            <div className="text-[11px] font-bold text-slate-100 uppercase tracking-wide">{signal.title}</div>
           </div>
-          <div>
-            <div className="text-[9px] uppercase tracking-ultra text-slate-500">{isVi ? 'KHUYẾN NGHỊ' : 'Recommended move'}</div>
-            <p className="mt-0.5 text-slate-400 leading-normal">{signal.recommendation}</p>
+          <span className={`rounded-lg border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${t.pill}`}>{label}</span>
+        </div>
+        <p className="text-[11px] leading-relaxed text-slate-300 font-medium">{signal.summary}</p>
+
+        <div className="mt-3.5 space-y-3 text-[11px] leading-relaxed">
+          <div className="rounded-lg bg-black/15 px-3 py-2">
+            <div className="text-[9px] uppercase tracking-ultra text-slate-500 mb-1">{isVi ? 'BẰNG CHỨNG' : 'Evidence'}</div>
+            <p className="text-slate-400 leading-normal">{signal.evidence}</p>
+          </div>
+          <div className="rounded-lg bg-black/15 px-3 py-2">
+            <div className="text-[9px] uppercase tracking-ultra text-slate-500 mb-1">{isVi ? 'KHUYẾN NGHỊ' : 'Recommended move'}</div>
+            <p className="text-slate-400 leading-normal">{signal.recommendation}</p>
           </div>
         </div>
       </div>
-      
+
       <button
         type="button"
         onClick={() => onAction?.(signal.id)}
-        className="mt-4 w-full rounded-xl border border-line-subtle bg-slate-950/40 py-1.5 text-nano font-bold uppercase tracking-ultra text-slate-300 transition-all hover:bg-slate-900/60 hover:text-slate-200"
+        className="mt-4 w-full rounded-xl border border-white/10 bg-white/[0.04] py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-300 transition-all hover:bg-white/[0.08] hover:text-slate-100 hover:border-white/15"
       >
         Open lens
       </button>
@@ -1541,9 +1551,12 @@ function SignalCard({ signal, onAction, reportLang = 'vi' }) {
 function HeroNarrativeCard({ narrative, onNextLensAction, reportLang = 'vi' }) {
   if (!narrative) return null
   return (
-    <div className="rounded-2xl border border-cyan-500/15 bg-cyan-500/5 p-4 space-y-3">
-      <div className="text-nano font-bold uppercase tracking-ultra text-cyan-300">
-        Research narrative
+    <div className="rounded-2xl border border-cyan-500/15 bg-gradient-to-br from-cyan-500/[0.06] to-transparent p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.6)]" />
+        <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-300">
+          Research narrative
+        </div>
       </div>
       <div className="grid gap-2.5 sm:grid-cols-3">
         <NarrativeCell label="Main insight" value={narrative.mainInsight} />
@@ -1561,16 +1574,16 @@ function HeroNarrativeCard({ narrative, onNextLensAction, reportLang = 'vi' }) {
 
 function NarrativeCell({ label, value, actionLabel = null, onAction = null }) {
   return (
-    <div className="rounded-xl border border-line-subtle bg-nebula p-3 flex flex-col justify-between">
+    <div className="rounded-xl border border-line-subtle/50 bg-gradient-to-b from-nebula/60 to-nebula/30 p-3.5 flex flex-col justify-between backdrop-blur-sm">
       <div>
-        <div className="text-[9px] uppercase tracking-ultra text-slate-500">{label}</div>
+        <div className="text-[9px] uppercase tracking-[0.14em] text-slate-500 font-bold">{label}</div>
         <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{value}</p>
       </div>
       {actionLabel && onAction && (
         <button
           type="button"
           onClick={onAction}
-          className="mt-3 w-full rounded-xl border border-cyan-400/25 bg-cyan-500/12 py-1.5 text-[10px] font-semibold uppercase tracking-ultra text-cyan-100 transition-colors hover:bg-cyan-500/18"
+          className="mt-3 w-full rounded-lg border border-cyan-400/20 bg-gradient-to-r from-cyan-500/14 to-cyan-500/8 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-200 transition-all hover:from-cyan-500/20 hover:to-cyan-500/12 hover:border-cyan-400/35"
         >
           {actionLabel}
         </button>
@@ -1623,15 +1636,16 @@ function FailuresTab({
   return (
     <div className={`flex min-h-0 flex-1 flex-col gap-3 ${reportMode ? 'overflow-hidden' : 'overflow-auto'}`}>
       {selectedCell && (
-        <div className="rounded-2xl border border-cyan-500/15 bg-cyan-500/6 px-3 py-2 text-[11px] text-cyan-100">
-          Confusion cell slice active: predicted class {selectedCell.pred}, ground truth class {selectedCell.gt}. Hard cases below are scoped to this cell; counts describe this slice, not overall accuracy.
+        <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/8 to-cyan-500/4 px-4 py-2.5 text-[11px] text-cyan-100 flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0 shadow-[0_0_6px_rgba(34,211,238,0.5)]" />
+          Confusion cell slice active: predicted class {selectedCell.pred}, ground truth class {selectedCell.gt}. Hard cases below are scoped to this cell.
         </div>
       )}
 
-      <div className="rounded-2xl border border-line-default bg-nebula p-3 task2-report-card">
-        <div className="mb-2">
-          <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Batch heatmap</span>
-          <p className="mt-1 text-[11px] text-slate-400">
+      <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4 task2-report-card">
+        <div className="mb-3">
+          <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Batch heatmap</span>
+          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
             Each row is a graph, each column is an epoch checkpoint. {reportMode && graphs.length > visibleGraphs.length ? `Showing the top ${visibleGraphs.length} priority rows; full collection available in interactive view.` : 'Use it to spot stubborn failures and late recoveries.'}
           </p>
         </div>
@@ -1647,9 +1661,9 @@ function FailuresTab({
       </div>
 
       <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-        <div className="min-w-0 rounded-2xl border border-line-default bg-nebula p-3">
+        <div className="min-w-0 rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
           {selectedCell && (
-            <div className="mb-2 rounded-lg border border-cyan-500/15 bg-cyan-500/8 px-2 py-1 text-[10px] font-semibold uppercase tracking-ultra text-cyan-200">
+            <div className="mb-2.5 rounded-lg border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-200">
               Confusion matrix slice counts
             </div>
           )}
@@ -1662,10 +1676,10 @@ function FailuresTab({
             scopeLabel={selectedCell ? 'Cell slice' : 'Focus slice'}
           />
         </div>
-        <div className="min-w-0 rounded-2xl border border-line-default bg-nebula p-3">
-          <div className="mb-2">
-            <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Hardest cases</span>
-            <p className="mt-1 text-[11px] text-slate-400">
+        <div className="min-w-0 rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
+          <div className="mb-3">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Hardest cases</span>
+            <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
               Misclassified graphs surface first, then the correct graphs with the thinnest margins.
             </p>
           </div>
@@ -1694,11 +1708,11 @@ function StructureTab({ snap, graphs, selectedId, onSelect, focus, selectedCell 
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
-      <div className="rounded-2xl border border-line-default bg-nebula p-3">
-        <div className="mb-2">
-          <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Structure explanation</span>
-          <p className="mt-1 text-[11px] text-slate-400">
-            The current slice is <span className="text-slate-200">{focus.label}</span>. Read entropy, density, and correctness together before concluding the model understands a motif.
+      <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
+        <div className="mb-3">
+          <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Structure explanation</span>
+          <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed">
+            The current slice is <span className="text-slate-200 font-semibold">{focus.label}</span>. Read entropy, density, and correctness together before concluding the model understands a motif.
           </p>
         </div>
         <Task2Diagnostics
@@ -1710,11 +1724,11 @@ function StructureTab({ snap, graphs, selectedId, onSelect, focus, selectedCell 
         />
       </div>
 
-      <div className="rounded-2xl border border-line-default bg-nebula p-3">
+      <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
-            <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Structural outliers</span>
-            <p className="mt-1 text-[11px] text-slate-400">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Structural outliers</span>
+            <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed">
               These graphs depart from the collection norm on density or clustering. They are the best place to test whether the model is reacting to motif shape or just graph size.
             </p>
           </div>
@@ -1731,10 +1745,10 @@ function StructureTab({ snap, graphs, selectedId, onSelect, focus, selectedCell 
                 key={descriptor.originalGraphId}
                 type="button"
                 onClick={() => onSelect?.(descriptor.originalGraphId)}
-                className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                className={`rounded-xl border px-3.5 py-2.5 text-left transition-all duration-200 ${
                   selectedId === descriptor.originalGraphId
-                    ? 'border-cyan-500/50 bg-cyan-500/10'
-                    : 'border-line-subtle bg-nebula hover:border-line-default hover:bg-nebula'
+                    ? 'border-cyan-500/40 bg-gradient-to-r from-cyan-500/10 to-cyan-500/5 shadow-[0_0_12px_rgba(6,182,212,0.08)]'
+                    : 'border-line-subtle/50 bg-nebula/40 hover:border-line-default/60 hover:bg-nebula/60'
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1796,26 +1810,29 @@ function ReadoutTab({ graph, modelSignature = null, classNames, onSelect, report
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-        <div className="rounded-2xl border border-cyan-500/18 bg-cyan-500/8 p-3">
-          <div className="text-nano font-bold uppercase tracking-ultra text-cyan-300">
-            {reportLang === 'vi' ? 'Đọc theo model' : 'Model reading'}
+        <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-cyan-500/4 p-4">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.5)]" />
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-300">
+              {reportLang === 'vi' ? 'Đọc theo model' : 'Model reading'}
+            </div>
           </div>
-          <div className="mt-1 text-sm font-semibold text-slate-100">{modelSignature?.primaryLabel || 'Graph readout'}</div>
+          <div className="mt-2 text-sm font-semibold text-slate-100">{modelSignature?.primaryLabel || 'Graph readout'}</div>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-300">
             {buildTask2ModelFailureReading(graph, modelSignature, reportLang)}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-line-default bg-nebula p-3">
+        <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Featured graph</div>
-              <div className="mt-1 text-sm font-semibold text-slate-100">G#{graph.originalGraphId}</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Featured graph</div>
+              <div className="mt-1.5 text-sm font-bold text-slate-100">G#{graph.originalGraphId}</div>
             </div>
             <button
               type="button"
               onClick={() => onSelect?.(graph.originalGraphId)}
-              className="rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 text-[11px] font-semibold text-cyan-300 transition-colors hover:bg-cyan-500/14"
+              className="rounded-lg border border-cyan-500/20 bg-gradient-to-r from-cyan-500/12 to-cyan-500/6 px-3 py-1.5 text-[10px] font-bold text-cyan-300 transition-all hover:from-cyan-500/18 hover:to-cyan-500/10 hover:border-cyan-400/35"
             >
               Focus
             </button>
@@ -1842,8 +1859,8 @@ function ReadoutTab({ graph, modelSignature = null, classNames, onSelect, report
       </div>
 
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-        <div className="rounded-2xl border border-line-default bg-nebula p-3">
-          <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Readout interpretation</div>
+        <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Readout interpretation</div>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{buildReadoutNarrative(graph, reportLang)}</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             <TagChip label={formatFailureTag(graph.failureTag)} tone={graph.correct === 1 ? 'good' : 'bad'} />
@@ -1853,8 +1870,8 @@ function ReadoutTab({ graph, modelSignature = null, classNames, onSelect, report
           </div>
         </div>
 
-        <div className="rounded-2xl border border-line-default bg-nebula p-3">
-          <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Structural profile</div>
+        <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Structural profile</div>
           <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
             <MiniMetric label="Density" value={graph.structural?.density} />
             <MiniMetric label="Cluster Coef" value={graph.structural?.avg_clustering} />
@@ -1865,8 +1882,8 @@ function ReadoutTab({ graph, modelSignature = null, classNames, onSelect, report
           </p>
         </div>
 
-        <div className="rounded-2xl border border-line-default bg-nebula p-3">
-          <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Readout concentration</div>
+        <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Readout concentration</div>
           <div className="mt-2 text-lg font-semibold text-slate-100">{(graph.readoutConcentration * 100).toFixed(0)}%</div>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
             Top-k contribution is <span className="font-semibold text-slate-200">{graph.readoutBucket}</span>, while global entropy is <span className="font-semibold text-slate-200">{graph.entropyBucket}</span>. Pattern: <span className="font-semibold text-slate-200">{readoutPattern}</span>.
@@ -2051,10 +2068,10 @@ function TagChip({ label, tone = 'info' }) {
     good: 'border-emerald-500/20 bg-emerald-500/8 text-emerald-200',
     warn: 'border-amber-500/20 bg-amber-500/8 text-amber-200',
     bad: 'border-red-500/20 bg-red-500/8 text-red-200',
-    info: 'border-line-default bg-nebula text-slate-200',
+    info: 'border-line-default/50 bg-white/[0.04] text-slate-300',
   }
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize ${palette[tone] || palette.info}`}>
+    <span className={`rounded-lg border px-2 py-0.5 text-[9px] font-bold capitalize ${palette[tone] || palette.info}`}>
       {label}
     </span>
   )
@@ -2062,26 +2079,26 @@ function TagChip({ label, tone = 'info' }) {
 
 function StatCell({ label, value, digits = 0, suffix = '', tone = 'info' }) {
   const palette = {
-    good: 'border-emerald-500/20 bg-emerald-500/8 text-emerald-200',
-    warn: 'border-amber-500/20 bg-amber-500/8 text-amber-200',
-    bad: 'border-red-500/20 bg-red-500/8 text-red-200',
-    info: 'border-line-default bg-nebula text-slate-200',
+    good: 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-emerald-500/4 text-emerald-200',
+    warn: 'border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-amber-500/4 text-amber-200',
+    bad: 'border-red-500/20 bg-gradient-to-br from-red-500/10 to-red-500/4 text-red-200',
+    info: 'border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 text-slate-200',
   }
 
   const display = Number.isFinite(value) ? `${Number(value).toFixed(digits)}${suffix}` : '—'
   return (
-    <div className={`rounded-2xl border p-3 ${palette[tone] || palette.info}`}>
-      <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">{label}</div>
-      <div className="mt-2 text-lg font-semibold tabular-nums">{display}</div>
+    <div className={`rounded-2xl border p-4 ${palette[tone] || palette.info}`}>
+      <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{label}</div>
+      <div className="mt-2 text-lg font-bold tabular-nums">{display}</div>
     </div>
   )
 }
 
 function MiniMetric({ label, value, digits = 2 }) {
   return (
-    <div className="rounded-xl border border-line-subtle bg-nebula p-2">
-      <div className="text-[10px] uppercase tracking-ultra text-slate-500">{label}</div>
-      <div className="mt-1 text-[12px] font-mono font-semibold text-slate-200 tabular-nums">
+    <div className="rounded-xl border border-line-subtle/40 bg-gradient-to-b from-nebula/50 to-nebula/25 p-2.5">
+      <div className="text-[9px] uppercase tracking-[0.14em] text-slate-500 font-bold">{label}</div>
+      <div className="mt-1.5 text-[12px] font-mono font-bold text-slate-200 tabular-nums">
         {Number.isFinite(value) ? value.toFixed(digits) : '—'}
       </div>
     </div>
