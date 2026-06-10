@@ -45,6 +45,27 @@ export function translateTask2ReportText(text, lang) {
     'Cross-check topology slices with misclassified graphs to confirm the model is reading motifs, not just size cues.': 'Hãy đối chiếu topology slices với các đồ thị bị phân loại sai để xác nhận mô hình đang đọc motif, không chỉ bám theo tín hiệu kích thước.',
     'Treat this collection more like a motif probe than a benchmark. Use confusion, margins, and structural slices together.': 'Hãy xem collection này như một phép dò motif hơn là benchmark thuần. Nên đọc confusion, margin và structural slices cùng nhau.',
     'Use accuracy for trend, but confirm with Macro F1, hard cases, and readout concentration before concluding the model is robust.': 'Hãy dùng accuracy để xem xu hướng, nhưng cần xác nhận thêm bằng Macro F1, hard cases và mức độ tập trung readout trước khi kết luận mô hình thật sự robust.',
+    'Hard cases': 'Ca khó',
+    'Persistent errors': 'Lỗi dai dẳng',
+    'Late recovery': 'Phục hồi muộn',
+    'Flip-heavy': 'Flip nhiều',
+    'Best checkpoint': 'Mốc tốt nhất',
+    Persistent: 'Dai dẳng',
+    'Late recovery': 'Phục hồi muộn',
+    'How to read this section': 'Cách đọc phần này',
+    'Accuracy trong lát cắt lỗi': 'Accuracy trong lát cắt lỗi',
+    'Lát cắt hiện tại chỉ gồm các ca phân loại sai': 'Lát cắt hiện tại chỉ gồm các ca phân loại sai',
+    'Sort by': 'Sắp xếp theo',
+    'Graph ID': 'Mã đồ thị',
+    'Error count': 'Số lỗi',
+    'Recovery epoch': 'Epoch phục hồi',
+    'Sai dai dẳng': 'Sai dai dẳng',
+    'Flip nhiều': 'Flip nhiều',
+    'Lỗi lớp yếu': 'Lỗi lớp yếu',
+    'Readout loãng': 'Readout loãng',
+    'Ca vùng biên': 'Ca vùng biên',
+    'Each row is a graph, each column is an epoch checkpoint.': 'Mỗi hàng là một đồ thị, mỗi cột là một mốc epoch.',
+    'Green = correct, red = wrong. Hover a row for details.': 'Xanh = đúng, đỏ = sai. Di chuột vào hàng để xem chi tiết.',
     'This dataset has relatively few graphs, so single mistakes can move metrics more than expected.': 'Dataset này có tương đối ít đồ thị, nên chỉ một vài lỗi đơn lẻ cũng có thể làm metric dao động mạnh hơn dự kiến.',
     'At least one class has fewer than 5 graphs. Read confusion and Macro F1 before trusting accuracy.': 'Có ít nhất một lớp có dưới 5 đồ thị. Hãy đọc confusion và Macro F1 trước khi tin vào accuracy.',
     'Class balance is skewed. Accuracy may look healthy even when minority graph types are weak.': 'Phân bố lớp đang lệch. Accuracy có thể trông ổn dù các kiểu đồ thị thiểu số vẫn còn yếu.',
@@ -76,6 +97,70 @@ export function translateTask2ReportText(text, lang) {
     mixed: 'pha trộn',
     low: 'thấp',
     high: 'cao',
+    Stable: 'Ổn định',
+    Risk: 'Rủi ro',
+    'Learning Timeline': 'Dòng thời gian học',
+    Entropy: 'Độ bất định',
+    'Model Behavior': 'Hành vi mô hình',
+    'Motion View': 'Chế độ chuyển động',
+    'Node size legend': 'Chú giải kích thước nút',
+    'Top contributing node': 'Nút đóng góp chính',
+    'Rising contribution': 'Đóng góp đang tăng',
+    'readout contribution level': 'mức đóng góp readout',
+    'Chưa có dữ liệu readout': 'Chưa có dữ liệu readout',
+    'No readout data yet': 'Chưa có dữ liệu readout',
+    'Schema không khớp; đang dùng kiểm tra pred/GT.': 'Schema không khớp; đang dùng kiểm tra pred/GT.',
+    'Graph dao động': 'Đồ thị dao động',
+    balanced: 'cân bằng',
+    'TÓM TẮT CHẨN ĐOÁN': 'TÓM TẮT CHẨN ĐOÁN',
+    'EXECUTIVE SUMMARY': 'TÓM TẮT CHẨN ĐOÁN',
+    'Lớp yếu nhất': 'Lớp yếu nhất',
+    'Weakest class': 'Lớp yếu nhất',
+    Calibration: 'Hiệu chuẩn',
+    'Thiên lệch shortcut': 'Thiên lệch shortcut',
+    'Shortcut bias': 'Thiên lệch shortcut',
+    'Rủi ro chính': 'Rủi ro chính',
+    'Main Risks': 'Rủi ro chính',
+    'Hiệu năng theo lớp': 'Hiệu năng theo lớp',
+    'Class-wise Performance': 'Hiệu năng theo lớp',
+    'Hiệu chuẩn xác suất': 'Hiệu chuẩn xác suất',
+    'Confidence Calibration': 'Hiệu chuẩn xác suất',
+    'Thiên lệch cấu trúc': 'Thiên lệch cấu trúc',
+    'Structural Shortcut': 'Thiên lệch cấu trúc',
+    'Xu hướng huấn luyện': 'Xu hướng huấn luyện',
+    'Training Trend': 'Xu hướng huấn luyện',
+    'Hành động tiếp theo': 'Hành động tiếp theo',
+    'Recommended Next Actions': 'Hành động tiếp theo',
+    'Đáng tin': 'Đáng tin',
+    Reliable: 'Đáng tin',
+    'Cần kiểm tra': 'Cần kiểm tra',
+    'Cần đọc cẩn thận': 'Cần đọc cẩn thận',
+    Fragile: 'Cần đọc cẩn thận',
+    'Có rủi ro': 'Có rủi ro',
+    'At risk': 'Có rủi ro',
+    'Không đáng kể': 'Không đáng kể',
+    'Chi tiết lát cắt & Focus': 'Chi tiết lát cắt & Focus',
+    'Slice & Focus Details': 'Chi tiết lát cắt & Focus',
+    'Cảnh báo độ tin cậy': 'Cảnh báo độ tin cậy',
+    'Reliability Warnings': 'Cảnh báo độ tin cậy',
+    'Mở lát cắt': 'Mở lát cắt',
+    'Open slice': 'Mở lát cắt',
+    'Độ chính xác': 'Độ chính xác',
+    Accuracy: 'Độ chính xác',
+    'Độ chính xác cân bằng': 'Độ chính xác cân bằng',
+    'Không có dữ liệu trong lát cắt này': 'Không có dữ liệu trong lát cắt này',
+    'No data in this slice': 'Không có dữ liệu trong lát cắt này',
+    'Heatmap theo lô': 'Heatmap theo lô',
+    'Các ca khó nhất': 'Các ca khó nhất',
+    'Hardest cases': 'Các ca khó nhất',
+    'Số liệu theo ô confusion': 'Số liệu theo ô confusion',
+    'Confusion matrix slice counts': 'Số liệu theo ô confusion',
+    'Đồ thị': 'Đồ thị',
+    Graphs: 'Đồ thị',
+    'Số nút TB': 'Số nút TB',
+    'Avg Nodes': 'Số nút TB',
+    'Số cạnh TB': 'Số cạnh TB',
+    'Avg Edges': 'Số cạnh TB',
   }
 
   if (exact[text]) return exact[text]
@@ -199,6 +284,52 @@ export function translateTask2ReportText(text, lang) {
     Status: 'Trạng thái',
     'Back to gallery': 'Quay lại gallery',
     'No graph data': 'Chưa có dữ liệu đồ thị',
+    Epochs: 'Epoch',
+    'Đóng góp': 'Đóng góp',
+    Contrib: 'Đóng góp',
+    'Nút chính': 'Nút chính',
+    'Top node': 'Nút chính',
+    'Nút đóng góp chính': 'Nút đóng góp chính',
+    'Chế độ chuyển động': 'Chế độ chuyển động',
+    'Dòng thời gian học': 'Dòng thời gian học',
+    'Hành vi mô hình': 'Hành vi mô hình',
+    'Đồ thị dao động': 'Đồ thị dao động',
+    'Tóm tắt dự đoán': 'Tóm tắt dự đoán',
+    'Prediction Summary': 'Tóm tắt dự đoán',
+    'Chỉ số chính': 'Chỉ số chính',
+    'Key Metrics': 'Chỉ số chính',
+    'Prediction Strip': 'Lịch sử dự đoán theo epoch',
+    'Lịch sử dự đoán theo epoch': 'Lịch sử dự đoán theo epoch',
+    'Top Readout Nodes': 'Nút đóng góp chính',
+    'Lăng kính mô hình': 'Lăng kính mô hình',
+    'Model Lens': 'Lăng kính mô hình',
+    'Cấu trúc': 'Cấu trúc',
+    Structure: 'Cấu trúc',
+    'Biên phân loại': 'Biên phân loại',
+    'Độ bất định': 'Độ bất định',
+    'Độ tin cậy': 'Độ tin cậy',
+    'Tổng hợp đồ thị': 'Tổng hợp đồ thị',
+    'Nhãn thật': 'Nhãn thật',
+    'Ground Truth': 'Nhãn thật',
+    'Dự đoán': 'Dự đoán',
+    Prediction: 'Dự đoán',
+    'Tổng hợp': 'Tổng hợp',
+    Legend: 'Chú giải',
+    'Kích thước': 'Kích thước',
+    'Số nút': 'Số nút',
+    'Số cạnh': 'Số cạnh',
+    'Chưa có dữ liệu đóng góp': 'Chưa có dữ liệu đóng góp',
+    'No contribution data': 'Chưa có dữ liệu đóng góp',
+    Correct: 'Đúng',
+    Wrong: 'Sai',
+    'Chưa rõ': 'Chưa rõ',
+    Unknown: 'Chưa rõ',
+    'Mức đóng góp': 'Mức đóng góp',
+    'Contribution level': 'Mức đóng góp',
+    'Đang tăng': 'Đang tăng',
+    Rising: 'Đang tăng',
+    'Chú giải kích thước nút': 'Chú giải kích thước nút',
+    'Node size legend': 'Chú giải kích thước nút',
     Focus: 'Tập trung',
     'Research workspace': 'Không gian nghiên cứu',
     Dashboard: 'Bảng điều khiển',
@@ -509,5 +640,33 @@ export function translateTask2FailureTagLabel(tag, lang) {
     case 'stable_win':
     default:
       return 'Ca ổn định'
+  }
+}
+
+/**
+ * translateTask2ReasonTag — short reason label for hard case cards.
+ *   tag  : failureTag string
+ *   lang : 'vi' | 'en'
+ */
+export function translateTask2ReasonTag(tag, lang) {
+  if (lang !== 'vi') {
+    switch (tag) {
+      case 'overconfident_miss': return 'Overconfident'
+      case 'diffuse_readout': return 'Diffuse readout'
+      case 'structural_outlier': return 'Structural outlier'
+      case 'boundary_case': return 'Boundary case'
+      case 'stable_win':
+      default:
+        return 'Stable'
+    }
+  }
+  switch (tag) {
+    case 'overconfident_miss': return 'Sai dai dẳng'
+    case 'diffuse_readout': return 'Readout loãng'
+    case 'structural_outlier': return 'Lỗi lớp yếu'
+    case 'boundary_case': return 'Ca vùng biên'
+    case 'stable_win':
+    default:
+      return 'Ổn định'
   }
 }

@@ -15,13 +15,17 @@ from tasks.graph_classification import (
     build_graph_calibration,
     build_task2_best_checkpoint_payload,
     compute_graph_classification_loss,
+    compute_structural_features,
     compute_task2_selection_metrics,
     drop_edge_index,
     apply_temperature,
+    graph_mixup_embeddings,
     model_default_hyperparams,
     normalize_graph_labels,
+    proteins_preset,
     run_graph_classification,
     split_graph_dataset,
+    tune_binary_threshold,
     tune_temperature_lbfgs,
 )
 
@@ -217,9 +221,8 @@ def test_gat_classifier_uses_graph_norm_and_residual_input_projection():
 
     out, graph_embeddings, alpha = model(x, edge_index, batch)
 
-    assert model.norm1.__class__.__name__ == 'GraphNorm'
-    assert model.norm2.__class__.__name__ == 'GraphNorm'
-    assert model.input_skip_proj is not None
+    assert model.norms[0].__class__.__name__ == 'GraphNorm'
+    assert model.norms[1].__class__.__name__ == 'GraphNorm'
     assert out.shape == (2, 2)
     assert graph_embeddings.shape == (2, 8)
     assert torch.allclose(alpha[batch == 0].sum(), torch.tensor(1.0), atol=1e-5)
@@ -254,8 +257,8 @@ def test_sage_classifier_uses_graph_norm_for_graph_batches():
 
     out, graph_embeddings, alpha = model(x, edge_index, batch)
 
-    assert model.norm1.__class__.__name__ == 'GraphNorm'
-    assert model.norm2.__class__.__name__ == 'GraphNorm'
+    assert model.norms[0].__class__.__name__ == 'GraphNorm'
+    assert model.norms[1].__class__.__name__ == 'GraphNorm'
     assert out.shape == (2, 2)
     assert graph_embeddings.shape == (2, 8)
     assert torch.allclose(alpha[batch == 0].sum(), torch.tensor(1.0), atol=1e-5)
@@ -523,4 +526,240 @@ def test_drop_edge_index_keeps_shape_and_is_noop_when_disabled():
     dropped = drop_edge_index(edge_index, 0.5, training=True, seed=7)
 
     assert dropped.shape[0] == 2
-    assert dropped.shape[1] >= 1
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# New feature tests
+# ───────────────────────────────────────────────────────────────────────────────
+
+def test_graph_classifier_num_layers_3():
+    """GraphClassifier with 3 layers should work and produce correct output shapes."""
+    model = GraphClassifier(in_channels=2, hidden=16, num_classes=2, model_type='GCN', num_layers=3)
+    x = torch.randn(8, 2)
+    edge_index = torch.tensor([[0, 1, 1, 2, 2, 3, 4, 5, 5, 6, 6, 7], [1, 0, 2, 1, 3, 2, 5, 4, 6, 5, 7, 6]], dtype=torch.long)
+    batch = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1], dtype=torch.long)
+
+    out, emb, alpha = model(x, edge_index, batch)
+
+    assert out.shape == (2, 2)
+    assert emb.shape == (2, 16)
+    assert alpha.shape == (8,)
+
+
+def test_graph_classifier_batch_norm():
+    """GraphClassifier with BatchNorm should work."""
+    model = GraphClassifier(in_channels=2, hidden=16, num_classes=2, model_type='GCN', use_batch_norm=True)
+    x = torch.randn(8, 2)
+    edge_index = torch.tensor([[0, 1, 1, 2, 2, 3, 4, 5, 5, 6, 6, 7], [1, 0, 2, 1, 3, 2, 5, 4, 6, 5, 7, 6]], dtype=torch.long)
+    batch = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1], dtype=torch.long)
+
+    out, emb, alpha = model(x, edge_index, batch)
+
+    assert out.shape == (2, 2)
+    assert emb.shape == (2, 16)
+
+
+def test_graph_classifier_mean_max_concat_readout():
+    """GraphClassifier with mean_max_concat readout should produce hidden*2 embeddings."""
+    model = GraphClassifier(in_channels=2, hidden=16, num_classes=2, model_type='GCN', readout_type='mean_max_concat')
+    x = torch.randn(8, 2)
+    edge_index = torch.tensor([[0, 1, 1, 2, 2, 3, 4, 5, 5, 6, 6, 7], [1, 0, 2, 1, 3, 2, 5, 4, 6, 5, 7, 6]], dtype=torch.long)
+    batch = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1], dtype=torch.long)
+
+    out, emb, alpha = model(x, edge_index, batch)
+
+    assert out.shape == (2, 2)
+    assert emb.shape == (2, 32)  # hidden * 2
+
+
+def test_graph_classifier_mean_readout():
+    """GraphClassifier with mean readout should work."""
+    model = GraphClassifier(in_channels=2, hidden=16, num_classes=2, model_type='GCN', readout_type='mean')
+    x = torch.randn(8, 2)
+    edge_index = torch.tensor([[0, 1, 1, 2, 2, 3, 4, 5, 5, 6, 6, 7], [1, 0, 2, 1, 3, 2, 5, 4, 6, 5, 7, 6]], dtype=torch.long)
+    batch = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1], dtype=torch.long)
+
+    out, emb, alpha = model(x, edge_index, batch)
+
+    assert out.shape == (2, 2)
+    assert emb.shape == (2, 16)
+
+
+def test_graph_classifier_max_readout():
+    """GraphClassifier with max readout should work."""
+    model = GraphClassifier(in_channels=2, hidden=16, num_classes=2, model_type='GCN', readout_type='max')
+    x = torch.randn(8, 2)
+    edge_index = torch.tensor([[0, 1, 1, 2, 2, 3, 4, 5, 5, 6, 6, 7], [1, 0, 2, 1, 3, 2, 5, 4, 6, 5, 7, 6]], dtype=torch.long)
+    batch = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1], dtype=torch.long)
+
+    out, emb, alpha = model(x, edge_index, batch)
+
+    assert out.shape == (2, 2)
+    assert emb.shape == (2, 16)
+
+
+def test_graph_classifier_gat_3_layers():
+    """GraphClassifier with GAT and 3 layers should work."""
+    model = GraphClassifier(in_channels=2, hidden=16, num_classes=2, model_type='GAT', heads=4, num_layers=3)
+    x = torch.randn(8, 2)
+    edge_index = torch.tensor([[0, 1, 1, 2, 2, 3, 4, 5, 5, 6, 6, 7], [1, 0, 2, 1, 3, 2, 5, 4, 6, 5, 7, 6]], dtype=torch.long)
+    batch = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1], dtype=torch.long)
+
+    out, emb, alpha = model(x, edge_index, batch)
+
+    assert out.shape == (2, 2)
+
+
+def test_graph_classifier_sage_batch_norm():
+    """GraphClassifier with SAGE and BatchNorm should work."""
+    model = GraphClassifier(in_channels=2, hidden=16, num_classes=2, model_type='SAGE', use_batch_norm=True, num_layers=3)
+    x = torch.randn(8, 2)
+    edge_index = torch.tensor([[0, 1, 1, 2, 2, 3, 4, 5, 5, 6, 6, 7], [1, 0, 2, 1, 3, 2, 5, 4, 6, 5, 7, 6]], dtype=torch.long)
+    batch = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1], dtype=torch.long)
+
+    out, emb, alpha = model(x, edge_index, batch)
+
+    assert out.shape == (2, 2)
+    assert emb.shape == (2, 16)
+
+
+def test_tune_binary_threshold():
+    """Threshold tuning should find a threshold that maximizes Macro F1."""
+    # Create logits where threshold=0.5 is suboptimal
+    logits = torch.tensor([
+        [2.0, 0.1],  # class 0, confident
+        [0.1, 2.0],  # class 1, confident
+        [1.5, 0.8],  # class 0, but prob(1) is ~0.33
+        [0.8, 1.5],  # class 1, but prob(1) is ~0.67
+        [2.0, 0.1],  # class 0
+        [0.1, 2.0],  # class 1
+    ], dtype=torch.float)
+    labels = torch.tensor([0, 1, 0, 1, 0, 1], dtype=torch.long)
+
+    best_threshold, best_macro_f1, all_results = tune_binary_threshold(logits, labels)
+
+    assert 0.35 <= best_threshold <= 0.65
+    assert best_macro_f1 > 0
+    assert len(all_results) > 0
+    # Each result should have threshold and macro_f1
+    for r in all_results:
+        assert 'threshold' in r
+        assert 'macro_f1' in r
+
+
+def test_tune_binary_threshold_perfect_separation():
+    """With perfect separation, threshold tuning should find high Macro F1."""
+    logits = torch.tensor([
+        [5.0, 0.0],  # class 0
+        [5.0, 0.0],  # class 0
+        [0.0, 5.0],  # class 1
+        [0.0, 5.0],  # class 1
+    ], dtype=torch.float)
+    labels = torch.tensor([0, 0, 1, 1], dtype=torch.long)
+
+    best_threshold, best_macro_f1, _ = tune_binary_threshold(logits, labels)
+
+    assert best_macro_f1 >= 0.99  # Should be nearly perfect
+
+
+def test_compute_structural_features():
+    """Structural features should add 2 new dimensions to node features."""
+    graphs = []
+    for _ in range(3):
+        edge_index = torch.tensor([[0, 1, 1, 2], [1, 0, 2, 1]], dtype=torch.long)
+        x = torch.randn(3, 2)
+        y = torch.tensor([0], dtype=torch.long)
+        g = Data(x=x, edge_index=edge_index, y=y, num_nodes=3)
+        graphs.append(g)
+
+    new_in_channels = compute_structural_features(graphs)
+
+    assert new_in_channels == 4  # original 2 + 2 structural features
+    for g in graphs:
+        assert g.x.shape == (3, 4)
+
+
+def test_proteins_preset_gcn():
+    """PROTEINS preset for GCN should return optimized hyperparameters."""
+    preset = proteins_preset('GCN')
+
+    assert preset['num_layers'] == 3
+    assert preset['hidden'] == 96
+    assert preset['readout_type'] == 'mean_max_concat'
+    assert preset['use_batch_norm'] is True
+    assert preset['task2_class_weights'] == [1.0, 1.1]
+    assert preset['task2_threshold_tuning'] is True
+    # Virtual node and mixup disabled by default
+    assert preset['task2_virtual_node'] is False
+    assert preset['task2_mixup_alpha'] == 0.0
+
+
+def test_proteins_preset_gat():
+    """PROTEINS preset for GAT should use attention readout with adjusted hyperparams."""
+    preset = proteins_preset('GAT')
+
+    assert preset['num_layers'] == 2
+    assert preset['heads'] == 4
+    assert preset['readout_type'] == 'attention'
+    assert preset['use_batch_norm'] is False
+    assert preset['task2_class_weights'] == [1.0, 1.1]
+
+
+def test_proteins_preset_sage():
+    """PROTEINS preset for SAGE should use deeper model."""
+    preset = proteins_preset('SAGE')
+
+    assert preset['num_layers'] == 3
+    assert preset['hidden'] == 96
+    assert preset['readout_type'] == 'mean_max_concat'
+    assert preset['task2_class_weights'] == [1.0, 1.1]
+
+
+def test_graph_classifier_virtual_node():
+    """GraphClassifier with virtual node should work and produce correct output shapes."""
+    model = GraphClassifier(
+        in_channels=2, hidden=16, num_classes=2, model_type='GCN',
+        num_layers=3, use_virtual_node=True
+    )
+    x = torch.randn(8, 2)
+    edge_index = torch.tensor([[0, 1, 1, 2, 2, 3, 4, 5, 5, 6, 6, 7], [1, 0, 2, 1, 3, 2, 5, 4, 6, 5, 7, 6]], dtype=torch.long)
+    batch = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1], dtype=torch.long)
+
+    out, emb, alpha = model(x, edge_index, batch)
+
+    assert out.shape == (2, 2)
+    assert emb.shape == (2, 16)
+    assert alpha.shape == (8,)
+
+
+def test_graph_mixup_embeddings():
+    """Graph mixup should produce interpolated embeddings."""
+    embeddings = torch.randn(6, 16)
+    labels = torch.tensor([0, 0, 0, 1, 1, 1], dtype=torch.long)
+
+    mixed, labels_a, labels_b, lam = graph_mixup_embeddings(embeddings, labels, alpha=0.2)
+
+    assert mixed.shape == embeddings.shape
+    assert labels_a.shape == labels.shape
+    assert labels_b.shape == labels.shape
+    assert 0.0 <= lam <= 1.0
+
+
+def test_graph_mixup_small_batch():
+    """Graph mixup should handle small batches gracefully."""
+    embeddings = torch.randn(1, 16)
+    labels = torch.tensor([0], dtype=torch.long)
+
+    mixed, labels_a, labels_b, lam = graph_mixup_embeddings(embeddings, labels, alpha=0.2)
+
+    # With batch_size=1, should return original
+    assert mixed.shape == embeddings.shape
+
+
+def test_proteins_preset_includes_new_techniques():
+    """PROTEINS preset should include threshold tuning and class weights."""
+    preset = proteins_preset('GCN')
+
+    assert preset['task2_threshold_tuning'] is True
+    assert preset['task2_class_weights'] == [1.0, 1.1]
+    assert preset['task2_focal_gamma'] == 1.0

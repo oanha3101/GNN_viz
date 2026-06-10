@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
 import usePlayerStore from '../../store/playerStore'
 import useGNNStore from '../../store/useGNNStore'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -17,6 +17,8 @@ import {
   buildTask2ModelSignature,
   buildTask2NarrativeSummary,
   buildTask2ResearchSignals,
+  computeHeatmapRowStats,
+  computeHeatmapSummary,
   describeTask2ReadoutPattern,
   filterTask2DescriptorsByCell,
   filterTask2Snapshot,
@@ -28,6 +30,7 @@ import {
   translateTask2EpochSuggestion,
   translateTask2FailureTagLabel,
   translateTask2FocusBucket,
+  translateTask2ReasonTag,
   localizeTask2Element,
   translateTask2ReportText,
   translateTask2Signal,
@@ -81,7 +84,6 @@ function buildReadoutNarrative(descriptor, lang = 'en') {
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
-  { id: 'mechanism', label: 'Mechanism' },
   { id: 'failures', label: 'Failures' },
   { id: 'structure', label: 'Structure' },
   { id: 'readout', label: 'Readout' },
@@ -90,7 +92,6 @@ const TABS = [
 const TASK2_TAB_LABELS = {
   vi: {
     overview: 'Tổng quan',
-    mechanism: 'Cơ chế học',
     failures: 'Lỗi',
     structure: 'Cấu trúc',
     readout: 'Readout',
@@ -425,6 +426,7 @@ export default function Task2MetricsPanel({
             buckets={translatedFocusBuckets}
             activeId={activeFocus.id}
             onChange={setFocus}
+            reportLang={reportLang}
           />
         )}
 
@@ -512,22 +514,10 @@ export default function Task2MetricsPanel({
                 setSelectedCell({ pred, gt })
               }}
               onSelect={setSelectedNode}
+              bestEpochSuggestion={epochSuggestion}
               reportMode={reportMode}
               reportLimit={reportLimit}
               reportLang={reportLang}
-            />
-          )}
-          {tab === 'mechanism' && (
-            <MechanismTab
-              signature={modelSignature}
-              descriptors={focusedDescriptors}
-              snapshots={snapshots}
-              reportLang={reportLang}
-              onSelect={setSelectedNode}
-              onOpenReadout={(graphId) => {
-                if (graphId != null) setSelectedNode(graphId)
-                setTab('readout')
-              }}
             />
           )}
           {tab === 'structure' && (
@@ -557,29 +547,33 @@ export default function Task2MetricsPanel({
   )
 }
 
-function FocusChipRow({ buckets, activeId, onChange }) {
+function FocusChipRow({ buckets, activeId, onChange, reportLang = 'vi' }) {
   if (!buckets?.length) return null
+  const isVi = reportLang === 'vi'
   return (
     <div className="flex flex-wrap gap-1 p-1 rounded-xl bg-slate-950/35 border border-line-subtle/20 w-fit max-w-full">
       {buckets.map((bucket) => {
         const active = bucket.id === activeId
+        const count = bucket.graphIds?.length ?? 0
         return (
           <button
             key={bucket.id}
             type="button"
             onClick={() => onChange(bucket.id)}
-            title={bucket.description}
+            title={count === 0 ? (isVi ? 'Không có dữ liệu trong lát cắt này' : 'No data in this slice') : bucket.description}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
               active
                 ? 'bg-gradient-to-b from-cyan-500/18 to-cyan-500/8 text-cyan-300 border border-cyan-500/20 shadow-[0_1px_4px_rgba(6,182,212,0.10)]'
-                : 'text-slate-500 border border-transparent hover:text-slate-300 hover:bg-white/[0.04]'
+                : count === 0
+                  ? 'text-slate-600 border border-transparent opacity-50'
+                  : 'text-slate-500 border border-transparent hover:text-slate-300 hover:bg-white/[0.04]'
             }`}
           >
             <span>{bucket.label}</span>
             <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold ${
-              active ? 'bg-cyan-500/18 text-cyan-200' : 'bg-slate-900/50 text-slate-500'
+              active ? 'bg-cyan-500/18 text-cyan-200' : count === 0 ? 'bg-slate-900/30 text-slate-700' : 'bg-slate-900/50 text-slate-500'
             }`}>
-              {bucket.graphIds?.length ?? 0}
+              {count}
             </span>
           </button>
         )
@@ -976,256 +970,149 @@ function Task2ModelSignatureCard({ signature, reportLang = 'en' }) {
   )
 }
 
-function getMechanismCopy(signature, reportLang = 'en') {
-  const isVi = reportLang === 'vi'
-  if (signature?.id === 'GAT') {
-    return {
-      title: isVi ? 'GAT học bằng cách khóa attention vào motif quyết định' : 'GAT learns by locking attention onto decisive motifs',
-      principle: isVi
-        ? 'Mô hình không xem mọi hàng xóm như nhau. Nó học node hoặc cạnh nào đáng tin hơn, rồi để một nhóm nhỏ node kéo readout của cả graph.'
-        : 'The model does not treat every neighbor equally. It learns which nodes or edges deserve more weight, then lets a small set pull the graph readout.',
-      expected: isVi
-        ? 'Khi học tốt, top-k node đóng góp tăng, entropy giảm, và các graph cùng lớp bắt đầu khóa vào motif giống nhau.'
-        : 'When learning is healthy, top-k contribution rises, entropy falls, and same-class graphs begin to lock onto similar motifs.',
-      risk: isVi
-        ? 'Nếu attention quá hẹp hoặc đổi liên tục, GAT có thể khóa nhầm motif và vẫn rất tự tin.'
-        : 'If attention is too narrow or keeps moving, GAT can lock onto the wrong motif while staying confident.',
-      primary: isVi ? 'Motif lock' : 'Motif lock',
-      secondary: isVi ? 'Entropy còn lại' : 'Remaining entropy',
-    }
-  }
-  if (signature?.id === 'SAGE') {
-    return {
-      title: isVi ? 'GraphSAGE học bằng biểu quyết lân cận ổn định dần' : 'GraphSAGE learns through stabilizing neighborhood votes',
-      principle: isVi
-        ? 'Mỗi node gom ngữ cảnh từ vùng lân cận, rồi graph-level readout dùng các vùng vote đó để quyết định nhãn toàn graph.'
-        : 'Each node aggregates local neighborhood context, then the graph readout uses those neighborhood votes to decide the graph label.',
-      expected: isVi
-        ? 'Khi học tốt, prediction ít flip hơn, margin bớt dao động, và các graph sát biên dần có quyết định rõ hơn.'
-        : 'When learning is healthy, predictions flip less, margins calm down, and boundary graphs settle into clearer decisions.',
-      risk: isVi
-        ? 'Nếu neighborhood vote yếu, cùng một graph sẽ đổi ý nhiều lần qua epoch hoặc giữ margin rất mỏng.'
-        : 'If the neighborhood vote is weak, the same graph keeps changing its mind across epochs or keeps a very thin margin.',
-      primary: isVi ? 'Vote ổn định' : 'Vote stability',
-      secondary: isVi ? 'Flip pressure' : 'Flip pressure',
-    }
-  }
-  return {
-    title: isVi ? 'GCN học bằng lan truyền và làm mượt tín hiệu cấu trúc' : 'GCN learns by propagating and smoothing structural signals',
-    principle: isVi
-      ? 'Mỗi lớp GCN trộn tín hiệu qua cạnh, nên các node kề nhau dần có biểu diễn đồng thuận hơn trước khi được gom thành graph embedding.'
-      : 'Each GCN layer mixes signals across edges, so neighboring nodes gradually become more aligned before they are pooled into a graph embedding.',
-    expected: isVi
-      ? 'Khi học tốt, đóng góp giữa các node kề nhau đồng thuận hơn, readout mượt hơn, và motif không bị chia thành nhiều tín hiệu rời rạc.'
-      : 'When learning is healthy, neighboring node contributions agree more, the readout smooths out, and motifs stop fragmenting into isolated signals.',
-    risk: isVi
-      ? 'Nếu quá mượt, graph khác nhau có thể trông giống nhau trong embedding và motif quyết định bị loãng.'
-      : 'If it oversmooths, different graphs can look too similar in embedding space and the decisive motif gets diluted.',
-    primary: isVi ? 'Độ mượt' : 'Smoothing',
-    secondary: isVi ? 'Readout loãng' : 'Diffuse readout',
-  }
-}
-
-function getMechanismRows(signature, reportLang = 'en') {
-  const isVi = reportLang === 'vi'
-  const metrics = signature?.metrics || {}
-  if (signature?.id === 'GAT') {
-    return [
-      { label: isVi ? 'Attention focus' : 'Attention focus', value: metrics.attention_focus, tone: metrics.attention_focus > 0.65 ? 'good' : 'warn' },
-      { label: isVi ? 'Top-k motif mass' : 'Top-k motif mass', value: metrics.topk_contribution_mass, tone: metrics.topk_contribution_mass > 0.65 ? 'good' : 'warn' },
-      { label: isVi ? 'Entropy đã giảm' : 'Entropy resolved', value: metrics.attention_entropy_trend, tone: metrics.attention_entropy_trend > 0.45 ? 'good' : 'warn' },
-      { label: isVi ? 'Motif lock score' : 'Motif lock score', value: metrics.motif_lock_score, tone: metrics.motif_lock_score > 0.45 ? 'good' : 'warn' },
-    ]
-  }
-  if (signature?.id === 'SAGE') {
-    return [
-      { label: isVi ? 'Vote stability' : 'Vote stability', value: metrics.score_stability, tone: metrics.score_stability > 0.65 ? 'good' : 'warn' },
-      { label: isVi ? 'Ít flip hơn' : 'Flip resistance', value: 1 - (metrics.prediction_flip_rate || 0), tone: metrics.prediction_flip_rate < 0.15 ? 'good' : 'warn' },
-      { label: isVi ? 'Margin ổn định' : 'Margin calm', value: 1 - (metrics.margin_variance || 0), tone: metrics.margin_variance < 0.18 ? 'good' : 'warn' },
-      { label: isVi ? 'Graph dao động' : 'Unstable graphs', value: Math.min(1, (signature.unstableGraphIds?.length || 0) / 12), tone: signature.unstableGraphIds?.length ? 'bad' : 'good' },
-    ]
-  }
-  return [
-    { label: isVi ? 'Readout smoothness' : 'Readout smoothness', value: metrics.readout_smoothness, tone: metrics.readout_smoothness > 0.55 ? 'good' : 'warn' },
-    { label: isVi ? 'Neighbor agreement' : 'Neighbor agreement', value: metrics.contribution_agreement, tone: metrics.contribution_agreement > 0.55 ? 'good' : 'warn' },
-    { label: isVi ? 'Embedding tightening' : 'Embedding tightening', value: metrics.embedding_cluster_tightening, tone: metrics.embedding_cluster_tightening > 0.5 ? 'good' : 'warn' },
-    { label: isVi ? 'Readout không loãng' : 'Readout clarity', value: 1 - (metrics.diffuse_readout_share || 0), tone: metrics.diffuse_readout_share < 0.35 ? 'good' : 'warn' },
-  ]
-}
-
-function rankMechanismGraphs(signature, descriptors = []) {
-  const model = signature?.id || 'GCN'
-  const unstable = new Set(signature?.unstableGraphIds || [])
-  return [...descriptors]
-    .map((graph) => {
-      const base =
-        model === 'GAT'
-          ? (graph.readoutConcentration || 0) * 0.55 + (1 - (graph.entropy || 0)) * 0.35 + (graph.correct === 1 ? 0.1 : 0)
-          : model === 'SAGE'
-            ? (unstable.has(graph.originalGraphId) ? 0.55 : 0) + (1 - Math.min(1, graph.margin || 0)) * 0.25 + (graph.correct === 0 ? 0.2 : 0)
-            : (1 - (graph.entropy || 0)) * 0.35 + (graph.readoutBucket !== 'diffuse' ? 0.25 : 0) + (graph.correct === 1 ? 0.2 : 0) + (1 - Math.min(1, graph.structuralOutlierScore || 0)) * 0.2
-      return { ...graph, mechanismScore: Math.max(0, Math.min(1, base)) }
-    })
-    .sort((a, b) => b.mechanismScore - a.mechanismScore)
-    .slice(0, 4)
-}
-
-function MechanismTab({ signature, descriptors = [], snapshots = [], reportLang = 'en', onSelect, onOpenReadout }) {
-  if (!signature) {
-    return <EmptyState title="No mechanism signal" description="Start Task 2 training to inspect how the selected model is learning graph labels." />
-  }
-
-  const isVi = reportLang === 'vi'
-  const copy = getMechanismCopy(signature, reportLang)
-  const rows = getMechanismRows(signature, reportLang)
-  const examples = rankMechanismGraphs(signature, descriptors)
-  const lastTrend = signature.trend?.slice(-40) || []
-
+function SectionHeader({ title, subtitle, reportLang = 'vi' }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
-      <div className="rounded-2xl border border-cyan-500/18 bg-cyan-500/8 p-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-nano font-bold uppercase tracking-ultra text-cyan-300">
-              {isVi ? 'Model mechanism lens' : 'Model mechanism lens'}
-            </div>
-            <div className="mt-1 text-sm font-semibold text-slate-100">{copy.title}</div>
-            <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{copy.principle}</p>
-          </div>
-          <div className="rounded-full border border-cyan-400/25 bg-cyan-500/12 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-cyan-100">
-            {signature.shortLabel}
-          </div>
-        </div>
-        <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-          <MechanismTextBlock label={isVi ? 'Khi học đúng hướng' : 'Healthy learning evidence'} value={copy.expected} />
-          <MechanismTextBlock label={isVi ? 'Rủi ro cần nhìn kỹ' : 'Failure mode to watch'} value={copy.risk} />
-        </div>
-      </div>
-
-      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
-        {rows.map((row) => (
-          <StatCell
-            key={row.label}
-            label={row.label}
-            value={(Math.max(0, Math.min(1, row.value || 0)) * 100)}
-            digits={0}
-            suffix="%"
-            tone={row.tone}
-          />
-        ))}
-      </div>
-
-      <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-              {isVi ? 'Bằng chứng theo epoch' : 'Epoch evidence'}
-            </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-              {copy.primary} {isVi ? 'là tín hiệu chính; cột mờ bên dưới là tín hiệu phụ để biết model đang ổn định hay đang phân tán.' : 'is the primary signal; the muted rail tracks the secondary pressure behind it.'}
-            </p>
-          </div>
-          <span className="rounded-full border border-line-default bg-nebula px-2.5 py-1 text-[11px] font-semibold text-slate-300">
-            {snapshots.length} epochs
-          </span>
-        </div>
-        <div className="grid h-24 grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border border-line-subtle bg-nebula px-2 py-2">
-          <div className="flex items-end gap-1">
-            {lastTrend.map((point) => (
-              <div key={`p-${point.epoch}`} className="min-w-0 flex-1 rounded-t bg-cyan-400/80" style={{ height: `${Math.max(8, Math.min(100, point.value * 100))}%` }} title={`Epoch ${point.epoch}: ${(point.value * 100).toFixed(1)}%`} />
-            ))}
-          </div>
-          <div className="flex items-end gap-1">
-            {lastTrend.map((point) => (
-              <div key={`s-${point.epoch}`} className="min-w-0 flex-1 rounded-t bg-slate-500/45" style={{ height: `${Math.max(6, Math.min(100, (point.secondary || 0) * 100))}%` }} title={`Epoch ${point.epoch}: ${(Number(point.secondary || 0) * 100).toFixed(1)}%`} />
-            ))}
-          </div>
-        </div>
-        <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-          <span>{copy.primary}</span>
-          <span>{copy.secondary}</span>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
-        <div className="mb-3">
-          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-            {isVi ? 'Graph chứng minh cơ chế học' : 'Mechanism evidence graphs'}
-          </div>
-          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-            {isVi ? 'Các graph này được chọn vì chúng làm lộ rõ nhất cách model đang ra quyết định, không chỉ vì đúng hay sai.' : 'These graphs are ranked by how clearly they expose the model behavior, not just by correctness.'}
-          </p>
-        </div>
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
-          {examples.map((graph) => (
-            <MechanismGraphCard
-              key={graph.originalGraphId}
-              graph={graph}
-              signature={signature}
-              reportLang={reportLang}
-              onSelect={onSelect}
-              onOpenReadout={onOpenReadout}
-            />
-          ))}
-        </div>
-      </div>
+    <div className="mb-2.5">
+      <h3 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">{title}</h3>
+      {subtitle && <p className="mt-0.5 text-[10px] text-slate-500">{subtitle}</p>}
     </div>
   )
 }
 
-function MechanismTextBlock({ label, value }) {
+function CollapsibleSection({ title, children, defaultOpen = false, reportLang = 'vi' }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const isVi = reportLang === 'vi'
   return (
-    <div className="rounded-xl border border-line-subtle bg-nebula p-3">
-      <div className="text-[10px] font-bold uppercase tracking-ultra text-slate-500">{label}</div>
-      <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{value}</p>
+    <div className="rounded-xl border border-white/[0.05] bg-white/[0.015]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-white/[0.02]"
+      >
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{title}</span>
+        <span className="text-[10px] text-slate-600">{open ? '▲' : `▼ ${isVi ? 'Xem thêm' : 'Show more'}`}</span>
+      </button>
+      {open && <div className="border-t border-white/[0.04] px-4 py-3">{children}</div>}
     </div>
   )
 }
 
-function MechanismGraphCard({ graph, signature, reportLang = 'en', onSelect, onOpenReadout }) {
+function ExecutiveSummaryCard({ narrative, reliability, researchSignals, epochSuggestion, modelSignature, graphClassNames, reportLang = 'vi' }) {
+  if (!narrative) return null
   const isVi = reportLang === 'vi'
-  const model = signature?.id || 'GCN'
-  const reason = model === 'GAT'
-    ? `${isVi ? 'Top-k đóng góp' : 'Top-k mass'} ${(graph.readoutConcentration * 100).toFixed(0)}%, entropy ${((graph.entropy || 0) * 100).toFixed(0)}%.`
-    : model === 'SAGE'
-      ? `${isVi ? 'Margin' : 'Margin'} ${((graph.margin || 0) * 100).toFixed(1)}%, ${signature.unstableGraphIds?.includes(graph.originalGraphId) ? (isVi ? 'đang dao động' : 'unstable') : (isVi ? 'đang ổn định' : 'settling')}.`
-      : `${isVi ? 'Readout' : 'Readout'} ${graph.readoutBucket}, ${isVi ? 'motif' : 'motif'} ${graph.motifSignature}.`
+  const metrics = reliability?.metrics || {}
+  const weakClass = metrics.weakClass
+  const weakLabel = weakClass ? (graphClassNames?.[weakClass.classId] || `Lớp ${weakClass.classId}`) : null
+  const weakRecall = weakClass ? (weakClass.recall * 100).toFixed(0) : null
+
+  const signals = [researchSignals?.collapse, researchSignals?.calibration, researchSignals?.shortcut].filter(Boolean)
+  const riskSignals = signals.filter((s) => s.status === 'danger' || s.status === 'warn')
+  const topRisk = riskSignals[0] || signals[0]
+
+  const confReliable = (metrics.calibrationEce ?? 1) < 0.12 && (metrics.highConfWrongRate ?? 1) < 0.1
+  const shortcutActive = Math.abs(metrics.densityBias ?? 0) > 0.32 || Math.abs(metrics.sizeBias ?? 0) > 0.32
+
+  const status = reliability?.status === 'danger' ? 'bad' : reliability?.status === 'warn' ? 'warn' : 'good'
+  const statusLabel = status === 'bad' ? (isVi ? 'Cần đọc cẩn thận' : 'Fragile') : status === 'warn' ? (isVi ? 'Cần ngữ cảnh' : 'Needs context') : (isVi ? 'Đáng tin' : 'Reliable')
+  const statusClasses = status === 'bad' ? 'border-rose-500/25 bg-rose-500/8 text-rose-300' : status === 'warn' ? 'border-amber-500/25 bg-amber-500/8 text-amber-300' : 'border-emerald-500/25 bg-emerald-500/8 text-emerald-300'
 
   return (
-    <div className="rounded-xl border border-line-subtle bg-nebula p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="text-[11px] font-semibold text-slate-100">G#{graph.originalGraphId}</div>
-          <div className={`mt-1 text-[10px] font-semibold ${graph.correct === 1 ? 'text-emerald-300' : 'text-red-300'}`}>
-            {graph.correct === 1 ? (isVi ? 'Đúng' : 'Correct') : (isVi ? 'Sai' : 'Wrong')}
+    <div className={`rounded-2xl border p-4 ${statusClasses}`}>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <div className="text-sm">📋</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-200">
+            {isVi ? 'TÓM TẮT CHẨN ĐOÁN' : 'EXECUTIVE SUMMARY'}
           </div>
         </div>
-        <span className="rounded-full border border-line-default bg-nebula px-2 py-0.5 text-[10px] font-mono text-slate-300">
-          {(graph.mechanismScore * 100).toFixed(0)}%
+        <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${statusClasses}`}>
+          {statusLabel}
         </span>
       </div>
-      <p className="mt-2 text-[11px] leading-relaxed text-slate-400">{reason}</p>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        <TagChip label={graph.densityBucket} tone="info" />
-        <TagChip label={graph.entropyBucket} tone={graph.entropyBucket === 'diffuse' ? 'warn' : 'good'} />
-        <TagChip label={graph.failureTag} tone={graph.correct === 1 ? 'good' : 'bad'} />
+
+      {/* Main conclusion */}
+      <p className="text-[12px] leading-relaxed text-white font-semibold mb-3">
+        {narrative.mainInsight}
+      </p>
+
+      {/* Key findings grid */}
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Weak class */}
+        <div className="rounded-lg bg-black/20 px-3 py-2">
+          <div className="text-[8px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-1">{isVi ? 'Lớp yếu nhất' : 'Weakest class'}</div>
+          <div className="text-[11px] font-semibold text-white">{weakLabel || '—'}</div>
+          {weakRecall && <div className="text-[10px] text-amber-300 font-mono">Recall {weakRecall}%</div>}
+        </div>
+
+        {/* Confidence reliability */}
+        <div className="rounded-lg bg-black/20 px-3 py-2">
+          <div className="text-[8px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-1">{isVi ? 'Hiệu chuẩn' : 'Calibration'}</div>
+          <div className={`text-[11px] font-semibold ${confReliable ? 'text-emerald-300' : 'text-amber-300'}`}>
+            {confReliable ? (isVi ? 'Đáng tin' : 'Reliable') : (isVi ? 'Cần kiểm tra' : 'Needs review')}
+          </div>
+          <div className="text-[10px] text-slate-400 font-mono">ECE {((metrics.calibrationEce ?? 0) * 100).toFixed(1)}%</div>
+        </div>
+
+        {/* Shortcut risk */}
+        <div className="rounded-lg bg-black/20 px-3 py-2">
+          <div className="text-[8px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-1">{isVi ? 'Thiên lệch shortcut' : 'Shortcut bias'}</div>
+          <div className={`text-[11px] font-semibold ${shortcutActive ? 'text-rose-300' : 'text-emerald-300'}`}>
+            {shortcutActive ? (isVi ? 'Có rủi ro' : 'At risk') : (isVi ? 'Không đáng kể' : 'Low')}
+          </div>
+        </div>
+
+        {/* Top risk signal */}
+        <div className="rounded-lg bg-black/20 px-3 py-2">
+          <div className="text-[8px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-1">{isVi ? 'Rủi ro chính' : 'Main risk'}</div>
+          <div className="text-[11px] font-semibold text-white break-words">{topRisk?.title || '—'}</div>
+          {topRisk && <div className={`text-[9px] font-bold uppercase ${topRisk.status === 'danger' ? 'text-rose-300' : topRisk.status === 'warn' ? 'text-amber-300' : 'text-emerald-300'}`}>{topRisk.status === 'danger' ? (isVi ? 'Rủi ro cao' : 'High risk') : topRisk.status === 'warn' ? (isVi ? 'Cần ngữ cảnh' : 'Needs context') : (isVi ? 'Ổn định' : 'Stable')}</div>}
+        </div>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => onSelect?.(graph.originalGraphId)}
-          className="rounded-full border border-cyan-400/25 bg-cyan-500/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-cyan-100 transition-colors hover:bg-cyan-500/18"
-        >
-          Focus
-        </button>
-        <button
-          type="button"
-          onClick={() => onOpenReadout?.(graph.originalGraphId)}
-          className="rounded-full border border-line-subtle bg-nebula px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-slate-200 transition-colors hover:bg-nebula"
-        >
-          Readout
-        </button>
+
+      {/* Main risk narrative */}
+      {narrative.mainRisk && (
+        <p className="mt-3 text-[11px] leading-relaxed text-white/70">
+          {narrative.mainRisk}
+        </p>
+      )}
+
+      {/* Best epoch hint */}
+      {epochSuggestion?.recommendation && (
+        <div className="mt-2 flex items-center gap-2 text-[10px] text-white/60">
+          <span>💡</span>
+          <span>{epochSuggestion.recommendation}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CompactRiskCard({ signal, onAction, reportLang = 'vi' }) {
+  const isVi = reportLang === 'vi'
+  const toneMap = {
+    danger: { dot: 'bg-rose-400', badge: 'bg-rose-500/15 text-rose-200 border-rose-500/25', label: isVi ? 'Rủi ro cao' : 'High risk' },
+    warn: { dot: 'bg-amber-400', badge: 'bg-amber-500/15 text-amber-200 border-amber-500/25', label: isVi ? 'Cần ngữ cảnh' : 'Needs context' },
+    ok: { dot: 'bg-emerald-400', badge: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/25', label: isVi ? 'Ổn định' : 'Stable' },
+  }
+  const t = toneMap[signal.status] || toneMap.ok
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] p-3">
+      <div className={`mt-1 h-2 w-2 shrink-0 rounded-full ${t.dot}`} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[11px] font-bold text-slate-100">{signal.title}</span>
+          <span className={`rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase ${t.badge}`}>{t.label}</span>
+        </div>
+        <p className="text-[10px] leading-relaxed text-slate-400 mb-1.5">{signal.evidence}</p>
+        <p className="text-[10px] leading-relaxed text-cyan-300/80">→ {signal.recommendation}</p>
       </div>
+      <button
+        type="button"
+        onClick={() => onAction?.(signal.id)}
+        className="shrink-0 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] font-bold uppercase text-slate-300 transition-colors hover:bg-white/[0.08]"
+      >
+        {isVi ? 'Mở' : 'Open'}
+      </button>
     </div>
   )
 }
@@ -1254,115 +1141,133 @@ function OverviewTab({
   const calibrationEce = metrics.calibrationEce
   const densityBias = metrics.densityBias
   const sizeBias = metrics.sizeBias
+  const isVi = reportLang === 'vi'
+
+  const signals = [researchSignals?.collapse, researchSignals?.calibration, researchSignals?.shortcut].filter(Boolean)
+  const collectionStats = collectionSummary.totalGraphs > 0
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
-      {/* Top Banner Alert if reliability has issues */}
-      <ReliabilityAlertBanner reliability={reliability} reportLang={reportLang} />
+    <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-1 py-1">
 
-      {/* Main Grid: 2 columns on larger screens */}
-      <div className="grid gap-4 lg:grid-cols-[38%_62%] items-start">
-        
-        {/* Left Column: Narrative, suggestions, actions */}
-        <div className="flex flex-col gap-4 min-w-0">
-          <Task2ModelSignatureCard signature={modelSignature} reportLang={reportLang} />
-          
-          <HeroNarrativeCard narrative={narrative} onNextLensAction={onNextLensAction} reportLang={reportLang} />
-          
-          <BestEpochSuggestionCard suggestion={epochSuggestion} onJumpToEpoch={onJumpToEpoch} reportLang={reportLang} />
-          
-          {metrics.weakClass && (
-            <div className="rounded-2xl border border-amber-500/18 bg-amber-500/5 p-4 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-nano font-bold uppercase tracking-ultra text-amber-200">Weak-class watch</div>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
-                    {metrics.weakClass.label} is the weakest class right now with recall {(metrics.weakClass.recall * 100).toFixed(1)}% and F1 {(metrics.weakClass.f1 * 100).toFixed(1)}%.
-                    Use the <span className="text-amber-200">Weak-class misses</span> focus chip to inspect why recall is lagging.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={onJumpToWeakClass}
-                  className="shrink-0 rounded-xl border border-amber-400/25 bg-amber-500/12 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-ultra text-amber-100 transition-colors hover:bg-amber-500/18"
-                >
-                  Open slice
-                </button>
-              </div>
-            </div>
-          )}
+      {/* ─── Section 1: Executive Summary ─── */}
+      <ExecutiveSummaryCard
+        narrative={narrative}
+        reliability={reliability}
+        researchSignals={researchSignals}
+        epochSuggestion={epochSuggestion}
+        modelSignature={modelSignature}
+        graphClassNames={graphClassNames}
+        reportLang={reportLang}
+      />
 
-          <FocusRoutingCard
-            story={focusStory}
-            weakClass={metrics.weakClass}
-            onJumpToWeakClass={onJumpToWeakClass}
-            onJumpToStructure={onJumpToStructure}
-            reportLang={reportLang}
-          />
-        </div>
-        
-        {/* Right Column: Visual analytics dashboard */}
-        <div className="flex flex-col gap-4 min-w-0">
-          
-          {/* Trust Profile Visual Progress Meters */}
-          <TrustProfileVisual metrics={metrics} reportLang={reportLang} />
-          
-          {/* Shortcut Bias Horizontal Scale Gauges */}
-          <div className="rounded-2xl border border-line-default bg-nebula p-4 space-y-3">
-            <div>
-              <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                {reportLang === 'vi' ? 'THIÊN LỆCH SHORTCUT' : 'Shortcut bias'}
-              </span>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                {reportLang === 'vi' 
-                  ? 'Tương quan giữa mức độ tự tin dự đoán và các đặc tính cấu trúc đồ thị. Nếu tương quan tuyệt đối > 0.35, mô hình có nguy cơ cao chỉ học tắt theo đặc tính đó.' 
-                  : 'Correlation between confidence and graph properties. absolute value > 0.35 suggests structural shortcut risk.'}
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <ShortcutBiasMeter label={reportLang === 'vi' ? 'Tự tin vs Mật độ' : 'Conf vs Density'} value={densityBias} />
-              <ShortcutBiasMeter label={reportLang === 'vi' ? 'Tự tin vs Kích thước' : 'Conf vs Size'} value={sizeBias} />
-              <ShortcutBiasMeter label={reportLang === 'vi' ? 'Tự tin vs Số cạnh' : 'Conf vs Edges'} value={metrics.edgeBias || 0} />
-            </div>
+      {/* ─── Section 2: Main Risks (compact signal cards) ─── */}
+      {signals.length > 0 && (
+        <section>
+          <SectionHeader title={isVi ? 'Rủi ro chính' : 'Main Risks'} reportLang={reportLang} />
+          <div className="grid gap-2 md:grid-cols-3">
+            {signals.map((item) => (
+              <CompactRiskCard key={item.id} signal={item} onAction={onSignalAction} reportLang={reportLang} />
+            ))}
           </div>
-          
-          {/* Per Class Metrics Visual Bar Comparison */}
+        </section>
+      )}
+
+      {/* ─── Section 3: Class-wise Performance ─── */}
+      {perClass.length > 0 && (
+        <section>
+          <SectionHeader title={isVi ? 'Hiệu năng theo lớp' : 'Class-wise Performance'} reportLang={reportLang} />
           <PerClassMetricsVisual perClass={perClass} classNames={graphClassNames} reportLang={reportLang} />
-          
-          {/* Collection Balance Stacked Distribution Bar */}
-          <CollectionBalanceVisual classCounts={classCounts} reportLang={reportLang} />
-
-          {/* Quick stats row */}
-          <div className="grid gap-2 grid-cols-2 sm:grid-cols-5">
-            <StatCell label="Graphs" value={collectionSummary.totalGraphs} digits={0} tone="good" />
-            <StatCell label="Classes" value={graphClassNames.length || 1} digits={0} tone="info" />
-            <StatCell label="Avg Nodes" value={collectionSummary.avgNodes} digits={1} tone="warn" />
-            <StatCell label="Avg Edges" value={collectionSummary.avgEdges} digits={1} tone="warn" />
-            <StatCell label="ECE" value={(calibrationEce || 0) * 100} digits={1} suffix="%" tone={Number.isFinite(calibrationEce) && calibrationEce < 0.1 ? 'good' : 'warn'} />
+          <div className="mt-3">
+            <CollectionBalanceVisual classCounts={classCounts} reportLang={reportLang} />
           </div>
+        </section>
+      )}
 
-          {/* Training Trend Chart */}
-          <div className="rounded-2xl border border-line-default bg-nebula p-4 space-y-2">
-            <div>
-              <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                {reportLang === 'vi' ? 'XU HƯỚNG HUẤN LUYỆN' : 'Training trend'}
-              </span>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                {reportLang === 'vi' 
-                  ? 'Đường sức khỏe huấn luyện toàn cục. Kiểm tra khu vực overfit và nhấp vào best epoch để nhảy tới.' 
-                  : 'Global health metrics over epochs. Look for overfit zones and click recommendations.'}
-              </p>
-            </div>
-            <div className="h-[220px]">
-              <MetricsChart />
+      {/* ─── Section 4: Confidence Calibration ─── */}
+      <section>
+        <SectionHeader title={isVi ? 'Hiệu chuẩn xác suất' : 'Confidence Calibration'} reportLang={reportLang} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TrustProfileVisual metrics={metrics} reportLang={reportLang} />
+          <div className="flex flex-col gap-3">
+            {/* Collection stats — only show if data exists */}
+            {collectionStats && (
+              <div className="grid gap-2 grid-cols-3">
+                <StatCell label={isVi ? 'Đồ thị' : 'Graphs'} value={collectionSummary.totalGraphs} digits={0} tone="info" />
+                <StatCell label={isVi ? 'Số nút TB' : 'Avg Nodes'} value={collectionSummary.avgNodes} digits={1} tone="info" />
+                <StatCell label={isVi ? 'Số cạnh TB' : 'Avg Edges'} value={collectionSummary.avgEdges} digits={1} tone="info" />
+              </div>
+            )}
+            <div className="grid gap-2 grid-cols-2">
+              <StatCell label="ECE" value={(calibrationEce || 0) * 100} digits={1} suffix="%" tone={Number.isFinite(calibrationEce) && calibrationEce < 0.1 ? 'good' : 'warn'} />
+              <StatCell label={isVi ? 'Lớp' : 'Classes'} value={graphClassNames.length || 1} digits={0} tone="info" />
             </div>
           </div>
-          
         </div>
-      </div>
-      
-      {/* Research Signals at the bottom - wide row */}
-      <ResearchSignalsCard signals={researchSignals} onSignalAction={onSignalAction} reportLang={reportLang} />
+      </section>
+
+      {/* ─── Section 5: Structural Shortcut ─── */}
+      <section>
+        <SectionHeader title={isVi ? 'Thiên lệch cấu trúc' : 'Structural Shortcut'} reportLang={reportLang} />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <ShortcutBiasMeter label={isVi ? 'Tự tin vs Mật độ' : 'Conf vs Density'} value={densityBias} />
+          <ShortcutBiasMeter label={isVi ? 'Tự tin vs Kích thước' : 'Conf vs Size'} value={sizeBias} />
+          <ShortcutBiasMeter label={isVi ? 'Tự tin vs Số cạnh' : 'Conf vs Edges'} value={metrics.edgeBias || 0} />
+        </div>
+      </section>
+
+      {/* ─── Section 6: Training Trend ─── */}
+      <section>
+        <SectionHeader title={isVi ? 'Xu hướng huấn luyện' : 'Training Trend'} reportLang={reportLang} />
+        <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] p-4">
+          <div className="mb-2 flex flex-wrap items-center gap-3 text-[9px] font-bold uppercase tracking-[0.12em]">
+            <span className="flex items-center gap-1.5"><span className="inline-block h-1.5 w-4 rounded-full bg-cyan-400" /><span className="text-cyan-300">{isVi ? 'Độ chính xác' : 'Accuracy'}</span></span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-1.5 w-4 rounded-full bg-emerald-400" /><span className="text-emerald-300">Macro F1</span></span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-1.5 w-4 rounded-full bg-violet-400" /><span className="text-violet-300">{isVi ? 'Độ chính xác cân bằng' : 'Balanced Acc'}</span></span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-1.5 w-4 rounded-full bg-rose-400" /><span className="text-rose-300">Loss</span></span>
+          </div>
+          <div className="h-[200px]">
+            <MetricsChart />
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Section 7: Recommended Next Actions ─── */}
+      <section>
+        <SectionHeader title={isVi ? 'Hành động tiếp theo' : 'Recommended Next Actions'} reportLang={reportLang} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {/* Best epoch */}
+          <BestEpochSuggestionCard suggestion={epochSuggestion} onJumpToEpoch={onJumpToEpoch} reportLang={reportLang} />
+          {/* Next lens + model signature */}
+          <div className="flex flex-col gap-3">
+            <HeroNarrativeCard narrative={narrative} onNextLensAction={onNextLensAction} reportLang={reportLang} />
+            <Task2ModelSignatureCard signature={modelSignature} reportLang={reportLang} />
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Collapsible secondary diagnostics ─── */}
+      <CollapsibleSection title={isVi ? 'Chi tiết lát cắt & Focus' : 'Slice & Focus Details'} reportLang={reportLang}>
+        {metrics.weakClass && (
+          <div className="mb-3 rounded-xl border border-amber-500/18 bg-amber-500/5 p-3 flex items-center justify-between gap-3">
+            <p className="text-[11px] text-slate-300">
+              <span className="font-semibold text-amber-200">{metrics.weakClass.label}</span> {isVi ? 'là lớp yếu nhất' : 'is the weakest class'} — Recall {(metrics.weakClass.recall * 100).toFixed(1)}%, F1 {(metrics.weakClass.f1 * 100).toFixed(1)}%
+            </p>
+            <button
+              type="button"
+              onClick={onJumpToWeakClass}
+              className="shrink-0 rounded-lg border border-amber-400/25 bg-amber-500/12 px-2.5 py-1 text-[10px] font-semibold text-amber-100 hover:bg-amber-500/18"
+            >
+              {isVi ? 'Mở lát cắt' : 'Open slice'}
+            </button>
+          </div>
+        )}
+        <FocusRoutingCard story={focusStory} weakClass={metrics.weakClass} onJumpToWeakClass={onJumpToWeakClass} onJumpToStructure={onJumpToStructure} reportLang={reportLang} />
+      </CollapsibleSection>
+
+      <CollapsibleSection title={isVi ? 'Cảnh báo độ tin cậy' : 'Reliability Warnings'} reportLang={reportLang}>
+        <ReliabilityAlertBanner reliability={reliability} reportLang={reportLang} />
+      </CollapsibleSection>
+
     </div>
   )
 }
@@ -1609,62 +1514,242 @@ function FailuresTab({
   selectedCell,
   onSelectCell,
   onSelect,
+  bestEpochSuggestion = null,
   reportMode = false,
   reportLimit = 56,
+  reportLang = 'vi',
 }) {
+  const isVi = reportLang === 'vi'
+  const [heatmapFilter, setHeatmapFilter] = useState('all')
+  const [heatmapSort, setHeatmapSort] = useState('id')
+  const [showInfoCard, setShowInfoCard] = useState(false)
+
   const visibleGraphs = useMemo(
     () => (reportMode ? sortTask2Descriptors(graphs, 'priority').slice(0, reportLimit) : graphs),
     [graphs, reportLimit, reportMode],
   )
-  const visibleSnap = useMemo(
-    () => filterTask2Snapshot(snap, visibleGraphs.map((graph) => graph.originalGraphId), visibleGraphs),
-    [snap, visibleGraphs],
+
+  // Compute per-graph epoch stats for filtering/sorting
+  const rowStats = useMemo(
+    () => computeHeatmapRowStats(snapshots, visibleGraphs),
+    [snapshots, visibleGraphs],
   )
-  const visibleGroundTruth = useMemo(
-    () => visibleGraphs.map((descriptor) => descriptor.groundTruth),
-    [visibleGraphs],
-  )
-  const visibleHardCases = useMemo(
-    () => (reportMode ? visibleGraphs : hardCaseGraphs),
-    [hardCaseGraphs, reportMode, visibleGraphs],
+  const summary = useMemo(
+    () => computeHeatmapSummary(rowStats),
+    [rowStats],
   )
 
+  // Apply filter
+  const filteredGraphs = useMemo(() => {
+    if (heatmapFilter === 'all') return visibleGraphs
+    return visibleGraphs.filter((g) => {
+      const stats = rowStats.get(g.originalGraphId)
+      if (!stats) return false
+      if (heatmapFilter === 'persistent') return stats.persistentError
+      if (heatmapFilter === 'flip') return stats.flipHeavy
+      if (heatmapFilter === 'late') return stats.lateRecovery
+      return true
+    })
+  }, [visibleGraphs, heatmapFilter, rowStats])
+
+  // Apply sort
+  const sortedGraphs = useMemo(() => {
+    const items = [...filteredGraphs]
+    if (heatmapSort === 'id') {
+      items.sort((a, b) => a.originalGraphId - b.originalGraphId)
+    } else if (heatmapSort === 'errors') {
+      items.sort((a, b) => {
+        const sa = rowStats.get(a.originalGraphId)
+        const sb = rowStats.get(b.originalGraphId)
+        return (sb?.errorCount ?? 0) - (sa?.errorCount ?? 0)
+      })
+    } else if (heatmapSort === 'recovery') {
+      items.sort((a, b) => {
+        const sa = rowStats.get(a.originalGraphId)
+        const sb = rowStats.get(b.originalGraphId)
+        const ra = sa?.recoveryEpoch ?? Infinity
+        const rb = sb?.recoveryEpoch ?? Infinity
+        return ra - rb
+      })
+    }
+    return items
+  }, [filteredGraphs, heatmapSort, rowStats])
+
+  const visibleSnap = useMemo(
+    () => filterTask2Snapshot(snap, sortedGraphs.map((graph) => graph.originalGraphId), sortedGraphs),
+    [snap, sortedGraphs],
+  )
+  const visibleGroundTruth = useMemo(
+    () => sortedGraphs.map((descriptor) => descriptor.groundTruth),
+    [sortedGraphs],
+  )
+  const visibleHardCases = useMemo(
+    () => (reportMode ? sortedGraphs : hardCaseGraphs),
+    [hardCaseGraphs, reportMode, sortedGraphs],
+  )
+
+  const bestEpoch = bestEpochSuggestion?.epoch ?? '—'
+
+  // Filter chip definitions
+  const filterChips = [
+    { id: 'all', label: isVi ? 'Tất cả' : 'All', count: visibleGraphs.length },
+    { id: 'persistent', label: isVi ? 'Dai dẳng' : 'Persistent', count: summary.persistentCount },
+    { id: 'flip', label: isVi ? 'Flip nhiều' : 'Flip-heavy', count: summary.flipHeavyCount },
+    { id: 'late', label: isVi ? 'Phục hồi muộn' : 'Late recovery', count: summary.lateRecoveryCount },
+  ]
+
+  const sortOptions = [
+    { id: 'id', label: isVi ? 'Mã đồ thị' : 'Graph ID' },
+    { id: 'errors', label: isVi ? 'Số lỗi' : 'Error count' },
+    { id: 'recovery', label: isVi ? 'Epoch phục hồi' : 'Recovery epoch' },
+  ]
+
   if (!graphs.length) {
-    return <EmptyState title="No graphs in this slice" description="Pick another focus chip to inspect a broader portion of the collection." />
+    return <EmptyState title={isVi ? 'Không có đồ thị trong lát cắt này' : 'No graphs in this slice'} description={isVi ? 'Hãy chọn focus chip khác để kiểm tra phần rộng hơn của collection.' : 'Pick another focus chip to inspect a broader portion of the collection.'} />
   }
 
   return (
     <div className={`flex min-h-0 flex-1 flex-col gap-3 ${reportMode ? 'overflow-hidden' : 'overflow-auto'}`}>
+      {/* Context banner for confusion cell */}
       {selectedCell && (
         <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/8 to-cyan-500/4 px-4 py-2.5 text-[11px] text-cyan-100 flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0 shadow-[0_0_6px_rgba(34,211,238,0.5)]" />
-          Confusion cell slice active: predicted class {selectedCell.pred}, ground truth class {selectedCell.gt}. Hard cases below are scoped to this cell.
+          {isVi
+            ? <>Ô confusion đang hoạt động: lớp dự đoán {selectedCell.pred}, lớp thật {selectedCell.gt}. Các ca khó bên dưới đang được lọc theo ô này.</>
+            : <>Confusion cell slice active: predicted class {selectedCell.pred}, ground truth class {selectedCell.gt}. Hard cases below are scoped to this cell.</>}
         </div>
       )}
 
+      {/* Summary bar */}
+      <div className="grid grid-cols-5 gap-2">
+        <SummaryBadge
+          label={isVi ? 'Ca khó' : 'Hard cases'}
+          value={summary.totalHard}
+          icon="🔥"
+          tone="bad"
+        />
+        <SummaryBadge
+          label={isVi ? 'Lỗi dai dẳng' : 'Persistent errors'}
+          value={summary.persistentCount}
+          icon="📌"
+          tone="bad"
+        />
+        <SummaryBadge
+          label={isVi ? 'Phục hồi muộn' : 'Late recovery'}
+          value={summary.lateRecoveryCount}
+          icon="🕐"
+          tone="warn"
+        />
+        <SummaryBadge
+          label={isVi ? 'Flip nhiều' : 'Flip-heavy'}
+          value={summary.flipHeavyCount}
+          icon="🔄"
+          tone="warn"
+        />
+        <SummaryBadge
+          label={isVi ? 'Mốc tốt nhất' : 'Best checkpoint'}
+          value={`E${bestEpoch}`}
+          icon="✓"
+          tone="good"
+        />
+      </div>
+
+      {/* How to read info card */}
+      <div className="rounded-xl border border-line-default/40 bg-gradient-to-r from-nebula/40 to-nebula/20">
+        <button
+          type="button"
+          onClick={() => setShowInfoCard(!showInfoCard)}
+          className="w-full flex items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-white/[0.02]"
+        >
+          <span className="w-5 h-5 rounded-full border border-slate-500/40 flex items-center justify-center text-[10px] text-slate-400 font-bold">?</span>
+          <span className="text-[11px] text-slate-400 font-semibold">{isVi ? 'Cách đọc phần này' : 'How to read this section'}</span>
+          <span className={`ml-auto text-[10px] text-slate-500 transition-transform ${showInfoCard ? 'rotate-180' : ''}`}>▼</span>
+        </button>
+        {showInfoCard && (
+          <div className="px-4 pb-3 pt-1 text-[11px] text-slate-400 leading-relaxed space-y-1.5 border-t border-line-subtle/30">
+            <p>• <span className="text-slate-300 font-semibold">{isVi ? 'Heatmap:' : 'Heatmap:'}</span> {isVi ? 'Mỗi hàng là một đồ thị, mỗi cột là một mốc epoch. Xanh = đúng, đỏ = sai.' : 'Each row is a graph, each column is an epoch. Green = correct, red = wrong.'}</p>
+            <p>• <span className="text-slate-300 font-semibold">{isVi ? 'Lỗi dai dẳng:' : 'Persistent:'}</span> {isVi ? 'Đồ thị sai ở >70% epoch — mô hình chưa học được motif này.' : 'Graphs wrong at >70% of epochs — the model never learned this motif.'}</p>
+            <p>• <span className="text-slate-300 font-semibold">{isVi ? 'Flip nhiều:' : 'Flip-heavy:'}</span> {isVi ? 'Đồ thị đổi nhãn đúng/sai ≥4 lần — quyết định không ổn định.' : 'Graphs that flipped correct/incorrect ≥4 times — unstable decision.'}</p>
+            <p>• <span className="text-slate-300 font-semibold">{isVi ? 'Phục hồi muộn:' : 'Late recovery:'}</span> {isVi ? 'Đồ thị chỉ trở thành đúng sau 70% quá trình huấn luyện.' : 'Graphs that only became correct after 70% of training.'}</p>
+            <p>• {isVi ? 'Nhấp vào ô confusion để lọc hard cases theo cặp lớp sai.' : 'Click a confusion cell to filter hard cases by that misclassification pair.'}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Heatmap card */}
       <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4 task2-report-card">
-        <div className="mb-3">
-          <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Batch heatmap</span>
-          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
-            Each row is a graph, each column is an epoch checkpoint. {reportMode && graphs.length > visibleGraphs.length ? `Showing the top ${visibleGraphs.length} priority rows; full collection available in interactive view.` : 'Use it to spot stubborn failures and late recoveries.'}
-          </p>
+        <div className="mb-3 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{isVi ? 'Heatmap theo lô' : 'Batch heatmap'}</span>
+            <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
+              {isVi
+                ? 'Dùng để phát hiện các lỗi dai dẳng và phục hồi muộn. Di chuột vào hàng để xem chi tiết.'
+                : 'Use it to spot stubborn failures and late recoveries. Hover a row for details.'}
+            </p>
+          </div>
+          {/* Sort control */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[9px] text-slate-500 uppercase tracking-wide">{isVi ? 'Sắp xếp:' : 'Sort:'}</span>
+            {sortOptions.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setHeatmapSort(opt.id)}
+                className={`rounded-md px-2 py-0.5 text-[9px] font-bold transition-all ${
+                  heatmapSort === opt.id
+                    ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/30'
+                    : 'text-slate-500 border border-transparent hover:text-slate-300'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Filter chips */}
+        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+          {filterChips.map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => setHeatmapFilter(chip.id)}
+              className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition-all flex items-center gap-1.5 ${
+                heatmapFilter === chip.id
+                  ? 'bg-cyan-500/15 text-cyan-200 border border-cyan-500/30 shadow-[0_0_8px_rgba(34,211,238,0.08)]'
+                  : 'text-slate-400 border border-line-subtle/40 hover:border-line-default/60 hover:text-slate-200'
+              }`}
+            >
+              {chip.label}
+              <span className={`rounded-full px-1.5 py-0 text-[9px] tabular-nums ${
+                heatmapFilter === chip.id ? 'bg-cyan-500/20 text-cyan-300' : 'bg-white/[0.04] text-slate-500'
+              }`}>
+                {chip.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
         <BatchHeatmap
           snap={visibleSnap}
           snapshots={snapshots}
           epochInt={epochInt}
-          graphs={visibleGraphs}
+          graphs={sortedGraphs}
           selectedId={selectedId}
           onSelect={onSelect}
+          rowStats={rowStats}
           reportMode={reportMode}
+          reportLang={reportLang}
         />
       </div>
 
-      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+      {/* Lower section: confusion + hard cases */}
+      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+        {/* Left: Confusion matrix */}
         <div className="min-w-0 rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
           {selectedCell && (
             <div className="mb-2.5 rounded-lg border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-200">
-              Confusion matrix slice counts
+              {isVi ? 'Số liệu theo ô confusion' : 'Confusion matrix slice counts'}
             </div>
           )}
           <Task2ConfusionMatrix
@@ -1673,16 +1758,13 @@ function FailuresTab({
             classNames={classNames}
             selectedCell={selectedCell}
             onSelectCell={onSelectCell}
-            scopeLabel={selectedCell ? 'Cell slice' : 'Focus slice'}
+            scopeLabel={selectedCell ? (isVi ? 'Ô đang chọn' : 'Cell slice') : (isVi ? 'Lát cắt' : 'Focus slice')}
+            lang={reportLang}
           />
         </div>
+
+        {/* Right: Hard cases */}
         <div className="min-w-0 rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
-          <div className="mb-3">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Hardest cases</span>
-            <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
-              Misclassified graphs surface first, then the correct graphs with the thinnest margins.
-            </p>
-          </div>
           <Task2HardCases
             snap={snap}
             graphs={visibleHardCases}
@@ -1690,6 +1772,7 @@ function FailuresTab({
             k={reportMode ? 8 : 10}
             selectedId={selectedId}
             onSelect={onSelect}
+            lang={reportLang}
           />
         </div>
       </div>
@@ -1697,22 +1780,56 @@ function FailuresTab({
   )
 }
 
-function StructureTab({ snap, graphs, selectedId, onSelect, focus, selectedCell }) {
+function SummaryBadge({ label, value, icon, tone = 'info' }) {
+  const palette = {
+    good: 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-emerald-500/4',
+    warn: 'border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-amber-500/4',
+    bad: 'border-red-500/20 bg-gradient-to-br from-red-500/10 to-red-500/4',
+    info: 'border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30',
+  }
+  const textPalette = {
+    good: 'text-emerald-200',
+    warn: 'text-amber-200',
+    bad: 'text-red-200',
+    info: 'text-slate-200',
+  }
+  return (
+    <div className={`rounded-xl border px-3 py-2 ${palette[tone] || palette.info}`}>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px]">{icon}</span>
+        <span className={`text-sm font-bold tabular-nums ${textPalette[tone] || textPalette.info}`}>{value}</span>
+      </div>
+      <div className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-slate-500 font-bold truncate">{label}</div>
+    </div>
+  )
+}
+
+function StructureTab({ snap, graphs, selectedId, onSelect, focus, selectedCell, reportLang = 'vi' }) {
+  const isVi = reportLang === 'vi'
+  const [showInfoCard, setShowInfoCard] = useState(false)
+
   const outliers = useMemo(
     () => [...graphs]
       .filter((descriptor) => descriptor.structuralOutlier)
       .sort((a, b) => (b.structuralOutlierScore || 0) - (a.structuralOutlierScore || 0))
-      .slice(0, 6),
+      .slice(0, 8),
     [graphs]
   )
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+      {/* Diagnostics card */}
       <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
         <div className="mb-3">
-          <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Structure explanation</span>
+          <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+            {isVi ? 'Giải thích cấu trúc' : 'Structure explanation'}
+          </span>
           <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed">
-            The current slice is <span className="text-slate-200 font-semibold">{focus.label}</span>. Read entropy, density, and correctness together before concluding the model understands a motif.
+            {isVi ? (
+              <>Lát cắt hiện tại là <span className="text-slate-200 font-semibold">{focus.label}</span>. Đọc entropy, mật độ và độ đúng cùng nhau trước khi kết luận mô hình hiểu motif.</>
+            ) : (
+              <>The current slice is <span className="text-slate-200 font-semibold">{focus.label}</span>. Read entropy, density, and correctness together before concluding the model understands a motif.</>
+            )}
           </p>
         </div>
         <Task2Diagnostics
@@ -1721,25 +1838,51 @@ function StructureTab({ snap, graphs, selectedId, onSelect, focus, selectedCell 
           selectedId={selectedId}
           selectedCell={selectedCell}
           onSelect={onSelect}
+          lang={reportLang}
         />
       </div>
 
+      {/* Info card */}
+      <div className="rounded-xl border border-line-default/40 bg-gradient-to-r from-nebula/40 to-nebula/20">
+        <button
+          type="button"
+          onClick={() => setShowInfoCard(!showInfoCard)}
+          className="w-full flex items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-white/[0.02]"
+        >
+          <span className="w-5 h-5 rounded-full border border-slate-500/40 flex items-center justify-center text-[10px] text-slate-400 font-bold">?</span>
+          <span className="text-[11px] text-slate-400 font-semibold">{isVi ? 'Cách đọc phần này' : 'How to read this section'}</span>
+          <span className={`ml-auto text-[10px] text-slate-500 transition-transform ${showInfoCard ? 'rotate-180' : ''}`}>▼</span>
+        </button>
+        {showInfoCard && (
+          <div className="px-4 pb-3 pt-1 text-[11px] text-slate-400 leading-relaxed space-y-1.5 border-t border-line-subtle/30">
+            <p>• {isVi ? 'Accuracy chỉ cho biết xu hướng tổng quát. Cần đọc thêm Macro F1, hard cases và mức tập trung readout trước khi kết luận mô hình robust.' : 'Accuracy only shows the general trend. Read Macro F1, hard cases, and readout concentration before concluding the model is robust.'}</p>
+            <p>• {isVi ? 'Các đồ thị ở góc trên bên trái scatter (entropy cao, mật độ thấp) là nơi mô hình có thể chưa tìm được motif cục bộ.' : 'Graphs in the upper-left corner of the scatter (high entropy, low density) are where the model may be missing a local motif.'}</p>
+            <p>• {isVi ? 'Ngoại lệ cấu trúc là đồ thị lệch chuẩn về mật độ hoặc phân cụm — nơi tốt nhất để kiểm tra mô hình có đang bám tín hiệu hình dạng motif hay chỉ kích thước.' : 'Structural outliers depart from the norm on density or clustering — the best place to test whether the model reads motif shape or just graph size.'}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Structural outliers */}
       <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
-            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Structural outliers</span>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+              {isVi ? 'Ngoại lệ cấu trúc' : 'Structural outliers'}
+            </span>
             <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed">
-              These graphs depart from the collection norm on density or clustering. They are the best place to test whether the model is reacting to motif shape or just graph size.
+              {isVi
+                ? 'Các đồ thị này lệch chuẩn về mật độ hoặc phân cụm. Đây là nơi tốt nhất để kiểm tra mô hình có đang phản ứng với hình dạng motif hay chỉ kích thước đồ thị.'
+                : 'These graphs depart from the collection norm on density or clustering. They are the best place to test whether the model is reacting to motif shape or just graph size.'}
             </p>
           </div>
           {selectedCell && (
-            <span className="rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 text-[10px] font-semibold text-cyan-200">
-              Cell lens active
+            <span className="rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 text-[10px] font-semibold text-cyan-200 shrink-0">
+              {isVi ? 'Đang lọc theo ô' : 'Cell lens active'}
             </span>
           )}
         </div>
         {outliers.length ? (
-          <div className="grid gap-2">
+          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
             {outliers.map((descriptor) => (
               <button
                 key={descriptor.originalGraphId}
@@ -1751,22 +1894,28 @@ function StructureTab({ snap, graphs, selectedId, onSelect, focus, selectedCell 
                     : 'border-line-subtle/50 bg-nebula/40 hover:border-line-default/60 hover:bg-nebula/60'
                 }`}
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <div className="text-[11px] font-semibold text-slate-100">G#{descriptor.originalGraphId}</div>
-                    <div className="mt-1 text-[11px] text-slate-400">{descriptor.motifSignature}</div>
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <div className="text-[11px] font-semibold text-slate-100">G#{descriptor.originalGraphId}</div>
+                  <div className="text-[10px] text-slate-500 font-mono tabular-nums">
+                    {((descriptor.structuralOutlierScore || 0) * 100).toFixed(0)}%
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <TagChip label={descriptor.densityBucket} tone="info" />
-                    <TagChip label={descriptor.clusteringBucket} tone="warn" />
-                    <TagChip label={descriptor.readoutBucket} tone="good" />
-                  </div>
+                </div>
+                <div className="text-[11px] text-slate-400 mb-2">{descriptor.motifSignature}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  <TagChip label={`${isVi ? 'Mật độ' : 'Density'}: ${descriptor.densityBucket}`} tone="info" />
+                  <TagChip label={`${isVi ? 'Cụm' : 'Cluster'}: ${descriptor.clusteringBucket}`} tone="warn" />
+                  <TagChip label={`${isVi ? 'Readout' : 'Readout'}: ${descriptor.readoutBucket}`} tone="good" />
                 </div>
               </button>
             ))}
           </div>
         ) : (
-          <EmptyState title="No strong outliers here" description="This slice stays close to the collection norm, so use Failures or Readout to explain the remaining mistakes." />
+          <EmptyState
+            title={isVi ? 'Không có ngoại lệ mạnh' : 'No strong outliers here'}
+            description={isVi
+              ? 'Lát cắt này gần chuẩn chung của collection, hãy dùng tab Lỗi hoặc Readout để giải thích các lỗi còn lại.'
+              : 'This slice stays close to the collection norm, so use Failures or Readout to explain the remaining mistakes.'}
+          />
         )}
       </div>
     </div>
@@ -1796,9 +1945,10 @@ function buildTask2ModelFailureReading(graph, signature, reportLang = 'en') {
 
 function ReadoutTab({ graph, modelSignature = null, classNames, onSelect, reportLang = 'en' }) {
   if (!graph) {
-    return <EmptyState title="No graph selected" description="Pick a graph from the topology or hard-case list to inspect graph-level readout." />
+    return <EmptyState title={reportLang === 'vi' ? 'Chưa chọn đồ thị' : 'No graph selected'} description={reportLang === 'vi' ? 'Chọn một đồ thị từ topology hoặc danh sách hard-case để kiểm tra readout.' : 'Pick a graph from the topology or hard-case list to inspect graph-level readout.'} />
   }
 
+  const isVi = reportLang === 'vi'
   const gtLabel = formatTask2ClassLabel(classNames, graph.groundTruth, 'Unknown')
   const predLabel = formatTask2ClassLabel(classNames, graph.predicted, 'Pending')
   const topContributors = graph.topContributors || []
@@ -1806,27 +1956,37 @@ function ReadoutTab({ graph, modelSignature = null, classNames, onSelect, report
     entropyBucket: graph.entropyBucket,
     readoutBucket: graph.readoutBucket,
   })
+  const nodeCount = graph.nodes?.length ?? graph.numNodes ?? 0
+  const edgeCount = graph.links?.length ?? graph.numEdges ?? 0
+  const conf = graph.confidence ?? 0
+  const margin = graph.margin ?? 0
+  const entropy = graph.entropy ?? 0
+  const readoutConcentration = graph.readoutConcentration ?? 0
+  const failureLabel = translateTask2FailureTagLabel(graph.failureTag, reportLang)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
-      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+      {/* Top row: model reading + featured graph + metric gauges */}
+      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+        {/* Model reading card */}
         <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-cyan-500/4 p-4">
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.5)]" />
             <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-300">
-              {reportLang === 'vi' ? 'Đọc theo model' : 'Model reading'}
+              {isVi ? 'Đọc theo model' : 'Model reading'}
             </div>
           </div>
-          <div className="mt-2 text-sm font-semibold text-slate-100">{modelSignature?.primaryLabel || 'Graph readout'}</div>
+          <div className="mt-2 text-sm font-semibold text-slate-100">{modelSignature?.primaryLabel || (isVi ? 'Readout đồ thi' : 'Graph readout')}</div>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-300">
             {buildTask2ModelFailureReading(graph, modelSignature, reportLang)}
           </p>
         </div>
 
+        {/* Featured graph card */}
         <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Featured graph</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{isVi ? 'Đồ thị nổi bật' : 'Featured graph'}</div>
               <div className="mt-1.5 text-sm font-bold text-slate-100">G#{graph.originalGraphId}</div>
             </div>
             <button
@@ -1834,75 +1994,103 @@ function ReadoutTab({ graph, modelSignature = null, classNames, onSelect, report
               onClick={() => onSelect?.(graph.originalGraphId)}
               className="rounded-lg border border-cyan-500/20 bg-gradient-to-r from-cyan-500/12 to-cyan-500/6 px-3 py-1.5 text-[10px] font-bold text-cyan-300 transition-all hover:from-cyan-500/18 hover:to-cyan-500/10 hover:border-cyan-400/35"
             >
-              Focus
+              {isVi ? 'Tập trung' : 'Focus'}
             </button>
           </div>
           <div className="mt-3 space-y-2 text-[11px] text-slate-300">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-slate-500">Ground truth</span>
+              <span className="text-slate-500">{isVi ? 'Nhãn thật' : 'Ground truth'}</span>
               <span className="font-semibold text-slate-100">{gtLabel}</span>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-slate-500">Prediction</span>
+              <span className="text-slate-500">{isVi ? 'Dự đoán' : 'Prediction'}</span>
               <span className={`font-semibold ${graph.correct === 1 ? 'text-emerald-300' : 'text-red-300'}`}>{predLabel}</span>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-slate-500">Nodes / edges</span>
-              <span className="font-mono text-slate-200">{graph.nodes.length}n / {graph.links.length}e</span>
+              <span className="text-slate-500">{isVi ? 'Nút / cạnh' : 'Nodes / edges'}</span>
+              <span className="font-mono text-slate-200">{nodeCount}n / {edgeCount}e</span>
             </div>
           </div>
         </div>
 
-        <StatCell label="Confidence" value={(graph.confidence || 0) * 100} digits={1} suffix="%" tone={(graph.confidence || 0) > 0.8 ? 'good' : (graph.confidence || 0) > 0.55 ? 'warn' : 'bad'} />
-        <StatCell label="Margin" value={(graph.margin || 0) * 100} digits={1} suffix="%" tone={(graph.margin || 0) > 0.2 ? 'good' : (graph.margin || 0) > 0.1 ? 'warn' : 'bad'} />
-        <StatCell label="Entropy" value={(graph.entropy || 0) * 100} digits={1} suffix="%" tone={(graph.entropy || 0) > 0.8 ? 'bad' : (graph.entropy || 0) > 0.55 ? 'warn' : 'good'} />
+        {/* Metric gauges */}
+        <StatCell label="Confidence" value={conf * 100} digits={1} suffix="%" tone={conf > 0.8 ? 'good' : conf > 0.55 ? 'warn' : 'bad'} />
+        <StatCell label="Margin" value={margin * 100} digits={1} suffix="%" tone={margin > 0.2 ? 'good' : margin > 0.1 ? 'warn' : 'bad'} />
+        <StatCell label="Entropy" value={entropy * 100} digits={1} suffix="%" tone={entropy > 0.8 ? 'bad' : entropy > 0.55 ? 'warn' : 'good'} />
       </div>
 
+      {/* Bottom row: interpretation + structural + concentration */}
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+        {/* Readout interpretation */}
         <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Readout interpretation</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{isVi ? 'Diễn giải readout' : 'Readout interpretation'}</div>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{buildReadoutNarrative(graph, reportLang)}</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <TagChip label={formatFailureTag(graph.failureTag)} tone={graph.correct === 1 ? 'good' : 'bad'} />
+            <TagChip label={failureLabel} tone={graph.correct === 1 ? 'good' : 'bad'} />
             <TagChip label={graph.densityBucket} tone="info" />
             <TagChip label={graph.entropyBucket} tone="warn" />
             <TagChip label={readoutPattern} tone="good" />
           </div>
         </div>
 
+        {/* Structural profile */}
         <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Structural profile</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{isVi ? 'Hồ sơ cấu trúc' : 'Structural profile'}</div>
           <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-            <MiniMetric label="Density" value={graph.structural?.density} />
-            <MiniMetric label="Cluster Coef" value={graph.structural?.avg_clustering} />
-            <MiniMetric label="AvgDeg" value={graph.structural?.avg_degree} digits={1} />
+            <MiniMetric label={isVi ? 'Mật độ' : 'Density'} value={graph.structural?.density} />
+            <MiniMetric label={isVi ? 'Hệ cụm' : 'Cluster Coef'} value={graph.structural?.avg_clustering} />
+            <MiniMetric label={isVi ? 'TB bậc' : 'AvgDeg'} value={graph.structural?.avg_degree} digits={1} />
           </div>
           <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-            Motif signature: <span className="font-semibold text-slate-200">{graph.motifSignature}</span>
+            {isVi ? 'Chữ ký motif:' : 'Motif signature:'} <span className="font-semibold text-slate-200">{graph.motifSignature || '—'}</span>
           </p>
         </div>
 
+        {/* Readout concentration */}
         <div className="rounded-2xl border border-line-default/60 bg-gradient-to-b from-nebula/60 to-nebula/30 p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Readout concentration</div>
-          <div className="mt-2 text-lg font-semibold text-slate-100">{(graph.readoutConcentration * 100).toFixed(0)}%</div>
-          <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-            Top-k contribution is <span className="font-semibold text-slate-200">{graph.readoutBucket}</span>, while global entropy is <span className="font-semibold text-slate-200">{graph.entropyBucket}</span>. Pattern: <span className="font-semibold text-slate-200">{readoutPattern}</span>.
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{isVi ? 'Mức tập trung readout' : 'Readout concentration'}</div>
+            <span className={`text-lg font-bold tabular-nums ${
+              readoutConcentration > 0.6 ? 'text-emerald-300' : readoutConcentration > 0.35 ? 'text-amber-300' : 'text-red-300'
+            }`}>
+              {(readoutConcentration * 100).toFixed(0)}%
+            </span>
+          </div>
+          {/* Concentration bar */}
+          <div className="h-2 w-full rounded-full bg-slate-950/40 overflow-hidden mb-2">
+            <div
+              className={`h-full rounded-full transition-all ${
+                readoutConcentration > 0.6 ? 'bg-emerald-500/70' : readoutConcentration > 0.35 ? 'bg-amber-500/70' : 'bg-red-500/70'
+              }`}
+              style={{ width: `${Math.max(2, readoutConcentration * 100)}%` }}
+            />
+          </div>
+          <p className="text-[11px] leading-relaxed text-slate-400">
+            {isVi ? (
+              <>Top-k đóng góp là <span className="font-semibold text-slate-200">{graph.readoutBucket}</span>, entropy toàn cục <span className="font-semibold text-slate-200">{graph.entropyBucket}</span>. Pattern: <span className="font-semibold text-slate-200">{readoutPattern}</span>.</>
+            ) : (
+              <>Top-k contribution is <span className="font-semibold text-slate-200">{graph.readoutBucket}</span>, global entropy is <span className="font-semibold text-slate-200">{graph.entropyBucket}</span>. Pattern: <span className="font-semibold text-slate-200">{readoutPattern}</span>.</>
+            )}
           </p>
+          {/* Top contributors */}
           <div className="mt-3 space-y-2">
-            {topContributors.length ? topContributors.map((item) => (
+            {topContributors.length ? topContributors.map((item, idx) => (
               <div key={item.nodeId} className="flex items-center gap-2">
-                <div className="w-8 shrink-0 rounded-md border border-line-default bg-nebula px-2 py-1 text-center text-[11px] font-mono text-slate-200">
+                <div className="w-7 shrink-0 rounded-md border border-line-default bg-nebula px-1.5 py-1 text-center text-[10px] font-mono text-slate-200">
                   {item.nodeId}
                 </div>
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-nebula">
-                  <div className="h-full rounded-full bg-amber-400/85" style={{ width: `${Math.max(4, item.value * 100)}%` }} />
+                <div className="flex-1 h-2 overflow-hidden rounded-full bg-slate-950/40">
+                  <div
+                    className={`h-full rounded-full ${idx === 0 ? 'bg-amber-400/85' : idx === 1 ? 'bg-amber-400/60' : 'bg-amber-400/40'}`}
+                    style={{ width: `${Math.max(3, item.value * 100)}%` }}
+                  />
                 </div>
-                <div className="w-12 shrink-0 text-right text-[11px] font-mono text-amber-300">
+                <div className="w-10 shrink-0 text-right text-[10px] font-mono text-amber-300 tabular-nums">
                   {(item.value * 100).toFixed(0)}%
                 </div>
               </div>
             )) : (
-              <p className="text-[11px] text-slate-500">No node contribution data yet.</p>
+              <p className="text-[11px] text-slate-500 italic">{isVi ? 'Chưa có dữ liệu đóng góp nút.' : 'No node contribution data yet.'}</p>
             )}
           </div>
         </div>
@@ -1911,7 +2099,8 @@ function ReadoutTab({ graph, modelSignature = null, classNames, onSelect, report
   )
 }
 
-function BatchHeatmap({ snap, snapshots, epochInt, graphs, selectedId, onSelect, reportMode = false }) {
+function BatchHeatmap({ snap, snapshots, epochInt, graphs, selectedId, onSelect, rowStats, reportMode = false, reportLang = 'vi' }) {
+  const isVi = reportLang === 'vi'
   const { heatmapRows, graphLabels, numGraphs } = useMemo(() => {
     if (!snapshots?.length) return { heatmapRows: [], graphLabels: [], numGraphs: 0 }
     const nG = snap?.graph_correct?.length || snapshots.find((item) => item.graph_correct)?.graph_correct?.length || 0
@@ -1943,40 +2132,73 @@ function BatchHeatmap({ snap, snapshots, epochInt, graphs, selectedId, onSelect,
     )
   }
 
+  // Compute epoch label step to avoid overcrowding
+  const epochLabelStep = Math.max(1, Math.ceil(heatmapRows.length / 12))
+
   return (
     <div className={`flex flex-col gap-2 ${reportMode ? 'task2-report-heatmap overflow-hidden' : ''}`}>
-      <p className="text-nano text-slate-400 leading-relaxed">
-        Each tile is one graph at one checkpoint. Green means correct, red means wrong.
+      <p className="text-[10px] text-slate-500 leading-relaxed">
+        {isVi ? 'Xanh = đúng, đỏ = sai. Di chuột vào hàng để xem chi tiết.' : 'Green = correct, red = wrong. Hover a row for details.'}
       </p>
       <div className={`flex-1 min-h-0 ${reportMode ? 'overflow-hidden' : 'overflow-auto'}`}>
         <div className="inline-flex flex-col gap-0.5 min-w-max">
+          {/* Epoch header */}
           <div className="flex gap-0.5 items-center">
-            <div className="w-12 shrink-0" />
-            {heatmapRows.map((row, ci) => (
-              <div
-                key={ci}
-                className={`w-5 text-center text-nano font-mono shrink-0 ${
-                  row.isCurrent ? 'text-cyan-300 font-bold' : 'text-slate-600'
-                }`}
-              >
-                {row.epoch}
-              </div>
-            ))}
+            <div className="w-14 shrink-0" />
+            {heatmapRows.map((row, ci) => {
+              const showLabel = ci % epochLabelStep === 0 || row.isCurrent
+              return (
+                <div
+                  key={ci}
+                  className={`w-5 text-center text-[8px] font-mono shrink-0 ${
+                    row.isCurrent ? 'text-cyan-300 font-bold' : showLabel ? 'text-slate-500' : 'text-transparent'
+                  }`}
+                >
+                  {row.isCurrent ? (
+                    <span className="inline-block rounded bg-cyan-500/20 px-0.5 text-[8px]">{row.epoch}</span>
+                  ) : (
+                    row.epoch
+                  )}
+                </div>
+              )
+            })}
           </div>
 
+          {/* Graph rows */}
           {Array.from({ length: numGraphs }, (_, gi) => {
             const graphId = graphs[gi]?.originalGraphId ?? gi
             const isSelected = selectedId === graphId
+            const stats = rowStats?.get(graphId)
+            const errorCount = stats?.errorCount ?? 0
+            const flipCount = stats?.flipCount ?? 0
+            const recoveryEpoch = stats?.recoveryEpoch
+            const wrongCount = heatmapRows.filter((row) => row.data[gi] === 0).length
+
+            // Build tooltip
+            const tooltip = [
+              `${isVi ? 'Đồ thị' : 'Graph'} ${graphLabels[gi]}`,
+              `${isVi ? 'Sai tại' : 'Wrong at'} ${wrongCount}/${heatmapRows.length} ${isVi ? 'mốc' : 'checkpoints'}`,
+              `${isVi ? 'Đổi nhãn' : 'Flips'}: ${flipCount}`,
+              recoveryEpoch != null
+                ? `${isVi ? 'Phục hồi tại epoch' : 'Recovered at epoch'} ${recoveryEpoch}`
+                : (isVi ? 'Chưa phục hồi' : 'Not recovered'),
+            ].join(' · ')
+
             return (
               <div
                 key={graphId}
                 onClick={() => onSelect?.(graphId)}
+                title={tooltip}
                 className={`flex gap-0.5 items-center cursor-pointer transition-colors rounded-sm hover:bg-white/5 ${
                   isSelected ? 'bg-cyan-500/10 ring-1 ring-cyan-500/30' : ''
                 }`}
               >
+                {/* Left accent bar for selected row */}
+                {isSelected && (
+                  <div className="w-0.5 h-5 rounded-full bg-cyan-400 shrink-0" />
+                )}
                 <div
-                  className={`w-12 text-right text-nano font-mono shrink-0 pr-1 ${
+                  className={`${isSelected ? 'w-13' : 'w-14'} text-right text-[9px] font-mono shrink-0 pr-1 ${
                     isSelected ? 'text-cyan-300 font-bold' : 'text-slate-500'
                   }`}
                 >
@@ -1995,7 +2217,6 @@ function BatchHeatmap({ snap, snapshots, epochInt, graphs, selectedId, onSelect,
                   return (
                     <div
                       key={ci}
-                      title={`Graph ${graphLabels[gi]} · Epoch ${row.epoch}: ${val === 1 ? 'correct' : val === 0 ? 'wrong' : 'unknown'}`}
                       className={`w-5 h-5 rounded-sm shrink-0 transition-all ${
                         row.isCurrent
                           ? isSelected

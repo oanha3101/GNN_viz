@@ -201,22 +201,11 @@ describe('Task2MetricsPanel', () => {
     expect(screen.getAllByText(/Độ tập trung attention|Attention focus/i).length).toBeGreaterThan(0)
   })
 
-  it('shows the model mechanism lens with evidence graphs', () => {
-    render(<Task2MetricsPanel />)
-
-    fireEvent.click(screen.getByRole('button', { name: /Mechanism|Cơ chế học/i }))
-
-    expect(screen.getByText(/Model mechanism lens/i)).toBeInTheDocument()
-    expect(screen.getByText(/GAT learns by locking attention onto decisive motifs|GAT học bằng cách khóa attention/i)).toBeInTheDocument()
-    expect(screen.getByText(/Mechanism evidence graphs|Graph chứng minh cơ chế học/i)).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /Readout/i }).length).toBeGreaterThan(0)
-  })
-
   it('surfaces research signals in the overview', () => {
     render(<Task2MetricsPanel />)
 
-    expect(screen.getByText(/Research signals|Tín hiệu nghiên cứu/i)).toBeInTheDocument()
-    expect(screen.getByText(/Class collapse|Sụp đổ lớp/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Rủi ro chính|Main Risks/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Class collapse|Sụp đổ lớp/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Calibration|Hiệu chuẩn/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Shortcut bias|Thiên lệch shortcut/i).length).toBeGreaterThan(0)
   })
@@ -241,15 +230,19 @@ describe('Task2MetricsPanel', () => {
   it('routes weak-class watch into the weak-class failure slice', () => {
     render(<Task2MetricsPanel />)
 
-    fireEvent.click(screen.getByRole('button', { name: /Open slice/i }))
+    // Open the collapsible "Slice & Focus Details" section first
+    fireEvent.click(screen.getByRole('button', { name: /Chi tiết lát cắt|Slice & Focus/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Open slice|Mở lát cắt/i }))
     expect(gnnState.setTask2FocusMode).toHaveBeenCalledWith('weak_class')
   })
 
   it('shows density shortcut vs weak-class misses block', () => {
     render(<Task2MetricsPanel />)
 
-    expect(screen.getByText('Density shortcut vs weak-class misses')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /Weak-class misses/i }).length).toBeGreaterThan(0)
+    // Open the collapsible section to reveal the focus routing card
+    fireEvent.click(screen.getByRole('button', { name: /Chi tiết lát cắt|Slice & Focus/i }))
+    expect(screen.getByText(/Density shortcut|Thiên lệch mật độ/i)).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /Weak-class misses|Các ca trượt/i }).length).toBeGreaterThan(0)
   })
 
   it('auto-selects the featured graph for the active slice', () => {

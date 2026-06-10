@@ -1370,3 +1370,77 @@ export function filterTask2Snapshot(snapshot, graphIds = [], graphs = []) {
     graph_probabilities: pick(snapshot.graph_probabilities),
   }
 }
+
+/**
+ * computeHeatmapRowStats — per-graph epoch history stats for the failure heatmap.
+ *   snapshots : snapshot[]   all epoch snapshots
+ *   graphs    : descriptor[] graph descriptors (with originalGraphId, sourceIndex)
+ *
+ * Returns Map<originalGraphId, { errorCount, flipCount, recoveryEpoch, persistentError, flipHeavy, lateRecovery }>
+ */
+export function computeHeatmapRowStats(snapshots = [], graphs = []) {
+  const result = new Map()
+  if (!snapshots.length || !graphs.length) return result
+
+  const totalEpochs = snapshots.length
+  const persistentThreshold = Math.floor(totalEpochs * 0.7)
+  const lateThreshold = Math.floor(totalEpochs * 0.7)
+
+  for (const graph of graphs) {
+    const graphId = graph.originalGraphId
+    const sourceIndex = graph.sourceIndex ?? 0
+    let errorCount = 0
+    let flipCount = 0
+    let recoveryEpoch = null
+    let prevCorrect = null
+    let consecutiveCorrect = 0
+
+    for (let epoch = 0; epoch < totalEpochs; epoch++) {
+      const correct = snapshots[epoch]?.graph_correct?.[sourceIndex]
+      if (correct === 0) errorCount++
+      if (prevCorrect !== null && correct !== null && correct !== prevCorrect) flipCount++
+      if (correct === 1) {
+        consecutiveCorrect++
+        if (recoveryEpoch === null && consecutiveCorrect >= 2) {
+          recoveryEpoch = epoch - 1
+        }
+      } else {
+        consecutiveCorrect = 0
+      }
+      prevCorrect = correct
+    }
+
+    result.set(graphId, {
+      errorCount,
+      flipCount,
+      recoveryEpoch,
+      persistentError: errorCount > persistentThreshold,
+      flipHeavy: flipCount >= 4,
+      lateRecovery: recoveryEpoch !== null && recoveryEpoch > lateThreshold,
+    })
+  }
+
+  return result
+}
+
+/**
+ * computeHeatmapSummary — aggregate stats from per-graph row stats.
+ *   rowStats : Map<id, rowStat>  output of computeHeatmapRowStats
+ *
+ * Returns { totalHard, persistentCount, lateRecoveryCount, flipHeavyCount }
+ */
+export function computeHeatmapSummary(rowStats) {
+  let persistentCount = 0
+  let lateRecoveryCount = 0
+  let flipHeavyCount = 0
+  let totalHard = 0
+
+  for (const stats of rowStats.values()) {
+    if (stats.errorCount > 0) totalHard++
+    if (stats.persistentError) persistentCount++
+    if (stats.lateRecovery) lateRecoveryCount++
+    if (stats.flipHeavy) flipHeavyCount++
+  }
+
+  return { totalHard, persistentCount, lateRecoveryCount, flipHeavyCount }
+}

@@ -15,7 +15,7 @@ from models.sql_models import User
 from schemas.constants import ErrorCode
 from services.hybrid_store import blob_store
 from tasks.community_detection import run_community_detection
-from tasks.graph_classification import run_graph_classification
+from tasks.graph_classification import run_graph_classification, run_multi_seed_evaluation
 from tasks.graph_embedding import run_graph_embedding
 from tasks.graph_generation import run_graph_generation
 from tasks.link_prediction import run_link_prediction
@@ -304,9 +304,18 @@ async def run_graph_classification_task(websocket, *, config, seq, session_id, s
     data = get_data_from_config(config)
     _ensure_graph_classification_compatible(data, config)
     custom_graphs = data if isinstance(data, list) else None
-    epoch_snapshots = await run_graph_classification(
-        config, websocket, stop_check, custom_graphs=custom_graphs, snapshot_hook=snapshot_hook
-    )
+
+    # Multi-seed evaluation mode
+    multi_seed = config.get('task2_multi_seed', None)
+    if multi_seed:
+        seeds = multi_seed if isinstance(multi_seed, list) else [1, 2, 3, 4, 5]
+        epoch_snapshots = await run_multi_seed_evaluation(
+            config, websocket, stop_check, custom_graphs=custom_graphs, seeds=seeds
+        )
+    else:
+        epoch_snapshots = await run_graph_classification(
+            config, websocket, stop_check, custom_graphs=custom_graphs, snapshot_hook=snapshot_hook
+        )
     await finalize_task_run(websocket, seq=seq, session_id=session_id, stop_check=stop_check, epoch_snapshots=epoch_snapshots)
 
 

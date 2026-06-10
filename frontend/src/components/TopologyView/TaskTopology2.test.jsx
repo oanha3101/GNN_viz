@@ -72,16 +72,15 @@ describe('TaskTopology2 task 2 gallery', () => {
   it('shows research metadata and sort controls', () => {
     render(<TaskTopology2 />)
 
-    expect(screen.getByRole('button', { name: 'Priority' })).toBeInTheDocument()
-    expect(screen.getByText(/margin 3%/i)).toBeInTheDocument()
-    expect(screen.getByText('diffuse')).toBeInTheDocument()
-    expect(screen.getAllByText('Ổn định lân cận').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'Ưu tiên' })).toBeInTheDocument()
+    expect(screen.getByText(/Margin 3%/i)).toBeInTheDocument()
+    expect(screen.getByText('loãng')).toBeInTheDocument()
   })
 
   it('updates sort and selects graph by original graph id', () => {
     render(<TaskTopology2 />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Confidence' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Độ tin cậy' }))
     expect(gnnState.setTask2GallerySort).toHaveBeenCalledWith('confidence_desc')
 
     fireEvent.click(screen.getByRole('button', { name: /G#70/i }))
@@ -91,10 +90,10 @@ describe('TaskTopology2 task 2 gallery', () => {
   it('can render the full collection in forced export mode', () => {
     render(<TaskTopology2 forcedGallerySort="confidence_desc" showFullCollection hideGalleryControls />)
 
-    expect(screen.getByText(/showing the full collection in one view/i)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Confidence' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Prev' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/Page 1\//i)).not.toBeInTheDocument()
+    expect(screen.getByText(/Đang hiển thị toàn bộ collection/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Độ tin cậy' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Trước' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Trang 1\//i)).not.toBeInTheDocument()
   })
 
   it('keeps the detail view reachable when a graph is selected', () => {
@@ -102,16 +101,11 @@ describe('TaskTopology2 task 2 gallery', () => {
 
     render(<TaskTopology2 />)
 
-    expect(screen.getByRole('button', { name: /back to gallery/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Quay lại gallery/i })).toBeInTheDocument()
     expect(screen.getByText('Graph #70')).toBeInTheDocument()
-    expect(screen.getByText('B')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Đồ thị động/i })).toBeInTheDocument()
+    expect(screen.getAllByText('B').length).toBeGreaterThan(0)
     expect(screen.getByLabelText(/Graph 70 structure/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Mở thông số/i })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Mở thông số/i }))
-    expect(screen.getByRole('button', { name: /Thu gọn/i })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Dòng học/i }))
-    expect(screen.getByText(/Learning timeline/i)).toBeInTheDocument()
+    expect(screen.getByText(/Dòng thời gian học/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Correctness epoch strip/i)).toBeInTheDocument()
   })
 })
