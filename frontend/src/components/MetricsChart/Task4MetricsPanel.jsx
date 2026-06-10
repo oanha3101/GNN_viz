@@ -46,7 +46,6 @@ export default function Task4MetricsPanel({ forcedTab = null, hideTabControls = 
     { id: 'overview', label: copy.tabs.overview },
     { id: 'bridges', label: copy.tabs.bridges },
     { id: 'stability', label: copy.tabs.stability },
-    { id: 'diagnostics', label: copy.tabs.diagnostics },
   ]), [copy])
   const { snapshots, currentEpochFloat } = usePlayerStore()
   const setSelectedCommunity = useGNNStore((s) => s.setSelectedCommunity)
@@ -100,7 +99,6 @@ export default function Task4MetricsPanel({ forcedTab = null, hideTabControls = 
       {activeTab === 'overview' && <OverviewTab copy={copy} snap={snap} snapshots={snapshots} epochInt={epochInt} graphData={graphData} selectedModel={selectedModel} />}
       {activeTab === 'bridges' && <BridgesTab copy={copy} snap={snap} graphData={graphData} onFocus={(cid) => setSelectedCommunity(cid)} />}
       {activeTab === 'stability' && <StabilityTab copy={copy} snap={snap} snapshots={snapshots} epochInt={epochInt} />}
-      {activeTab === 'diagnostics' && <DiagnosticsTab copy={copy} snap={snap} snapshots={snapshots} epochInt={epochInt} />}
     </div>
   )
 }

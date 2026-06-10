@@ -123,7 +123,13 @@ export function localizeElementText(root, lang, replacements = {}) {
       return out.replace(trimmed, dict[trimmed])
     }
     for (const [source, target] of Object.entries(dict).sort((a, b) => b[0].length - a[0].length)) {
-      out = out.replaceAll(source, target)
+      const isWord = /^[a-zA-Z0-9_]+$/.test(source)
+      if (isWord) {
+        const regex = new RegExp('\\b' + source + '\\b', 'g')
+        out = out.replace(regex, target)
+      } else {
+        out = out.replaceAll(source, target)
+      }
     }
     return out
   }

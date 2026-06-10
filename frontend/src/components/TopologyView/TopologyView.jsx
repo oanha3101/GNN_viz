@@ -96,7 +96,7 @@ export default function TopologyView({ reportMode = false }) {
       isVeryLargeGraph,
       showNodeLabels: !reportMode && nodeCount <= 80,
       disableMotion: reportMode || isVeryLargeGraph,
-      showLinkParticles: false,
+      showLinkParticles: true,
       enableNodeDrag: !reportMode && nodeCount < 900,
       warmupTicks: isShowcaseGraph ? 45 : isVeryLargeGraph ? 12 : 30,
       cooldownTicks: isShowcaseGraph ? 140 : isVeryLargeGraph ? 40 : 100,
@@ -174,14 +174,18 @@ export default function TopologyView({ reportMode = false }) {
     }
 
     let samplingEdgeMap = null
+    let sampledNodes = null
     if (visualModel === 'SAGE' && Array.isArray(currentSnap?.sampling_edges)) {
       samplingEdgeMap = new Map()
+      sampledNodes = new Set()
       currentSnap.sampling_edges.forEach((edge) => {
         const source = typeof edge.source === 'object' ? edge.source.id : edge.source
         const target = typeof edge.target === 'object' ? edge.target.id : edge.target
         if (Number.isFinite(source) && Number.isFinite(target)) {
           samplingEdgeMap.set(Math.min(source, target) + '-' + Math.max(source, target), true)
         }
+        if (Number.isFinite(source)) sampledNodes.add(source)
+        if (Number.isFinite(target)) sampledNodes.add(target)
       })
     }
 
@@ -224,6 +228,7 @@ export default function TopologyView({ reportMode = false }) {
       perHeadMap,
       nodeMaxAttnMap,
       samplingEdgeMap,
+      sampledNodes,
       epochDeltaMap,
       showNodeLabels: graphPerf.showNodeLabels,
       disableMotion: graphPerf.disableMotion,
@@ -236,6 +241,9 @@ export default function TopologyView({ reportMode = false }) {
     } else {
       kHopNeighborsRef.current = null
     }
+
+    // Force a redraw of the canvas to render real-time changes when playing
+    fgRef.current?.refresh?.()
   }, [snapshots, currentEpochFloat, selectedNodeId, viewMode, groundTruth, visualModel, attentionHead, kHopEnabled, kHopMaxHops, rawGraphData, showErrorsOnly, graphPerf])
 
   // Resize handler — re-attach whenever the target node remounts
@@ -350,6 +358,16 @@ export default function TopologyView({ reportMode = false }) {
     handleCloseContextMenu()
   }, [])
 
+  // Auto-focus on selected node when selectedNodeId changes
+  useEffect(() => {
+    if (!fgRef.current || !activeGraphData || selectedNodeId === null) return
+    const node = activeGraphData.nodes.find(n => n.id === selectedNodeId)
+    if (node && Number.isFinite(node.x) && Number.isFinite(node.y)) {
+      fgRef.current.centerAt(node.x, node.y, 800)
+      fgRef.current.zoom(2.5, 800)
+    }
+  }, [selectedNodeId, activeGraphData])
+
   // Simulation Setup — only run once when graph data is first loaded
   // This stabilizes node positions across epochs by not re-running layout
   const layoutInitializedRef = useRef(false)
@@ -454,11 +472,21 @@ export default function TopologyView({ reportMode = false }) {
         ...node,
         color: nodeColor,
         confidence: state.currentSnapshot?.node_confidence?.[node.id] ?? 0,
-        isCorrect: state.currentSnapshot?.node_correctness?.[node.id] === 1,
+        isCorrect: (() => {
+          const correctnessVal = state.currentSnapshot?.node_correctness?.[node.id]
+          if (correctnessVal !== undefined && correctnessVal !== null) {
+            return correctnessVal === 1 || correctnessVal === true
+          }
+          if (state.currentSnapshot?.node_predictions && Array.isArray(gtSafe) && gtSafe[node.id] !== undefined) {
+            return state.currentSnapshot.node_predictions[node.id] === gtSafe[node.id]
+          }
+          return null
+        })(),
         majorityRatio: state.currentSnapshot?.majority_ratio?.[node.id] ?? 0,
         neighborContext: state.currentSnapshot?.neighbor_majority?.[node.id] ?? null,
         dirichletEnergy: state.currentSnapshot?.dirichlet_energy ?? null,
         initialDirichletEnergy: snaps?.[0]?.dirichlet_energy ?? null,
+        isSampled: state.sampledNodes?.has(node.id) === true,
         epochDelta: state.epochDeltaMap?.get(node.id) ?? null,
         isBestSoFar: state.currentSnapshot?.is_best_so_far === true,
         isShowcaseGraph: graphPerf.isShowcaseGraph,
@@ -517,12 +545,11 @@ export default function TopologyView({ reportMode = false }) {
         // Ép vẽ lại bằng cách đưa CEF vào một prop mà thư viện theo dõi
         onRenderFramePre={(ctx) => {
           const state = animState.current
-          const sid = state.sid
-          if (sid === null || !state.currentSnapshot) return
+          if (!state.currentSnapshot) return
           const nodes = graphData?.nodes
           if (!nodes) return
-          const selectedNode = nodes.find(n => n.id === sid)
-          if (!selectedNode || !Number.isFinite(selectedNode.x)) return
+          const sid = state.sid
+          const selectedNode = sid !== null ? nodes.find(n => n.id === sid) : null
 
           // ── GAT: Attention Beams ────────────────────────────────────────
           if (state.model === 'GAT' && state.attentionMap) {
@@ -530,6 +557,23 @@ export default function TopologyView({ reportMode = false }) {
             for (const edge of edges) {
               const src = edge.source
               const tgt = edge.target
+              
+              if (sid === null) {
+                const weight = edge.weight || 0
+                if (weight < 0.3) continue
+                const otherNode = nodes.find(n => n.id === tgt)
+                const sourceNode = nodes.find(n => n.id === src)
+                if (!sourceNode || !otherNode || !Number.isFinite(sourceNode.x) || !Number.isFinite(otherNode.x)) continue
+                const thickness = 0.5 + weight * 2
+                ctx.beginPath()
+                ctx.moveTo(sourceNode.x, sourceNode.y)
+                ctx.lineTo(otherNode.x, otherNode.y)
+                ctx.strokeStyle = `rgba(251, 191, 36, ${0.05 + weight * 0.12})`
+                ctx.lineWidth = thickness
+                ctx.stroke()
+                continue
+              }
+
               if (src !== sid && tgt !== sid) continue
               const otherId = src === sid ? tgt : src
               const otherNode = nodes.find(n => n.id === otherId)
@@ -554,41 +598,60 @@ export default function TopologyView({ reportMode = false }) {
             for (const edge of samplingEdges) {
               const src = typeof edge.source === 'object' ? edge.source.id : edge.source
               const tgt = typeof edge.target === 'object' ? edge.target.id : edge.target
+              
+              if (sid === null) {
+                const sourceNode = nodes.find(n => n.id === src)
+                const targetNode = nodes.find(n => n.id === tgt)
+                if (!sourceNode || !targetNode || !Number.isFinite(sourceNode.x) || !Number.isFinite(targetNode.x)) continue
+                ctx.save()
+                ctx.beginPath()
+                ctx.moveTo(sourceNode.x, sourceNode.y)
+                ctx.lineTo(targetNode.x, targetNode.y)
+                ctx.strokeStyle = 'rgba(34, 211, 238, 0.07)'
+                ctx.lineWidth = 1
+                ctx.setLineDash([2, 3])
+                ctx.stroke()
+                ctx.restore()
+                continue
+              }
+
               if (src === sid) sampledSet.add(tgt)
               if (tgt === sid) sampledSet.add(src)
             }
-            // Draw sampling edges from selected node
-            for (const otherId of sampledSet) {
-              const otherNode = nodes.find(n => n.id === otherId)
-              if (!otherNode || !Number.isFinite(otherNode.x)) continue
-              ctx.beginPath()
-              ctx.moveTo(selectedNode.x, selectedNode.y)
-              ctx.lineTo(otherNode.x, otherNode.y)
-              ctx.strokeStyle = 'rgba(34, 211, 238, 0.5)'
-              ctx.lineWidth = 2
-              ctx.stroke()
-            }
-            // Draw glow on sampled neighbors
-            for (const otherId of sampledSet) {
-              const otherNode = nodes.find(n => n.id === otherId)
-              if (!otherNode || !Number.isFinite(otherNode.x)) continue
-              ctx.beginPath()
-              ctx.arc(otherNode.x, otherNode.y, 12, 0, 2 * Math.PI)
-              ctx.fillStyle = 'rgba(34, 211, 238, 0.15)'
-              ctx.fill()
-              ctx.strokeStyle = 'rgba(34, 211, 238, 0.6)'
-              ctx.lineWidth = 1.5
-              ctx.stroke()
-            }
-            // Badge "S" on sampled neighbors
-            for (const otherId of sampledSet) {
-              const otherNode = nodes.find(n => n.id === otherId)
-              if (!otherNode || !Number.isFinite(otherNode.x)) continue
-              ctx.font = 'bold 7px Inter, sans-serif'
-              ctx.textAlign = 'center'
-              ctx.textBaseline = 'middle'
-              ctx.fillStyle = 'rgba(34, 211, 238, 0.9)'
-              ctx.fillText('S', otherNode.x, otherNode.y - 14)
+            if (sid !== null && selectedNode && Number.isFinite(selectedNode.x)) {
+              // Draw sampling edges from selected node
+              for (const otherId of sampledSet) {
+                const otherNode = nodes.find(n => n.id === otherId)
+                if (!otherNode || !Number.isFinite(otherNode.x)) continue
+                ctx.beginPath()
+                ctx.moveTo(selectedNode.x, selectedNode.y)
+                ctx.lineTo(otherNode.x, otherNode.y)
+                ctx.strokeStyle = 'rgba(34, 211, 238, 0.5)'
+                ctx.lineWidth = 2
+                ctx.stroke()
+              }
+              // Draw glow on sampled neighbors
+              for (const otherId of sampledSet) {
+                const otherNode = nodes.find(n => n.id === otherId)
+                if (!otherNode || !Number.isFinite(otherNode.x)) continue
+                ctx.beginPath()
+                ctx.arc(otherNode.x, otherNode.y, 12, 0, 2 * Math.PI)
+                ctx.fillStyle = 'rgba(34, 211, 238, 0.15)'
+                ctx.fill()
+                ctx.strokeStyle = 'rgba(34, 211, 238, 0.6)'
+                ctx.lineWidth = 1.5
+                ctx.stroke()
+              }
+              // Badge "S" on sampled neighbors
+              for (const otherId of sampledSet) {
+                const otherNode = nodes.find(n => n.id === otherId)
+                if (!otherNode || !Number.isFinite(otherNode.x)) continue
+                ctx.font = 'bold 7px Inter, sans-serif'
+                ctx.textAlign = 'center'
+                ctx.textBaseline = 'middle'
+                ctx.fillStyle = 'rgba(34, 211, 238, 0.9)'
+                ctx.fillText('S', otherNode.x, otherNode.y - 14)
+              }
             }
           }
         }}
@@ -722,6 +785,14 @@ export default function TopologyView({ reportMode = false }) {
           if (fitPendingRef.current && fgRef.current) {
             fitPendingRef.current = false
             try {
+              if (selectedNodeId !== null && activeGraphData) {
+                const node = activeGraphData.nodes.find(n => n.id === selectedNodeId)
+                if (node && Number.isFinite(node.x) && Number.isFinite(node.y)) {
+                  fgRef.current.centerAt(node.x, node.y, 500)
+                  fgRef.current.zoom(2.5, 500)
+                  return
+                }
+              }
               fgRef.current.zoomToFit(500, 12)
             } catch {
               // Ignore transient fit errors while the layout is settling.
@@ -782,48 +853,7 @@ export default function TopologyView({ reportMode = false }) {
         )}
       </AnimatePresence>}
 
-      {/* Mode Toggles */}
       {!reportMode && <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-10 items-end">
-        <div className="flex gap-1.5">
-          {['prediction', 'error'].map((mode) => (
-            <button
-              key={mode}
-              onClick={() => useGNNStore.getState().setViewMode(mode)}
-              className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all border
-                ${viewMode === mode
-                  ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(79,70,229,0.5)]'
-                  : 'bg-deep border-line-subtle text-twilight hover:text-moonlight'
-                }`}
-            >
-              {mode}
-            </button>
-          ))}
-        </div>
-
-        {/* Misclassification Explorer Toggle */}
-        <button
-          onClick={() => setShowErrorsOnly(v => !v)}
-          className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all border flex items-center gap-1.5
-            ${showErrorsOnly
-              ? 'bg-[#f43f5e]/20 border-[#f43f5e]/40 text-[#fda4af] shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-              : 'bg-deep border-line-subtle text-twilight hover:text-moonlight'
-            }`}
-          title={showErrorsOnly
-            ? 'Hide misclassification highlight'
-            : 'Highlight misclassified nodes (red ring)'}
-        >
-          <span className={`inline-block w-1.5 h-1.5 rounded-full ${showErrorsOnly ? 'bg-[#f43f5e]' : 'bg-[#5b5689]'}`} />
-          <span>
-            Errors Only
-            {showErrorsOnly && (() => {
-              const snaps = animState.current.snaps
-              const cur = snaps[Math.max(0, Math.min(snaps.length - 1, Math.floor(currentEpochFloat)))]
-              const n = countMisclassified(cur && cur.node_correctness)
-              return n > 0 ? ` · ${n}` : ''
-            })()}
-          </span>
-        </button>
-
         {/* K-Hop Neighborhood Toggle */}
         {selectedNodeId !== null && (
           <div className="bg-deep/90 backdrop-blur-md rounded-lg p-1.5 border border-line-default/50">

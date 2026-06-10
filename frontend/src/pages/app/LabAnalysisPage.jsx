@@ -719,7 +719,6 @@ export default function LabAnalysisPage() {
           { tab: 'overview', label: task4Copy.reportTabs.overview },
           { tab: 'bridges', label: task4Copy.reportTabs.bridges },
           { tab: 'stability', label: task4Copy.reportTabs.stability },
-          { tab: 'diagnostics', label: task4Copy.reportTabs.diagnostics },
         ],
         5: [
           { tab: 'overview', label: lang === 'vi' ? 'Task 5 - tổng quan chỉ số' : 'Task 5 Metrics - overview' },
@@ -740,7 +739,6 @@ export default function LabAnalysisPage() {
           { tab: 'overview', label: task4Copy.reportTabs.overview },
           { tab: 'bridges', label: task4Copy.reportTabs.bridges },
           { tab: 'stability', label: task4Copy.reportTabs.stability },
-          { tab: 'diagnostics', label: task4Copy.reportTabs.diagnostics },
         ]
         : TASK_TABS[selectedTask]
       if (tabs) {

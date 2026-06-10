@@ -4,7 +4,7 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
 import NodeHoverCard from './NodeHoverCard'
-import { easeInOutCubic, lerp } from '../../engine/interpolate'
+import { easeInOutCubic, lerp, interpolateSnapshots } from '../../engine/interpolate'
 import { CLASS_COLORS } from '../../utils/colors'
 import {
   buildTask3FocusContext,
@@ -72,6 +72,26 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
 
   const nodeCount = rawGraphData?.nodes?.length || 0
   const showBulkNodeLabels = nodeCount <= 60
+
+  const currentSnap = useMemo(() => {
+    if (!snapshots?.length) return null
+    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+    return snapshots[epochInt] || null
+  }, [snapshots, currentEpochFloat])
+
+  const { hasFP, hasFN } = useMemo(() => {
+    if (!currentSnap?.edge_scores || !taskData?.testEdges) return { hasFP: false, hasFN: false }
+    const testEdges = taskData.testEdges
+    const scores = currentSnap.edge_scores
+    let fp = false
+    let fn = false
+    for (let i = 0; i < Math.min(scores.length, testEdges.length); i++) {
+      if (!testEdges[i].exists && scores[i] >= 0.5) fp = true
+      if (testEdges[i].exists && scores[i] < 0.5) fn = true
+      if (fp && fn) break
+    }
+    return { hasFP: fp, hasFN: fn }
+  }, [currentSnap, taskData?.testEdges])
 
   const containerRef = useRef(null)
   const fgRef = useRef(null)
@@ -167,28 +187,39 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
     return map
   }, [taskData?.testEdges])
 
-  useEffect(() => {
-    if (focusedEdgeIdx == null || !fgRef.current) return undefined
-    const edge = taskData?.testEdges?.[focusedEdgeIdx]
-    if (!edge) return undefined
-    const nodes = activeGraphData?.nodes || []
-    const sourceNode = nodes.find((node) => node.id === edge.source)
-    const targetNode = nodes.find((node) => node.id === edge.target)
-    if (!sourceNode || !targetNode) return undefined
-    if (!Number.isFinite(sourceNode.x) || !Number.isFinite(targetNode.x)) return undefined
+  const adjacencyMap = useMemo(() => {
+    const map = new Map()
+    if (!activeGraphData?.nodes) return map
+    for (const node of activeGraphData.nodes) {
+      map.set(node.id, new Set())
+    }
+    if (activeGraphData.links) {
+      for (const link of activeGraphData.links) {
+        const source = typeof link.source === 'object' ? link.source.id : link.source
+        const target = typeof link.target === 'object' ? link.target.id : link.target
+        if (source == null || target == null) continue
+        if (!map.has(source)) map.set(source, new Set())
+        if (!map.has(target)) map.set(target, new Set())
+        map.get(source).add(target)
+        map.get(target).add(source)
+      }
+    }
+    return map
+  }, [activeGraphData])
 
-    runCameraAction(() => {
-      fgRef.current.centerAt((sourceNode.x + targetNode.x) / 2, (sourceNode.y + targetNode.y) / 2, 500)
-      fgRef.current.zoom(TASK3_FOCUS_ZOOM, 500)
-    }, 500)
 
-    if (reportMode || effectiveViewMode === 'evidence') return undefined
-    const timeout = setTimeout(() => setFocusedEdge(null), 1800)
-    return () => clearTimeout(timeout)
-  }, [focusedEdgeIdx, taskData, activeGraphData, runCameraAction, setFocusedEdge, reportMode, effectiveViewMode])
 
   const mostInterestingLink = useMemo(() => {
     if (hoveredLink) return hoveredLink
+    // Don't auto-select when user has manually focused an edge
+    if (focusedEdgeIdx != null) {
+      const edge = taskData?.testEdges?.[focusedEdgeIdx]
+      if (edge) {
+        const epochInt = Math.max(0, Math.min((snapshots?.length || 1) - 1, Math.floor(currentEpochFloat)))
+        const score = snapshots?.[epochInt]?.edge_scores?.[focusedEdgeIdx] || 0
+        return { source: { id: edge.source }, target: { id: edge.target }, _idx: focusedEdgeIdx, score, isAuto: false }
+      }
+    }
 
     const epochInt = Math.max(0, Math.min((snapshots?.length || 1) - 1, Math.floor(currentEpochFloat)))
     const snap = snapshots?.[epochInt]
@@ -252,25 +283,22 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
     const t = easeInOutCubic(Math.max(0, Math.min(1, currentEpochFloat - epochInt)))
     const snapA = snapshots[epochInt]
     const snapB = snapshots[epochInt + 1] || snapA
-    return selectTask3OverlayEdgeIndexes({
-      testEdges: taskData.testEdges,
-      scoreA: snapA?.edge_scores || [],
-      scoreB: snapB?.edge_scores || snapA?.edge_scores || [],
-      t,
-      focusedEdgeIdx,
-      selectedNodeId,
-      limit: effectiveViewMode === 'evidence' ? 7 : selectedNodeId != null ? 4 : 5,
+
+    const indexes = []
+    taskData.testEdges.forEach((edge, idx) => {
+      const scoreA = snapA?.edge_scores?.[idx] ?? 0
+      const scoreB = snapB?.edge_scores?.[idx] ?? scoreA
+      const score = scoreA + (scoreB - scoreA) * t
+
+      const isPositivePrediction = score >= 0.5
+      const isFalseNegative = edge.exists && score < 0.5
+
+      if (isPositivePrediction || isFalseNegative) {
+        indexes.push(idx)
+      }
     })
-    const unstable = Array.isArray(snapA?.unstable_edge_indices) ? snapA.unstable_edge_indices : []
-    if (overlayMode !== 'stability' || unstable.length === 0) return selected
-    const allowed = selectedNodeId == null
-      ? unstable
-      : unstable.filter((idx) => {
-          const edge = taskData.testEdges[idx]
-          return edge && (edge.source === selectedNodeId || edge.target === selectedNodeId)
-        })
-    return [...new Set([...allowed.slice(0, 4), ...selected])].slice(0, effectiveViewMode === 'evidence' ? 9 : 7)
-  }, [snapshots, currentEpochFloat, taskData, focusedEdgeIdx, selectedNodeId, effectiveViewMode, overlayMode])
+    return indexes
+  }, [snapshots, currentEpochFloat, taskData])
 
   useEffect(() => {
     overlayEdgeIndexesRef.current = overlayEdgeIndexes
@@ -342,10 +370,30 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
       const score = lerp(scoreA, scoreB, t)
       const isUnstable = Array.isArray(snapA?.unstable_edge_indices) && snapA.unstable_edge_indices.includes(edgeIdx)
       const isFocused = edgeIdx === focusedEdgeIdx
-      const isPrimary = order === 0
       const isFuture = !edge.exists
-      const alpha = isFocused ? 0.92 : isPrimary ? 0.72 : 0.42
-      const lineWidth = ((isFocused ? 5.6 : isPrimary ? 4.2 : 2.6) + (isUnstable ? 1.2 : 0)) / Math.max(scale, 0.75)
+      const isConnectedToSelected = selectedNodeId !== null && (edge.source === selectedNodeId || edge.target === selectedNodeId)
+
+      const isHovered = hoveredLink && (
+        ((hoveredLink.source.id ?? hoveredLink.source) === edge.source && (hoveredLink.target.id ?? hoveredLink.target) === edge.target) ||
+        ((hoveredLink.source.id ?? hoveredLink.source) === edge.target && (hoveredLink.target.id ?? hoveredLink.target) === edge.source)
+      )
+
+      let alpha = 0.55
+      if (selectedNodeId !== null) {
+        alpha = isConnectedToSelected ? 0.92 : 0.08
+      }
+      if (isFocused || isHovered) {
+        alpha = 0.95
+      }
+
+      let baseWidth = isFuture ? 1.8 : 2.2
+      if (isFocused || isHovered) {
+        baseWidth = 4.5
+      } else if (selectedNodeId !== null && isConnectedToSelected) {
+        baseWidth = 3.2
+      }
+
+      const lineWidth = (baseWidth + (isUnstable ? 1.2 : 0)) / Math.max(scale, 0.75)
       const color = isUnstable
         ? `rgba(45, 212, 191, ${Math.max(alpha, 0.7)})`
         : getLinkColor(score).replace(/[\d.]+\)$/, `${alpha})`)
@@ -364,20 +412,20 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
       ctx.strokeStyle = color
       ctx.lineWidth = lineWidth
       ctx.shadowColor = color
-      ctx.shadowBlur = (isFocused ? 16 : isPrimary ? 10 : 6) / Math.max(scale, 0.75)
+      ctx.shadowBlur = (isFocused || isHovered ? 12 : isConnectedToSelected ? 8 : 4) / Math.max(scale, 0.75)
       ctx.stroke()
       ctx.setLineDash([])
 
       if (shouldShowTask3EdgeLabel({
-        isFocused,
-        isPrimary,
+        isFocused: isFocused || isHovered,
+        isConnectedToSelected,
         selectedNodeId,
         hoveredLink,
         scale,
       })) {
         const mx = (sourceNode.x + targetNode.x) / 2
         const my = (sourceNode.y + targetNode.y) / 2
-      const label = `${isFuture ? copy.labels.predictedPositive : copy.labels.heldOutPositive} ${(score * 100).toFixed(0)}%`
+        const label = `${(score * 100).toFixed(0)}%`
         ctx.font = `900 ${10.5 / Math.max(scale, 0.85)}px monospace`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
@@ -387,9 +435,48 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
         ctx.fillStyle = '#ffffff'
         ctx.fillText(label, mx, my - 11 / Math.max(scale, 0.85))
       }
+
+      // FP/FN visual marks on test edges
+      const isFP = !edge.exists && score >= 0.5
+      const isFN = edge.exists && score < 0.5
+      const mx = (sourceNode.x + targetNode.x) / 2
+      const my = (sourceNode.y + targetNode.y) / 2
+
+      if (selectedNodeId === null || isConnectedToSelected) {
+        if (isFP) {
+          // False Positive: just bold red text "FP" with dark stroke for high readability
+          ctx.font = `900 ${10.5 / scale}px monospace`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          
+          ctx.strokeStyle = 'rgba(10, 5, 20, 0.88)'
+          ctx.lineWidth = 3 / scale
+          ctx.strokeText('FP', mx, my)
+          
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.95)'
+          ctx.fillText('FP', mx, my)
+        } else if (isFN) {
+          // False Negative: orange "X" (missing) symbol + "FN" label below
+          ctx.strokeStyle = 'rgba(249, 115, 22, 0.95)'
+          ctx.lineWidth = 2.8 / scale
+          ctx.beginPath()
+          ctx.moveTo(mx - 6 / scale, my - 6 / scale)
+          ctx.lineTo(mx + 6 / scale, my + 6 / scale)
+          ctx.moveTo(mx + 6 / scale, my - 6 / scale)
+          ctx.lineTo(mx - 6 / scale, my + 6 / scale)
+          ctx.stroke()
+
+          ctx.font = `900 ${8.5 / scale}px monospace`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'top'
+          ctx.fillStyle = 'rgba(249, 115, 22, 0.95)'
+          ctx.fillText('FN', mx, my + 9 / scale)
+        }
+      }
+
       ctx.restore()
     })
-  }, [activeGraphData, copy, currentEpochFloat, focusedEdgeIdx, hoveredLink, overlayEdgeIndexes, selectedNodeId, snapshots, taskData])
+  }, [activeGraphData, currentEpochFloat, focusedEdgeIdx, hoveredLink, overlayEdgeIndexes, selectedNodeId, snapshots, taskData])
 
   const linkCanvasObject = useCallback((link, ctx, globalScale) => {
     if (!snapshots?.length) return
@@ -432,33 +519,67 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
       color = getLinkColor(score)
       width = Math.min(3.4, 1.15 + score * 2.25)
       isFuture = !testEdges[testIdx].exists && score > 0.5
-    }
+    } else {
+      // Background edges: apply model-specific overlays
+      if (overlayMode === 'attention' && attentionMap) {
+        const weight = attentionMap.get(edgeKey) ?? 0
+        if (weight > 0.05) {
+          color = `rgba(251, 191, 36, ${0.3 + weight * 0.7})`
+          width = 0.85 + weight * 3.1
+        } else {
+          color = 'rgba(91, 86, 137, 0.08)'
+          width = 0.7
+        }
+      } else if (overlayMode === 'stability') {
+        const neighborsA = adjacencyMap?.get(sourceId)
+        const neighborsB = adjacencyMap?.get(targetId)
+        let sharedCount = 0
+        if (neighborsA && neighborsB) {
+          for (const neighborId of neighborsA) {
+            if (neighborsB.has(neighborId)) {
+              sharedCount++
+            }
+          }
+        }
+        const stabilityWeight = Math.min(1.0, sharedCount / 4.0)
+        const alpha = 0.08 + stabilityWeight * 0.72
+        color = `rgba(45, 212, 191, ${alpha})`
+        width = 0.55 + stabilityWeight * 1.8
+      } else if (overlayMode === 'smoothness') {
+        const embA = snapA?.embeddings_2d?.[sourceId]
+        const embB = snapA?.embeddings_2d?.[targetId]
+        if (embA && embB) {
+          const dx = embA[0] - embB[0]
+          const dy = embA[1] - embB[1]
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          const similarity = 1 / (1 + dist)
 
-    if (overlayMode === 'attention' && attentionMap) {
-      const weight = attentionMap.get(edgeKey) ?? 0
-      if (weight > 0.05) {
-        color = `rgba(251, 191, 36, ${0.3 + weight * 0.7})`
-        width = 0.85 + weight * 3.1
-      } else {
-        color = 'rgba(91, 86, 137, 0.08)'
-        width = 0.7
+          const embB_A = snapB?.embeddings_2d?.[sourceId]
+          const embB_B = snapB?.embeddings_2d?.[targetId]
+          let similarityB = similarity
+          if (embB_A && embB_B) {
+            const dxB = embB_A[0] - embB_B[0]
+            const dyB = embB_A[1] - embB_B[1]
+            similarityB = 1 / (1 + Math.sqrt(dxB * dxB + dyB * dyB))
+          }
+          const interpSim = lerp(similarity, similarityB, t)
+
+          const deA = snapA?.dirichlet_energy ?? 0.5
+          const deB = snapB?.dirichlet_energy ?? deA
+          const dirichlet = lerp(deA, deB, t)
+
+          const r = Math.round(lerp(120, 34, interpSim))
+          const g = Math.round(lerp(113, 197, interpSim))
+          const b = Math.round(lerp(160, 94, interpSim))
+
+          const opacity = Math.max(0.02, Math.min(0.75, dirichlet * 1.5))
+          color = `rgba(${r}, ${g}, ${b}, ${opacity})`
+          width = 0.55 + interpSim * 1.6
+        } else {
+          color = 'rgba(91, 86, 137, 0.08)'
+          width = 0.7
+        }
       }
-    } else if (overlayMode === 'smoothness' && testIdx !== -1 && snapA?.edge_similarity) {
-      const simA = snapA.edge_similarity[testIdx] ?? 0.5
-      const simB = snapB?.edge_similarity?.[testIdx] ?? simA
-      const sim = lerp(simA, simB, t)
-      const r = Math.round(lerp(34, 239, 1 - sim))
-      const g = Math.round(lerp(197, 68, 1 - sim))
-      const b = Math.round(lerp(94, 68, 1 - sim))
-      color = `rgba(${r},${g},${b}, 0.55)`
-      width = 0.45 + sim * 2.2
-    } else if (overlayMode === 'stability') {
-      const varianceA = snapA?.score_variance ?? 0
-      const varianceB = snapB?.score_variance ?? varianceA
-      const variance = lerp(varianceA, varianceB, t)
-      const alpha = Math.max(0.1, 0.8 - variance * 4.2)
-      color = `rgba(45, 212, 191, ${alpha})`
-      width = 0.45 + (1 - Math.min(variance * 5, 1)) * 2
     }
 
     ctx.save()
@@ -485,8 +606,9 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
     ctx.strokeStyle = color
     ctx.lineWidth = width / globalScale
     ctx.stroke()
+
     ctx.restore()
-  }, [snapshots, currentEpochFloat, taskData, selectedNodeId, mostInterestingLink, testEdgeMap, overlayMode, attentionMap, visibleFocusContext, effectiveViewMode, focusedEdgeIdx])
+  }, [snapshots, currentEpochFloat, taskData, selectedNodeId, mostInterestingLink, testEdgeMap, overlayMode, attentionMap, visibleFocusContext, effectiveViewMode, focusedEdgeIdx, adjacencyMap])
 
   const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
     if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
@@ -521,6 +643,14 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
         : isPathNode
           ? '#a855f7'
           : (CLASS_COLORS[groundTruth?.[node.id]] || '#6366f1')
+
+    // Draw solid background circle to mask underlying edges
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI)
+    ctx.fillStyle = '#0a0519'
+    ctx.fill()
+    ctx.restore()
 
     ctx.save()
     ctx.globalAlpha = alpha
@@ -562,6 +692,183 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
     ctx.restore()
   }, [groundTruth, selectedNodeId, visibleFocusContext, hoveredLink, showNodes, showBulkNodeLabels, effectiveViewMode])
 
+  const animStateRef = useRef(null)
+  if (!animStateRef.current) {
+    animStateRef.current = {}
+  }
+  animStateRef.current.selectedModel = selectedModel
+  animStateRef.current.snapshots = snapshots
+  animStateRef.current.currentEpochFloat = currentEpochFloat
+  animStateRef.current.attentionMap = attentionMap
+  animStateRef.current.testEdgeMap = testEdgeMap
+  animStateRef.current.testEdges = taskData?.testEdges || []
+  animStateRef.current.overlayMode = overlayMode
+  animStateRef.current.adjacencyMap = adjacencyMap
+
+  const linkDirectionalParticles = useCallback((link) => {
+    const { selectedModel, snapshots, currentEpochFloat, attentionMap, testEdgeMap } = animStateRef.current
+    if (!snapshots?.length) return 0
+
+    const srcId = typeof link.source === 'object' ? link.source.id : link.source
+    const tgtId = typeof link.target === 'object' ? link.target.id : link.target
+    const edgeKey = `${Math.min(srcId, tgtId)}-${Math.max(srcId, tgtId)}`
+    const testIdx = testEdgeMap?.get(edgeKey) ?? -1
+
+    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+    const t = currentEpochFloat - epochInt
+    const snapA = snapshots[epochInt]
+    const snapB = snapshots[epochInt + 1] || snapA
+
+    if (selectedModel === 'GAT') {
+      if (testIdx !== -1) {
+        const scoreA = snapA?.edge_scores?.[testIdx] || 0
+        const scoreB = snapB?.edge_scores?.[testIdx] || scoreA
+        const score = scoreA + (scoreB - scoreA) * t
+        return score > 0.55 ? (score > 0.85 ? 3 : 2) : 0
+      } else {
+        const weight = attentionMap?.get(edgeKey) ?? 0
+        return weight > 0.25 ? (weight > 0.55 ? 3 : 2) : 0
+      }
+    }
+
+    if (selectedModel === 'GCN') {
+      const overSmooth = snapA?.oversmoothing_score ?? 0
+      if (testIdx !== -1) {
+        const simA = snapA?.edge_similarity?.[testIdx] ?? 0.5
+        const simB = snapB?.edge_similarity?.[testIdx] ?? simA
+        const similarity = simA + (simB - simA) * t
+        if (overSmooth > 0.8) return 0
+        return similarity > 0.45 ? (similarity > 0.75 ? 2 : 1) : 0
+      } else {
+        if (overSmooth > 0.75) return 0
+        const seed = link._idx + Math.floor(currentEpochFloat * 2.5)
+        const threshold = 0.65 + overSmooth * 0.25
+        return (Math.sin(seed) * 10000 % 1) > threshold ? 1 : 0
+      }
+    }
+
+    if (selectedModel === 'SAGE') {
+      if (testIdx !== -1) {
+        const varA = snapA?.score_variance_by_edge?.[testIdx] ?? 0
+        const varB = snapB?.score_variance_by_edge?.[testIdx] ?? varA
+        const variance = varA + (varB - varA) * t
+        return variance < 0.018 ? 2 : (Math.sin(performance.now() / 150) > 0 ? 1 : 0)
+      } else {
+        const stability = snapA?.sage_stability_score ?? 0.8
+        const seed = link._idx + Math.floor(currentEpochFloat * 1.5)
+        const threshold = 0.82 - (stability - 0.5) * 0.15
+        return (Math.sin(seed) * 10000 % 1) > threshold ? 1 : 0
+      }
+    }
+
+    return 0
+  }, [])
+
+  const linkDirectionalParticleSpeed = useCallback((link) => {
+    const { selectedModel, snapshots, currentEpochFloat, attentionMap, testEdgeMap, adjacencyMap } = animStateRef.current
+    if (!snapshots?.length) return 0
+
+    const srcId = typeof link.source === 'object' ? link.source.id : link.source
+    const tgtId = typeof link.target === 'object' ? link.target.id : link.target
+    const edgeKey = `${Math.min(srcId, tgtId)}-${Math.max(srcId, tgtId)}`
+    const testIdx = testEdgeMap?.get(edgeKey) ?? -1
+
+    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+    const t = currentEpochFloat - epochInt
+    const snapA = snapshots[epochInt]
+    const snapB = snapshots[epochInt + 1] || snapA
+
+    if (selectedModel === 'GAT') {
+      if (testIdx !== -1) {
+        const scoreA = snapA?.edge_scores?.[testIdx] || 0
+        const scoreB = snapB?.edge_scores?.[testIdx] || scoreA
+        const score = scoreA + (scoreB - scoreA) * t
+        return 0.003 + score * 0.016
+      } else {
+        const weight = attentionMap?.get(edgeKey) ?? 0
+        return 0.002 + weight * 0.018
+      }
+    }
+
+    if (selectedModel === 'GCN') {
+      const overSmooth = snapA?.oversmoothing_score ?? 0
+      const speedFactor = Math.max(0.1, 1 - overSmooth * 0.9)
+      if (testIdx !== -1) {
+        const simA = snapA?.edge_similarity?.[testIdx] ?? 0.5
+        const simB = snapB?.edge_similarity?.[testIdx] ?? simA
+        const similarity = simA + (simB - simA) * t
+        return speedFactor * (0.004 + similarity * 0.016)
+      } else {
+        return speedFactor * 0.008
+      }
+    }
+
+    if (selectedModel === 'SAGE') {
+      if (testIdx !== -1) {
+        const varA = snapA?.score_variance_by_edge?.[testIdx] ?? 0
+        const varB = snapB?.score_variance_by_edge?.[testIdx] ?? varA
+        const variance = varA + (varB - varA) * t
+        return variance > 0.018 ? 0.024 : 0.012
+      } else {
+        const neighborsA = adjacencyMap?.get(srcId)
+        const neighborsB = adjacencyMap?.get(tgtId)
+        let sharedCount = 0
+        if (neighborsA && neighborsB) {
+          for (const neighborId of neighborsA) {
+            if (neighborsB.has(neighborId)) {
+              sharedCount++
+            }
+          }
+        }
+        const stabilityWeight = Math.min(1.0, sharedCount / 4.0)
+        return 0.005 + stabilityWeight * 0.015
+      }
+    }
+
+    return 0.01
+  }, [])
+
+  const linkDirectionalParticleColor = useCallback((link) => {
+    const { selectedModel, snapshots, currentEpochFloat, testEdgeMap } = animStateRef.current
+    if (!snapshots?.length) return 'rgba(255, 255, 255, 0.5)'
+
+    const srcId = typeof link.source === 'object' ? link.source.id : link.source
+    const tgtId = typeof link.target === 'object' ? link.target.id : link.target
+    const edgeKey = `${Math.min(srcId, tgtId)}-${Math.max(srcId, tgtId)}`
+    const testIdx = testEdgeMap?.get(edgeKey) ?? -1
+
+    const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+    const t = currentEpochFloat - epochInt
+    const snapA = snapshots[epochInt]
+    const snapB = snapshots[epochInt + 1] || snapA
+
+    if (selectedModel === 'GAT') {
+      return 'rgba(251, 191, 36, 0.88)'
+    }
+
+    if (selectedModel === 'GCN') {
+      if (testIdx !== -1) {
+        const simA = snapA?.edge_similarity?.[testIdx] ?? 0.5
+        const simB = snapB?.edge_similarity?.[testIdx] ?? simA
+        const similarity = simA + (simB - simA) * t
+        return similarity > 0.55 ? 'rgba(34, 197, 94, 0.9)' : 'rgba(239, 68, 68, 0.9)'
+      }
+      return 'rgba(99, 102, 241, 0.65)'
+    }
+
+    if (selectedModel === 'SAGE') {
+      if (testIdx !== -1) {
+        const varA = snapA?.score_variance_by_edge?.[testIdx] ?? 0
+        const varB = snapB?.score_variance_by_edge?.[testIdx] ?? varA
+        const variance = varA + (varB - varA) * t
+        return variance > 0.018 ? 'rgba(236, 72, 153, 0.9)' : 'rgba(45, 212, 191, 0.9)'
+      }
+      return 'rgba(45, 212, 191, 0.65)'
+    }
+
+    return 'rgba(255, 255, 255, 0.5)'
+  }, [])
+
   if (!activeGraphData) {
     return (
       <div className="w-full h-full bg-abyss flex items-center justify-center text-twilight text-[10px] uppercase font-black">
@@ -583,13 +890,32 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
         nodeCanvasObjectMode={() => 'replace'}
         linkCanvasObject={linkCanvasObject}
         linkCanvasObjectMode={() => 'replace'}
-        onRenderFramePost={drawBefore}
+        onRenderFramePre={drawBefore}
+        linkDirectionalParticles={linkDirectionalParticles}
+        linkDirectionalParticleWidth={1.5}
+        linkDirectionalParticleSpeed={linkDirectionalParticleSpeed}
+        linkDirectionalParticleColor={linkDirectionalParticleColor}
         onNodeClick={(node) => {
           manualCameraHoldUntilRef.current = performance.now() + TASK3_MANUAL_CAMERA_HOLD_MS
           setSelectedNode(selectedNodeId === node.id ? null : node.id)
         }}
         onNodeHover={(node) => setHoveredNode(node?.id ?? null)}
         onLinkHover={(link) => setHoveredLink(link)}
+        onLinkClick={(link) => {
+          if (link) {
+            const sourceId = typeof link.source === 'object' ? link.source.id : link.source
+            const targetId = typeof link.target === 'object' ? link.target.id : link.target
+            const edgeKey = `${Math.min(sourceId, targetId)}-${Math.max(sourceId, targetId)}`
+            const testIdx = testEdgeMap.get(edgeKey) ?? -1
+            if (testIdx !== -1) {
+              setFocusedEdge(focusedEdgeIdx === testIdx ? null : testIdx)
+            }
+          }
+        }}
+        onBackgroundClick={() => {
+          setSelectedNode(null)
+          setFocusedEdge(null)
+        }}
         onZoom={(transform) => {
           if (!fgRef.current || !transform) return
           const clamped = clampTask3Zoom(transform.k)
@@ -640,25 +966,9 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
         </div>
       </div>
 
-      {!reportMode && (
-        <div className="absolute top-4 left-4 z-20 flex gap-1 rounded-xl border border-line-default bg-nebula/80 p-1 backdrop-blur-md">
-          {['global', 'focus', 'evidence'].map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setLocalViewMode(mode)}
-              className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] transition-colors ${
-                effectiveViewMode === mode
-                  ? 'bg-cyan-500/20 text-cyan-100'
-                  : 'text-slate-500 hover:text-slate-200'
-              }`}
-            >
-              {copy.modes[mode]}
-            </button>
-          ))}
-        </div>
-      )}
 
-      <div className="absolute top-4 right-4 z-20 flex gap-2">
+
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
         <button
           onClick={() => setShowNodes(!showNodes)}
           className={`px-3 py-1.5 rounded-xl text-nano font-black tracking-wider uppercase border transition-all ${showNodes ? 'bg-deep/90 border-line-default text-moonlight hover:text-starlight' : 'bg-amethyst/15 border-amethyst text-amethyst'}`}
@@ -675,14 +985,36 @@ export default function TaskTopology3({ viewMode = null, reportMode = false }) {
       </div>
 
       <div className="absolute bottom-6 left-6 z-20 rounded-2xl border border-line-default bg-nebula/78 px-3 py-2 backdrop-blur-md">
-        <div className="mb-2 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">{copy.labels.legend}</div>
+        <div className="mb-2 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+          {copy.labels.legend}
+        </div>
         <div className="grid gap-1 text-[10px] text-slate-300">
+          {/* Cạnh */}
           <LegendSwatch color="rgba(91,86,137,0.35)" label={copy.labels.backgroundGraph} />
-          <LegendSwatch color="#22d3ee" label={copy.labels.focusedShort} />
           <LegendSwatch color="#34d399" label={copy.labels.predictedEdge} />
-          <LegendSwatch color="#fb7185" label={copy.labels.falsePositiveShort} />
-          <LegendSwatch color="#f59e0b" label={copy.labels.mutualRing} />
-          <LegendSwatch color="#a855f7" label={copy.labels.pathNodes} />
+          {overlayMode === 'attention' && currentSnap?.attention_edges?.length > 0 && (
+            <LegendSwatch color="#fbbf24" label={copy.labels.attention} />
+          )}
+          {overlayMode === 'stability' && Number.isFinite(currentSnap?.score_variance) && (
+            <LegendSwatch color="rgba(45,212,191,0.7)" label={copy.labels.stability} />
+          )}
+          {overlayMode === 'smoothness' && currentSnap?.edge_similarity?.length > 0 && (
+            <>
+              <LegendSwatch color="#22c55e" label={copy.labels.similarityHigh} />
+              <LegendSwatch color="#ef4444" label={copy.labels.similarityLow} />
+            </>
+          )}
+          {hasFP && <LegendSwatch color="#ef4444" label={copy.labels.falsePositives} />}
+          {hasFN && <LegendSwatch color="#f97316" label={copy.labels.falseNegatives} />}
+          {/* Nút — chỉ hiện khi có focus */}
+          {focusContext.hasFocus && (
+            <>
+              <div className="my-1 border-t border-line-subtle" />
+              <LegendSwatch color="#22d3ee" label={copy.labels.focusedShort} />
+              <LegendSwatch color="#f59e0b" label={copy.labels.mutualRing} />
+              <LegendSwatch color="#a855f7" label={copy.labels.pathNodes} />
+            </>
+          )}
         </div>
       </div>
     </div>

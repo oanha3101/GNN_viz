@@ -28,18 +28,9 @@ export default function LinkMetricsPanel() {
   )
   const hard = useMemo(() => topKHardEdges(paired, 4, 0.5), [paired])
   const selected = useMemo(() => {
-    const preferred =
-      reasoningPack.enriched.find((row) => row.idx === focusedEdgeIdx)
-      || hard.falsePositives[0]
-      || hard.falseNegatives[0]
-      || reasoningPack.ambiguous[0]
-      || reasoningPack.enriched[0]
-      || null
-
-    return preferred
-      ? reasoningPack.enriched.find((row) => row.idx === preferred.idx) || null
-      : null
-  }, [focusedEdgeIdx, hard, reasoningPack])
+    if (focusedEdgeIdx === null) return null
+    return reasoningPack.enriched.find((row) => row.idx === focusedEdgeIdx) || null
+  }, [focusedEdgeIdx, reasoningPack])
 
   if (snapshots.length === 0) {
     return (

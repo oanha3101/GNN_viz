@@ -86,11 +86,14 @@ export function drawTask1Node(node, ctx, globalScale, config) {
       ctx.lineWidth = (1.1 + (1 - smoothingRatio) * 0.9) / globalScale
       ctx.stroke()
 
-      if (!disableMotion && majorityRatio > 0.72) {
-        const ripple = (Date.now() % 1200) / 1200
+      // Expanding agreement wave that slows down as GCN smoothing progresses (Dirichlet energy drops)
+      if (!disableMotion) {
+        const duration = 1500 + smoothingRatio * 1200
+        const ripple = (Date.now() % duration) / duration
+        const maxExtend = 5 + (1 - smoothingRatio) * 8
         ctx.beginPath()
-        ctx.arc(drawX, drawY, ringRadius + ripple * 4, 0, 2 * Math.PI)
-        ctx.strokeStyle = `rgba(191, 219, 254, ${0.2 * (1 - ripple)})`
+        ctx.arc(drawX, drawY, ringRadius + ripple * maxExtend, 0, 2 * Math.PI)
+        ctx.strokeStyle = `rgba(129, 140, 248, ${(0.22 - smoothingRatio * 0.08) * (1 - ripple)})`
         ctx.lineWidth = 1 / globalScale
         ctx.stroke()
       }
@@ -120,6 +123,22 @@ export function drawTask1Node(node, ctx, globalScale, config) {
         ctx.strokeStyle = `rgba(191, 219, 254, ${0.14 + maxAttn * 0.24})`
         ctx.lineWidth = 1.2 / globalScale
         ctx.stroke()
+
+        // Rotating amber attention orbital ring for highly-attended nodes
+        if (maxAttn > 0.12 && !disableMotion) {
+          const time = -Date.now() / 500
+          ctx.save()
+          ctx.beginPath()
+          ctx.arc(drawX, drawY, glowRadius + 4.5, 0, 2 * Math.PI)
+          ctx.strokeStyle = `rgba(251, 191, 36, ${0.25 + maxAttn * 0.35})`
+          ctx.lineWidth = 1.0 / globalScale
+          ctx.setLineDash([2, 5])
+          ctx.translate(drawX, drawY)
+          ctx.rotate(time)
+          ctx.translate(-drawX, -drawY)
+          ctx.stroke()
+          ctx.restore()
+        }
       }
     }
   }
@@ -149,6 +168,22 @@ export function drawTask1Node(node, ctx, globalScale, config) {
         ctx.strokeStyle = `rgba(244, 114, 182, ${0.10 + boundaryScore * 0.22})`
         ctx.lineWidth = 1 / globalScale
         ctx.stroke()
+      }
+
+      // Rotating cyan radar sweep for active sampled nodes
+      if (node.isSampled && !disableMotion) {
+        const time = Date.now() / 400
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(drawX, drawY, supportRadius + 3.5, 0, 2 * Math.PI)
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.6)'
+        ctx.lineWidth = 1.2 / globalScale
+        ctx.setLineDash([3, 4])
+        ctx.translate(drawX, drawY)
+        ctx.rotate(time)
+        ctx.translate(-drawX, -drawY)
+        ctx.stroke()
+        ctx.restore()
       }
     }
   }
