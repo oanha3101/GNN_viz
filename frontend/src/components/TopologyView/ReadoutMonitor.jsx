@@ -122,6 +122,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
   const classNames = useGNNStore((state) => state.classNames)
   const selectedModel = useGNNStore((state) => state.selectedModel)
   const setSelectedGraph = useGNNStore((state) => state.setSelectedNode)
+  const setSelectedCell = useGNNStore((state) => state.setTask2SelectedCell)
   const focusMode = useGNNStore((state) => state.task2FocusMode)
   const selectedCell = useGNNStore((state) => state.task2SelectedCell)
   const { snapshots, currentEpochFloat } = usePlayerStore()
@@ -197,6 +198,14 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
     ),
     [scopedDescriptors, focusDescriptors, activeGraphId]
   )
+
+  useEffect(() => {
+    if (forcedSelectedCell) return undefined
+    if (!resolvedSelectedCell) return undefined
+    if (scopedDescriptors.length) return undefined
+    setSelectedCell(null)
+    return undefined
+  }, [forcedSelectedCell, resolvedSelectedCell, scopedDescriptors.length, setSelectedCell])
 
   const frame = useMemo(
     () => buildTask2GraphEpochFrame({ snapA, snapB, currentEpochFloat, t: frac, graph, classNames: graphClassNames }),

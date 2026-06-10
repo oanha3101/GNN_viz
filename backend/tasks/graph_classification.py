@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import networkx as nx
 from sklearn.decomposition import PCA
 from torch_geometric.data import Data, Batch
-from torch_geometric.nn import GCNConv, GATConv, SAGEConv, GraphNorm, global_add_pool, global_mean_pool
+from torch_geometric.nn import GCNConv, GATConv, SAGEConv, GraphNorm, global_add_pool, global_mean_pool, global_max_pool
 from utils.ws_msg import send_json_zipped
 
 
@@ -36,32 +36,75 @@ class GraphClassifier(torch.nn.Module):
         dropout=0.5,
         pool_type='attention_sum',
         attn_dropout=None,
+        num_layers=2,
+        use_batch_norm=False,
+        readout_type='attention',
+        use_virtual_node=False,
     ):
         super().__init__()
         self.model_type = normalize_task2_model_type(model_type)
         self.dropout = dropout
         self.pool_type = pool_type
         self.attn_dropout = dropout if attn_dropout is None else float(attn_dropout)
+        self.num_layers = max(2, int(num_layers))
+        self.use_batch_norm = bool(use_batch_norm)
+        self.readout_type = str(readout_type or 'attention')
         self.uses_graph_norm = self.model_type in ('GAT', 'SAGE')
 
-        if self.model_type == 'GAT':
-            self.conv1 = GATConv(in_channels, hidden, heads=heads, dropout=self.attn_dropout)
-            self.conv2 = GATConv(hidden * heads, hidden, heads=1, concat=False, dropout=self.attn_dropout)
-        elif self.model_type == 'SAGE':
-            self.conv1 = SAGEConv(in_channels, hidden)
-            self.conv2 = SAGEConv(hidden, hidden)
-        else:
-            self.conv1 = GCNConv(in_channels, hidden)
-            self.conv2 = GCNConv(hidden, hidden)
+        # Build conv layers dynamically
+        self.convs = torch.nn.ModuleList()
+        self.norms = torch.nn.ModuleList()
+        self.skip_projs = torch.nn.ModuleList()
 
-        conv1_out = hidden * heads if self.model_type == 'GAT' else hidden
-        self.norm1 = GraphNorm(conv1_out) if self.uses_graph_norm else torch.nn.LayerNorm(conv1_out)
-        self.norm2 = GraphNorm(hidden) if self.uses_graph_norm else torch.nn.LayerNorm(hidden)
-        self.input_skip_proj = torch.nn.Linear(in_channels, conv1_out) if self.model_type == 'GAT' else None
-        self.skip_proj = torch.nn.Linear(conv1_out, hidden) if conv1_out != hidden else None
+        for layer_idx in range(self.num_layers):
+            if layer_idx == 0:
+                in_dim = in_channels
+            else:
+                in_dim = hidden * heads if self.model_type == 'GAT' else hidden
 
-        # Gated readout gives the UI a more faithful motif-level signal than a
-        # single linear gate while staying cheap enough for realtime playback.
+            if layer_idx == self.num_layers - 1:
+                # Last layer: single head for GAT
+                if self.model_type == 'GAT':
+                    self.convs.append(GATConv(in_dim, hidden, heads=1, concat=False, dropout=self.attn_dropout))
+                elif self.model_type == 'SAGE':
+                    self.convs.append(SAGEConv(in_dim, hidden))
+                else:
+                    self.convs.append(GCNConv(in_dim, hidden))
+                out_dim = hidden
+            else:
+                # Hidden layers
+                if self.model_type == 'GAT':
+                    self.convs.append(GATConv(in_dim, hidden, heads=heads, dropout=self.attn_dropout))
+                    out_dim = hidden * heads
+                elif self.model_type == 'SAGE':
+                    self.convs.append(SAGEConv(in_dim, hidden))
+                    out_dim = hidden
+                else:
+                    self.convs.append(GCNConv(in_dim, hidden))
+                    out_dim = hidden
+
+            # Norm: BatchNorm if requested, else GraphNorm for GAT/SAGE, else LayerNorm
+            if self.use_batch_norm:
+                self.norms.append(torch.nn.BatchNorm1d(out_dim))
+            elif self.uses_graph_norm:
+                self.norms.append(GraphNorm(out_dim))
+            else:
+                self.norms.append(torch.nn.LayerNorm(out_dim))
+
+            # Skip projection: project input dim to output dim for residual
+            if in_dim != out_dim:
+                self.skip_projs.append(torch.nn.Linear(in_dim, out_dim))
+            else:
+                self.skip_projs.append(torch.nn.Identity())
+
+        # Virtual node: a global context node connected to all real nodes
+        self.use_virtual_node = bool(use_virtual_node)
+        if self.use_virtual_node:
+            self.virtual_node_emb = torch.nn.Embedding(1, in_channels)
+            # After all conv layers, virtual node output dim = hidden (last layer output)
+            self.virtual_node_proj = torch.nn.Linear(hidden, hidden)
+
+        # Gated attention readout
         gate_hidden = max(4, hidden // 2)
         self.att_gate = torch.nn.Sequential(
             torch.nn.Linear(hidden, gate_hidden),
@@ -70,40 +113,112 @@ class GraphClassifier(torch.nn.Module):
             torch.nn.Linear(gate_hidden, 1),
         )
 
-        self.lin = torch.nn.Linear(hidden, num_classes)
+        # Classification head input dim depends on readout type
+        if self.readout_type == 'mean_max_concat':
+            lin_in = hidden * 2
+        else:
+            lin_in = hidden
+        self.lin = torch.nn.Linear(lin_in, num_classes)
+
+    def _add_virtual_nodes(self, x, edge_index, batch):
+        """Add one virtual node per graph, connected bidirectionally to all real nodes."""
+        num_graphs = int(batch.max().item()) + 1
+        num_real = x.size(0)
+
+        # Virtual node features
+        vn_idx = torch.zeros(num_graphs, dtype=torch.long, device=x.device)
+        vn_feat = self.virtual_node_emb(vn_idx)  # (num_graphs, in_channels)
+
+        # Concatenate virtual node features
+        x_ext = torch.cat([x, vn_feat], dim=0)
+
+        # Build edges: virtual node <-> all real nodes in same graph
+        vn_offset = num_real
+        vn_ids = batch + vn_offset  # virtual node index for each real node
+        edges_vn_to_real = torch.stack([vn_ids, torch.arange(num_real, device=x.device)], dim=0)
+        edges_real_to_vn = torch.stack([torch.arange(num_real, device=x.device), vn_ids], dim=0)
+        edge_index_ext = torch.cat([edge_index, edges_vn_to_real, edges_real_to_vn], dim=1)
+
+        # Extended batch: real nodes keep their batch, virtual nodes get their own
+        batch_ext = torch.cat([batch, torch.arange(num_graphs, device=x.device)])
+
+        return x_ext, edge_index_ext, batch_ext, num_real
+
+    def _extract_virtual_updates(self, h_ext, num_real, batch, num_graphs):
+        """Extract virtual node embeddings and broadcast back to real nodes."""
+        vn_emb = h_ext[num_real:]  # (num_graphs, hidden)
+        # Broadcast virtual node embedding to all real nodes
+        vn_broadcast = vn_emb[batch]  # (num_real, hidden)
+        return h_ext[:num_real] + self.virtual_node_proj(vn_broadcast)
 
     def forward(self, x, edge_index, batch):
-        h1 = self.conv1(x, edge_index)
-        h1 = self.norm1(h1, batch) if self.uses_graph_norm else self.norm1(h1)
-        if self.input_skip_proj is not None:
-            h1 = h1 + self.input_skip_proj(x)
-        h1 = F.elu(h1) if self.model_type == 'GAT' else F.relu(h1)
-        h1 = F.dropout(h1, p=self.dropout, training=self.training)
+        h = x
+        num_graphs = int(batch.max().item()) + 1
 
-        h2 = self.conv2(h1, edge_index)
-        h2 = self.norm2(h2, batch) if self.uses_graph_norm else self.norm2(h2)
-        h1_skip = self.skip_proj(h1) if self.skip_proj is not None else h1
-        h2 = h2 + h1_skip
-        x = F.elu(h2) if self.model_type == 'GAT' else F.relu(h2)
-        node_embeddings = x
-
-        # Compute attention weights alpha
-        raw_alpha = self.att_gate(x).squeeze(-1)
-        alpha = torch.zeros_like(raw_alpha)
-        for graph_id in batch.unique(sorted=True):
-            mask = batch == graph_id
-            alpha[mask] = torch.softmax(raw_alpha[mask], dim=0)
-
-        # Apply attention to nodes and pool. The default is weighted-sum: alpha
-        # already sums to one per graph, so a second mean would dilute motifs in
-        # larger/sparser graphs and reintroduce a size shortcut.
-        x_g = alpha.unsqueeze(-1) * x
-        if self.pool_type in ('attention_sum', 'attn_sum', 'add'):
-            graph_embeddings = global_add_pool(x_g, batch)
-        elif self.pool_type == 'mean':
-            graph_embeddings = global_mean_pool(x, batch)
+        # Add virtual nodes if enabled
+        if self.use_virtual_node:
+            h_ext, edge_index_ext, batch_ext, num_real = self._add_virtual_nodes(h, edge_index, batch)
         else:
-            graph_embeddings = global_add_pool(x_g, batch)
+            h_ext = h
+            edge_index_ext = edge_index
+            batch_ext = batch
+            num_real = h.size(0)
+
+        for layer_idx in range(self.num_layers):
+            h_in = h_ext
+            h_ext = self.convs[layer_idx](h_ext, edge_index_ext)
+            # Norm
+            if self.use_batch_norm:
+                h_ext = self.norms[layer_idx](h_ext)
+            elif self.uses_graph_norm:
+                h_ext = self.norms[layer_idx](h_ext, batch_ext)
+            else:
+                h_ext = self.norms[layer_idx](h_ext)
+            # Residual skip connection
+            h_ext = h_ext + self.skip_projs[layer_idx](h_in)
+            # Activation
+            if layer_idx < self.num_layers - 1:
+                h_ext = F.elu(h_ext) if self.model_type == 'GAT' else F.relu(h_ext)
+                h_ext = F.dropout(h_ext, p=self.dropout, training=self.training)
+            else:
+                h_ext = F.elu(h_ext) if self.model_type == 'GAT' else F.relu(h_ext)
+
+        # Extract real node embeddings (with virtual node updates if enabled)
+        if self.use_virtual_node:
+            h = self._extract_virtual_updates(h_ext, num_real, batch, num_graphs)
+        else:
+            h = h_ext
+
+        node_embeddings = h
+
+        # Readout
+        if self.readout_type == 'mean':
+            graph_embeddings = global_mean_pool(node_embeddings, batch)
+            alpha = torch.ones(node_embeddings.size(0), device=node_embeddings.device) / torch.clamp(
+                torch.bincount(batch).float(), min=1.0
+            ).repeat_interleave(torch.bincount(batch))
+        elif self.readout_type == 'max':
+            graph_embeddings = global_max_pool(node_embeddings, batch)
+            alpha = torch.ones(node_embeddings.size(0), device=node_embeddings.device)
+        elif self.readout_type == 'mean_max_concat':
+            mean_emb = global_mean_pool(node_embeddings, batch)
+            max_emb = global_max_pool(node_embeddings, batch)
+            graph_embeddings = torch.cat([mean_emb, max_emb], dim=-1)
+            alpha = torch.ones(node_embeddings.size(0), device=node_embeddings.device)
+        else:
+            # Default: gated attention (attention_sum)
+            raw_alpha = self.att_gate(node_embeddings).squeeze(-1)
+            alpha = torch.zeros_like(raw_alpha)
+            for graph_id in batch.unique(sorted=True):
+                mask = batch == graph_id
+                alpha[mask] = torch.softmax(raw_alpha[mask], dim=0)
+            x_g = alpha.unsqueeze(-1) * node_embeddings
+            if self.pool_type in ('attention_sum', 'attn_sum', 'add'):
+                graph_embeddings = global_add_pool(x_g, batch)
+            elif self.pool_type == 'mean':
+                graph_embeddings = global_mean_pool(node_embeddings, batch)
+            else:
+                graph_embeddings = global_add_pool(x_g, batch)
 
         out = self.lin(graph_embeddings)
         return out, graph_embeddings, alpha
@@ -261,6 +376,196 @@ def model_default_hyperparams(model_type: str) -> dict:
         'epochs': 140,
         'early_stop_patience': 28,
     }
+
+
+def proteins_preset(model_type: str) -> dict:
+    """PROTEINS-optimized hyperparameter presets targeting ~80% Macro F1.
+
+    Conservative approach: only change what's proven to help.
+    Each change is incremental and testable.
+    """
+    mt = normalize_task2_model_type(model_type)
+
+    if mt == 'GAT':
+        return {
+            'num_layers': 2,
+            'hidden': 64,
+            'heads': 4,
+            'dropout': 0.30,
+            'attn_dropout': 0.30,
+            'lr': 0.003,
+            'weight_decay': 3e-4,
+            'epochs': 160,
+            'early_stop_patience': 28,
+            'readout_type': 'attention',
+            'use_batch_norm': False,
+            'use_structural_features': False,
+            'task2_class_weights': [1.0, 1.1],
+            'task2_threshold_tuning': True,
+            'task2_focal_gamma': 1.0,
+            'task2_label_smoothing': 0.015,
+            'task2_edge_dropout': 0.14,
+            'task2_virtual_node': False,
+            'task2_mixup_alpha': 0.0,
+            'task2_lr_scheduler': False,
+            'task2_grad_clip': 0.0,
+        }
+
+    if mt == 'SAGE':
+        return {
+            'num_layers': 3,
+            'hidden': 96,
+            'dropout': 0.30,
+            'lr': 0.004,
+            'weight_decay': 5e-4,
+            'epochs': 160,
+            'early_stop_patience': 28,
+            'readout_type': 'mean_max_concat',
+            'use_batch_norm': True,
+            'use_structural_features': False,
+            'task2_class_weights': [1.0, 1.1],
+            'task2_threshold_tuning': True,
+            'task2_focal_gamma': 1.2,
+            'task2_label_smoothing': 0.01,
+            'task2_edge_dropout': 0.12,
+            'task2_virtual_node': False,
+            'task2_mixup_alpha': 0.0,
+            'task2_lr_scheduler': False,
+            'task2_grad_clip': 0.0,
+        }
+
+    # GCN — default
+    return {
+        'num_layers': 3,
+        'hidden': 96,
+        'dropout': 0.30,
+        'lr': 0.006,
+        'weight_decay': 3e-4,
+        'epochs': 160,
+        'early_stop_patience': 28,
+        'readout_type': 'mean_max_concat',
+        'use_batch_norm': True,
+        'use_structural_features': False,
+        'task2_class_weights': [1.0, 1.1],
+        'task2_threshold_tuning': True,
+        'task2_focal_gamma': 1.0,
+        'task2_label_smoothing': 0.01,
+        'task2_edge_dropout': 0.10,
+        'task2_virtual_node': False,
+        'task2_mixup_alpha': 0.0,
+        'task2_lr_scheduler': False,
+        'task2_grad_clip': 0.0,
+    }
+
+
+def compute_structural_features(graphs):
+    """Add normalized degree and clustering coefficient as node features.
+
+    For each graph, computes [norm_degree, clustering_coeff] per node and
+    concatenates to existing node features. Modifies graphs in-place.
+    Returns the new in_channels dimension.
+    """
+    import networkx as nx
+
+    for g in graphs:
+        num_n = g.num_nodes or g.x.size(0)
+        edge_np = g.edge_index.cpu().numpy()
+
+        # Build networkx graph for clustering coefficient
+        G = nx.Graph()
+        G.add_nodes_from(range(num_n))
+        edges_set = set()
+        for j in range(edge_np.shape[1]):
+            s, t = int(edge_np[0, j]), int(edge_np[1, j])
+            if s != t:
+                edges_set.add((min(s, t), max(s, t)))
+        G.add_edges_from(edges_set)
+
+        # Normalized degree
+        degrees = torch.zeros(num_n)
+        for j in range(edge_np.shape[1]):
+            degrees[edge_np[0, j]] += 1
+        max_deg = degrees.max().clamp(min=1)
+        norm_deg = degrees / max_deg
+
+        # Clustering coefficient
+        clust = nx.clustering(G)
+        clust_tensor = torch.tensor([clust.get(i, 0.0) for i in range(num_n)], dtype=torch.float)
+
+        # Concatenate to existing features
+        struct_feats = torch.stack([norm_deg, clust_tensor], dim=-1)
+        g.x = torch.cat([g.x, struct_feats], dim=-1)
+
+    return graphs[0].x.size(-1) if graphs else 0
+
+
+def tune_binary_threshold(logits, labels, search_range=(0.35, 0.65), step=0.01):
+    """Tune binary classification threshold on validation set.
+
+    Searches C1 threshold from search_range[0] to search_range[1] and picks
+    the threshold maximizing Macro F1.
+
+    Returns: (best_threshold, best_macro_f1, all_results)
+    """
+    probs = torch.softmax(logits, dim=1)
+    c1_probs = probs[:, 1]
+    labels_np = labels.cpu().numpy() if isinstance(labels, torch.Tensor) else labels
+
+    best_threshold = 0.5
+    best_macro_f1 = 0.0
+    all_results = []
+
+    threshold = search_range[0]
+    while threshold <= search_range[1] + 1e-9:
+        preds = (c1_probs >= threshold).long().cpu().numpy()
+        # Compute per-class F1
+        num_classes = 2
+        f1s = []
+        for c in range(num_classes):
+            tp = int(((preds == c) & (labels_np == c)).sum())
+            fp = int(((preds == c) & (labels_np != c)).sum())
+            fn = int(((preds != c) & (labels_np == c)).sum())
+            precision = tp / max(tp + fp, 1)
+            recall = tp / max(tp + fn, 1)
+            f1 = 2 * precision * recall / max(precision + recall, 1e-8)
+            f1s.append(f1)
+        macro_f1 = sum(f1s) / len(f1s)
+        all_results.append({'threshold': round(threshold, 4), 'macro_f1': round(macro_f1, 6), 'per_class_f1': f1s})
+
+        if macro_f1 > best_macro_f1:
+            best_macro_f1 = macro_f1
+            best_threshold = threshold
+
+        threshold += step
+
+    return round(best_threshold, 4), round(best_macro_f1, 6), all_results
+
+
+def graph_mixup_embeddings(graph_embeddings, labels, alpha=0.2):
+    """Graph-level mixup: interpolate between pairs of graph embeddings.
+
+    This regularizes the model by training on virtual graphs that are linear
+    combinations of real graphs, encouraging smoother decision boundaries.
+
+    Returns: (mixed_embeddings, labels_a, labels_b, lam)
+    """
+    batch_size = graph_embeddings.size(0)
+    if batch_size < 2:
+        return graph_embeddings, labels, labels, 1.0
+
+    perm = torch.randperm(batch_size, device=graph_embeddings.device)
+    lam = float(np.random.beta(alpha, alpha)) if alpha > 0 else 1.0
+    lam = max(lam, 1.0 - lam)  # Ensure lam >= 0.5
+
+    mixed = lam * graph_embeddings + (1.0 - lam) * graph_embeddings[perm]
+    return mixed, labels, labels[perm], lam
+
+
+def compute_mixup_loss(logits_a, logits_b, labels_a, labels_b, lam, class_weights=None):
+    """Compute mixup cross-entropy loss."""
+    loss_a = F.cross_entropy(logits_a, labels_a, weight=class_weights, reduction='mean')
+    loss_b = F.cross_entropy(logits_b, labels_b, weight=class_weights, reduction='mean')
+    return lam * loss_a + (1.0 - lam) * loss_b
 
 
 def build_class_weight_tensor(labels, num_classes):
@@ -819,6 +1124,105 @@ def generate_synthetic_graphs(num_graphs=50, seed=42):
 
 
 # ───────────────────────────────────────────────────────────────────────────────
+# Multi-seed evaluation
+# ───────────────────────────────────────────────────────────────────────────────
+async def run_multi_seed_evaluation(config, websocket, stop_flag, custom_graphs=None, seeds=None):
+    """Run training with multiple seeds and aggregate results.
+
+    For each seed, runs a full training loop and collects metrics.
+    Returns aggregated mean ± std across seeds.
+    """
+    if seeds is None:
+        seeds = [1, 2, 3, 4, 5]
+
+    all_results = []
+    total_seeds = len(seeds)
+
+    for seed_idx, seed in enumerate(seeds):
+        if stop_flag():
+            break
+
+        seed_config = dict(config)
+        seed_config['split_seed'] = seed
+        # Suppress per-epoch snapshots for multi-seed to reduce WS traffic
+        seed_config['_multi_seed_quiet'] = True
+
+        seed_results = {}
+
+        def seed_snapshot_hook(epoch, snapshot):
+            # Only keep the best snapshot metrics
+            if snapshot.get('is_best_so_far'):
+                seed_results['best_snapshot'] = {
+                    'epoch': epoch,
+                    'macro_f1': snapshot.get('macro_f1'),
+                    'balanced_accuracy': snapshot.get('balanced_accuracy'),
+                    'val_acc': snapshot.get('val_acc'),
+                    'test_acc': snapshot.get('test_acc'),
+                    'c1_recall': snapshot.get('c1_recall'),
+                    'tuned_threshold': snapshot.get('tuned_threshold'),
+                    'tuned_macro_f1': snapshot.get('tuned_macro_f1'),
+                    'per_class_recall': snapshot.get('per_class_recall'),
+                    'per_class_metrics': snapshot.get('graph_per_class_metrics'),
+                    'confusion_slice_counts': snapshot.get('confusion_slice_counts'),
+                    'graph_calibration': snapshot.get('graph_calibration'),
+                    'readout_quality': snapshot.get('readout_quality'),
+                    'structural_bias_signals': snapshot.get('structural_bias_signals'),
+                }
+
+        try:
+            await run_graph_classification(seed_config, websocket, stop_flag, custom_graphs, snapshot_hook=seed_snapshot_hook)
+        except Exception as e:
+            seed_results['error'] = str(e)
+
+        seed_results['seed'] = seed
+        all_results.append(seed_results)
+
+        # Send progress update
+        await send_json_zipped(websocket, {
+            'type': 'task2_multi_seed_progress',
+            'data': {
+                'completed': seed_idx + 1,
+                'total': total_seeds,
+                'current_seed': seed,
+            },
+            'progress': (seed_idx + 1) / total_seeds,
+        })
+
+    # Aggregate results
+    valid_results = [r for r in all_results if 'best_snapshot' in r and 'error' not in r]
+    if not valid_results:
+        return {'error': 'All seeds failed', 'results': all_results}
+
+    def safe_mean_std(values):
+        if not values:
+            return 0.0, 0.0
+        arr = np.array(values, dtype=float)
+        return float(arr.mean()), float(arr.std())
+
+    metrics_to_agg = ['macro_f1', 'balanced_accuracy', 'val_acc', 'test_acc', 'c1_recall', 'tuned_macro_f1']
+    aggregated = {}
+    for metric in metrics_to_agg:
+        values = [r['best_snapshot'][metric] for r in valid_results if r['best_snapshot'].get(metric) is not None]
+        mean, std = safe_mean_std(values)
+        aggregated[metric] = {'mean': round(mean, 6), 'std': round(std, 6), 'values': [round(v, 6) for v in values]}
+
+    summary = {
+        'seeds': seeds,
+        'successful_seeds': len(valid_results),
+        'aggregated': aggregated,
+        'per_seed': [r.get('best_snapshot', {}) for r in valid_results],
+        'best_seed': max(valid_results, key=lambda r: r['best_snapshot'].get('macro_f1', 0))['seed'],
+    }
+
+    await send_json_zipped(websocket, {
+        'type': 'task2_multi_seed_summary',
+        'data': summary,
+    })
+
+    return summary
+
+
+# ───────────────────────────────────────────────────────────────────────────────
 # Main Training Loop
 # ───────────────────────────────────────────────────────────────────────────────
 async def run_graph_classification(config, websocket, stop_flag, custom_graphs=None, snapshot_hook=None):
@@ -831,6 +1235,17 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
     """
     model_type = normalize_task2_model_type(config.get('model', 'GCN'))
     defaults = model_default_hyperparams(model_type)
+
+    # Apply PROTEINS preset only when explicitly requested via task2_preset
+    use_proteins_preset = config.get('task2_preset') == 'proteins'
+    if use_proteins_preset:
+        preset = proteins_preset(model_type)
+        # Preset values become defaults; explicit config keys still override
+        for k, v in preset.items():
+            if k not in config:
+                config[k] = v
+        # Update defaults for downstream reads
+        defaults.update({k: v for k, v in preset.items() if k in defaults})
 
     epochs = int(config.get('epochs', defaults['epochs']))
     split_seed = int(config.get('split_seed', 42))
@@ -852,15 +1267,23 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
     contrastive_weight = float(config.get('task2_density_contrastive_weight', 0.02 if is_gcn else 0.03 if is_gat else 0.02 if is_sage else 0.025))
     balance_weight = float(config.get('task2_prediction_balance_weight', 0.035 if (is_gcn or is_gat or is_sage) else 0.02))
     attn_dropout = float(config.get('task2_attn_dropout', config.get('attn_dropout', defaults.get('attn_dropout', config.get('dropout', defaults['dropout'])))))
-    # Preserve model-specific default early stopping unless the caller
-    # explicitly overrides it. Leaving this at 0 made Task 2 run the full
-    # schedule even after validation quality stopped improving.
     early_stop_patience = int(config.get('task2_early_stop_patience', defaults['early_stop_patience']))
     temperature_min = float(config.get('task2_temperature_min', 1.0 if is_sage else 0.8))
     temperature_max = float(config.get('task2_temperature_max', 1.5 if is_sage else 3.0))
     danger_threshold = float(config.get('task2_danger_threshold', 0.85))
     uncertain_threshold = float(config.get('task2_uncertain_threshold', 0.55))
     use_lbfgs_calibration = bool(config.get('task2_lbfgs_calibration', True))
+
+    # New architecture and training config keys
+    num_layers = int(config.get('num_layers', defaults.get('num_layers', 2)))
+    use_batch_norm = bool(config.get('use_batch_norm', defaults.get('use_batch_norm', False)))
+    readout_type = str(config.get('readout_type', defaults.get('readout_type', 'attention')))
+    use_structural_features = bool(config.get('use_structural_features', defaults.get('use_structural_features', False)))
+    custom_class_weights = config.get('task2_class_weights', None)
+    use_threshold_tuning = bool(config.get('task2_threshold_tuning', defaults.get('task2_threshold_tuning', False)))
+    use_virtual_node = bool(config.get('task2_virtual_node', defaults.get('task2_virtual_node', False)))
+    mixup_alpha = float(config.get('task2_mixup_alpha', defaults.get('task2_mixup_alpha', 0.0)))
+    use_mixup = mixup_alpha > 0
 
     if custom_graphs and len(custom_graphs) > 0:
         # ── Use user-uploaded graphs ──
@@ -938,6 +1361,10 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
     class_names = collection_metadata.get('class_names') or [f"C{i}" for i in range(num_classes)]
     label_map = collection_metadata.get('label_map') or label_map
 
+    # Optionally add structural node features (normalized degree + clustering coeff)
+    if use_structural_features and pyg_graphs:
+        in_channels = compute_structural_features(pyg_graphs)
+
     # Send graph structure to frontend first
     await send_json_zipped(websocket, {
         'type': 'graph_data',
@@ -961,12 +1388,30 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         dropout=float(config.get('dropout', defaults['dropout'])),
         pool_type=pool_type,
         attn_dropout=attn_dropout,
+        num_layers=num_layers,
+        use_batch_norm=use_batch_norm,
+        readout_type=readout_type,
+        use_virtual_node=use_virtual_node,
     )
+    base_lr = float(config.get('lr', defaults['lr']))
     optimizer = torch.optim.Adam(
         model.parameters(),
-        lr=float(config.get('lr', defaults['lr'])),
+        lr=base_lr,
         weight_decay=weight_decay,
     )
+
+    # Cosine LR scheduler with linear warmup
+    use_lr_scheduler = bool(config.get('task2_lr_scheduler', True))
+    warmup_epochs = int(config.get('task2_warmup_epochs', max(5, epochs // 20)))
+    grad_clip = float(config.get('task2_grad_clip', 1.0))
+    scheduler = None
+    if use_lr_scheduler:
+        def lr_lambda(epoch):
+            if epoch < warmup_epochs:
+                return max(0.01, (epoch + 1) / max(1, warmup_epochs))
+            progress = (epoch - warmup_epochs) / max(1, epochs - warmup_epochs)
+            return max(0.01, 0.5 * (1.0 + math.cos(math.pi * progress)))
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
     # 3-way stratified split — temperature scaling and best-checkpoint selection
     # both run on the VAL set, so honest TEST metrics never leak into the
@@ -997,7 +1442,12 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
 
     train_labels = [int(g.y.view(-1)[0].item()) for g in train_graphs]
     train_label_counts = torch.bincount(torch.tensor(train_labels, dtype=torch.long), minlength=num_classes)
-    class_weights = build_class_weight_tensor(train_labels, num_classes) if use_class_weights else None
+    if custom_class_weights and isinstance(custom_class_weights, (list, tuple)) and len(custom_class_weights) >= num_classes:
+        class_weights = torch.tensor(custom_class_weights[:num_classes], dtype=torch.float)
+    elif use_class_weights:
+        class_weights = build_class_weight_tensor(train_labels, num_classes)
+    else:
+        class_weights = None
 
     effective_train_graphs = train_graphs
     if balanced_oversample and train_graphs:
@@ -1050,6 +1500,15 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         optimizer.zero_grad()
         train_edge_index = drop_edge_index(effective_train_batch.edge_index, edge_dropout, training=True)
         out, train_graph_embs, train_alpha = model(effective_train_batch.x, train_edge_index, effective_train_batch.batch)
+
+        # Graph mixup: interpolate embeddings for regularization
+        if use_mixup and train_graph_embs.size(0) >= 2:
+            mixed_emb, labels_a, labels_b, lam = graph_mixup_embeddings(train_graph_embs, effective_train_y, alpha=mixup_alpha)
+            logits_a = model.lin(mixed_emb)
+            mixup_loss = compute_mixup_loss(logits_a, out[:logits_a.size(0)], labels_a, labels_b, lam, class_weights=class_weights)
+        else:
+            mixup_loss = out.new_tensor(0.0)
+
         ce_loss = compute_graph_classification_loss(
             out,
             effective_train_y,
@@ -1060,9 +1519,13 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         entropy_loss = compute_attention_entropy_regularizer(train_alpha, effective_train_batch.batch)
         contrastive_loss = compute_density_aware_contrastive_loss(train_graph_embs, effective_train_y, effective_train_density)
         balance_loss = compute_prediction_balance_regularizer(out, effective_train_y, num_classes)
-        loss = ce_loss + (readout_entropy_weight * entropy_loss) + (contrastive_weight * contrastive_loss) + (balance_weight * balance_loss)
+        loss = ce_loss + (readout_entropy_weight * entropy_loss) + (contrastive_weight * contrastive_loss) + (balance_weight * balance_loss) + (0.2 * mixup_loss)
         loss.backward()
+        if grad_clip > 0:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         optimizer.step()
+        if scheduler is not None:
+            scheduler.step()
 
         # ── Evaluation ─────────────────────────────────────────────────────
         model.eval()
@@ -1098,6 +1561,19 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
 
             # Compute calibrated confidence (max prob) — primary signal used elsewhere.
             confidences = [max(p) for p in all_probs]
+
+            # Binary threshold tuning (for binary classification only)
+            best_threshold = 0.5
+            tuned_macro_f1 = 0.0
+            threshold_results = []
+            if use_threshold_tuning and num_classes == 2:
+                val_probs_cal = apply_temperature(val_out, calibration_temperature, min_temp=temperature_min, max_temp=temperature_max)
+                try:
+                    best_threshold, tuned_macro_f1, threshold_results = tune_binary_threshold(
+                        val_probs_cal, val_y
+                    )
+                except Exception:
+                    pass
 
             val_loss = compute_graph_classification_loss(
                 val_out,
@@ -1384,6 +1860,20 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                 'early_stop_patience': int(early_stop_patience),
                 'split_ratio': [float(train_ratio), float(val_ratio), float(max(0.0, 1.0 - train_ratio - val_ratio))],
                 'split_class_counts': split_class_counts,
+            },
+            # Threshold tuning results
+            'tuned_threshold': float(best_threshold),
+            'tuned_macro_f1': float(tuned_macro_f1),
+            'threshold_tuning_results': threshold_results[:20] if threshold_results else [],
+            # Per-class recall for easy monitoring (especially C1 recall)
+            'per_class_recall': {str(i): float(graph_per_class_metrics[i]['recall']) for i in range(num_classes)} if graph_per_class_metrics else {},
+            'c1_recall': float(graph_per_class_metrics[1]['recall']) if num_classes > 1 and graph_per_class_metrics else None,
+            # Model architecture info
+            'model_architecture': {
+                'num_layers': num_layers,
+                'use_batch_norm': use_batch_norm,
+                'readout_type': readout_type,
+                'use_structural_features': use_structural_features,
             },
         }
         if improved_this_epoch:

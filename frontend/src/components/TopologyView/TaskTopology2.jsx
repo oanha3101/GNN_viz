@@ -11,7 +11,7 @@ import {
   buildTask2ModelSignature,
   sortTask2Descriptors,
 } from '../../utils/task2Metrics'
-import { localizeTask2Element } from '../../utils/task2ReportI18n'
+import { localizeTask2Element, translateTask2ReportText } from '../../utils/task2ReportI18n'
 
 function buildDetailGraphStructureKey(graph) {
   if (!graph) return null
@@ -128,20 +128,91 @@ function buildGraphClassNames(graphs = [], taskClassNames = []) {
   return inferred.length ? inferred.map((classId) => `Class ${classId}`) : ['Class 0']
 }
 
-function formatFailureTag(tag) {
-  switch (tag) {
-    case 'overconfident_miss':
-      return 'overconfident miss'
-    case 'boundary_case':
-      return 'boundary case'
-    case 'diffuse_readout':
-      return 'diffuse readout'
-    case 'structural_outlier':
-      return 'structural outlier'
-    case 'stable_win':
-    default:
-      return 'stable win'
+function formatFailureTag(tag, lang) {
+  if (lang === 'vi') {
+    switch (tag) {
+      case 'overconfident_miss': return 'sai nhưng quá tự tin'
+      case 'boundary_case': return 'ca vùng biên'
+      case 'diffuse_readout': return 'readout loãng'
+      case 'structural_outlier': return 'ngoại lệ cấu trúc'
+      case 'stable_win':
+      default: return 'ca ổn định'
+    }
   }
+  switch (tag) {
+    case 'overconfident_miss': return 'overconfident miss'
+    case 'boundary_case': return 'boundary case'
+    case 'diffuse_readout': return 'diffuse readout'
+    case 'structural_outlier': return 'structural outlier'
+    case 'stable_win':
+    default: return 'stable win'
+  }
+}
+
+function getEntropyQuality(value, lang) {
+  const pct = (value || 0) * 100
+  if (lang === 'vi') {
+    if (pct < 20) return { label: 'Tập trung cao', tone: 'text-emerald-300', desc: 'Mô hình gần như chắc chắn.' }
+    if (pct < 40) return { label: 'Tương đối tập trung', tone: 'text-emerald-200', desc: 'Mô hình vẫn tự tin, ít mơ hồ.' }
+    if (pct < 60) return { label: 'Trung bình', tone: 'text-amber-200', desc: 'Có mức mơ hồ vừa phải.' }
+    if (pct < 80) return { label: 'Hơi loãng', tone: 'text-orange-300', desc: 'Mô hình đang phân vân giữa nhiều lớp.' }
+    return { label: 'Rất loãng', tone: 'text-rose-300', desc: 'Mô hình không có tín hiệu rõ ràng.' }
+  }
+  if (pct < 20) return { label: 'High focus', tone: 'text-emerald-300', desc: 'Near-certain prediction.' }
+  if (pct < 40) return { label: 'Low uncertainty', tone: 'text-emerald-200', desc: 'Model is fairly confident.' }
+  if (pct < 60) return { label: 'Moderate', tone: 'text-amber-200', desc: 'Some ambiguity present.' }
+  if (pct < 80) return { label: 'Elevated', tone: 'text-orange-300', desc: 'Model is uncertain between classes.' }
+  return { label: 'Very diffuse', tone: 'text-rose-300', desc: 'No clear signal.' }
+}
+
+function getMarginQuality(value, lang) {
+  const pct = (value || 0) * 100
+  if (lang === 'vi') {
+    if (pct >= 60) return { label: 'An toàn', tone: 'text-emerald-300', desc: 'Khoảng cách lớn, dự đoán rõ ràng.' }
+    if (pct >= 40) return { label: 'Khá ổn', tone: 'text-emerald-200', desc: 'Dự đoán tương đối tự tin.' }
+    if (pct >= 25) return { label: 'Hơi mỏng', tone: 'text-amber-200', desc: 'Gần ranh giới quyết định.' }
+    if (pct >= 10) return { label: 'Mỏng', tone: 'text-orange-300', desc: 'Dễ bị nhầm nếu nhiễu nhẹ.' }
+    return { label: 'Rất rủi ro', tone: 'text-rose-300', desc: 'Nằm ngay ranh giới quyết định.' }
+  }
+  if (pct >= 60) return { label: 'Safe', tone: 'text-emerald-300', desc: 'Wide gap, clear prediction.' }
+  if (pct >= 40) return { label: 'Moderate', tone: 'text-emerald-200', desc: 'Reasonably confident.' }
+  if (pct >= 25) return { label: 'Thin margin', tone: 'text-amber-200', desc: 'Near decision boundary.' }
+  if (pct >= 10) return { label: 'Narrow', tone: 'text-orange-300', desc: 'Sensitive to small noise.' }
+  return { label: 'Very risky', tone: 'text-rose-300', desc: 'Right on the decision boundary.' }
+}
+
+function getConfidenceQuality(value, lang) {
+  const pct = (value || 0) * 100
+  if (lang === 'vi') {
+    if (pct >= 85) return { label: 'Rất tự tin', tone: 'text-emerald-300' }
+    if (pct >= 65) return { label: 'Tự tin', tone: 'text-emerald-200' }
+    if (pct >= 45) return { label: 'Trung bình', tone: 'text-amber-200' }
+    if (pct >= 25) return { label: 'Thấp', tone: 'text-orange-300' }
+    return { label: 'Rất thấp', tone: 'text-rose-300' }
+  }
+  if (pct >= 85) return { label: 'Very high', tone: 'text-emerald-300' }
+  if (pct >= 65) return { label: 'High', tone: 'text-emerald-200' }
+  if (pct >= 45) return { label: 'Moderate', tone: 'text-amber-200' }
+  if (pct >= 25) return { label: 'Low', tone: 'text-orange-300' }
+  return { label: 'Very low', tone: 'text-rose-300' }
+}
+
+function getReadoutQuality(value, lang) {
+  const pct = (value || 0) * 100
+  if (lang === 'vi') {
+    if (pct >= 70) return { label: 'Rất tập trung', tone: 'text-emerald-300', desc: 'Vài nút chi phối toàn bộ readout.' }
+    if (pct >= 45) return { label: 'Tập trung', tone: 'text-emerald-200', desc: 'Readout có trọng tâm rõ.' }
+    if (pct >= 25) return { label: 'Trung bình', tone: 'text-amber-200', desc: 'Phân bố vừa phải.' }
+    return { label: 'Loãng', tone: 'text-orange-300', desc: 'Nhiều nút yếu đóng góp đều.' }
+  }
+  if (pct >= 70) return { label: 'Highly focused', tone: 'text-emerald-300', desc: 'Few nodes dominate readout.' }
+  if (pct >= 45) return { label: 'Focused', tone: 'text-emerald-200', desc: 'Clear readout center.' }
+  if (pct >= 25) return { label: 'Moderate', tone: 'text-amber-200', desc: 'Balanced distribution.' }
+  return { label: 'Diffuse', tone: 'text-orange-300', desc: 'Many weak contributors.' }
+}
+
+function t(text, lang) {
+  return translateTask2ReportText(text, lang) || text
 }
 
 function MiniGraphSVG({ nodes, links, contributions, modelSignature = null, size = 100 }) {
@@ -245,6 +316,29 @@ function DetailGraphSVG({
   const contributionDelta = frame?.contributionDelta || []
   const topContributorIds = frame?.topContributorIds || new Set()
   const modelId = modelSignature?.id || 'GCN'
+  const modelTheme = modelId === 'GAT'
+    ? {
+        edge: 'rgba(251,191,36,0.58)',
+        edgeSoft: 'rgba(251,191,36,0.24)',
+        node: '#f59e0b',
+        nodeSoft: '#fef3c7',
+        halo: 'rgba(251,191,36,0.24)',
+      }
+    : modelId === 'SAGE'
+      ? {
+          edge: 'rgba(52,211,153,0.52)',
+          edgeSoft: 'rgba(52,211,153,0.2)',
+          node: '#34d399',
+          nodeSoft: '#bbf7d0',
+          halo: 'rgba(52,211,153,0.22)',
+        }
+      : {
+          edge: 'rgba(34,211,238,0.38)',
+          edgeSoft: 'rgba(34,211,238,0.16)',
+          node: '#67e8f9',
+          nodeSoft: '#dbeafe',
+          halo: 'rgba(34,211,238,0.2)',
+        }
   const positions = useMemo(() => {
     const map = {}
     graph.nodes.forEach((node) => {
@@ -255,15 +349,15 @@ function DetailGraphSVG({
   const animatedPositions = useMemo(() => {
     if (!animated) return positions
     const map = {}
-    const modelMultiplier = modelId === 'GAT' ? 1.18 : modelId === 'SAGE' ? 0.86 : 0.96
-    const visualTime = currentEpochFloat + motionClock * 0.72
+    const modelMultiplier = modelId === 'GAT' ? 0.96 : modelId === 'SAGE' ? 0.54 : 0.72
+    const visualTime = currentEpochFloat + motionClock * 0.34
     graph.nodes.forEach((node, index) => {
       const base = positions[node.id] || { x: 0, y: 0 }
       const weight = Math.max(0, Math.min(1, contributions[node.id] || 0))
-      const phase = visualTime * (1.08 + weight * 0.32) + index * 1.618
-      const radius = (2 + weight * 5.8) * modelMultiplier
-      const driftX = Math.cos(phase) * radius + Math.sin(phase * 0.37) * radius * 0.22
-      const driftY = Math.sin(phase * 0.86) * radius + Math.cos(phase * 0.31) * radius * 0.18
+      const phase = visualTime * (0.74 + weight * 0.16) + index * 1.618
+      const radius = (0.55 + weight * 2.1) * modelMultiplier
+      const driftX = Math.cos(phase) * radius + Math.sin(phase * 0.37) * radius * 0.08
+      const driftY = Math.sin(phase * 0.86) * radius + Math.cos(phase * 0.31) * radius * 0.07
       map[node.id] = {
         x: base.x + driftX,
         y: base.y + driftY,
@@ -325,11 +419,7 @@ function DetailGraphSVG({
         const to = animatedPositions[target]
         if (!from || !to) return null
         const weight = ((contributions[source] || 0) + (contributions[target] || 0)) / 2
-        const stroke = modelId === 'GAT' && weight > 0.5
-          ? 'rgba(251,191,36,0.56)'
-          : modelId === 'SAGE' && weight > 0.36
-            ? 'rgba(52,211,153,0.42)'
-            : 'rgba(34,211,238,0.28)'
+        const stroke = weight > 0.44 ? modelTheme.edge : modelTheme.edgeSoft
         return (
           <line
             key={`${source}-${target}-${index}`}
@@ -338,10 +428,10 @@ function DetailGraphSVG({
             x2={to.x}
             y2={to.y}
             stroke={stroke}
-            strokeWidth={1.1 + weight * (modelId === 'GAT' ? 2.4 : 1.6)}
+            strokeWidth={modelId === 'GAT' ? 1 + weight * 2.6 : modelId === 'SAGE' ? 0.9 + weight * 1.4 : 1.1 + weight * 1.9}
             strokeLinecap="round"
-            strokeDasharray={modelId === 'SAGE' && weight > 0.35 ? '5 5' : undefined}
-            style={{ transition: 'stroke 90ms linear, stroke-width 90ms linear, opacity 90ms linear' }}
+            strokeDasharray={modelId === 'SAGE' ? '5 5' : undefined}
+            style={{ transition: 'stroke 260ms ease, stroke-width 260ms ease, opacity 260ms ease' }}
           />
         )
       })}
@@ -352,17 +442,9 @@ function DetailGraphSVG({
         const delta = contributionDelta[node.id] || 0
         const isTop = topContributorIds.has(node.id)
         const isFocus = weight >= 0.48 || isTop
-        const fill = modelId === 'SAGE'
-          ? (isTop ? '#bbf7d0' : isFocus ? '#34d399' : '#60a5fa')
-          : modelId === 'GAT'
-            ? (isTop ? '#fef3c7' : isFocus ? '#f59e0b' : '#3b82f6')
-            : (isFocus ? '#67e8f9' : '#3b82f6')
-        const halo = modelId === 'GCN'
-          ? 'rgba(34,211,238,0.24)'
-          : modelId === 'GAT'
-            ? 'rgba(251,191,36,0.24)'
-            : 'rgba(52,211,153,0.20)'
-        const size = 7 + weight * 10
+        const fill = isTop ? modelTheme.nodeSoft : isFocus ? modelTheme.node : '#3b82f6'
+        const halo = modelTheme.halo
+        const size = modelId === 'SAGE' ? 6.3 + weight * 9 : modelId === 'GAT' ? 7.2 + weight * 10.8 : 6.8 + weight * 9.8
         const label = node.original_id !== undefined ? node.original_id : node.id
         return (
           <g
@@ -370,7 +452,7 @@ function DetailGraphSVG({
             onMouseEnter={() => onNodeHover?.(node.id)}
             onMouseLeave={() => onNodeHover?.(null)}
             className="cursor-default"
-            style={{ transition: 'opacity 90ms linear' }}
+            style={{ transition: 'opacity 220ms ease' }}
           >
             {modelId === 'SAGE' && isFocus && (
               <circle
@@ -382,7 +464,7 @@ function DetailGraphSVG({
                 strokeWidth="1.4"
               opacity="0.28"
               strokeDasharray="5 5"
-                style={{ transition: 'r 90ms linear, opacity 90ms linear, stroke 90ms linear' }}
+                style={{ transition: 'r 260ms ease, opacity 260ms ease, stroke 260ms ease' }}
               />
             )}
             <circle
@@ -392,7 +474,7 @@ function DetailGraphSVG({
               fill={halo}
               opacity={isFocus ? 0.28 : 0.08}
               filter={`url(#task2-node-glow-${graph.originalGraphId})`}
-              style={{ transition: 'r 90ms linear, fill 90ms linear, opacity 90ms linear' }}
+              style={{ transition: 'r 260ms ease, fill 260ms ease, opacity 260ms ease' }}
             />
             {delta > 0.08 && (
               <circle
@@ -403,7 +485,7 @@ function DetailGraphSVG({
                 stroke={modelId === 'GAT' ? '#fbbf24' : '#22d3ee'}
                 strokeWidth="2"
                 opacity="0.65"
-                style={{ transition: 'r 80ms linear, opacity 80ms linear' }}
+                style={{ transition: 'r 220ms ease, opacity 220ms ease' }}
               />
             )}
             <circle
@@ -413,7 +495,7 @@ function DetailGraphSVG({
               fill={fill}
               stroke={isTop ? 'rgba(255,255,255,0.92)' : 'rgba(226,232,240,0.55)'}
               strokeWidth={isTop ? 2 : 1.2}
-              style={{ transition: 'r 90ms linear, fill 90ms linear, stroke 90ms linear, stroke-width 90ms linear' }}
+              style={{ transition: 'r 260ms ease, fill 260ms ease, stroke 260ms ease, stroke-width 260ms ease' }}
             />
             <text
               x={point.x}
@@ -424,7 +506,7 @@ function DetailGraphSVG({
               fontSize={Math.max(9, size * 0.78)}
               fontWeight="800"
               fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-              style={{ transition: 'fill 90ms linear, font-size 90ms linear' }}
+              style={{ transition: 'fill 260ms ease, font-size 260ms ease' }}
             >
               {label}
             </text>
@@ -484,53 +566,118 @@ function CorrectnessStrip({ history = [], currentEpochFloat = 0 }) {
   )
 }
 
-function MetricBar({ label, value = 0, tone = 'bg-cyan-400' }) {
+function MetricBar({ label, value = 0, tone = 'bg-cyan-400', quality = null, tooltip = null }) {
   const pct = Math.max(0, Math.min(1, value || 0))
   return (
-    <div>
+    <div title={tooltip || undefined}>
       <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
         <span>{label}</span>
-        <span className="font-mono text-slate-200">{(pct * 100).toFixed(0)}%</span>
+        <div className="flex items-center gap-1.5">
+          {quality?.label && (
+            <span className={`normal-case tracking-normal text-[9px] font-semibold ${quality.tone || 'text-slate-400'}`}>
+              {quality.label}
+            </span>
+          )}
+          <span className="font-mono text-slate-200">{(pct * 100).toFixed(0)}%</span>
+        </div>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-slate-900/80">
         <div className={`h-full rounded-full ${tone}`} style={{ width: `${pct * 100}%`, transition: 'width 220ms ease' }} />
       </div>
+      {quality?.desc && (
+        <div className="mt-0.5 text-[9px] text-slate-600">{quality.desc}</div>
+      )}
     </div>
   )
 }
 
-function LearningTimeline({ history = [], frame = null, currentEpochFloat = 0 }) {
+function LearningTimeline({ history = [], frame = null, currentEpochFloat = 0, compact = false, lang = 'en' }) {
   const confidenceValues = history.map((item) => item.confidence ?? 0)
   const entropyValues = history.map((item) => item.entropy ?? 0)
   const readoutValues = history.map((item) => item.readoutConcentration ?? 0)
+  const activeEpoch = (frame?.epoch ?? currentEpochFloat).toFixed(1)
+  const statusLabel = frame?.correct === 1
+    ? t('Stable', lang)
+    : frame?.correct === 0
+      ? t('Risk', lang)
+      : t('Pending', lang)
+  const statusTone = frame?.correct === 1
+    ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20'
+    : frame?.correct === 0
+      ? 'text-rose-300 bg-rose-500/10 border-rose-500/20'
+      : 'text-slate-300 bg-slate-500/10 border-slate-500/20'
+  const topContribId = frame?.topContributors?.[0]?.nodeId
+  const contribCount = frame?.topContributors?.length || 0
+  const contribTooltip = lang === 'vi'
+    ? `Nút đóng góp chính${topContribId != null ? `: nút ${topContribId}` : ''}${contribCount > 1 ? ` (top ${contribCount})` : ''}`
+    : `Top contributing node${topContribId != null ? `: node ${topContribId}` : ''}${contribCount > 1 ? ` (top ${contribCount})` : ''}`
+  const entropyQuality = getEntropyQuality(frame?.entropy ?? 0, lang)
+  const readoutQuality = getReadoutQuality(frame?.readoutConcentration ?? 0, lang)
+  const marginQuality = getMarginQuality(frame?.margin ?? 0, lang)
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-[22px] border border-cyan-300/16 bg-deep/78 px-4 py-3 shadow-lg backdrop-blur">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <div className={`min-w-0 overflow-hidden rounded-[20px] border border-cyan-300/12 bg-[linear-gradient(180deg,rgba(8,18,33,0.92),rgba(6,13,25,0.9))] shadow-[0_12px_36px_rgba(2,8,23,0.24)] backdrop-blur ${compact ? 'px-3 py-3' : 'px-4 py-3'}`}>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Learning timeline</div>
-          <div className="mt-1 text-[11px] font-semibold text-slate-400">
-            Epoch <span className="font-mono text-white">{(frame?.epoch ?? currentEpochFloat).toFixed(1)}</span>
-            <span className="mx-2 text-slate-700">/</span>
-            {frame?.correct === 1 ? 'prediction correct' : frame?.correct === 0 ? 'prediction wrong' : 'waiting for labels'}
+          <div className="text-[9px] font-black uppercase tracking-[0.22em] text-cyan-300/90">{t('Learning Timeline', lang)}</div>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-mono text-white">
+              E{activeEpoch}
+            </span>
+            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${statusTone}`}>
+              {statusLabel}
+            </span>
           </div>
         </div>
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 pt-0.5">
           <CorrectnessStrip history={history} currentEpochFloat={currentEpochFloat} />
         </div>
       </div>
-      <div className="grid min-w-0 gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-line-subtle bg-nebula/45 p-2">
-          <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Confidence</div>
+      <div className="grid min-w-0 gap-2">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5">
+          <div className="mb-1 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">
+            <span>{t('Confidence', lang)}</span>
+            <span className="font-mono text-cyan-200">{((frame?.confidence ?? 0) * 100).toFixed(0)}%</span>
+          </div>
           <Sparkline values={confidenceValues} tone="#22d3ee" label="Confidence sparkline" />
         </div>
-        <div className="rounded-xl border border-line-subtle bg-nebula/45 p-2">
-          <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Entropy</div>
-          <Sparkline values={entropyValues} tone="#f59e0b" label="Entropy sparkline" />
+        <div className="grid gap-2 md:grid-cols-2">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5">
+            <div className="mb-1 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">
+              <span>{t('Entropy', lang)}</span>
+              <span className={`font-mono ${entropyQuality.tone}`}>{((frame?.entropy ?? 0) * 100).toFixed(0)}%</span>
+            </div>
+            <Sparkline values={entropyValues} tone="#f59e0b" label="Entropy sparkline" />
+            <div className={`mt-0.5 text-[8px] font-medium ${entropyQuality.tone}`}>{entropyQuality.label}</div>
+          </div>
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5">
+            <div className="mb-1 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">
+              <span>{t('Readout', lang)}</span>
+              <span className={`font-mono ${readoutQuality.tone}`}>{((frame?.readoutConcentration ?? 0) * 100).toFixed(0)}%</span>
+            </div>
+            <Sparkline values={readoutValues} tone="#34d399" label="Readout concentration sparkline" />
+            <div className={`mt-0.5 text-[8px] font-medium ${readoutQuality.tone}`}>{readoutQuality.label}</div>
+          </div>
         </div>
-        <div className="rounded-xl border border-line-subtle bg-nebula/45 p-2">
-          <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Readout</div>
-          <Sparkline values={readoutValues} tone="#34d399" label="Readout concentration sparkline" />
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        <div className="rounded-xl border border-white/[0.05] bg-black/10 px-2.5 py-2" title={marginQuality.desc}>
+          <div className="text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">{t('Margin', lang)}</div>
+          <div className={`mt-1 font-mono text-[11px] ${marginQuality.tone}`}>{((frame?.margin ?? 0) * 100).toFixed(0)}%</div>
+          <div className={`text-[7px] font-medium ${marginQuality.tone}`}>{marginQuality.label}</div>
+        </div>
+        <div className="rounded-xl border border-white/[0.05] bg-black/10 px-2.5 py-2 cursor-help" title={contribTooltip}>
+          <div className="text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">
+            {lang === 'vi' ? 'Đóng góp' : 'Contrib'}
+          </div>
+          <div className="mt-1 font-mono text-[11px] text-cyan-200">{topContribId ?? '-'}</div>
+          <div className="text-[7px] font-medium text-slate-600">
+            {lang === 'vi' ? 'Nút chính' : 'Top node'}
+          </div>
+        </div>
+        <div className="rounded-xl border border-white/[0.05] bg-black/10 px-2.5 py-2">
+          <div className="text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">{t('Epochs', lang)}</div>
+          <div className="mt-1 font-mono text-[11px] text-slate-200">{history.length}</div>
         </div>
       </div>
     </div>
@@ -606,6 +753,8 @@ export default function TaskTopology2({
   const selectedModel = useGNNStore((state) => state.selectedModel)
   const setSelectedNode = useGNNStore((state) => state.setSelectedNode)
   const setHoveredNode = useGNNStore((state) => state.setHoveredNode)
+  const setHoveredGraph = useGNNStore((state) => state.setHoveredGraph)
+  const setSelectedCell = useGNNStore((state) => state.setTask2SelectedCell)
   const selectedNodeId = useGNNStore((state) => state.selectedNodeId)
   const focusMode = useGNNStore((state) => state.task2FocusMode)
   const setFocusMode = useGNNStore((state) => state.setTask2FocusMode)
@@ -621,10 +770,14 @@ export default function TaskTopology2({
   const cols = useResponsiveGridCols(gridRef)
   const [page, setPage] = useState(1)
   const [stableDetailGraphData, setStableDetailGraphData] = useState(null)
-  const [detailTab, setDetailTab] = useState('motion')
-  const [detailOverlayOpen, setDetailOverlayOpen] = useState(false)
   const [detailViewport, setDetailViewport] = useState({ zoom: 1, pan: { x: 0, y: 0 } })
-  const motionClock = useMotionClock(Boolean(selectedNodeId !== null && detailTab === 'motion'))
+  const motionClock = useMotionClock(Boolean(selectedNodeId !== null))
+
+  const handleBackToGallery = useCallback(() => {
+    setHoveredNode(null)
+    setHoveredGraph(null)
+    setSelectedNode(null)
+  }, [setHoveredGraph, setHoveredNode, setSelectedNode])
 
   const graphs = taskData?.graphs || []
   const indexedGraphs = useMemo(
@@ -696,6 +849,22 @@ export default function TaskTopology2({
     [resolvedSelectedCell, sortedDescriptors]
   )
 
+  useEffect(() => {
+    if (forcedFocus) return undefined
+    if (resolvedFocusId === 'all') return undefined
+    if (activeFocus.graphIds?.length) return undefined
+    setFocusMode('all')
+    return undefined
+  }, [activeFocus.graphIds, forcedFocus, resolvedFocusId, setFocusMode])
+
+  useEffect(() => {
+    if (forcedSelectedCell) return undefined
+    if (!resolvedSelectedCell) return undefined
+    if (selectedCellMatches.length) return undefined
+    setSelectedCell(null)
+    return undefined
+  }, [forcedSelectedCell, resolvedSelectedCell, selectedCellMatches.length, setSelectedCell])
+
   const pageSize = Math.max(8, cols * 6)
   const totalPages = showFullCollection ? 1 : Math.max(1, Math.ceil(sortedDescriptors.length / pageSize))
   const currentPage = showFullCollection ? 1 : Math.min(page, totalPages)
@@ -761,30 +930,13 @@ export default function TaskTopology2({
     setDetailViewport({ zoom: 1, pan: { x: 0, y: 0 } })
   }, [detailGraphKey, selectedGraph])
 
-  useEffect(() => {
-    if (reportLang !== 'vi' || !panelRootRef.current) return undefined
-    const rafId = window.requestAnimationFrame(() => {
-      localizeTask2Element(panelRootRef.current, reportLang)
-    })
-    return () => window.cancelAnimationFrame(rafId)
-  }, [
-    reportMode,
-    reportLang,
-    page,
-    cols,
-    selectedNodeId,
-    sortedDescriptors.length,
-    resolvedSelectedCell?.pred,
-    resolvedSelectedCell?.gt,
-    resolvedFocusId,
-    activeGallerySort,
-    resolvedClassFilter,
-  ])
+  // Inline t() handles translations directly — no DOM post-processing needed
+  // useEffect(() => { ... localizeTask2Element ... }) removed to avoid double-translation
 
   if (!descriptors.length) {
     return (
       <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs bg-panel">
-        No graph data
+        {t('No graph data', reportLang)}
       </div>
     )
   }
@@ -810,72 +962,85 @@ export default function TaskTopology2({
     }
     const resetDetailViewport = () => setDetailViewport({ zoom: 1, pan: { x: 0, y: 0 } })
     const handleGraphWheel = (event) => {
+      if (!(event.ctrlKey || event.metaKey)) return
       event.preventDefault()
-      updateDetailZoom(event.deltaY < 0 ? 0.12 : -0.12)
+      updateDetailZoom(event.deltaY < 0 ? 0.05 : -0.05)
     }
 
+    const confidenceQ = getConfidenceQuality(confidence, reportLang)
+    const entropyQ = getEntropyQuality(entropy, reportLang)
+    const marginQ = getMarginQuality(margin, reportLang)
+    const readoutQ = getReadoutQuality(readout, reportLang)
+
+    /* ── Derived labels ── */
+    const isCorrect = selectedGraphFrame?.correct === 1
+    const isWrong = selectedGraphFrame?.correct === 0
+    const statusText = isCorrect ? t('Correct', reportLang) : isWrong ? t('Wrong', reportLang) : t('Pending', reportLang)
+    const statusClasses = isCorrect
+      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+      : isWrong
+        ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+        : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
+    const topContribs = selectedGraphFrame?.topContributors || []
+    const readoutConc = selectedGraphFrame?.readoutConcentration ?? 0
+    const nodesL = reportLang === 'vi' ? 'nút' : 'nodes'
+    const edgesL = reportLang === 'vi' ? 'cạnh' : 'edges'
+
+    /* ── Card shell ── */
+    const Card = ({ title, children, className = '' }) => (
+      <div className={`rounded-[16px] border border-white/[0.06] bg-white/[0.025] p-3.5 ${className}`}>
+        {title && (
+          <div className="mb-2.5 text-[8px] font-black uppercase tracking-[0.2em] text-slate-500">{title}</div>
+        )}
+        {children}
+      </div>
+    )
+
     return (
-      <div ref={panelRootRef} className="h-full w-full overflow-y-auto bg-[linear-gradient(180deg,#07111f,#081322)] px-4 pb-28 pt-16 custom-scrollbar">
-        <div className="grid min-h-full grid-rows-[auto_auto_auto] gap-2">
-          <div className="sticky top-0 z-40 flex items-center justify-between gap-4 rounded-xl bg-[#07111f]/84 px-1 py-2 backdrop-blur-xl">
-            <button
-              type="button"
-              onClick={() => setSelectedNode(null)}
-              className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-slate-300 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-            >
-              Back to gallery
-            </button>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-lg font-black tracking-tight text-white">{`Graph #${selectedGraph.originalGraphId}`}</div>
-            </div>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 text-[10px] font-mono text-slate-300">
-              <span className="rounded-full bg-white/5 px-2.5 py-1">GT {labelForClass(selectedGraph.groundTruth)}</span>
-              <span className={`rounded-full px-2.5 py-1 ${selectedGraphFrame?.correct === 1 ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/10 text-rose-300'}`}>
-                <span className="text-slate-500">Pred</span> <b>{predictionLabel}</b>
-              </span>
-              <span className="rounded-full bg-cyan-500/10 px-2.5 py-1 text-cyan-200">{(confidence * 100).toFixed(0)}%</span>
-            </div>
-          </div>
+      <div ref={panelRootRef} className="flex h-full w-full flex-col overflow-hidden bg-[linear-gradient(180deg,#07111f,#081322)]">
 
-          <div className="flex items-center justify-between gap-3 px-1 py-1">
-            <div className="flex rounded-full bg-white/[0.04] p-1">
-              {[
-                ['motion', 'Đồ thị động'],
-                ['learning', 'Dòng học'],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setDetailTab(value)}
-                  className={`rounded-full px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] transition-all ${
-                    detailTab === value
-                      ? 'bg-cyan-300 text-slate-950'
-                      : 'text-slate-500 hover:bg-white/5 hover:text-slate-100'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="hidden">
-              {detailTab === 'motion'
-                ? 'Node chuyển động quanh layout gốc theo contribution từng epoch.'
-                : 'Timeline đọc confidence, entropy, readout và trạng thái đúng/sai.'}
-            </div>
+        {/* ── Sticky compact header ── */}
+        <div className="z-40 flex shrink-0 flex-wrap items-center gap-2 border-b border-white/[0.06] bg-[#07111f]/97 px-4 py-2.5 backdrop-blur-xl">
+          <button
+            type="button"
+            onClick={handleBackToGallery}
+            className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+          >
+            {t('Back to gallery', reportLang)}
+          </button>
+          <div className="min-w-0 flex-1 truncate text-sm font-black tracking-tight text-white">
+            Graph #{selectedGraph.originalGraphId}
           </div>
+          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${statusClasses}`}>{statusText}</span>
+          <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-mono text-slate-300">
+            {t('Nhãn thật', reportLang)}: <b className="text-white">{labelForClass(selectedGraph.groundTruth)}</b>
+          </span>
+          <span className="text-[10px] text-slate-600">&rarr;</span>
+          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-mono ${isCorrect ? 'border-emerald-500/30 text-emerald-300' : isWrong ? 'border-rose-500/30 text-rose-300' : 'border-white/10 text-slate-300'}`}>
+            {t('Dự đoán', reportLang)}: <b>{predictionLabel}</b>
+          </span>
+          <span className="shrink-0 rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-cyan-200">{(confidence * 100).toFixed(0)}%</span>
+          <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-200">{t('Biên phân loại', reportLang)} {(margin * 100).toFixed(0)}%</span>
+        </div>
 
-          {detailTab === 'motion' ? (
-            <div className="relative h-[calc(100vh-250px)] min-h-[600px] max-h-[800px] overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.10),transparent_48%),linear-gradient(180deg,rgba(15,23,42,0.42),rgba(2,8,23,0.12))]">
-              <div className="hidden" />
-              <div className="hidden">
-                dynamic graph · stable center
-              </div>
+        {/* ── Single-column scroll ── */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+          <div className="mx-auto max-w-[1120px] px-4 py-4 space-y-5">
+
+            {/* ── Graph canvas ── */}
+            <div className="relative overflow-hidden rounded-[24px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(9,19,36,0.94),rgba(4,12,25,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_18px_56px_rgba(2,8,23,0.3)]" style={{ height: 'clamp(380px, 50vh, 640px)' }}>
               {!selectedGraphFrame?.hasReadoutData && (
-                <div className="absolute right-6 top-6 z-20 rounded-full border border-amber-400/30 bg-amber-500/12 px-3 py-1 text-[10px] font-bold text-amber-200">
-                  No readout data yet
+                <div className="absolute left-4 top-4 z-20 rounded-full border border-amber-400/30 bg-amber-500/12 px-3 py-1 text-[10px] font-bold text-amber-200">
+                  {reportLang === 'vi' ? 'Chưa có dữ liệu readout' : 'No readout data yet'}
                 </div>
               )}
-              <div className="absolute inset-3 z-10">
+              <div className={`absolute inset-3 z-10 rounded-[20px] border border-white/[0.04] ${
+                modelSignature.id === 'GAT'
+                  ? 'bg-[radial-gradient(circle_at_48%_28%,rgba(251,191,36,0.14),transparent_34%),radial-gradient(circle_at_top,rgba(15,23,42,0.18),transparent_55%)]'
+                  : modelSignature.id === 'SAGE'
+                    ? 'bg-[radial-gradient(circle_at_45%_30%,rgba(52,211,153,0.12),transparent_34%),radial-gradient(circle_at_top,rgba(15,23,42,0.18),transparent_55%)]'
+                    : 'bg-[radial-gradient(circle_at_50%_26%,rgba(34,211,238,0.14),transparent_36%),radial-gradient(circle_at_top,rgba(15,23,42,0.18),transparent_55%)]'
+              }`}>
                 <DetailGraphSVG
                   graph={graphForStage}
                   frame={selectedGraphFrame}
@@ -889,101 +1054,169 @@ export default function TaskTopology2({
                   onWheel={handleGraphWheel}
                 />
               </div>
-              <div className="absolute right-5 top-5 z-20 flex items-center gap-0.5 rounded-xl border border-white/10 bg-slate-950/55 p-1 text-[10px] font-black text-slate-200 shadow-[0_8px_32px_rgba(2,8,23,0.40)] backdrop-blur-2xl">
-                <button
-                  type="button"
-                  onClick={() => updateDetailZoom(-0.18)}
-                  className="grid h-7 w-7 place-items-center rounded-full transition hover:bg-white/10"
-                  aria-label="Zoom out graph"
-                >
-                  −
-                </button>
-                <button
-                  type="button"
-                  onClick={resetDetailViewport}
-                  className="rounded-full px-2 py-1 font-mono text-cyan-100 transition hover:bg-white/10"
-                  aria-label="Reset graph zoom"
-                >
-                  {detailViewport.zoom.toFixed(1)}x
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateDetailZoom(0.18)}
-                  className="grid h-7 w-7 place-items-center rounded-full transition hover:bg-white/10"
-                  aria-label="Zoom in graph"
-                >
-                  +
-                </button>
+
+              {/* Zoom controls */}
+              <div className="absolute right-4 top-4 z-20 flex items-center gap-0.5 rounded-xl border border-white/10 bg-slate-950/55 p-1 text-[10px] font-black text-slate-200 shadow-lg backdrop-blur-2xl">
+                <button type="button" onClick={() => updateDetailZoom(-0.08)} className="grid h-7 w-7 place-items-center rounded-full transition hover:bg-white/10" aria-label="Zoom out">-</button>
+                <button type="button" onClick={resetDetailViewport} className="rounded-full px-2 py-1 font-mono text-cyan-100 transition hover:bg-white/10" aria-label="Reset zoom">{detailViewport.zoom.toFixed(1)}x</button>
+                <button type="button" onClick={() => updateDetailZoom(0.08)} className="grid h-7 w-7 place-items-center rounded-full transition hover:bg-white/10" aria-label="Zoom in">+</button>
               </div>
-              {detailOverlayOpen ? (
-                <div className="absolute bottom-3 right-5 z-20 w-[min(340px,calc(100%-40px))] rounded-2xl border border-white/12 bg-gradient-to-b from-slate-950/65 to-slate-950/55 px-4 py-3.5 shadow-[0_16px_48px_rgba(2,8,23,0.55)] backdrop-blur-2xl transition-all duration-200">
-                  <div className="mb-2.5 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
-                        {modelSignature.primaryLabel}
-                      </div>
-                      <div className="mt-0.5 font-mono text-[10px] font-bold text-slate-300">
-                        {selectedGraph.nodes.length}n / {selectedGraph.links.length}e
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setDetailOverlayOpen(false)}
-                      className="shrink-0 rounded-lg border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-200 transition-all hover:border-cyan-300/50 hover:text-cyan-200 hover:bg-white/[0.06]"
-                    >
-                      Thu gọn
-                    </button>
-                  </div>
-                  <div className="grid gap-2">
-                    <MetricBar label="Confidence" value={confidence} tone="bg-cyan-400" />
-                    <MetricBar label="Margin" value={margin} tone="bg-emerald-400" />
-                    <MetricBar label="Readout" value={readout} tone="bg-amber-400" />
-                    <MetricBar label="Entropy" value={entropy} tone="bg-rose-400" />
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-[10px] font-semibold leading-relaxed text-slate-400">
-                    {modelSignature.explanation}
-                  </p>
+
+              {/* Node size legend */}
+              <div className="absolute left-4 top-4 z-20 rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-[10px] text-slate-300 shadow-lg backdrop-blur-xl">
+                <div className="mb-1.5 text-[8px] font-black uppercase tracking-[0.18em] text-slate-500">{reportLang === 'vi' ? 'Chú giải' : 'Legend'}</div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-cyan-400" />
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-400 opacity-60" />
+                  <span className="text-[9px] text-slate-400">{reportLang === 'vi' ? 'Mức đóng góp' : 'Contribution level'}</span>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setDetailOverlayOpen(true)}
-                  className="absolute bottom-3 right-5 z-20 rounded-xl border border-cyan-200/20 bg-slate-950/60 px-4 py-2 text-[9px] font-black uppercase tracking-[0.14em] text-cyan-100 shadow-[0_12px_40px_rgba(2,8,23,0.45)] backdrop-blur-2xl transition-all hover:border-cyan-200/60 hover:bg-gradient-to-r hover:from-cyan-400 hover:to-cyan-300 hover:text-slate-950"
-                >
-                  Mở thông số · {(confidence * 100).toFixed(0)}%
-                </button>
-              )}
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-white/90 bg-cyan-400" />
+                  <span className="text-[9px] text-slate-400">{reportLang === 'vi' ? 'Nút đóng góp chính' : 'Top contributor'}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="none" stroke={modelSignature.id === 'GAT' ? '#f59e0b' : modelSignature.id === 'SAGE' ? '#34d399' : '#67e8f9'} strokeWidth="1.5" opacity="0.65" /></svg>
+                  <span className="text-[9px] text-slate-400">{reportLang === 'vi' ? 'Đang tăng' : 'Rising'}</span>
+                </div>
+              </div>
+
+              {/* Model badge bottom-left */}
+              <div className="absolute bottom-4 left-4 z-20 rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 shadow-lg backdrop-blur-xl">
+                <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-slate-950 ${
+                  modelSignature.id === 'GAT' ? 'bg-amber-300/90' : modelSignature.id === 'SAGE' ? 'bg-emerald-300/90' : 'bg-cyan-400/90'
+                }`}>{modelSignature.id}</span>
+                <span className="ml-2 text-[10px] font-semibold text-slate-500">{t('Motion View', reportLang)}</span>
+              </div>
             </div>
-          ) : (
-            <div className="min-h-0">
-              <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-                <LearningTimeline
-                  history={selectedGraphHistory}
-                  frame={selectedGraphFrame}
-                  currentEpochFloat={currentEpochFloat}
-                />
-                <div className="grid min-w-0 gap-3 rounded-[22px] border border-line-subtle bg-deep/72 px-4 py-3 shadow-lg backdrop-blur">
+
+            {/* ── Row: Key Metrics + Prediction Strip ── */}
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card title={reportLang === 'vi' ? 'Chỉ số chính' : 'Key Metrics'}>
+                <div className="space-y-3">
+                  <MetricBar label={t('Độ tin cậy', reportLang)} value={confidence} tone="bg-cyan-400" quality={confidenceQ} tooltip={confidenceQ.desc} />
+                  <MetricBar label={t('Biên phân loại', reportLang)} value={margin} tone="bg-emerald-400" quality={marginQ} tooltip={marginQ.desc} />
+                  <MetricBar label={reportLang === 'vi' ? 'Tổng hợp đồ thị' : 'Readout'} value={readout} tone="bg-amber-400" quality={readoutQ} tooltip={readoutQ.desc} />
+                  <MetricBar label={t('Độ bất định', reportLang)} value={entropy} tone="bg-rose-400" quality={entropyQ} tooltip={entropyQ.desc} />
+                </div>
+              </Card>
+              <Card title={reportLang === 'vi' ? 'Lịch sử dự đoán theo epoch' : 'Prediction Strip'}>
+                <CorrectnessStrip history={selectedGraphHistory} currentEpochFloat={currentEpochFloat} />
+                <div className="mt-2 flex flex-wrap items-center gap-4 text-[9px] text-slate-500">
+                  <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-emerald-400" /> {reportLang === 'vi' ? 'Đúng' : 'Correct'}</span>
+                  <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-rose-400" /> {reportLang === 'vi' ? 'Sai' : 'Wrong'}</span>
+                  <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-slate-600" /> {reportLang === 'vi' ? 'Chưa rõ' : 'Unknown'}</span>
+                  <span className="ml-auto font-mono text-slate-400">E{(selectedGraphFrame?.epoch ?? currentEpochFloat).toFixed(1)}</span>
+                </div>
+              </Card>
+            </div>
+
+            {/* ── Learning Timeline ── */}
+            <Card title={t('Learning Timeline', reportLang)}>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-white/[0.04] bg-white/[0.02] p-2.5">
+                  <div className="mb-1 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    <span>{t('Độ tin cậy', reportLang)}</span>
+                    <span className="font-mono text-cyan-200">{((selectedGraphFrame?.confidence ?? 0) * 100).toFixed(0)}%</span>
+                  </div>
+                  <Sparkline values={selectedGraphHistory.map(h => h.confidence ?? 0)} tone="#22d3ee" label="Confidence" />
+                </div>
+                <div className="rounded-lg border border-white/[0.04] bg-white/[0.02] p-2.5">
+                  <div className="mb-1 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    <span>{t('Độ bất định', reportLang)}</span>
+                    <span className={`font-mono ${entropyQ.tone}`}>{((selectedGraphFrame?.entropy ?? 0) * 100).toFixed(0)}%</span>
+                  </div>
+                  <Sparkline values={selectedGraphHistory.map(h => h.entropy ?? 0)} tone="#f59e0b" label="Entropy" />
+                  <div className={`mt-0.5 text-[8px] font-medium ${entropyQ.tone}`}>{entropyQ.label}</div>
+                </div>
+                <div className="rounded-lg border border-white/[0.04] bg-white/[0.02] p-2.5">
+                  <div className="mb-1 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    <span>{reportLang === 'vi' ? 'Tổng hợp' : 'Readout'}</span>
+                    <span className={`font-mono ${readoutQ.tone}`}>{(readoutConc * 100).toFixed(0)}%</span>
+                  </div>
+                  <Sparkline values={selectedGraphHistory.map(h => h.readoutConcentration ?? 0)} tone="#34d399" label="Readout" />
+                  <div className={`mt-0.5 text-[8px] font-medium ${readoutQ.tone}`}>{readoutQ.label}</div>
+                </div>
+              </div>
+            </Card>
+
+            {/* ── Row: Model Lens + Top Contributors + Structure ── */}
+            <div className="grid gap-4 lg:grid-cols-3">
+              {/* Lăng kính mô hình */}
+              <Card title={reportLang === 'vi' ? 'Lăng kính mô hình' : 'Model Lens'}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-slate-950 ${
+                    modelSignature.id === 'GAT' ? 'bg-amber-300/90' : modelSignature.id === 'SAGE' ? 'bg-emerald-300/90' : 'bg-cyan-400/90'
+                  }`}>{modelSignature.id}</span>
+                  <span className="font-mono text-[11px] font-bold text-slate-200">{(modelSignature.currentScore * 100).toFixed(0)}%</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-slate-400 break-words">{modelSignature.explanation}</p>
+                <div className={`mt-2.5 rounded-lg border px-2.5 py-2 ${
+                  modelSignature.id === 'GAT' ? 'border-amber-400/20 bg-amber-500/8'
+                    : modelSignature.id === 'SAGE' ? 'border-emerald-400/20 bg-emerald-500/8'
+                      : 'border-cyan-400/20 bg-cyan-500/8'
+                }`}>
+                  <div className="text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 mb-1">{t('Model Behavior', reportLang)}</div>
+                  <div className="text-[11px] leading-relaxed text-slate-300 break-words">
+                    {reportLang === 'vi'
+                      ? (modelSignature.id === 'GAT'
+                        ? 'Cạnh và motif chính phát sáng ấm hơn khi attention tập trung.'
+                        : modelSignature.id === 'SAGE'
+                          ? 'Bỏ phiếu lân cận ổn định hơn với cấu trúc nét đứt nhẹ nhàng.'
+                          : 'Tín hiệu lan tỏa đều hơn với propagation cyan mượt.')
+                      : (modelSignature.id === 'GAT'
+                        ? 'Edges and top motifs glow warmer as attention locks in.'
+                        : modelSignature.id === 'SAGE'
+                          ? 'Neighborhood voting stays steadier with calmer dashed structure.'
+                          : 'Signals spread more evenly with smoother cyan propagation.')}
+                  </div>
+                </div>
+              </Card>
+
+              {/* Nút đóng góp chính */}
+              <Card title={reportLang === 'vi' ? 'Nút đóng góp chính' : 'Top Readout Nodes'}>
+                {topContribs.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {topContribs.slice(0, 5).map((contrib, i) => {
+                      const w = Math.max(0, Math.min(1, contrib.weight ?? 0))
+                      return (
+                        <div key={contrib.nodeId ?? i} className="flex items-center gap-2 text-[11px]">
+                          <span className="w-5 shrink-0 text-right font-mono text-[10px] text-slate-600">#{i + 1}</span>
+                          <span className="font-mono font-bold text-white w-8">{reportLang === 'vi' ? 'nút' : 'node'} {contrib.nodeId}</span>
+                          <div className="min-w-0 flex-1 h-1.5 overflow-hidden rounded-full bg-slate-800">
+                            <div className="h-full rounded-full bg-cyan-400" style={{ width: `${w * 100}%` }} />
+                          </div>
+                          <span className="shrink-0 font-mono text-[10px] text-cyan-200">{(w * 100).toFixed(0)}%</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-slate-600">{reportLang === 'vi' ? 'Chưa có dữ liệu đóng góp' : 'No contribution data'}</div>
+                )}
+              </Card>
+
+              {/* Cấu trúc */}
+              <Card title={reportLang === 'vi' ? 'Cấu trúc' : 'Structure'}>
+                <div className="grid grid-cols-2 gap-2 text-[11px] mb-2">
                   <div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">{modelSignature.primaryLabel}</span>
-                      <span className="font-mono text-[11px] font-bold text-slate-200">{(modelSignature.currentScore * 100).toFixed(0)}%</span>
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-400">{modelSignature.explanation}</p>
+                    <div className="text-slate-500">{reportLang === 'vi' ? 'Số nút' : 'Nodes'}</div>
+                    <div className="font-mono font-bold text-white">{selectedGraph.nodes.length}</div>
                   </div>
-                  <div className="grid gap-2">
-                    <MetricBar label="Confidence" value={confidence} tone="bg-cyan-400" />
-                    <MetricBar label="Margin" value={margin} tone="bg-emerald-400" />
-                    <MetricBar label="Readout" value={readout} tone="bg-amber-400" />
-                    <MetricBar label="Entropy" value={entropy} tone="bg-rose-400" />
-                  </div>
-                  <div className="rounded-xl border border-line-subtle bg-nebula/35 px-3 py-2 text-[11px] font-semibold text-slate-400">
-                    <span className="font-mono text-cyan-200">{selectedGraph.nodes.length} nodes / {selectedGraph.links.length} edges</span>
-                    <div className="mt-1 line-clamp-2 text-slate-500">{selectedGraph.motifSignature}</div>
+                  <div>
+                    <div className="text-slate-500">{reportLang === 'vi' ? 'Số cạnh' : 'Edges'}</div>
+                    <div className="font-mono font-bold text-white">{selectedGraph.links.length}</div>
                   </div>
                 </div>
-              </div>
+                <div className="text-[11px] leading-relaxed text-slate-400 break-words">{selectedGraph.motifSignature}</div>
+                {selectedGraph.failureTag && (
+                  <div className="mt-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[10px] text-slate-400">
+                    {formatFailureTag(selectedGraph.failureTag, reportLang)}
+                  </div>
+                )}
+              </Card>
             </div>
-          )}
+
+          </div>
         </div>
       </div>
     )
@@ -998,29 +1231,29 @@ export default function TaskTopology2({
         panelRootRef.current = node
         gridRef.current = node
       }}
-      className="w-full h-full overflow-y-auto bg-gradient-to-b from-panel to-panel/80 custom-scrollbar"
+      className="w-full h-full overflow-y-auto overflow-x-hidden bg-gradient-to-b from-panel to-panel/80 custom-scrollbar"
     >
       <div className="pt-16 pb-6 px-6">
         <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-line-default/50 bg-gradient-to-b from-nebula/50 to-nebula/25 px-5 py-4 backdrop-blur-sm shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500 font-bold">Graph collection</div>
+              <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500 font-bold">{t('Graph collection', reportLang)}</div>
               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-micro text-slate-300">
-                <span className="font-bold">{sortedDescriptors.length} graphs</span>
+                <span className="font-bold">{sortedDescriptors.length} {t('graphs', reportLang)}</span>
                 <span className="text-slate-600">·</span>
-                <span>{graphClassNames.length || 1} class profiles</span>
+                <span>{graphClassNames.length || 1} {t('class profiles', reportLang)}</span>
                 <span className="text-slate-600">·</span>
-                <span className="text-cyan-300/80">{activeFocus.label}</span>
+                <span className="text-cyan-300/80">{t(activeFocus.label, reportLang)}</span>
               </div>
               <div className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
                 {resolvedSelectedCell
-                  ? `${selectedCellMatches.length} graphs match the active confusion cell. The rest stay visible so you can keep structural context.`
-                  : activeFocus.description}
+                  ? t(`${selectedCellMatches.length} graphs match the active confusion cell. The rest stay visible so you can keep structural context.`, reportLang)
+                  : t(activeFocus.description, reportLang)}
               </div>
             </div>
             {showFullCollection ? (
               <div className="rounded-lg border border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 to-cyan-500/5 px-3 py-1.5 text-micro font-bold text-cyan-200">
-                Showing the full collection in one view
+                {t('Showing the full collection in one view', reportLang)}
               </div>
             ) : (
               <div className="flex items-center gap-2">
@@ -1030,10 +1263,10 @@ export default function TaskTopology2({
                   disabled={currentPage === 1}
                   className="rounded-lg border border-line-default/60 bg-white/[0.03] px-3 py-1.5 text-micro font-bold uppercase tracking-wide text-slate-400 transition-all hover:border-line-default hover:bg-white/[0.06] hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
                 >
-                  Prev
+                  {t('Prev', reportLang)}
                 </button>
                 <span className="min-w-[72px] text-center text-micro font-mono text-slate-400">
-                  Page {currentPage}/{totalPages}
+                  {t('Page', reportLang)} {currentPage}/{totalPages}
                 </span>
                 <button
                   type="button"
@@ -1041,7 +1274,7 @@ export default function TaskTopology2({
                   disabled={currentPage === totalPages}
                   className="rounded-lg border border-line-default/60 bg-white/[0.03] px-3 py-1.5 text-micro font-bold uppercase tracking-wide text-slate-400 transition-all hover:border-line-default hover:bg-white/[0.06] hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
                 >
-                  Next
+                  {t('Next', reportLang)}
                 </button>
               </div>
             )}
@@ -1051,10 +1284,10 @@ export default function TaskTopology2({
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 {[
-                  ['priority', 'Priority'],
-                  ['confidence_desc', 'Confidence'],
-                  ['entropy_desc', 'Entropy'],
-                  ['size_desc', 'Size'],
+                  ['priority', t('Priority', reportLang)],
+                  ['confidence_desc', t('Confidence', reportLang)],
+                  ['entropy_desc', t('Entropy', reportLang)],
+                  ['size_desc', t('Size', reportLang)],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -1072,13 +1305,13 @@ export default function TaskTopology2({
               </div>
 
               <label className="flex items-center gap-2 text-[11px] text-slate-400">
-                <span className="uppercase tracking-ultra text-slate-500">GT class</span>
+                <span className="uppercase tracking-ultra text-slate-500">{t('GT class', reportLang)}</span>
                 <select
                   value={resolvedClassFilter}
                   onChange={(event) => setClassFilter(event.target.value === 'all' ? 'all' : Number(event.target.value))}
                   className="rounded-lg border border-line-default/50 bg-white/[0.04] px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 transition-colors hover:border-line-default"
                 >
-                  <option value="all">All</option>
+                  <option value="all">{t('All', reportLang)}</option>
                   {classFilterOptions.map((classId) => (
                     <option key={classId} value={classId}>
                       {labelForClass(classId)}
@@ -1097,17 +1330,17 @@ export default function TaskTopology2({
             const selected = descriptor.originalGraphId === selectedNodeId
             const predictionLabel = descriptor.predicted != null
               ? labelForClass(descriptor.predicted)
-              : 'Pending'
+              : t('Pending', reportLang)
             const isWrong = descriptor.correct !== 1
             const isDanger = isWrong && confidence >= 0.85
             const isUncertain = !isWrong && confidence < 0.55
             const statusLabel = isDanger
-              ? 'Danger'
+              ? t('Danger', reportLang)
               : isWrong
-                ? 'Wrong'
+                ? t('Wrong', reportLang)
                 : isUncertain
-                  ? 'Uncertain'
-                  : 'Correct'
+                  ? t('Uncertain', reportLang)
+                  : t('Correct', reportLang)
             const quickTone = isDanger
               ? 'border-rose-500/70 hover:border-rose-400 shadow-[0_0_18px_-6px_rgba(244,63,94,0.55)]'
               : isWrong
@@ -1147,7 +1380,7 @@ export default function TaskTopology2({
                   </div>
                   {modelSignature.id === 'SAGE' && modelSignature.unstableGraphIds.includes(descriptor.originalGraphId) && (
                     <div className="absolute right-3 top-3 rounded-full border border-emerald-400/30 bg-emerald-500/14 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-200">
-                      Graph dao động
+                      {t('Graph dao động', reportLang)}
                     </div>
                   )}
                 </div>
@@ -1159,7 +1392,7 @@ export default function TaskTopology2({
                         G#{descriptor.originalGraphId}
                       </p>
                       <p className="text-nano text-slate-500 font-mono">
-                        {descriptor.nodes.length}n/{descriptor.links.length}e
+                        {reportLang === 'vi' ? `${descriptor.nodes.length}nT/${descriptor.links.length}c` : `${descriptor.nodes.length}n/${descriptor.links.length}e`}
                       </p>
                     </div>
                     <span
@@ -1177,42 +1410,42 @@ export default function TaskTopology2({
 
                   <div className="mt-3 grid gap-1 text-[11px] text-slate-300">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-500">GT</span>
+                      <span className="text-slate-500">{t('GT', reportLang)}</span>
                       <span>{labelForClass(descriptor.groundTruth)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-500">Pred</span>
+                      <span className="text-slate-500">{t('Pred', reportLang)}</span>
                       <span className={descriptor.correct === 1 ? 'text-emerald-300' : 'text-red-300'}>
                         {predictionLabel}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-500">Status</span>
+                      <span className="text-slate-500">{t('Status', reportLang)}</span>
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${statusBadgeTone}`}>
                         {statusLabel}
                       </span>
                     </div>
                     {descriptor.correctnessMismatch && (
                       <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold text-rose-200">
-                        Correctness schema mismatch; using pred/GT check.
+                        {reportLang === 'vi' ? 'Schema không khớp; đang dùng kiểm tra pred/GT.' : 'Correctness schema mismatch; using pred/GT check.'}
                       </div>
                     )}
                   </div>
 
                   <div className="mt-2.5 flex flex-wrap gap-1">
                     <span className="rounded-md border border-line-default/40 bg-black/15 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
-                      margin {((descriptor.margin ?? 0) * 100).toFixed(0)}%
+                      {t('Margin', reportLang)} {((descriptor.margin ?? 0) * 100).toFixed(0)}%
                     </span>
                     <span className="rounded-md border border-line-default/40 bg-black/15 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
-                      {descriptor.densityBucket}
+                      {t(descriptor.densityBucket, reportLang)}
                     </span>
                     <span className="rounded-md border border-line-default/40 bg-black/15 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
-                      {descriptor.entropyBucket}
+                      {t(descriptor.entropyBucket, reportLang)}
                     </span>
                   </div>
 
                   <p className="mt-2 text-[10px] leading-relaxed text-slate-500 line-clamp-1">
-                    {descriptor.motifSignature} · {formatFailureTag(descriptor.failureTag)}
+                    {descriptor.motifSignature} · {formatFailureTag(descriptor.failureTag, reportLang)}
                   </p>
                 </div>
               </button>

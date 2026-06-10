@@ -27,6 +27,8 @@ import {
   buildTask2ModelSignature,
   describeTask2ReadoutPattern,
   formatTask2ClassLabel,
+  computeHeatmapRowStats,
+  computeHeatmapSummary,
 } from './task2Metrics'
 
 describe('buildConfusionMatrix', () => {
@@ -532,5 +534,81 @@ describe('task 2 collection helpers', () => {
     expect(sage.primaryLabel).toBe('Bỏ phiếu lân cận')
     expect(sage.metrics.prediction_flip_rate).toBeGreaterThanOrEqual(0)
     expect(Array.isArray(sage.unstableGraphIds)).toBe(true)
+  })
+})
+
+describe('computeHeatmapRowStats', () => {
+  it('returns empty map for empty inputs', () => {
+    expect(computeHeatmapRowStats([], []).size).toBe(0)
+    expect(computeHeatmapRowStats([{}], []).size).toBe(0)
+  })
+
+  it('counts errors and flips correctly', () => {
+    const snapshots = [
+      { graph_correct: [0, 1, 0] },
+      { graph_correct: [0, 0, 1] },
+      { graph_correct: [1, 1, 0] },
+      { graph_correct: [1, 0, 1] },
+      { graph_correct: [1, 1, 0] },
+    ]
+    const graphs = [
+      { originalGraphId: 0, sourceIndex: 0 },
+      { originalGraphId: 1, sourceIndex: 1 },
+      { originalGraphId: 2, sourceIndex: 2 },
+    ]
+    const stats = computeHeatmapRowStats(snapshots, graphs)
+
+    // Graph 0: wrong,wrong,right,right,right → errorCount=2, flipCount=1, recoveryEpoch=2
+    expect(stats.get(0).errorCount).toBe(2)
+    expect(stats.get(0).flipCount).toBe(1)
+    expect(stats.get(0).recoveryEpoch).toBe(2)
+    expect(stats.get(0).persistentError).toBe(false)
+
+    // Graph 1: right,wrong,right,wrong,right → errorCount=2, flipCount=4
+    expect(stats.get(1).errorCount).toBe(2)
+    expect(stats.get(1).flipCount).toBe(4)
+    expect(stats.get(1).flipHeavy).toBe(true)
+
+    // Graph 2: wrong,right,wrong,right,wrong → errorCount=3, flipCount=4
+    expect(stats.get(2).errorCount).toBe(3)
+    expect(stats.get(2).flipCount).toBe(4)
+    expect(stats.get(2).flipHeavy).toBe(true)
+  })
+
+  it('detects persistent errors (>70% wrong)', () => {
+    const snapshots = Array.from({ length: 10 }, (_, i) => ({
+      graph_correct: [i < 8 ? 0 : 1], // wrong 8 out of 10 = 80%
+    }))
+    const graphs = [{ originalGraphId: 0, sourceIndex: 0 }]
+    const stats = computeHeatmapRowStats(snapshots, graphs)
+    expect(stats.get(0).persistentError).toBe(true)
+    expect(stats.get(0).errorCount).toBe(8)
+  })
+
+  it('detects late recovery', () => {
+    // 10 epochs: wrong for first 8, correct for last 2
+    const snapshots = Array.from({ length: 10 }, (_, i) => ({
+      graph_correct: [i < 8 ? 0 : 1],
+    }))
+    const graphs = [{ originalGraphId: 0, sourceIndex: 0 }]
+    const stats = computeHeatmapRowStats(snapshots, graphs)
+    expect(stats.get(0).recoveryEpoch).toBe(8)
+    expect(stats.get(0).lateRecovery).toBe(true)
+  })
+})
+
+describe('computeHeatmapSummary', () => {
+  it('aggregates counts correctly', () => {
+    const stats = new Map([
+      [0, { errorCount: 8, flipCount: 1, recoveryEpoch: null, persistentError: true, flipHeavy: false, lateRecovery: false }],
+      [1, { errorCount: 2, flipCount: 4, recoveryEpoch: 3, persistentError: false, flipHeavy: true, lateRecovery: false }],
+      [2, { errorCount: 1, flipCount: 0, recoveryEpoch: 8, persistentError: false, flipHeavy: false, lateRecovery: true }],
+      [3, { errorCount: 0, flipCount: 0, recoveryEpoch: null, persistentError: false, flipHeavy: false, lateRecovery: false }],
+    ])
+    const summary = computeHeatmapSummary(stats)
+    expect(summary.totalHard).toBe(3) // graphs 0, 1, 2 have errorCount > 0
+    expect(summary.persistentCount).toBe(1)
+    expect(summary.flipHeavyCount).toBe(1)
+    expect(summary.lateRecoveryCount).toBe(1)
   })
 })
