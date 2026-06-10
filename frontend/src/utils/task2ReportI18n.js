@@ -229,6 +229,12 @@ export function translateTask2ReportText(text, lang) {
     'Status Wrong': 'Trạng thái sai',
     'Status Danger': 'Trạng thái nguy cơ cao',
     'Status Uncertain': 'Trạng thái chưa chắc',
+    'High-conf wrong': 'Sai tự tin cao',
+    'Shortcut risk': 'Rủi ro shortcut',
+    'Readout diffuse': 'Readout loãng',
+    'Jump to epoch': 'Nhảy tới epoch',
+    'Open lens': 'Mở lăng kính',
+    'Structure lens': 'Lăng kính cấu trúc',
   }
   if (moreExact[text]) return moreExact[text]
 

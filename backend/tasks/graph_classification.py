@@ -232,34 +232,34 @@ def model_default_hyperparams(model_type: str) -> dict:
     mt = normalize_task2_model_type(model_type)
     if mt == 'GAT':
         return {
-            'hidden': 48,
+            'hidden': 64,
             'heads': 4,
-            'dropout': 0.35,
-            'attn_dropout': 0.25,
-            'lr': 3e-3,
-            'weight_decay': 1e-3,
-            'epochs': 80,
-            'early_stop_patience': 12,
+            'dropout': 0.22,
+            'attn_dropout': 0.12,
+            'lr': 4e-3,
+            'weight_decay': 7e-4,
+            'epochs': 140,
+            'early_stop_patience': 24,
         }
     if mt == 'SAGE':
         return {
-            'hidden': 48,
+            'hidden': 64,
             'heads': 1,
-            'dropout': 0.35,
-            'lr': 4e-3,
-            'weight_decay': 1e-3,
-            'epochs': 80,
-            'early_stop_patience': 8,
+            'dropout': 0.24,
+            'lr': 5e-3,
+            'weight_decay': 8e-4,
+            'epochs': 140,
+            'early_stop_patience': 24,
         }
     # GCN baseline
     return {
-        'hidden': 32,
+        'hidden': 64,
         'heads': 1,
-        'dropout': 0.45,
-        'lr': 1e-2,
+        'dropout': 0.28,
+        'lr': 8e-3,
         'weight_decay': 5e-4,
-        'epochs': 80,
-        'early_stop_patience': 20,
+        'epochs': 140,
+        'early_stop_patience': 28,
     }
 
 
@@ -285,6 +285,16 @@ def compute_graph_classification_loss(logits, target, class_weights=None, focal_
         focal_factor = torch.pow(1.0 - pt, focal_gamma)
         ce = focal_factor * ce
     return ce.mean()
+
+
+def compute_prediction_balance_regularizer(logits, target, num_classes):
+    """Discourage degenerate one-class prediction collapse on small graph sets."""
+    if logits.numel() == 0 or target.numel() == 0 or num_classes <= 1:
+        return logits.new_tensor(0.0)
+    probs = torch.softmax(logits, dim=1).mean(dim=0)
+    target_prior = torch.bincount(target.view(-1), minlength=num_classes).float().to(logits.device)
+    target_prior = target_prior / target_prior.sum().clamp(min=1.0)
+    return F.mse_loss(probs, target_prior)
 
 
 def drop_edge_index(edge_index, drop_prob=0.0, training=True, seed=None):
@@ -746,21 +756,22 @@ def build_structural_bias_signals(graphs_data, confidences, correctness, predict
 # ───────────────────────────────────────────────────────────────────────────────
 # Synthetic Graph Generation
 # ───────────────────────────────────────────────────────────────────────────────
-def generate_synthetic_graphs(num_graphs=50):
+def generate_synthetic_graphs(num_graphs=50, seed=42):
     """Generate 50 small graphs: 25 Erdős-Rényi (class 0), 25 Scale-free (class 1)."""
     graphs_data = []
+    rng = np.random.default_rng(seed)
 
     for i in range(num_graphs):
-        n = np.random.randint(6, 14)
+        n = int(rng.integers(8, 18))
         gt_class = i % 2  # 0 = ER, 1 = Scale-free
 
         if gt_class == 0:
             # Erdős-Rényi — random connections
-            g = nx.erdos_renyi_graph(n, p=0.4)
+            g = nx.erdos_renyi_graph(n, p=0.22, seed=int(seed + i * 17))
         else:
             # Scale-free (Barabási-Albert)
-            m = max(1, n // 4)
-            g = nx.barabasi_albert_graph(n, m)
+            m = max(1, min(3, n // 5))
+            g = nx.barabasi_albert_graph(n, m, seed=int(seed + i * 17))
 
         # Convert to PyG format
         edges = list(g.edges())
@@ -770,10 +781,21 @@ def generate_synthetic_graphs(num_graphs=50):
                 g.add_edge(0, 1)
             edges = list(g.edges())
 
-        # Feature: degree normalized
+        # Features: local structure signals that GCN/GAT/SAGE can learn from
+        # without baking the graph label directly into the input.
         degrees = dict(g.degree())
         max_deg = max(degrees.values()) if degrees else 1
-        x = torch.tensor([[degrees.get(j, 0) / max_deg] for j in range(n)], dtype=torch.float)
+        clustering = nx.clustering(g)
+        core_numbers = nx.core_number(g) if g.number_of_edges() > 0 else {j: 0 for j in range(n)}
+        max_core = max(core_numbers.values()) if core_numbers else 1
+        x = torch.tensor([
+            [
+                degrees.get(j, 0) / max_deg,
+                clustering.get(j, 0.0),
+                core_numbers.get(j, 0) / max(1, max_core),
+            ]
+            for j in range(n)
+        ], dtype=torch.float)
 
         if edges:
             edge_index_list = [[s, t] for s, t in edges] + [[t, s] for s, t in edges]
@@ -820,14 +842,15 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
     pool_type = config.get('task2_pool', 'attention_sum')
     use_class_weights = bool(config.get('task2_class_weighting', True if (is_gcn or is_gat or is_sage) else False))
     balanced_oversample = bool(config.get('task2_balanced_sampler', True))
-    focal_gamma = float(config.get('task2_focal_gamma', 2.0 if is_sage else 1.5 if (is_gcn or is_gat) else 1.0))
-    label_smoothing = float(config.get('task2_label_smoothing', 0.03 if is_gcn else 0.02))
+    focal_gamma = float(config.get('task2_focal_gamma', 1.5 if is_sage else 1.25 if (is_gcn or is_gat) else 1.0))
+    label_smoothing = float(config.get('task2_label_smoothing', 0.02 if is_gcn else 0.015))
     weight_decay = float(config.get('task2_weight_decay', config.get('weight_decay', defaults['weight_decay'])))
     if (is_gcn or is_gat or is_sage) and 'task2_weight_decay' not in config and 'weight_decay' not in config:
         weight_decay = 1e-3
-    edge_dropout = float(config.get('task2_edge_dropout', 0.10 if is_gcn else 0.20 if is_gat else 0.15 if is_sage else 0.08))
+    edge_dropout = float(config.get('task2_edge_dropout', 0.08 if is_gcn else 0.14 if is_gat else 0.12 if is_sage else 0.08))
     readout_entropy_weight = float(config.get('task2_readout_entropy_weight', 0.01 if (is_gcn or is_gat or is_sage) else 0.02))
     contrastive_weight = float(config.get('task2_density_contrastive_weight', 0.02 if is_gcn else 0.03 if is_gat else 0.02 if is_sage else 0.025))
+    balance_weight = float(config.get('task2_prediction_balance_weight', 0.035 if (is_gcn or is_gat or is_sage) else 0.02))
     attn_dropout = float(config.get('task2_attn_dropout', config.get('attn_dropout', defaults.get('attn_dropout', config.get('dropout', defaults['dropout'])))))
     # Preserve model-specific default early stopping unless the caller
     # explicitly overrides it. Leaving this at 0 made Task 2 run the full
@@ -892,7 +915,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         graphs_data = graphs_json
     else:
         # ── Generate synthetic graphs (fallback) ──
-        graphs_data_raw = generate_synthetic_graphs(50)
+        graphs_data_raw = generate_synthetic_graphs(120, seed=split_seed)
         pyg_graphs = [g['pyg'] for g in graphs_data_raw]
         collection_metadata = get_graph_collection_metadata(pyg_graphs)
         ground_truth, label_map = normalize_graph_labels(pyg_graphs)
@@ -909,7 +932,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         } for index, g in enumerate(graphs_data_raw)]
         
         graphs_data = graphs_json
-        in_channels = 1
+        in_channels = pyg_graphs[0].x.size(1)
         num_classes = 2
 
     class_names = collection_metadata.get('class_names') or [f"C{i}" for i in range(num_classes)]
@@ -1015,6 +1038,8 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
     best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
     best_snapshot = None
     no_improve_epochs = 0
+    stable_val_acc = None
+    stable_all_acc = None
 
     for epoch in range(epochs):
         if stop_flag():
@@ -1034,7 +1059,8 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
         )
         entropy_loss = compute_attention_entropy_regularizer(train_alpha, effective_train_batch.batch)
         contrastive_loss = compute_density_aware_contrastive_loss(train_graph_embs, effective_train_y, effective_train_density)
-        loss = ce_loss + (readout_entropy_weight * entropy_loss) + (contrastive_weight * contrastive_loss)
+        balance_loss = compute_prediction_balance_regularizer(out, effective_train_y, num_classes)
+        loss = ce_loss + (readout_entropy_weight * entropy_loss) + (contrastive_weight * contrastive_loss) + (balance_weight * balance_loss)
         loss.backward()
         optimizer.step()
 
@@ -1259,6 +1285,8 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             mean_acc_all = float(np.mean(graph_correct)) if graph_correct else 0.0
             calibration_gap_signed = mean_calib_conf - mean_acc_all
             calibration_gap_raw = mean_raw_conf - mean_acc_all
+            stable_val_acc = current_val_acc if stable_val_acc is None else (0.82 * stable_val_acc + 0.18 * current_val_acc)
+            stable_all_acc = mean_acc_all if stable_all_acc is None else (0.82 * stable_all_acc + 0.18 * mean_acc_all)
 
         will_early_stop = (
             early_stop_patience > 0
@@ -1316,6 +1344,9 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
             'train_acc': float(train_acc.item()),
             'val_acc': float(val_acc.item()),
             'test_acc': float(test_acc.item()),
+            'all_graph_acc': float(mean_acc_all),
+            'stable_val_acc': float(stable_val_acc),
+            'stable_all_acc': float(stable_all_acc),
             'val_macro_f1': float(val_selection['macro_f1']),
             'val_balanced_accuracy': float(val_selection['balanced_accuracy']),
             'val_selection_score': float(current_selection_score),
@@ -1344,6 +1375,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                 'task2_edge_dropout': float(edge_dropout),
                 'task2_readout_entropy_weight': float(readout_entropy_weight),
                 'task2_density_contrastive_weight': float(contrastive_weight),
+                'task2_prediction_balance_weight': float(balance_weight),
                 'task2_temperature_min': float(temperature_min),
                 'task2_temperature_max': float(temperature_max),
                 'selection_metric': val_selection['selection_metric'],
@@ -1452,6 +1484,9 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                 'val_macro_f1': float(final_val_selection['macro_f1']),
                 'val_balanced_accuracy': float(final_val_selection['balanced_accuracy']),
                 'test_acc': final_test_acc,
+                'all_graph_acc': final_mean_acc,
+                'stable_val_acc': final_val_acc,
+                'stable_all_acc': final_mean_acc,
                 'mean_raw_confidence': float(np.mean([row['raw_confidence'] for row in final_inspector])) if final_inspector else 0.0,
                 'mean_calibrated_confidence': final_mean_calib_conf,
                 'calibration_temperature': float(final_calib_temp),
@@ -1486,6 +1521,7 @@ async def run_graph_classification(config, websocket, stop_flag, custom_graphs=N
                     'task2_edge_dropout': float(edge_dropout),
                     'task2_readout_entropy_weight': float(readout_entropy_weight),
                     'task2_density_contrastive_weight': float(contrastive_weight),
+                    'task2_prediction_balance_weight': float(balance_weight),
                     'task2_temperature_min': float(temperature_min),
                     'task2_temperature_max': float(temperature_max),
                     'selection_metric': final_val_selection['selection_metric'],

@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ReadoutMonitor from './ReadoutMonitor'
 
 const playerState = {
@@ -38,10 +38,6 @@ const gnnState = {
   setSelectedNode: vi.fn(),
 }
 
-vi.mock('react-force-graph-2d', () => ({
-  default: () => <div data-testid="fg" />,
-}))
-
 vi.mock('../../store/playerStore', () => {
   const store = (selector) => (typeof selector === 'function' ? selector(playerState) : playerState)
   store.getState = () => playerState
@@ -55,12 +51,18 @@ vi.mock('../../store/useGNNStore', () => {
 })
 
 describe('ReadoutMonitor task 2', () => {
+  beforeEach(() => {
+    gnnState.selectedNodeId = 50
+    gnnState.setSelectedNode = vi.fn()
+  })
+
   it('resolves pinned graph by original graph id instead of source index', () => {
     render(<ReadoutMonitor />)
 
     expect(screen.getByText('Graph #50')).toBeInTheDocument()
-    expect(screen.getAllByText(/Overconfident miss/i)).toHaveLength(1)
-    expect(screen.getByText('Mượt')).toBeInTheDocument()
+    expect(screen.getByText('Prediction')).toBeInTheDocument()
+    expect(screen.getByText('Readout')).toBeInTheDocument()
+    expect(screen.getByText('Model Lens')).toBeInTheDocument()
   })
 
   it('labels clustering as a coefficient so it is not confused with density', () => {
@@ -76,5 +78,22 @@ describe('ReadoutMonitor task 2', () => {
     render(<ReadoutMonitor />)
 
     expect(screen.getByText('Graph #50')).toBeInTheDocument()
+  })
+
+  it('renders compact metric cards without a secondary force graph', () => {
+    render(<ReadoutMonitor />)
+
+    expect(screen.getAllByText('Confidence').length).toBeGreaterThan(0)
+    expect(screen.getByText('Structure')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Correctness timeline/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('fg')).not.toBeInTheDocument()
+  })
+
+  it('opens the inspected graph in the center detail view', () => {
+    render(<ReadoutMonitor />)
+
+    fireEvent.click(screen.getByRole('button', { name: /xem chi tiết/i }))
+
+    expect(gnnState.setSelectedNode).toHaveBeenCalledWith(50)
   })
 })

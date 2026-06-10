@@ -229,11 +229,11 @@ def test_gat_classifier_uses_graph_norm_and_residual_input_projection():
 def test_gat_defaults_are_recall_rescue_recipe():
     defaults = model_default_hyperparams('GAT')
 
-    assert defaults['hidden'] == 48
-    assert defaults['dropout'] == 0.35
-    assert defaults['attn_dropout'] == 0.25
-    assert defaults['weight_decay'] == 1e-3
-    assert defaults['early_stop_patience'] == 12
+    assert defaults['hidden'] == 64
+    assert defaults['dropout'] == 0.22
+    assert defaults['attn_dropout'] == 0.12
+    assert defaults['weight_decay'] == 7e-4
+    assert defaults['early_stop_patience'] == 24
 
 
 def test_sage_classifier_uses_graph_norm_for_graph_batches():
@@ -265,10 +265,10 @@ def test_sage_classifier_uses_graph_norm_for_graph_batches():
 def test_sage_defaults_are_collapse_rescue_recipe():
     defaults = model_default_hyperparams('GraphSAGE')
 
-    assert defaults['hidden'] == 48
-    assert defaults['dropout'] == 0.35
-    assert defaults['weight_decay'] == 1e-3
-    assert defaults['early_stop_patience'] == 8
+    assert defaults['hidden'] == 64
+    assert defaults['dropout'] == 0.24
+    assert defaults['weight_decay'] == 8e-4
+    assert defaults['early_stop_patience'] == 24
 
 
 def test_gat_task2_runtime_defaults_are_shortcut_resistant():
@@ -295,7 +295,7 @@ def test_gat_task2_runtime_defaults_are_shortcut_resistant():
         custom_graphs=graphs,
     ))
 
-    assert snapshots[0]['model_hyperparams']['task2_edge_dropout'] == 0.20
+    assert snapshots[0]['model_hyperparams']['task2_edge_dropout'] == 0.14
     assert snapshots[0]['model_hyperparams']['task2_density_contrastive_weight'] == 0.03
     assert snapshots[0]['best_selection_metric'] == '0.5*macro_f1+0.5*balanced_accuracy'
     assert websocket.messages
@@ -328,8 +328,9 @@ def test_sage_task2_runtime_defaults_rescue_class_collapse():
     hyperparams = snapshots[0]['model_hyperparams']
     assert snapshots[0]['model_type'] == 'SAGE'
     assert hyperparams['task2_class_weighting'] is True
-    assert hyperparams['task2_focal_gamma'] == 2.0
-    assert hyperparams['task2_edge_dropout'] == 0.15
+    assert hyperparams['task2_focal_gamma'] == 1.5
+    assert hyperparams['task2_edge_dropout'] == 0.12
+    assert hyperparams['task2_prediction_balance_weight'] == 0.035
     assert hyperparams['task2_temperature_max'] == 1.5
     assert snapshots[0]['calibration_temperature'] <= 1.5
     assert snapshots[0]['best_selection_metric'] == '0.5*macro_f1+0.5*balanced_accuracy'
@@ -359,7 +360,7 @@ def test_task2_model_defaults_enable_early_stop_when_not_overridden():
     assert len(snapshots) <= 12
     assert snapshots[-1]['epochs_target'] == 12
     assert snapshots[-1]['epochs_completed'] == len(snapshots)
-    assert snapshots[-1]['model_hyperparams']['early_stop_patience'] == 8
+    assert snapshots[-1]['model_hyperparams']['early_stop_patience'] == 24
     if len(snapshots) < 12:
         assert snapshots[-1]['early_stopped'] is True
         assert snapshots[-1]['stop_reason'] == 'early_stop'

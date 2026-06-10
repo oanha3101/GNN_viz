@@ -270,9 +270,25 @@ export default function Task2MetricsPanel({
   }, [reliability, reportLang])
   const groundTruth = useMemo(() => focusedDescriptors.map((descriptor) => descriptor.groundTruth), [focusedDescriptors])
   const currentAccuracy = useMemo(() => {
+    if (!snap) return null
+    const validation = Number(snap.stable_val_acc ?? snap.val_acc)
+    const allCorrect = Array.isArray(snap.graph_correct) && snap.graph_correct.length
+      ? snap.graph_correct.reduce((sum, value) => sum + value, 0) / snap.graph_correct.length
+      : null
+    if (Number.isFinite(validation)) {
+      return {
+        label: snap.stable_val_acc != null ? 'Stable Val' : 'Val',
+        value: validation * 100,
+        secondary: Number.isFinite(allCorrect) ? allCorrect * 100 : null,
+      }
+    }
     if (!snap?.graph_correct?.length) return null
     const correct = snap.graph_correct.reduce((sum, value) => sum + value, 0)
-    return (correct / snap.graph_correct.length) * 100
+    return {
+      label: 'All',
+      value: (correct / snap.graph_correct.length) * 100,
+      secondary: null,
+    }
   }, [snap])
 
   useEffect(() => {
@@ -356,7 +372,10 @@ export default function Task2MetricsPanel({
           </div>
           {currentAccuracy != null && (
             <div className="rounded-full border border-emerald-500/20 bg-emerald-500/8 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
-              Acc {currentAccuracy.toFixed(1)}%
+              {currentAccuracy.label} {currentAccuracy.value.toFixed(1)}%
+              {currentAccuracy.secondary != null && (
+                <span className="ml-1 text-emerald-200/60">All {currentAccuracy.secondary.toFixed(1)}%</span>
+              )}
             </div>
           )}
         </div>
@@ -541,7 +560,7 @@ export default function Task2MetricsPanel({
 function FocusChipRow({ buckets, activeId, onChange }) {
   if (!buckets?.length) return null
   return (
-    <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+    <div className="flex flex-wrap gap-1.5 p-1 rounded-2xl bg-slate-950/45 border border-line-subtle/30 w-fit max-w-full">
       {buckets.map((bucket) => {
         const active = bucket.id === activeId
         return (
@@ -549,24 +568,345 @@ function FocusChipRow({ buckets, activeId, onChange }) {
             key={bucket.id}
             type="button"
             onClick={() => onChange(bucket.id)}
-            className={`rounded-2xl border px-3 py-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${
+            title={bucket.description}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
               active
-                ? 'border-cyan-400/30 bg-cyan-500/10'
-                : 'border-line-default bg-nebula hover:border-line-default hover:bg-nebula'
+                ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/25 shadow-[0_2px_8px_rgba(6,182,212,0.15)]'
+                : 'text-slate-400 border border-transparent hover:text-slate-200 hover:bg-slate-900/40'
             }`}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span className={`text-nano font-bold uppercase tracking-ultra ${active ? 'text-cyan-300' : 'text-slate-400'}`}>
-                {bucket.label}
-              </span>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${active ? 'bg-cyan-500/18 text-cyan-200' : 'bg-nebula text-slate-400'}`}>
-                {bucket.graphIds.length}
-              </span>
-            </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">{bucket.description}</p>
+            <span>{bucket.label}</span>
+            <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold ${
+              active ? 'bg-cyan-500/20 text-cyan-200' : 'bg-slate-900/60 text-slate-500'
+            }`}>
+              {bucket.graphIds?.length ?? 0}
+            </span>
           </button>
         )
       })}
+    </div>
+  )
+}
+
+function ShortcutBiasMeter({ label, value }) {
+  const isFinite = Number.isFinite(value)
+  const displayVal = isFinite ? value.toFixed(2) : '0.00'
+  const percentage = isFinite ? ((value + 1) / 2) * 100 : 50 // Map -1..1 to 0..100%
+  
+  const absVal = Math.abs(value || 0)
+  const isHighBias = absVal > 0.35
+  const isMediumBias = absVal > 0.2 && absVal <= 0.35
+  
+  const barColor = isHighBias 
+    ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' 
+    : isMediumBias 
+      ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
+      : 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]'
+      
+  return (
+    <div className="flex flex-col gap-1.5 p-3 rounded-2xl border border-line-subtle/25 bg-slate-950/20">
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold text-slate-400">
+        <span>{label}</span>
+        <span className={`font-mono font-bold text-xs ${
+          isHighBias ? 'text-red-400' : isMediumBias ? 'text-amber-400' : 'text-slate-200'
+        }`}>
+          {value > 0 ? `+${displayVal}` : displayVal}
+        </span>
+      </div>
+      
+      <div className="relative h-2 w-full rounded-full bg-slate-900 overflow-visible border border-line-subtle/15 mt-1">
+        <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-800" />
+        {isFinite && (
+          <div 
+            className={`absolute top-0 bottom-0 rounded-full ${barColor}`}
+            style={{
+              left: value >= 0 ? '50%' : `${percentage}%`,
+              right: value >= 0 ? `${100 - percentage}%` : '50%'
+            }}
+          />
+        )}
+        {isFinite && (
+          <div 
+            className="absolute -top-1 w-3 h-3 rounded-full bg-white border-2 border-slate-950 -ml-1.5 shadow"
+            style={{ left: `${percentage}%` }}
+          />
+        )}
+      </div>
+      
+      <div className="flex items-center justify-between text-[8px] font-mono text-slate-600">
+        <span>-1.0</span>
+        <span>0.0</span>
+        <span>+1.0</span>
+      </div>
+    </div>
+  )
+}
+
+function CircularGauge({ label, value, max = 1, format = (v) => `${(v * 100).toFixed(0)}%`, tone = 'info', description }) {
+  const pct = Math.max(0, Math.min(100, (value / max) * 100))
+  const radius = 24
+  const strokeWidth = 4
+  const circumference = 2 * Math.PI * radius
+  const strokeDashoffset = circumference - (pct / 100) * circumference
+  
+  const colors = {
+    good: { stroke: 'stroke-emerald-400 fill-none', text: 'text-emerald-300', bg: 'bg-emerald-500/8 border-emerald-500/15' },
+    warn: { stroke: 'stroke-amber-400 fill-none', text: 'text-amber-300', bg: 'bg-amber-500/8 border-amber-500/15' },
+    bad: { stroke: 'stroke-red-400 fill-none', text: 'text-red-300', bg: 'bg-red-500/8 border-red-500/15' },
+    info: { stroke: 'stroke-cyan-400 fill-none', text: 'text-cyan-300', bg: 'bg-slate-900/35 border-line-subtle/25' }
+  }
+  const color = colors[tone] || colors.info
+
+  return (
+    <div className={`flex items-center gap-3 p-3 rounded-2xl border ${color.bg}`}>
+      <div className="relative w-14 h-14 shrink-0">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 60 60">
+          <circle
+            cx="30"
+            cy="30"
+            r={radius}
+            className="stroke-slate-900/80 fill-none"
+            strokeWidth={strokeWidth}
+          />
+          <circle
+            cx="30"
+            cy="30"
+            r={radius}
+            className={`transition-all duration-500 ease-out ${color.stroke}`}
+            strokeWidth={strokeWidth}
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] font-bold text-slate-100">
+          {format(value)}
+        </div>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-nano font-bold uppercase tracking-wider text-slate-400">{label}</div>
+        <p className="text-[10px] leading-tight text-slate-500 mt-0.5 truncate" title={description}>{description}</p>
+      </div>
+    </div>
+  )
+}
+
+function TrustProfileVisual({ metrics, reportLang = 'vi' }) {
+  if (!metrics) return null
+  const isVi = reportLang === 'vi'
+  const brier = metrics.brier ?? 0
+  const highConfWrong = metrics.highConfWrongRate ?? 0
+  const shortcutRisk = metrics.shortcutRiskScore ?? 0
+  const diffuseShare = metrics.readoutDiffuseShare ?? 0
+  const temp = metrics.calibrationTemperature ?? 1.0
+
+  return (
+    <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/5 p-4">
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-nano font-bold uppercase tracking-ultra text-emerald-300">
+          Trust profile
+        </div>
+        <div className="text-[10px] font-mono text-slate-500 bg-slate-900/55 px-2 py-0.5 rounded border border-line-subtle/15">
+          Temp Scale: <span className="font-bold text-slate-200">{Number.isFinite(temp) ? temp.toFixed(2) : '1.00'}</span>
+        </div>
+      </div>
+      <p className="text-[11px] text-slate-400 leading-relaxed mb-3.5">
+        {isVi 
+          ? 'Chẩn đoán độ tin cậy của xác suất dự đoán, các lỗi tự tin sai, áp lực shortcut và mức tập trung của readout.' 
+          : 'Diagnostic of confidence calibration, confident mistakes, shortcut pressure, and readout focus.'}
+      </p>
+      
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        <CircularGauge 
+          label="Brier" 
+          value={brier}
+          format={(v) => v.toFixed(3)}
+          tone={brier < 0.18 ? 'good' : 'warn'}
+          description={isVi ? 'Sai số dự đoán bình phương (càng nhỏ càng tốt)' : 'Squared prediction error (lower is better)'}
+        />
+        <CircularGauge 
+          label="High-conf wrong" 
+          value={highConfWrong}
+          tone={highConfWrong > 0.15 ? 'bad' : highConfWrong > 0.05 ? 'warn' : 'good'}
+          description={isVi ? 'Tỉ lệ dự đoán sai khi confidence >= 75%' : 'Ratio of incorrect predictions when confidence >= 75%'}
+        />
+        <CircularGauge 
+          label="Shortcut risk" 
+          value={shortcutRisk}
+          format={(v) => v.toFixed(2)}
+          tone={Math.abs(shortcutRisk) > 0.5 ? 'bad' : Math.abs(shortcutRisk) > 0.3 ? 'warn' : 'good'}
+          description={isVi ? 'Mức độ mô hình bám vào kích thước/mật độ đồ thị' : 'Degree to which model relies on graph size/density'}
+        />
+        <CircularGauge 
+          label="Readout diffuse" 
+          value={diffuseShare}
+          tone={diffuseShare > 0.45 ? 'bad' : diffuseShare > 0.25 ? 'warn' : 'good'}
+          description={isVi ? 'Tỷ lệ đồ thị có attention bị phân tán' : 'Ratio of graphs with spread-out attention'}
+        />
+      </div>
+    </div>
+  )
+}
+
+function ClassMetricBar({ label, value, colorClass }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+        <span>{label}</span>
+        <span className="font-bold text-slate-200">{(value * 100).toFixed(1)}%</span>
+      </div>
+      <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-line-subtle/10">
+        <div 
+          className={`h-full rounded-full transition-all duration-500 ${colorClass}`}
+          style={{ width: `${value * 100}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// Global variable taskData can contain classNames or the store can. Let's make sure classNames fallback works.
+function PerClassMetricsVisual({ perClass = [], classNames = [], reportLang = 'vi' }) {
+  if (!perClass?.length) return null
+  const isVi = reportLang === 'vi'
+  
+  return (
+    <div className="rounded-2xl border border-line-default bg-nebula p-4 space-y-3.5">
+      <div>
+        <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">
+          {isVi ? 'CHỈ SỐ THEO LỚP' : 'Per-class metrics'}
+        </span>
+        <p className="text-[11px] text-slate-400 leading-relaxed">
+          {isVi 
+            ? 'So sánh hiệu năng Precision, Recall và F1-Score trên từng nhãn phân loại.' 
+            : 'Performance comparison of Precision, Recall, and F1-score across classes.'}
+        </p>
+      </div>
+      
+      <div className="grid gap-4 md:grid-cols-2">
+        {perClass.map((row) => {
+          const className = classNames[row.class_id] || `Class ${row.class_id}`
+          return (
+            <div key={row.class_id} className="p-3 rounded-2xl border border-line-subtle bg-slate-950/20 space-y-3">
+              <div className="flex items-center justify-between border-b border-line-subtle/20 pb-2">
+                <span className="text-xs font-bold text-cyan-300 uppercase tracking-wide">{className}</span>
+                <span className="text-[10px] font-mono bg-slate-900/60 px-2 py-0.5 rounded text-slate-400">
+                  {isVi ? 'Hỗ trợ' : 'Support'}: <span className="font-bold text-slate-300">{row.support}</span>
+                </span>
+              </div>
+              
+              <div className="space-y-2.5">
+                <ClassMetricBar label="Precision" value={row.precision} colorClass="bg-cyan-500 shadow-[0_0_6px_rgba(6,182,212,0.3)]" />
+                <ClassMetricBar label="Recall" value={row.recall} colorClass="bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.3)]" />
+                <ClassMetricBar label="F1-Score" value={row.f1} colorClass="bg-violet-500 shadow-[0_0_6px_rgba(139,92,246,0.3)]" />
+              </div>
+              
+              <div className="flex items-center justify-between text-[10px] bg-slate-900/40 p-2 rounded-xl text-slate-400">
+                <span>{isVi ? 'Xác suất trung bình (Mean Conf)' : 'Mean Confidence'}</span>
+                <span className="font-mono font-bold text-slate-200">{(row.mean_confidence * 100).toFixed(1)}%</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function CollectionBalanceVisual({ classCounts = [], reportLang = 'vi' }) {
+  if (!classCounts?.length) return null
+  const isVi = reportLang === 'vi'
+  
+  const colors = [
+    'from-cyan-500 to-cyan-400',
+    'from-violet-500 to-violet-400',
+    'from-amber-500 to-amber-400',
+    'from-emerald-500 to-emerald-400'
+  ]
+
+  return (
+    <div className="rounded-2xl border border-line-default bg-nebula p-4 space-y-3">
+      <div>
+        <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">
+          {isVi ? 'CÂN BẰNG COLLECTION' : 'Collection balance'}
+        </span>
+        <p className="text-[11px] text-slate-400 leading-relaxed">
+          {isVi 
+            ? 'Phân bổ số lượng đồ thị thực tế giữa các lớp.' 
+            : 'Distribution of graph counts across classes.'}
+        </p>
+      </div>
+      
+      <div className="h-4 w-full rounded-full bg-slate-950 flex overflow-hidden border border-line-subtle/10 animate-pulse-subtle">
+        {classCounts.map((item, idx) => {
+          const pct = item.share * 100
+          if (pct <= 0) return null
+          const color = colors[idx % colors.length]
+          return (
+            <div 
+              key={item.classId}
+              style={{ width: `${pct}%` }}
+              title={`${item.label}: ${item.support} (${pct.toFixed(1)}%)`}
+              className={`h-full bg-gradient-to-r ${color} transition-all duration-500`}
+            />
+          )
+        })}
+      </div>
+      
+      <div className="flex flex-wrap gap-x-4 gap-y-2.5 pt-1">
+        {classCounts.map((item, idx) => {
+          const pct = item.share * 100
+          const colorDot = colors[idx % colors.length].split(' ')[0].replace('from-', 'bg-')
+          return (
+            <div key={item.classId} className="flex items-center gap-2 text-xs">
+              <span className={`w-2.5 h-2.5 rounded-full ${colorDot}`} />
+              <span className="font-semibold text-slate-200">{item.label}</span>
+              <span className="font-mono text-slate-500">
+                {item.support} ({pct.toFixed(0)}%)
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function ReliabilityAlertBanner({ reliability, reportLang = 'vi' }) {
+  if (!reliability) return null
+  const isVi = reportLang === 'vi'
+  const isDanger = reliability.status === 'danger'
+  const isWarn = reliability.status === 'warn'
+  
+  if (!isDanger && !isWarn) return null
+  
+  const borderTone = isDanger ? 'border-red-500/25 bg-red-500/8' : 'border-amber-500/25 bg-amber-500/8'
+  const textTone = isDanger ? 'text-red-300' : 'text-amber-300'
+  const badgeTone = isDanger ? 'bg-red-500/20 text-red-200 border-red-500/30' : 'bg-amber-500/20 text-amber-200 border-amber-500/30'
+  
+  return (
+    <div className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-3.5 rounded-2xl border ${borderTone} transition-all duration-300`}>
+      <div className="flex items-start gap-2.5">
+        <span className="mt-0.5 text-base">⚠️</span>
+        <div>
+          <h4 className={`text-xs font-bold uppercase tracking-wider ${textTone}`}>
+            {isVi 
+              ? (isDanger ? 'RÀO CHẮN ĐỘ TIN CẬY: ĐỌC YẾU' : 'RÀO CHẮN ĐỘ TIN CẬY: CẦN THÊM NGỮ CẢNH')
+              : (isDanger ? 'Reliability Guardrail: Fragile Read' : 'Reliability Guardrail: Needs Context')}
+          </h4>
+          <p className="text-[11px] text-slate-300 leading-relaxed mt-0.5">{reliability.readingGuide}</p>
+          {!!reliability.warnings?.length && (
+            <ul className="list-disc list-inside mt-1.5 space-y-1 text-[10px] text-slate-400">
+              {reliability.warnings.map((w, idx) => (
+                <li key={idx}>{w}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+      <div className={`self-start md:self-center shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${badgeTone}`}>
+        {isDanger ? (isVi ? 'Yếu' : 'Fragile') : (isVi ? 'Cần Ngữ Cảnh' : 'Needs Context')}
+      </div>
     </div>
   )
 }
@@ -593,7 +933,7 @@ function Task2ModelSignatureCard({ signature, reportLang = 'en' }) {
       ]
 
   return (
-    <div className="rounded-2xl border border-cyan-500/18 bg-cyan-500/8 p-3">
+    <div className="rounded-2xl border border-cyan-500/18 bg-cyan-500/8 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-nano font-bold uppercase tracking-ultra text-cyan-300">
@@ -606,16 +946,16 @@ function Task2ModelSignatureCard({ signature, reportLang = 'en' }) {
           {signature.metricLabel} {(signature.currentScore * 100).toFixed(0)}%
         </div>
       </div>
-      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
+      <div className="mt-3.5 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))' }}>
         {metricRows.map(([label, value]) => (
           <div key={label} className="rounded-xl border border-line-subtle bg-nebula p-2">
-            <div className="text-[9px] font-bold uppercase tracking-ultra text-slate-500">{label}</div>
+            <div className="text-[9px] font-bold uppercase tracking-ultra text-slate-500 leading-tight">{label}</div>
             <div className="mt-1 font-mono text-sm font-bold text-slate-100">{(Math.max(0, Math.min(1, value || 0)) * 100).toFixed(0)}%</div>
           </div>
         ))}
       </div>
       {signature.trend?.length > 1 && (
-        <div className="mt-3">
+        <div className="mt-3.5">
           <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-slate-500">
             <span>{isVi ? 'Sparkline theo epoch' : 'Epoch sparkline'}</span>
             <span>{signature.trend.length} frames</span>
@@ -624,7 +964,7 @@ function Task2ModelSignatureCard({ signature, reportLang = 'en' }) {
             {signature.trend.slice(-32).map((point) => (
               <div
                 key={point.epoch}
-                className="min-w-0 flex-1 rounded-t bg-cyan-400/75"
+                className="min-w-0 flex-1 rounded-t bg-cyan-400/75 transition-all duration-350 hover:bg-cyan-300"
                 title={`Epoch ${point.epoch}: ${(point.value * 100).toFixed(1)}%`}
                 style={{ height: `${Math.max(8, Math.min(100, point.value * 100))}%` }}
               />
@@ -916,156 +1256,135 @@ function OverviewTab({
   const sizeBias = metrics.sizeBias
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
-      <ReliabilityCard reliability={reliability} />
-      <Task2ModelSignatureCard signature={modelSignature} reportLang={reportLang} />
-      <HeroNarrativeCard narrative={narrative} onNextLensAction={onNextLensAction} />
-      <BestEpochSuggestionCard suggestion={epochSuggestion} onJumpToEpoch={onJumpToEpoch} />
-      <ResearchSignalsCard signals={researchSignals} onSignalAction={onSignalAction} />
-      <TrustProfileCard metrics={metrics} />
-      <FocusRoutingCard
-        story={focusStory}
-        weakClass={metrics.weakClass}
-        onJumpToWeakClass={onJumpToWeakClass}
-        onJumpToStructure={onJumpToStructure}
-      />
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
+      {/* Top Banner Alert if reliability has issues */}
+      <ReliabilityAlertBanner reliability={reliability} reportLang={reportLang} />
 
-      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
-        <StatCell label="Graphs" value={collectionSummary.totalGraphs} digits={0} tone="good" />
-        <StatCell label="Classes" value={graphClassNames.length || 1} digits={0} tone="info" />
-        <StatCell label="Avg Nodes" value={collectionSummary.avgNodes} digits={1} tone="warn" />
-        <StatCell label="Avg Edges" value={collectionSummary.avgEdges} digits={1} tone="warn" />
-        <StatCell label="Macro F1" value={(metrics.macroF1 || 0) * 100} digits={1} suffix="%" tone={(metrics.macroF1 || 0) > 0.75 ? 'good' : 'warn'} />
-        <StatCell label="Balanced Acc" value={(metrics.balancedAccuracy || 0) * 100} digits={1} suffix="%" tone={(metrics.balancedAccuracy || 0) > 0.75 ? 'good' : 'warn'} />
-        <StatCell label="Median Margin" value={(metrics.medianMargin || 0) * 100} digits={1} suffix="%" tone={(metrics.medianMargin || 0) > 18 ? 'good' : 'bad'} />
-        <StatCell label="ECE" value={(calibrationEce || 0) * 100} digits={1} suffix="%" tone={Number.isFinite(calibrationEce) && calibrationEce < 0.1 ? 'good' : 'warn'} />
-        <StatCell label="Size Bias" value={sizeBias || 0} digits={2} tone={Math.abs(sizeBias || 0) > 0.35 ? 'bad' : 'info'} />
-      </div>
-
-      <div className="rounded-2xl border border-line-default bg-nebula p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">Current focus</div>
-            <p className="mt-1 text-[11px] text-slate-400">
-              {focus.description} This lens is currently showing {filteredCount} graph{filteredCount === 1 ? '' : 's'}.
-            </p>
-          </div>
-          <div className="rounded-full border border-line-default bg-nebula px-2.5 py-1 text-[11px] font-semibold text-slate-300">
-            Slice size: {filteredCount}
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-line-default bg-nebula p-3">
-        <div className="mb-3">
-          <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Collection balance</span>
-          <p className="mt-1 text-[11px] text-slate-400">
-            Class support tells you whether Task 2 should be read like a benchmark or more like a motif probe.
-          </p>
-        </div>
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          {classCounts.map((item) => (
-            <div key={item.classId} className="rounded-xl border border-line-subtle bg-nebula p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold text-slate-200">{item.label}</span>
-                <span className="text-[11px] font-mono text-slate-400">{item.support}</span>
-              </div>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-nebula">
-                <div className="h-full rounded-full bg-cyan-400/80" style={{ width: `${item.share * 100}%` }} />
-              </div>
-              <div className="mt-1 text-nano text-slate-500">{(item.share * 100).toFixed(1)}% of collection</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-line-default bg-nebula p-3">
-        <div className="mb-2">
-          <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Training trend</span>
-          <p className="mt-1 text-[11px] text-slate-400">
-            Use this as the health trace. Then confirm the story with the failure slice and structure slice.
-          </p>
-        </div>
-        <div className="h-[260px]">
-          <MetricsChart />
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-line-default bg-nebula p-3">
-        <div className="mb-2">
-          <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Per-class metrics</span>
-          <p className="mt-1 text-[11px] text-slate-400">
-            Read recall first for the weak class, then confirm precision, F1, and mean confidence.
-          </p>
-        </div>
-        {metrics.weakClass && (
-          <div className="mb-3 rounded-xl border border-amber-500/18 bg-amber-500/8 p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-[10px] font-bold uppercase tracking-ultra text-amber-200">Weak-class watch</div>
-                <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
-                  {metrics.weakClass.label} is the weakest class right now with recall {(metrics.weakClass.recall * 100).toFixed(1)}% and F1 {(metrics.weakClass.f1 * 100).toFixed(1)}%.
-                  Use the <span className="text-amber-200">Weak-class misses</span> focus chip to inspect why recall is lagging.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onJumpToWeakClass}
-                className="shrink-0 rounded-full border border-amber-400/25 bg-amber-500/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-amber-100 transition-colors hover:bg-amber-500/18"
-              >
-                Open slice
-              </button>
-            </div>
-          </div>
-        )}
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-          {perClass.map((row) => (
-            <div key={row.class_id} className="rounded-xl border border-line-subtle bg-nebula p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold text-slate-100">Class {row.class_id}</span>
-                <span className="text-[10px] font-mono text-slate-400">support {row.support}</span>
-              </div>
-              <div className="mt-2 grid gap-1 text-[11px] text-slate-300">
-                <div className="flex items-center justify-between gap-2"><span className="text-slate-500">Precision</span><span>{(row.precision * 100).toFixed(1)}%</span></div>
-                <div className="flex items-center justify-between gap-2"><span className="text-slate-500">Recall</span><span>{(row.recall * 100).toFixed(1)}%</span></div>
-                <div className="flex items-center justify-between gap-2"><span className="text-slate-500">F1</span><span>{(row.f1 * 100).toFixed(1)}%</span></div>
-                <div className="flex items-center justify-between gap-2"><span className="text-slate-500">Mean conf</span><span>{((row.mean_confidence || 0) * 100).toFixed(1)}%</span></div>
+      {/* Main Grid: 2 columns on larger screens */}
+      <div className="grid gap-4 lg:grid-cols-[38%_62%] items-start">
+        
+        {/* Left Column: Narrative, suggestions, actions */}
+        <div className="flex flex-col gap-4 min-w-0">
+          <Task2ModelSignatureCard signature={modelSignature} reportLang={reportLang} />
+          
+          <HeroNarrativeCard narrative={narrative} onNextLensAction={onNextLensAction} reportLang={reportLang} />
+          
+          <BestEpochSuggestionCard suggestion={epochSuggestion} onJumpToEpoch={onJumpToEpoch} reportLang={reportLang} />
+          
+          {metrics.weakClass && (
+            <div className="rounded-2xl border border-amber-500/18 bg-amber-500/5 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-nano font-bold uppercase tracking-ultra text-amber-200">Weak-class watch</div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
+                    {metrics.weakClass.label} is the weakest class right now with recall {(metrics.weakClass.recall * 100).toFixed(1)}% and F1 {(metrics.weakClass.f1 * 100).toFixed(1)}%.
+                    Use the <span className="text-amber-200">Weak-class misses</span> focus chip to inspect why recall is lagging.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onJumpToWeakClass}
+                  className="shrink-0 rounded-xl border border-amber-400/25 bg-amber-500/12 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-ultra text-amber-100 transition-colors hover:bg-amber-500/18"
+                >
+                  Open slice
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
+          )}
 
-      <div className="rounded-2xl border border-line-default bg-nebula p-3">
-        <div className="mb-2">
-          <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">Shortcut bias</span>
-          <p className="mt-1 text-[11px] text-slate-400">
-            Positive or negative correlation here suggests the model may be leaning on graph size or density.
-          </p>
+          <FocusRoutingCard
+            story={focusStory}
+            weakClass={metrics.weakClass}
+            onJumpToWeakClass={onJumpToWeakClass}
+            onJumpToStructure={onJumpToStructure}
+            reportLang={reportLang}
+          />
         </div>
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-          <StatCell label="Conf vs Density" value={densityBias} digits={2} tone={Math.abs(densityBias || 0) > 0.35 ? 'bad' : 'info'} />
-          <StatCell label="Conf vs Size" value={sizeBias} digits={2} tone={Math.abs(sizeBias || 0) > 0.35 ? 'bad' : 'info'} />
-          <StatCell label="Conf vs Edges" value={metrics.edgeBias || 0} digits={2} tone={Math.abs(metrics.edgeBias || 0) > 0.35 ? 'bad' : 'info'} />
+        
+        {/* Right Column: Visual analytics dashboard */}
+        <div className="flex flex-col gap-4 min-w-0">
+          
+          {/* Trust Profile Visual Progress Meters */}
+          <TrustProfileVisual metrics={metrics} reportLang={reportLang} />
+          
+          {/* Shortcut Bias Horizontal Scale Gauges */}
+          <div className="rounded-2xl border border-line-default bg-nebula p-4 space-y-3">
+            <div>
+              <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">
+                {reportLang === 'vi' ? 'THIÊN LỆCH SHORTCUT' : 'Shortcut bias'}
+              </span>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                {reportLang === 'vi' 
+                  ? 'Tương quan giữa mức độ tự tin dự đoán và các đặc tính cấu trúc đồ thị. Nếu tương quan tuyệt đối > 0.35, mô hình có nguy cơ cao chỉ học tắt theo đặc tính đó.' 
+                  : 'Correlation between confidence and graph properties. absolute value > 0.35 suggests structural shortcut risk.'}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <ShortcutBiasMeter label={reportLang === 'vi' ? 'Tự tin vs Mật độ' : 'Conf vs Density'} value={densityBias} />
+              <ShortcutBiasMeter label={reportLang === 'vi' ? 'Tự tin vs Kích thước' : 'Conf vs Size'} value={sizeBias} />
+              <ShortcutBiasMeter label={reportLang === 'vi' ? 'Tự tin vs Số cạnh' : 'Conf vs Edges'} value={metrics.edgeBias || 0} />
+            </div>
+          </div>
+          
+          {/* Per Class Metrics Visual Bar Comparison */}
+          <PerClassMetricsVisual perClass={perClass} classNames={graphClassNames} reportLang={reportLang} />
+          
+          {/* Collection Balance Stacked Distribution Bar */}
+          <CollectionBalanceVisual classCounts={classCounts} reportLang={reportLang} />
+
+          {/* Quick stats row */}
+          <div className="grid gap-2 grid-cols-2 sm:grid-cols-5">
+            <StatCell label="Graphs" value={collectionSummary.totalGraphs} digits={0} tone="good" />
+            <StatCell label="Classes" value={graphClassNames.length || 1} digits={0} tone="info" />
+            <StatCell label="Avg Nodes" value={collectionSummary.avgNodes} digits={1} tone="warn" />
+            <StatCell label="Avg Edges" value={collectionSummary.avgEdges} digits={1} tone="warn" />
+            <StatCell label="ECE" value={(calibrationEce || 0) * 100} digits={1} suffix="%" tone={Number.isFinite(calibrationEce) && calibrationEce < 0.1 ? 'good' : 'warn'} />
+          </div>
+
+          {/* Training Trend Chart */}
+          <div className="rounded-2xl border border-line-default bg-nebula p-4 space-y-2">
+            <div>
+              <span className="block text-nano font-bold uppercase tracking-ultra text-slate-500">
+                {reportLang === 'vi' ? 'XU HƯỚNG HUẤN LUYỆN' : 'Training trend'}
+              </span>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                {reportLang === 'vi' 
+                  ? 'Đường sức khỏe huấn luyện toàn cục. Kiểm tra khu vực overfit và nhấp vào best epoch để nhảy tới.' 
+                  : 'Global health metrics over epochs. Look for overfit zones and click recommendations.'}
+              </p>
+            </div>
+            <div className="h-[220px]">
+              <MetricsChart />
+            </div>
+          </div>
+          
         </div>
       </div>
+      
+      {/* Research Signals at the bottom - wide row */}
+      <ResearchSignalsCard signals={researchSignals} onSignalAction={onSignalAction} reportLang={reportLang} />
     </div>
   )
 }
 
-function ResearchSignalsCard({ signals, onSignalAction }) {
+function ResearchSignalsCard({ signals, onSignalAction, reportLang = 'vi' }) {
   const items = [signals?.collapse, signals?.calibration, signals?.shortcut].filter(Boolean)
   if (!items.length) return null
+  const isVi = reportLang === 'vi'
 
   return (
-    <div className="rounded-2xl border border-violet-500/15 bg-violet-500/6 p-3">
-      <div className="text-nano font-bold uppercase tracking-ultra text-violet-200">Research signals</div>
+    <div className="rounded-2xl border border-violet-500/15 bg-violet-500/5 p-4 mt-2">
+      <div className="text-nano font-bold uppercase tracking-ultra text-violet-200">
+        {isVi ? 'TÍN HIỆU NGHIÊN CỨU' : 'Research signals'}
+      </div>
       <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-        These cards turn the current run into three questions: is the model collapsing toward one class, are its confidences trustworthy, and is it using structural shortcuts.
+        {isVi
+          ? 'Các phân tích tự động trả lời ba câu hỏi quan trọng: mô hình có bị sụp đổ dự đoán về một lớp, độ tin cậy của xác suất có khớp thực tế, và mô hình có dùng shortcut cấu trúc.'
+          : 'Automated signals answering three key questions: model collapse, calibration trustworthiness, and structural shortcuts.'}
       </p>
-      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+      <div className="mt-3.5 grid gap-3 md:grid-cols-3">
         {items.map((item) => (
-          <SignalCard key={item.id} signal={item} onAction={onSignalAction} />
+          <SignalCard key={item.id} signal={item} onAction={onSignalAction} reportLang={reportLang} />
         ))}
       </div>
     </div>
@@ -1073,97 +1392,55 @@ function ResearchSignalsCard({ signals, onSignalAction }) {
 }
 
 function TrustProfileCard({ metrics }) {
-  if (!metrics) return null
-  const brier = metrics.brier
-  const highConfWrong = metrics.highConfWrongRate || 0
-  const shortcutRisk = metrics.shortcutRiskScore || 0
-  const diffuseShare = metrics.readoutDiffuseShare || 0
-  const temperature = metrics.calibrationTemperature
-
-  return (
-    <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/6 p-3">
-      <div className="text-nano font-bold uppercase tracking-ultra text-emerald-200">Trust profile</div>
-      <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-        A compact research-grade read: calibration quality, high-confidence mistakes, shortcut pressure, and whether readout is concentrated enough to support motif-level claims.
-      </p>
-      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
-        <StatCell
-          label="Brier"
-          value={Number.isFinite(brier) ? brier : 0}
-          digits={3}
-          tone={Number.isFinite(brier) && brier < 0.18 ? 'good' : 'warn'}
-        />
-        <StatCell
-          label="High-conf wrong"
-          value={highConfWrong * 100}
-          digits={1}
-          suffix="%"
-          tone={highConfWrong > 0.15 ? 'bad' : highConfWrong > 0.05 ? 'warn' : 'good'}
-        />
-        <StatCell
-          label="Shortcut risk"
-          value={shortcutRisk}
-          digits={2}
-          tone={Math.abs(shortcutRisk) > 0.5 ? 'bad' : Math.abs(shortcutRisk) > 0.3 ? 'warn' : 'good'}
-        />
-        <StatCell
-          label="Readout diffuse"
-          value={diffuseShare * 100}
-          digits={1}
-          suffix="%"
-          tone={diffuseShare > 0.45 ? 'bad' : diffuseShare > 0.25 ? 'warn' : 'good'}
-        />
-        <StatCell
-          label="Temp scale"
-          value={Number.isFinite(temperature) ? temperature : 1}
-          digits={2}
-          tone={Number.isFinite(temperature) && temperature > 1.4 ? 'warn' : 'info'}
-        />
-      </div>
-    </div>
-  )
+  return null // Deprecated, replaced by TrustProfileVisual
 }
 
-function BestEpochSuggestionCard({ suggestion, onJumpToEpoch }) {
+function BestEpochSuggestionCard({ suggestion, onJumpToEpoch, reportLang = 'vi' }) {
   if (!suggestion) return null
 
   return (
-    <div className="rounded-2xl border border-sky-500/15 bg-sky-500/6 p-3">
-      <div className="text-nano font-bold uppercase tracking-ultra text-sky-200">Best epoch suggestion</div>
-      <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{suggestion.recommendation}</p>
-      <p className="mt-2 text-[11px] leading-relaxed text-slate-400">{suggestion.rationale}</p>
-      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-        <div className="rounded-xl border border-line-subtle bg-nebula p-3">
-          <div className="text-[10px] uppercase tracking-ultra text-slate-500">Best Macro F1</div>
-          <div className="mt-2 text-[12px] font-semibold text-slate-100">
-            Epoch {suggestion.bestMacro?.epoch ?? '—'}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-400">
-            {(Number(suggestion.bestMacro?.macroF1 || 0) * 100).toFixed(1)}% Macro F1
+    <div className="rounded-2xl border border-sky-500/15 bg-sky-500/5 p-4 space-y-3">
+      <div className="text-nano font-bold uppercase tracking-ultra text-sky-200">
+        Best epoch suggestion
+      </div>
+      <p className="text-[11px] leading-relaxed text-slate-300 font-semibold">{suggestion.recommendation}</p>
+      <p className="text-[11px] leading-relaxed text-slate-400">{suggestion.rationale}</p>
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        <div className="rounded-xl border border-line-subtle bg-slate-950/25 p-3 flex flex-col justify-between">
+          <div>
+            <div className="text-[9px] uppercase tracking-ultra text-slate-500">Best Macro F1</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-100">
+              Epoch {suggestion.bestMacro?.epoch ?? '—'}
+            </div>
+            <div className="text-[10px] text-slate-400">
+              {(Number(suggestion.bestMacro?.macroF1 || 0) * 100).toFixed(1)}% Macro F1
+            </div>
           </div>
           {Number.isInteger(suggestion.bestMacro?.epoch) && (
             <button
               type="button"
               onClick={() => onJumpToEpoch?.(suggestion.bestMacro.epoch)}
-              className="mt-3 rounded-full border border-sky-400/25 bg-sky-500/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-sky-100 transition-colors hover:bg-sky-500/18"
+              className="mt-3 w-full rounded-xl border border-sky-400/25 bg-sky-500/12 py-1.5 text-[10px] font-semibold uppercase tracking-ultra text-sky-100 transition-colors hover:bg-sky-500/18"
             >
               Jump to epoch
             </button>
           )}
         </div>
-        <div className="rounded-xl border border-line-subtle bg-nebula p-3">
-          <div className="text-[10px] uppercase tracking-ultra text-slate-500">Best Balanced Acc</div>
-          <div className="mt-2 text-[12px] font-semibold text-slate-100">
-            Epoch {suggestion.bestBalanced?.epoch ?? '—'}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-400">
-            {(Number(suggestion.bestBalanced?.balancedAccuracy || 0) * 100).toFixed(1)}% Balanced Acc
+        <div className="rounded-xl border border-line-subtle bg-slate-950/25 p-3 flex flex-col justify-between">
+          <div>
+            <div className="text-[9px] uppercase tracking-ultra text-slate-500">Best Balanced Acc</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-100">
+              Epoch {suggestion.bestBalanced?.epoch ?? '—'}
+            </div>
+            <div className="text-[10px] text-slate-400">
+              {(Number(suggestion.bestBalanced?.balancedAccuracy || 0) * 100).toFixed(1)}% Balanced Acc
+            </div>
           </div>
           {Number.isInteger(suggestion.bestBalanced?.epoch) && (
             <button
               type="button"
               onClick={() => onJumpToEpoch?.(suggestion.bestBalanced.epoch)}
-              className="mt-3 rounded-full border border-sky-400/25 bg-sky-500/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-sky-100 transition-colors hover:bg-sky-500/18"
+              className="mt-3 w-full rounded-xl border border-sky-400/25 bg-sky-500/12 py-1.5 text-[10px] font-semibold uppercase tracking-ultra text-sky-100 transition-colors hover:bg-sky-500/18"
             >
               Jump to epoch
             </button>
@@ -1174,7 +1451,7 @@ function BestEpochSuggestionCard({ suggestion, onJumpToEpoch }) {
   )
 }
 
-function FocusRoutingCard({ story, weakClass, onJumpToWeakClass, onJumpToStructure }) {
+function FocusRoutingCard({ story, weakClass, onJumpToWeakClass, onJumpToStructure, reportLang = 'vi' }) {
   if (!story || !weakClass) return null
 
   const toneClass = story.status === 'danger'
@@ -1184,35 +1461,34 @@ function FocusRoutingCard({ story, weakClass, onJumpToWeakClass, onJumpToStructu
       : 'border-emerald-500/20 bg-emerald-500/7'
 
   return (
-    <div className={`rounded-2xl border p-3 ${toneClass}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-nano font-bold uppercase tracking-ultra text-slate-200">{story.title}</div>
-          <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{story.summary}</p>
-          <p className="mt-2 text-[11px] leading-relaxed text-slate-400">{story.evidence}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onJumpToWeakClass}
-            className="rounded-full border border-amber-400/25 bg-amber-500/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-amber-100 transition-colors hover:bg-amber-500/18"
-          >
-            Weak-class misses
-          </button>
-          <button
-            type="button"
-            onClick={onJumpToStructure}
-            className="rounded-full border border-cyan-400/25 bg-cyan-500/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-cyan-100 transition-colors hover:bg-cyan-500/18"
-          >
-            Structure lens
-          </button>
-        </div>
+    <div className={`rounded-2xl border p-4 ${toneClass} space-y-3`}>
+      <div className="min-w-0">
+        <div className="text-nano font-bold uppercase tracking-ultra text-slate-200">{story.title}</div>
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{story.summary}</p>
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-400">{story.evidence}</p>
+      </div>
+      <div className="flex flex-wrap gap-2 pt-1">
+        <button
+          type="button"
+          onClick={onJumpToWeakClass}
+          className="rounded-xl border border-amber-400/25 bg-amber-500/12 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-ultra text-amber-100 transition-colors hover:bg-amber-500/18"
+        >
+          Weak-class misses
+        </button>
+        <button
+          type="button"
+          onClick={onJumpToStructure}
+          className="rounded-xl border border-cyan-400/25 bg-cyan-500/12 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-ultra text-cyan-100 transition-colors hover:bg-cyan-500/18"
+        >
+          Structure lens
+        </button>
       </div>
     </div>
   )
 }
 
-function SignalCard({ signal, onAction }) {
+function SignalCard({ signal, onAction, reportLang = 'vi' }) {
+  const isVi = reportLang === 'vi'
   const tone = signal.status === 'danger'
     ? 'border-red-500/20 bg-red-500/7'
     : signal.status === 'warn'
@@ -1223,45 +1499,61 @@ function SignalCard({ signal, onAction }) {
     : signal.status === 'warn'
       ? 'border-amber-400/25 bg-amber-500/14 text-amber-200'
       : 'border-emerald-400/20 bg-emerald-500/12 text-emerald-200'
-  const label = signal.status === 'danger' ? 'High risk' : signal.status === 'warn' ? 'Needs context' : 'Stable'
+      
+  const label = signal.status === 'danger' 
+    ? (isVi ? 'Rủi ro cao' : 'High risk') 
+    : signal.status === 'warn' 
+      ? (isVi ? 'Cần ngữ cảnh' : 'Needs context') 
+      : (isVi ? 'Ổn định' : 'Stable')
 
   return (
-    <div className={`rounded-xl border p-3 ${tone}`}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-[11px] font-semibold text-slate-100">{signal.title}</div>
-        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${pill}`}>{label}</span>
-      </div>
-      <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{signal.summary}</p>
-      <div className="mt-3 space-y-2 text-[11px] leading-relaxed">
-        <div>
-          <div className="text-[10px] uppercase tracking-ultra text-slate-500">Evidence</div>
-          <p className="mt-1 text-slate-400">{signal.evidence}</p>
+    <div className={`flex flex-col justify-between rounded-xl border p-3.5 ${tone}`}>
+      <div>
+        <div className="flex items-center justify-between gap-2 border-b border-line-subtle/10 pb-2 mb-2">
+          <div className="text-[11px] font-bold text-slate-100 uppercase tracking-wide">{signal.title}</div>
+          <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${pill}`}>{label}</span>
         </div>
-        <div>
-          <div className="text-[10px] uppercase tracking-ultra text-slate-500">Recommended move</div>
-          <p className="mt-1 text-slate-400">{signal.recommendation}</p>
+        <p className="text-[11px] leading-relaxed text-slate-300 font-semibold">{signal.summary}</p>
+        
+        <div className="mt-3.5 space-y-2.5 text-[11px] leading-relaxed">
+          <div>
+            <div className="text-[9px] uppercase tracking-ultra text-slate-500">{isVi ? 'BẰNG CHỨNG' : 'Evidence'}</div>
+            <p className="mt-0.5 text-slate-400 leading-normal">{signal.evidence}</p>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase tracking-ultra text-slate-500">{isVi ? 'KHUYẾN NGHỊ' : 'Recommended move'}</div>
+            <p className="mt-0.5 text-slate-400 leading-normal">{signal.recommendation}</p>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => onAction?.(signal.id)}
-          className="rounded-full border border-line-subtle bg-nebula px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-slate-200 transition-colors hover:bg-nebula"
-        >
-          Open lens
-        </button>
       </div>
+      
+      <button
+        type="button"
+        onClick={() => onAction?.(signal.id)}
+        className="mt-4 w-full rounded-xl border border-line-subtle bg-slate-950/40 py-1.5 text-nano font-bold uppercase tracking-ultra text-slate-300 transition-all hover:bg-slate-900/60 hover:text-slate-200"
+      >
+        Open lens
+      </button>
     </div>
   )
 }
 
-function HeroNarrativeCard({ narrative, onNextLensAction }) {
+function HeroNarrativeCard({ narrative, onNextLensAction, reportLang = 'vi' }) {
   if (!narrative) return null
   return (
-    <div className="rounded-2xl border border-cyan-500/15 bg-cyan-500/6 p-3">
-      <div className="text-nano font-bold uppercase tracking-ultra text-cyan-300">Research narrative</div>
-      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+    <div className="rounded-2xl border border-cyan-500/15 bg-cyan-500/5 p-4 space-y-3">
+      <div className="text-nano font-bold uppercase tracking-ultra text-cyan-300">
+        Research narrative
+      </div>
+      <div className="grid gap-2.5 sm:grid-cols-3">
         <NarrativeCell label="Main insight" value={narrative.mainInsight} />
         <NarrativeCell label="Main risk" value={narrative.mainRisk} />
-        <NarrativeCell label="Next lens" value={narrative.recommendedNextLens} actionLabel="Open lens" onAction={onNextLensAction} />
+        <NarrativeCell 
+          label="Next lens" 
+          value={narrative.recommendedNextLens} 
+          actionLabel="Open lens" 
+          onAction={onNextLensAction} 
+        />
       </div>
     </div>
   )
@@ -1269,14 +1561,16 @@ function HeroNarrativeCard({ narrative, onNextLensAction }) {
 
 function NarrativeCell({ label, value, actionLabel = null, onAction = null }) {
   return (
-    <div className="rounded-xl border border-line-subtle bg-nebula p-3">
-      <div className="text-[10px] uppercase tracking-ultra text-slate-500">{label}</div>
-      <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{value}</p>
+    <div className="rounded-xl border border-line-subtle bg-nebula p-3 flex flex-col justify-between">
+      <div>
+        <div className="text-[9px] uppercase tracking-ultra text-slate-500">{label}</div>
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{value}</p>
+      </div>
       {actionLabel && onAction && (
         <button
           type="button"
           onClick={onAction}
-          className="mt-3 rounded-full border border-cyan-400/25 bg-cyan-500/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-ultra text-cyan-100 transition-colors hover:bg-cyan-500/18"
+          className="mt-3 w-full rounded-xl border border-cyan-400/25 bg-cyan-500/12 py-1.5 text-[10px] font-semibold uppercase tracking-ultra text-cyan-100 transition-colors hover:bg-cyan-500/18"
         >
           {actionLabel}
         </button>
@@ -1286,48 +1580,9 @@ function NarrativeCell({ label, value, actionLabel = null, onAction = null }) {
 }
 
 function ReliabilityCard({ reliability }) {
-  if (!reliability) return null
-
-  const toneClass = reliability.status === 'danger'
-    ? 'border-red-500/25 bg-red-500/6'
-    : reliability.status === 'warn'
-      ? 'border-amber-500/25 bg-amber-500/6'
-      : 'border-emerald-500/20 bg-emerald-500/6'
-  const toneText = reliability.status === 'danger'
-    ? 'text-red-300'
-    : reliability.status === 'warn'
-      ? 'text-amber-300'
-      : 'text-emerald-300'
-
-  return (
-    <div className={`rounded-2xl border p-3 ${toneClass}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <div className={`text-nano font-bold uppercase tracking-ultra ${toneText}`}>Reliability guardrail</div>
-          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{reliability.readingGuide}</p>
-        </div>
-        <div className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-          reliability.status === 'danger'
-            ? 'border-red-400/30 bg-red-500/15 text-red-200'
-            : reliability.status === 'warn'
-              ? 'border-amber-400/30 bg-amber-500/15 text-amber-200'
-              : 'border-emerald-400/25 bg-emerald-500/12 text-emerald-200'
-        }`}>
-          {reliability.status === 'danger' ? 'Fragile read' : reliability.status === 'warn' ? 'Needs context' : 'Stable enough'}
-        </div>
-      </div>
-      {!!reliability.warnings?.length && (
-        <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-          {reliability.warnings.map((warning) => (
-            <div key={warning} className="rounded-xl border border-line-subtle bg-nebula p-3 text-[11px] leading-relaxed text-slate-300">
-              {warning}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
+  return null // Deprecated, replaced by ReliabilityAlertBanner
 }
+
 
 function FailuresTab({
   snap,

@@ -35,10 +35,9 @@ function PanelLoader({ label }) {
 }
 
 function PanelHeading({ title, subtitle, align = 'left' }) {
-  // Sit in the extreme top-left/right corner with w-fit so the pill never
-  // stretches over the Task 2 grid cards below.
+  // Fixed pill so it stays visible even when the topology panel scrolls.
   return (
-    <div className={`absolute top-3 ${align === 'right' ? 'right-3' : 'left-3'} z-10 pointer-events-none w-fit max-w-[calc(100%-1.5rem)] rounded-lg border border-white/5 bg-panel-soft/70 backdrop-blur-xl px-3 py-1.5 flex items-center gap-2`}>
+    <div className={`fixed top-[3.75rem] ${align === 'right' ? 'right-3' : 'left-[calc(var(--sidebar-w,240px)+12px)]'} z-30 pointer-events-none w-fit max-w-[calc(100%-1.5rem)] rounded-lg border border-white/5 bg-panel-soft/80 backdrop-blur-xl px-3 py-1.5 flex items-center gap-2`}>
       <div className="w-1.5 h-1.5 rounded-full bg-amethyst shadow-[0_0_6px_#a855f7]" />
       <span className="text-micro uppercase font-black tracking-ultra text-starlight/90 leading-none">{title}</span>
       {subtitle && (
@@ -531,7 +530,7 @@ function LabShell() {
                       ? t('lab.topology_subtitle_t5')
                       : selectedTask === 3
                       ? t('lab.topology_subtitle_t3')
-                      : t('lab.topology_subtitle_default')
+                      : null
                   }
                 />
                 <ErrorBoundary>

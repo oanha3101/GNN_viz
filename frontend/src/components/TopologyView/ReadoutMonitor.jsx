@@ -1,14 +1,14 @@
-import { useMemo, useRef, useState, useEffect } from 'react'
-import ForceGraph2D from 'react-force-graph-2d'
+import { useMemo, useEffect, useRef } from 'react'
 import useGNNStore from '../../store/useGNNStore'
 import usePlayerStore from '../../store/playerStore'
 import { useLanguage } from '../../contexts/LanguageContext'
-import { easeInOutCubic, interpolateSnapshots, lerpColor } from '../../engine/interpolate'
+import { interpolateSnapshots } from '../../engine/interpolate'
 import {
   buildTask2FocusBuckets,
   buildTask2GraphDescriptors,
+  buildTask2GraphEpochFrame,
+  buildTask2GraphEpochHistory,
   buildTask2ModelSignature,
-  describeTask2ReadoutPattern,
   formatTask2ClassLabel,
   getTask2DescriptorById,
   sortTask2Descriptors,
@@ -21,43 +21,95 @@ function buildGraphClassNames(graphs = [], taskClassNames = []) {
   }
   const seen = new Set()
   for (const graph of graphs) {
-    if (Number.isInteger(graph?.groundTruth)) {
-      seen.add(graph.groundTruth)
-    }
+    if (Number.isInteger(graph?.groundTruth)) seen.add(graph.groundTruth)
   }
   return [...seen].sort((a, b) => a - b).map((classId) => `Class ${classId}`)
 }
 
-function formatFailureTag(tag) {
-  switch (tag) {
-    case 'overconfident_miss':
-      return 'Overconfident miss'
-    case 'boundary_case':
-      return 'Boundary case'
-    case 'diffuse_readout':
-      return 'Diffuse readout'
-    case 'structural_outlier':
-      return 'Structural outlier'
-    case 'stable_win':
-    default:
-      return 'Stable win'
-  }
+function MiniSparkline({ values = [], tone = '#22d3ee', label = 'sparkline' }) {
+  const clean = values.map((value) => (Number.isFinite(value) ? value : 0))
+  const width = 120
+  const height = 34
+  const pad = 4
+  const max = Math.max(1, ...clean)
+  const min = Math.min(0, ...clean)
+  const range = Math.max(0.001, max - min)
+  const points = clean.map((value, index) => {
+    const x = clean.length === 1 ? width / 2 : pad + (index / Math.max(1, clean.length - 1)) * (width - pad * 2)
+    const y = height - pad - ((value - min) / range) * (height - pad * 2)
+    return `${x.toFixed(2)},${y.toFixed(2)}`
+  }).join(' ')
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-9 w-full" role="img" aria-label={label}>
+      <line x1={pad} y1={height - pad} x2={width - pad} y2={height - pad} stroke="rgba(148,163,184,0.18)" />
+      {points && <polyline points={points} fill="none" stroke={tone} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />}
+    </svg>
+  )
 }
 
-function buildStablePreviewGraph(graph) {
-  if (!graph) return null
-  const total = Math.max(graph.nodes.length, 1)
-  const radius = Math.max(38, Math.min(88, total * 6))
-  return {
-    ...graph,
-    nodes: graph.nodes.map((node, index) => {
-      const angle = (index / total) * Math.PI * 2 - Math.PI / 2
-      const x = Math.cos(angle) * radius
-      const y = Math.sin(angle) * radius
-      return { ...node, x, y, fx: x, fy: y }
-    }),
-    links: graph.links.map((link) => ({ ...link })),
-  }
+function CorrectnessStrip({ history = [], currentEpochFloat = 0 }) {
+  const activeIndex = Math.max(0, Math.min(history.length - 1, Math.round(currentEpochFloat)))
+  return (
+    <div className="flex h-7 items-end gap-1" aria-label="Correctness timeline">
+      {history.map((item, index) => {
+        const active = index === activeIndex
+        const color = item.correct === 1 ? 'bg-emerald-400' : item.correct === 0 ? 'bg-rose-400' : 'bg-slate-600'
+        return (
+          <div
+            key={`${item.epoch}-${index}`}
+            className={`min-w-[4px] flex-1 rounded-full ${color} ${active ? 'h-7 ring-2 ring-white/70' : 'h-3 opacity-70'}`}
+            title={`Epoch ${item.epoch}`}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
+function MetricBar({ label, value = 0, tone = 'bg-cyan-400' }) {
+  const pct = Math.max(0, Math.min(1, Number(value) || 0))
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+        <span>{label}</span>
+        <span className="font-mono text-slate-100">{(pct * 100).toFixed(1)}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-950/70">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${pct * 100}%`, transition: 'width 220ms ease' }} />
+      </div>
+    </div>
+  )
+}
+
+function StatCard({ title, children }) {
+  return (
+    <section className="rounded-2xl border border-line-subtle bg-deep/58 p-3 shadow-inner">
+      <h4 className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{title}</h4>
+      {children}
+    </section>
+  )
+}
+
+function ModelLens({ modelSignature }) {
+  const model = modelSignature?.id || 'GCN'
+  const copy = model === 'GAT'
+    ? 'GAT nen lam ro mot vai nut/canh top-k: neu attention tot, entropy giam va contributor chinh noi bat dan.'
+    : model === 'SAGE'
+      ? 'SAGE nen on dinh theo neighborhood vote: prediction bot flip, margin day len khi cac cum lan can dong thuan.'
+      : 'GCN nen lan truyen muot qua vung lien thong: cac nut gan nhau co contribution dong thuan hon theo epoch.'
+
+  return (
+    <StatCard title="Model Lens">
+      <div className="flex items-center justify-between gap-3">
+        <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-black text-cyan-200">
+          {model}
+        </span>
+        <span className="font-mono text-[11px] font-bold text-slate-100">{((modelSignature?.currentScore || 0) * 100).toFixed(0)}%</span>
+      </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-slate-400">{copy}</p>
+    </StatCard>
+  )
 }
 
 export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell = null, reportMode = false, analysisMode = false }) {
@@ -73,19 +125,19 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
   const focusMode = useGNNStore((state) => state.task2FocusMode)
   const selectedCell = useGNNStore((state) => state.task2SelectedCell)
   const { snapshots, currentEpochFloat } = usePlayerStore()
+  const panelRootRef = useRef(null)
 
   const isPinned = selectedNodeId !== null
   const activeGraphId = isPinned ? selectedNodeId : hoveredGraphId
-
   const epochInt = Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
-  const t = easeInOutCubic(Math.max(0, Math.min(1, currentEpochFloat - epochInt)))
+  const frac = Math.max(0, Math.min(1, currentEpochFloat - epochInt))
   const snapA = snapshots[epochInt]
   const snapB = snapshots[epochInt + 1] || snapA
 
   const currSnap = useMemo(() => {
     if (!snapA) return null
-    return interpolateSnapshots(snapA, snapB, t)
-  }, [snapA, snapB, t])
+    return frac > 0 && snapB ? interpolateSnapshots(snapA, snapB, frac) : snapA
+  }, [snapA, snapB, frac])
 
   const indexedGraphs = useMemo(
     () => (taskData?.graphs || []).map((graph, index) => ({
@@ -109,7 +161,6 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
     () => buildTask2ModelSignature(currSnap, snapshots, descriptors, selectedModel),
     [currSnap, snapshots, descriptors, selectedModel]
   )
-
   const focusBuckets = useMemo(
     () => buildTask2FocusBuckets({ snapshot: currSnap, graphs: indexedGraphs, classNames: graphClassNames }),
     [currSnap, indexedGraphs, graphClassNames]
@@ -136,7 +187,7 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
     ))
   }, [focusDescriptors, resolvedSelectedCell])
 
-  const descriptor = useMemo(
+  const graph = useMemo(
     () => (
       getTask2DescriptorById(scopedDescriptors, activeGraphId)
       || getTask2DescriptorById(focusDescriptors, activeGraphId)
@@ -147,43 +198,14 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
     [scopedDescriptors, focusDescriptors, activeGraphId]
   )
 
-  const graph = useMemo(() => {
-    if (!descriptor) return null
-    return {
-      ...descriptor,
-      nodes: descriptor.nodes.map((node) => ({ ...node })),
-      links: descriptor.links.map((link) => ({ ...link })),
-    }
-  }, [descriptor])
-  const previewGraph = useMemo(() => buildStablePreviewGraph(graph), [graph])
-
-  const fgRef = useRef(null)
-  const containerRef = useRef(null)
-  const panelRootRef = useRef(null)
-  const [dim, setDim] = useState({ w: 200, h: 150 })
-
-  useEffect(() => {
-    if (!fgRef.current || !previewGraph) return undefined
-    fgRef.current.d3Force('charge')?.strength(0)
-    fgRef.current.d3Force('link')?.distance(32)
-    fgRef.current.d3Force('center')?.strength(0)
-
-    const timer = setTimeout(() => {
-      if (fgRef.current) fgRef.current.zoomToFit(300, 15)
-    }, 60)
-    return () => clearTimeout(timer)
-  }, [previewGraph])
-
-  useEffect(() => {
-    if (!containerRef.current) return undefined
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setDim({ w: entry.contentRect.width || 100, h: entry.contentRect.height || 100 })
-      }
-    })
-    observer.observe(containerRef.current)
-    return () => observer.disconnect()
-  }, [])
+  const frame = useMemo(
+    () => buildTask2GraphEpochFrame({ snapA, snapB, currentEpochFloat, t: frac, graph, classNames: graphClassNames }),
+    [snapA, snapB, currentEpochFloat, frac, graph, graphClassNames]
+  )
+  const history = useMemo(
+    () => buildTask2GraphEpochHistory({ snapshots, graph, classNames: graphClassNames }),
+    [snapshots, graph, graphClassNames]
+  )
 
   useEffect(() => {
     if (reportLang !== 'vi' || !panelRootRef.current) return undefined
@@ -193,265 +215,144 @@ export default function ReadoutMonitor({ forcedFocus = null, forcedSelectedCell 
     return () => window.cancelAnimationFrame(rafId)
   }, [reportMode, reportLang, activeGraphId, graph?.originalGraphId, epochInt])
 
-  const heatmapColors = useMemo(() => {
-    if (!graph || !currSnap?.node_contributions) return {}
-    const contribs = currSnap.node_contributions[graph.sourceIndex] || []
-    const colorMap = {}
-    graph.nodes.forEach((node, index) => {
-      const score = Math.max(0, Math.min(1, contribs[index] || 0))
-      if (modelSignature.id === 'SAGE') {
-        colorMap[node.id] = score < 0.45 ? lerpColor('#334155', '#22c55e', score / 0.45) : lerpColor('#22c55e', '#bbf7d0', (score - 0.45) / 0.55)
-      } else if (modelSignature.id === 'GCN') {
-        colorMap[node.id] = score < 0.5 ? lerpColor('#1e293b', '#38bdf8', score / 0.5) : lerpColor('#38bdf8', '#e0f2fe', (score - 0.5) / 0.5)
-      } else if (score < 0.3) colorMap[node.id] = lerpColor('#334155', '#ea580c', score / 0.3)
-      else if (score < 0.7) colorMap[node.id] = lerpColor('#ea580c', '#facc15', (score - 0.3) / 0.4)
-      else colorMap[node.id] = lerpColor('#facc15', '#ffffff', (score - 0.7) / 0.3)
-    })
-    return colorMap
-  }, [graph, currSnap, modelSignature])
-
   if (snapshots.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4 bg-nebula">
-        <p className="text-center leading-relaxed">
-          Hover a Task 2 embedding point
-          <br />
-          to inspect graph-level readout
-        </p>
+        <p className="text-center leading-relaxed">Hover a Task 2 embedding point<br />to inspect graph-level readout</p>
       </div>
     )
   }
 
-  if (!graph) {
+  if (!graph || !frame) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-4 bg-nebula">
-        <p className="text-center leading-relaxed">
-          No graph matches the active readout slice.
-          <br />
-          Try a broader focus or clear the confusion cell.
-        </p>
+        <p className="text-center leading-relaxed">No graph matches the active readout slice.<br />Try a broader focus or clear the confusion cell.</p>
       </div>
     )
   }
 
-  const gtLabel = formatTask2ClassLabel(graphClassNames, graph.groundTruth, 'Unknown')
-  const predLabel = formatTask2ClassLabel(graphClassNames, graph.predicted, 'Analyzing')
-  const confidence = graph.confidence ?? 0
-  const readoutPattern = graph.readoutPattern || describeTask2ReadoutPattern({
-    entropyBucket: graph.entropyBucket,
-    readoutBucket: graph.readoutBucket,
-  })
+  const gtLabel = formatTask2ClassLabel(graphClassNames, frame.groundTruth, 'Unknown')
+  const predLabel = formatTask2ClassLabel(graphClassNames, frame.predicted, 'Analyzing')
+  const confidenceValues = history.map((item) => item.confidence ?? 0)
+  const entropyValues = history.map((item) => item.entropy ?? 0)
+  const marginValues = history.map((item) => item.margin ?? 0)
 
   return (
     <div
       ref={panelRootRef}
       className={`h-full w-full overflow-y-auto custom-scrollbar bg-nebula text-xs text-slate-200 ${analysisMode ? 'p-4' : 'p-3'}`}
     >
-      <div className="sticky top-0 z-20 -mx-1 mb-3 rounded-xl border border-line-subtle bg-deep/90 px-3 py-2 backdrop-blur">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Task 2 readout monitor</h3>
+      <div className="sticky top-0 z-20 -mx-1 mb-3 rounded-2xl border border-line-subtle bg-deep/94 px-3 py-3 backdrop-blur">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Readout Lens Task 2</h3>
             <div className="mt-1 flex items-center gap-2">
-              <span className="text-xl font-black tracking-tight text-white">Graph #{graph.originalGraphId}</span>
-              <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-cyan-200">
-                {modelSignature.shortLabel}
+              <span className="truncate text-xl font-black tracking-tight text-white">Graph #{graph.originalGraphId}</span>
+              <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${frame.correct === 1 ? 'border-emerald-400/25 bg-emerald-500/10 text-emerald-300' : 'border-rose-400/25 bg-rose-500/10 text-rose-300'}`}>
+                {frame.correct === 1 ? 'Correct' : 'Wrong'}
               </span>
             </div>
           </div>
-          {isPinned || reportMode ? (
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
             <button
-              onClick={() => setSelectedGraph(null)}
+              onClick={() => setSelectedGraph(graph.originalGraphId)}
               disabled={reportMode}
-              className="rounded-full bg-amber-500/20 border border-amber-500/40 px-2 py-1 text-[10px] font-bold text-amber-300 hover:bg-amber-500/30 transition-all"
-              title="Release pinned graph"
+              className="rounded-full border border-cyan-400/35 bg-cyan-500/12 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-cyan-200 transition-all hover:bg-cyan-400 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+              title="Open this graph in the center detail view"
             >
-              {reportMode ? 'Report' : 'Pinned'}
+              Xem chi tiết
             </button>
-          ) : (
-            <button
-              onClick={() => setHoveredGraph(null)}
-              className="rounded-full border border-line-default px-2 py-1 text-[10px] font-semibold text-slate-500 hover:text-slate-300 transition-colors"
-            >
-              Hover
-            </button>
-          )}
-        </div>
-        <div className="mt-2 flex flex-wrap gap-2 text-[9px]">
-          <span className="bg-deep border border-line-default px-2 py-0.5 rounded text-slate-400">GT: <b className="text-slate-200">{gtLabel}</b></span>
-          <span className="bg-deep border border-line-default px-2 py-0.5 rounded text-slate-400">Pred: <b className={graph.correct === 1 ? 'text-green-400' : 'text-red-400'}>{predLabel}</b></span>
-          <span className="bg-deep border border-line-default px-2 py-0.5 rounded text-slate-400">
-            {graph.nodes.length}n / {graph.links.length}e
-          </span>
-        </div>
-      </div>
-
-      <div className="mb-3 grid grid-cols-3 gap-1.5 rounded-md border border-line-subtle bg-nebula p-2">
-        <MetaStat label="Density" value={graph.structural?.density} title="Existing undirected edges divided by all possible edges." />
-        <MetaStat label="Cluster Coef" value={graph.structural?.avg_clustering} title="Average local triangle closure. A chain or tree can be 0 even when density is not 0." />
-        <MetaStat label="AvgDeg" value={graph.structural?.avg_degree} digits={1} />
-      </div>
-
-      <div className="mb-3 space-y-1">
-        <div className="flex items-center justify-between">
-          <span className="text-nano text-slate-500 uppercase font-semibold tracking-ultra">Confidence</span>
-          <span className={`text-micro font-mono font-bold tabular-nums ${confidence > 0.8 ? 'text-emerald-400' : 'text-amber-400'}`}>
-            {(confidence * 100).toFixed(1)}%
-          </span>
-        </div>
-        <div className="h-1.5 w-full bg-nebula rounded-full overflow-hidden">
-          <div
-            className={`h-full transition-all duration-500 ${graph.correct === 1 ? 'bg-emerald-500' : 'bg-red-500'}`}
-            style={{ width: `${Math.max(0, Math.min(1, confidence)) * 100}%` }}
-          />
-        </div>
-      </div>
-
-      <div
-        ref={containerRef}
-        className={`relative mb-3 overflow-hidden rounded-2xl border border-cyan-500/10 bg-deep/70 shadow-inner ${analysisMode ? 'h-[260px]' : 'h-[190px]'}`}
-      >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.10),transparent_58%)]" />
-        <ForceGraph2D
-          ref={fgRef}
-          width={dim.w}
-          height={dim.h}
-          graphData={previewGraph}
-          nodeCanvasObjectMode={() => 'replace'}
-          nodeCanvasObject={(node, ctx, globalScale) => {
-            if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
-            const contribs = currSnap?.node_contributions?.[graph.sourceIndex] || []
-            const score = Math.max(0, Math.min(1, contribs[node.id] || 0))
-            const size = modelSignature.id === 'GCN' ? 6 + score * 3 : 6
-            if (modelSignature.id === 'SAGE' && score > 0.35) {
-              ctx.beginPath()
-              ctx.arc(node.x, node.y, size + 8, 0, 2 * Math.PI, false)
-              ctx.strokeStyle = 'rgba(34,197,94,0.24)'
-              ctx.lineWidth = 1
-              ctx.setLineDash([3, 3])
-              ctx.stroke()
-              ctx.setLineDash([])
-            }
-            if (modelSignature.id === 'GAT' && score > 0.6) {
-              ctx.beginPath()
-              ctx.arc(node.x, node.y, size + 7, 0, 2 * Math.PI, false)
-              ctx.strokeStyle = 'rgba(245,158,11,0.5)'
-              ctx.lineWidth = 2
-              ctx.stroke()
-            }
-            ctx.beginPath()
-            ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false)
-            const color = heatmapColors[node.id] || '#475569'
-            ctx.fillStyle = color
-            ctx.fill()
-
-            const scale = Math.max(0.001, globalScale || 1)
-            const fontSize = Math.max(3, Math.min(24, 10 / Math.sqrt(scale)))
-            ctx.font = `bold ${fontSize}px monospace`
-            ctx.textAlign = 'center'
-            ctx.textBaseline = 'middle'
-            ctx.fillStyle = typeof color === 'string' && (color.includes('255, 255') || color === '#ffffff')
-              ? '#0f172a'
-              : '#ffffff'
-            const label = node.original_id !== undefined ? node.original_id : node.id
-            ctx.fillText(label, node.x, node.y)
-          }}
-          linkColor={(link) => {
-            if (modelSignature.id === 'GCN') return 'rgba(56,189,248,0.16)'
-            if (modelSignature.id === 'SAGE') return 'rgba(34,197,94,0.16)'
-            const source = typeof link.source === 'object' ? link.source.id : link.source
-            const target = typeof link.target === 'object' ? link.target.id : link.target
-            const contribs = currSnap?.node_contributions?.[graph.sourceIndex] || []
-            const weight = ((contribs[source] || 0) + (contribs[target] || 0)) / 2
-            return weight > 0.5 ? 'rgba(245,158,11,0.44)' : 'rgba(148,163,184,0.1)'
-          }}
-          linkWidth={(link) => {
-            const source = typeof link.source === 'object' ? link.source.id : link.source
-            const target = typeof link.target === 'object' ? link.target.id : link.target
-            const contribs = currSnap?.node_contributions?.[graph.sourceIndex] || []
-            const weight = ((contribs[source] || 0) + (contribs[target] || 0)) / 2
-            return modelSignature.id === 'GAT' ? 1 + weight * 2 : 1
-          }}
-          backgroundColor="transparent"
-          warmupTicks={0}
-          cooldownTicks={0}
-          d3VelocityDecay={0.9}
-          enableZoomInteraction={false}
-          enablePanInteraction={false}
-          enableNodeDrag={false}
-          onEngineStop={() => {
-            if (fgRef.current) fgRef.current.zoomToFit(200, 20)
-          }}
-        />
-      </div>
-
-      <div className="grid gap-2 rounded-xl border border-line-subtle bg-deep/45 p-3 text-[11px] text-slate-300">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-slate-500">Margin</span>
-          <span className="font-mono text-slate-200">{((graph.margin ?? 0) * 100).toFixed(1)}%</span>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-slate-500">Entropy</span>
-          <span className="font-mono text-slate-200">{((graph.entropy ?? 0) * 100).toFixed(1)}%</span>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-slate-500">Readout concentration</span>
-          <span className="font-mono text-slate-200">{(graph.readoutConcentration * 100).toFixed(0)}%</span>
-        </div>
-      </div>
-
-      <div className="mt-3 rounded-xl border border-cyan-500/10 bg-deep/55 p-3 space-y-2">
-        <div className="text-nano text-slate-500 uppercase font-semibold tracking-ultra">Narrative profile · {modelSignature.primaryLabel}</div>
-        <p className="text-[11px] leading-relaxed text-slate-300">
-          {graph.motifSignature}. Top-k contribution is <span className="text-slate-100 font-semibold">{graph.readoutBucket}</span>, global entropy is <span className="text-slate-100 font-semibold">{graph.entropyBucket}</span>, so the readout pattern is <span className="text-slate-100 font-semibold">{readoutPattern}</span>. {modelSignature.explanation}
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          <Tag label={graph.densityBucket} />
-          <Tag label={graph.entropyBucket} />
-          <Tag label={readoutPattern} />
-          <Tag label={formatFailureTag(graph.failureTag)} />
-        </div>
-      </div>
-
-      {graph.topContributors?.length > 0 && (
-        <div className="mt-3 space-y-1.5 z-10">
-          <span className="text-nano text-slate-500 uppercase font-semibold tracking-ultra block">Top contributors</span>
-          <div className="space-y-1">
-            {graph.topContributors.map((node) => (
-              <div key={node.nodeId} className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="w-5 h-5 rounded-sm flex items-center justify-center bg-nebula text-nano font-bold text-slate-100 shrink-0">
-                    {node.nodeId}
-                  </div>
-                  <div className="h-1 flex-1 bg-nebula/50 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-500" style={{ width: `${Math.max(0, Math.min(1, node.value)) * 100}%` }} />
-                  </div>
-                </div>
-                <span className="text-nano font-bold font-mono text-amber-400 tabular-nums shrink-0">
-                  {(node.value * 100).toFixed(0)}%
-                </span>
-              </div>
-            ))}
+            {isPinned || reportMode ? (
+              <button
+                onClick={() => setSelectedGraph(null)}
+                disabled={reportMode}
+                className="rounded-full border border-amber-500/35 bg-amber-500/12 px-2.5 py-1 text-[10px] font-bold text-amber-300 hover:bg-amber-500/25 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                title="Release pinned graph"
+              >
+                {reportMode ? 'Report' : 'Bỏ ghim'}
+              </button>
+            ) : (
+              <button
+                onClick={() => setHoveredGraph(null)}
+                className="rounded-full border border-line-default px-2.5 py-1 text-[10px] font-semibold text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                Hover
+              </button>
+            )}
           </div>
         </div>
-      )}
+      </div>
+
+      <div className="grid gap-3">
+        <StatCard title="Prediction">
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="rounded-xl bg-nebula/50 p-2">
+              <div className="text-slate-500">GT</div>
+              <div className="mt-1 font-black text-slate-100">{gtLabel}</div>
+            </div>
+            <div className="rounded-xl bg-nebula/50 p-2">
+              <div className="text-slate-500">Pred</div>
+              <div className={`mt-1 font-black ${frame.correct === 1 ? 'text-emerald-300' : 'text-rose-300'}`}>{predLabel}</div>
+            </div>
+          </div>
+          <div className="mt-3">
+            <CorrectnessStrip history={history} currentEpochFloat={currentEpochFloat} />
+          </div>
+        </StatCard>
+
+        <StatCard title="Confidence">
+          <div className="space-y-3">
+            <MetricBar label="Confidence" value={frame.confidence} tone="bg-cyan-400" />
+            <MetricBar label="Margin" value={frame.margin} tone="bg-emerald-400" />
+            <div className="grid grid-cols-2 gap-2">
+              <MiniSparkline values={confidenceValues} tone="#22d3ee" label="Confidence history" />
+              <MiniSparkline values={marginValues} tone="#34d399" label="Margin history" />
+            </div>
+          </div>
+        </StatCard>
+
+        <StatCard title="Readout">
+          <div className="space-y-3">
+            <MetricBar label="Entropy" value={frame.entropy} tone="bg-amber-400" />
+            <MetricBar label="Top-k concentration" value={frame.readoutConcentration} tone="bg-fuchsia-400" />
+            <MiniSparkline values={entropyValues} tone="#f59e0b" label="Entropy history" />
+            {frame.topContributors?.length > 0 && (
+              <div className="space-y-1.5">
+                {frame.topContributors.map((node) => (
+                  <div key={node.nodeId} className="flex items-center gap-2">
+                    <span className="w-6 rounded bg-nebula px-1.5 py-0.5 text-center font-mono text-[10px] font-black text-slate-100">{node.nodeId}</span>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-950/70">
+                      <div className="h-full rounded-full bg-amber-400" style={{ width: `${Math.max(0, Math.min(1, node.value)) * 100}%` }} />
+                    </div>
+                    <span className="w-10 text-right font-mono text-[10px] font-bold text-amber-300">{(node.value * 100).toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </StatCard>
+
+        <ModelLens modelSignature={modelSignature} />
+
+        <StatCard title="Structure">
+          <div className="grid grid-cols-3 gap-2">
+            <MetaStat label="Density" value={graph.structural?.density} />
+            <MetaStat label="Cluster Coef" value={graph.structural?.avg_clustering} />
+            <MetaStat label="AvgDeg" value={graph.structural?.avg_degree} digits={1} />
+          </div>
+          <p className="mt-3 text-[11px] leading-relaxed text-slate-500">{graph.motifSignature}</p>
+        </StatCard>
+      </div>
     </div>
   )
 }
 
-function MetaStat({ label, value, digits = 3, title = undefined }) {
-  const display = value != null && Number.isFinite(value) ? value.toFixed(digits) : '—'
+function MetaStat({ label, value, digits = 3 }) {
+  const display = value != null && Number.isFinite(value) ? value.toFixed(digits) : '-'
   return (
-    <div className="flex flex-col gap-0.5" title={title}>
-      <span className="text-[8px] text-slate-500 uppercase tracking-ultra font-semibold">{label}</span>
-      <span className="text-micro font-mono font-bold text-slate-200 tabular-nums">{display}</span>
+    <div className="rounded-xl bg-nebula/50 p-2">
+      <span className="block text-[8px] text-slate-500 uppercase tracking-[0.14em] font-semibold">{label}</span>
+      <span className="mt-1 block text-[12px] font-mono font-bold text-slate-100 tabular-nums">{display}</span>
     </div>
-  )
-}
-
-function Tag({ label }) {
-  return (
-    <span className="rounded-full border border-line-default bg-nebula px-2 py-0.5 text-[10px] font-semibold text-slate-200">
-      {label}
-    </span>
   )
 }

@@ -341,6 +341,125 @@ export function computeTask2ReadoutConcentration(contributions = []) {
   }
 }
 
+function resolveTask2SourceIndex(graph = null, fallback = 0) {
+  if (Number.isInteger(graph?.sourceIndex)) return graph.sourceIndex
+  if (Number.isInteger(graph?.originalGraphId)) return graph.originalGraphId
+  return fallback
+}
+
+function safeNumber(value, fallback = 0) {
+  return Number.isFinite(value) ? value : fallback
+}
+
+function lerpNumber(a, b, t) {
+  return safeNumber(a) + (safeNumber(b) - safeNumber(a)) * clamp01(t)
+}
+
+function pickGraphValue(snapshot, key, sourceIndex, fallback = null) {
+  const value = snapshot?.[key]?.[sourceIndex]
+  return value ?? fallback
+}
+
+function pickTask2Contributions(snapshot, sourceIndex) {
+  const values = snapshot?.node_contributions?.[sourceIndex]
+  return Array.isArray(values) ? values.map((value) => safeNumber(value)) : []
+}
+
+function deriveTask2FrameFromSnapshot(snapshot, graph = null, classNames = [], fallbackIndex = 0) {
+  const sourceIndex = resolveTask2SourceIndex(graph, fallbackIndex)
+  const contributions = pickTask2Contributions(snapshot, sourceIndex)
+  const readout = computeTask2ReadoutConcentration(contributions)
+  const predicted = pickGraphValue(snapshot, 'graph_predictions', sourceIndex, null)
+  const groundTruth = Number.isInteger(graph?.groundTruth)
+    ? graph.groundTruth
+    : pickGraphValue(snapshot, 'graph_ground_truth', sourceIndex, null)
+  const emittedCorrect = pickGraphValue(snapshot, 'graph_correct', sourceIndex, null)
+  const derivedCorrect = predicted != null && groundTruth != null ? Number(predicted === groundTruth) : null
+  const correct = emittedCorrect ?? derivedCorrect
+  const entropy = pickGraphValue(snapshot, 'attention_entropy', sourceIndex, null) ?? computeEntropy(contributions)
+
+  return {
+    sourceIndex,
+    epoch: Number.isInteger(snapshot?.epoch) ? snapshot.epoch : fallbackIndex,
+    predicted,
+    predictedLabel: formatTask2ClassLabel(classNames, predicted, 'Pending'),
+    groundTruth,
+    groundTruthLabel: formatTask2ClassLabel(classNames, groundTruth, 'Unknown'),
+    correct,
+    confidence: pickGraphValue(snapshot, 'graph_confidences', sourceIndex, null),
+    margin: pickGraphValue(snapshot, 'confidence_margins', sourceIndex, null),
+    entropy,
+    readoutConcentration: readout.score,
+    topContributors: readout.topContributors,
+    contributions,
+  }
+}
+
+export function buildTask2GraphEpochHistory({ snapshots = [], graph = null, classNames = [] } = {}) {
+  if (!Array.isArray(snapshots) || !snapshots.length || !graph) return []
+  const sourceIndex = resolveTask2SourceIndex(graph, 0)
+
+  return snapshots.map((snapshot, index) => {
+    const frame = deriveTask2FrameFromSnapshot(snapshot, graph, classNames, index)
+    const previous = index > 0
+      ? deriveTask2FrameFromSnapshot(snapshots[index - 1], graph, classNames, index - 1)
+      : null
+    const previousTop = previous?.topContributors?.[0]?.nodeId
+    const currentTop = frame.topContributors?.[0]?.nodeId
+
+    return {
+      ...frame,
+      sourceIndex,
+      index,
+      predictionChanged: previous ? previous.predicted !== frame.predicted : false,
+      topContributorChanged: previous ? previousTop !== currentTop : false,
+    }
+  })
+}
+
+export function buildTask2GraphEpochFrame({
+  snapA = null,
+  snapB = null,
+  currentEpochFloat = 0,
+  t = null,
+  graph = null,
+  classNames = [],
+} = {}) {
+  if (!graph || !snapA) return null
+  const sourceIndex = resolveTask2SourceIndex(graph, 0)
+  const rawT = t == null ? currentEpochFloat - Math.floor(currentEpochFloat) : t
+  const ratio = clamp01(rawT)
+  const next = snapB || snapA
+  const a = deriveTask2FrameFromSnapshot(snapA, graph, classNames)
+  const b = deriveTask2FrameFromSnapshot(next, graph, classNames)
+  const maxNodes = Math.max(a.contributions.length, b.contributions.length, graph?.nodes?.length || 0)
+  const contributions = Array.from({ length: maxNodes }, (_, index) => (
+    lerpNumber(a.contributions[index] ?? 0, b.contributions[index] ?? 0, ratio)
+  ))
+  const readout = computeTask2ReadoutConcentration(contributions)
+  const discrete = ratio >= 0.5 ? b : a
+  const previousContributions = a.contributions
+  const contributionDelta = contributions.map((value, index) => value - safeNumber(previousContributions[index]))
+  const topContributorIds = new Set(readout.topContributors.map((item) => item.nodeId))
+
+  return {
+    ...discrete,
+    sourceIndex,
+    epoch: lerpNumber(a.epoch, b.epoch, ratio),
+    confidence: lerpNumber(a.confidence ?? 0, b.confidence ?? a.confidence ?? 0, ratio),
+    margin: lerpNumber(a.margin ?? 0, b.margin ?? a.margin ?? 0, ratio),
+    entropy: lerpNumber(a.entropy ?? 0, b.entropy ?? a.entropy ?? 0, ratio),
+    readoutConcentration: readout.score,
+    topContributors: readout.topContributors,
+    topContributorIds,
+    contributions,
+    contributionDelta,
+    previousContributions,
+    interpolation: ratio,
+    hasReadoutData: a.contributions.length > 0 || b.contributions.length > 0,
+  }
+}
+
 function clamp01(value) {
   if (!Number.isFinite(value)) return 0
   return Math.max(0, Math.min(1, value))

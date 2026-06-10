@@ -21,12 +21,13 @@ export function buildTask2TrainingDefaults(selectedTask, selectedModel, uploadMe
       task2_pool: 'attention_sum',
       task2_class_weighting: true,
       task2_balanced_sampler: true,
-      task2_focal_gamma: profile.smallCollection ? 1.0 : profile.mediumCollection ? 1.25 : 1.5,
+      task2_focal_gamma: profile.smallCollection ? 0.8 : profile.mediumCollection ? 1.0 : 1.25,
       task2_label_smoothing: profile.smallCollection ? 0.01 : profile.mediumCollection ? 0.02 : 0.03,
-      task2_weight_decay: profile.smallCollection ? 7e-4 : 1e-3,
-      task2_edge_dropout: profile.smallCollection ? 0.04 : profile.mediumCollection ? 0.07 : 0.10,
+      task2_weight_decay: profile.smallCollection ? 5e-4 : 7e-4,
+      task2_edge_dropout: profile.smallCollection ? 0.02 : profile.mediumCollection ? 0.05 : 0.08,
       task2_readout_entropy_weight: profile.smallCollection ? 0.004 : profile.mediumCollection ? 0.007 : 0.01,
       task2_density_contrastive_weight: profile.smallCollection ? 0.008 : profile.mediumCollection ? 0.015 : 0.02,
+      task2_prediction_balance_weight: 0.035,
     }
   }
   if (model === 'GAT') {
@@ -34,13 +35,14 @@ export function buildTask2TrainingDefaults(selectedTask, selectedModel, uploadMe
       task2_pool: 'attention_sum',
       task2_class_weighting: true,
       task2_balanced_sampler: true,
-      task2_focal_gamma: profile.smallCollection ? 1.0 : profile.mediumCollection ? 1.25 : 1.5,
+      task2_focal_gamma: profile.smallCollection ? 0.8 : profile.mediumCollection ? 1.0 : 1.25,
       task2_label_smoothing: profile.smallCollection ? 0.01 : 0.02,
-      task2_weight_decay: 1e-3,
-      task2_edge_dropout: profile.smallCollection ? 0.12 : profile.mediumCollection ? 0.16 : 0.20,
-      task2_attn_dropout: profile.smallCollection ? 0.15 : profile.mediumCollection ? 0.20 : 0.25,
+      task2_weight_decay: 7e-4,
+      task2_edge_dropout: profile.smallCollection ? 0.06 : profile.mediumCollection ? 0.10 : 0.14,
+      task2_attn_dropout: profile.smallCollection ? 0.08 : profile.mediumCollection ? 0.12 : 0.16,
       task2_readout_entropy_weight: profile.smallCollection ? 0.004 : profile.mediumCollection ? 0.006 : 0.01,
       task2_density_contrastive_weight: profile.smallCollection ? 0.012 : profile.mediumCollection ? 0.02 : 0.03,
+      task2_prediction_balance_weight: 0.035,
     }
   }
   if (model === 'SAGE' || model === 'GRAPHSAGE' || model === 'GRAPH_SAGE') {
@@ -48,12 +50,13 @@ export function buildTask2TrainingDefaults(selectedTask, selectedModel, uploadMe
       task2_pool: 'attention_sum',
       task2_class_weighting: true,
       task2_balanced_sampler: true,
-      task2_focal_gamma: profile.smallCollection ? (profile.manyClasses ? 1.5 : 1.25) : profile.mediumCollection ? 1.5 : 2.0,
+      task2_focal_gamma: profile.smallCollection ? (profile.manyClasses ? 1.25 : 0.9) : profile.mediumCollection ? 1.15 : 1.5,
       task2_label_smoothing: profile.smallCollection ? 0.01 : profile.mediumCollection ? 0.015 : 0.02,
-      task2_weight_decay: 1e-3,
-      task2_edge_dropout: profile.smallCollection ? 0.08 : profile.mediumCollection ? 0.10 : 0.15,
+      task2_weight_decay: 8e-4,
+      task2_edge_dropout: profile.smallCollection ? 0.04 : profile.mediumCollection ? 0.08 : 0.12,
       task2_readout_entropy_weight: profile.smallCollection ? 0.004 : profile.mediumCollection ? 0.006 : 0.01,
       task2_density_contrastive_weight: profile.smallCollection ? 0.008 : profile.mediumCollection ? 0.012 : 0.02,
+      task2_prediction_balance_weight: 0.035,
       task2_temperature_min: profile.smallCollection ? 0.9 : 1.0,
       task2_temperature_max: profile.smallCollection ? 2.0 : profile.mediumCollection ? 1.8 : 1.5,
     }

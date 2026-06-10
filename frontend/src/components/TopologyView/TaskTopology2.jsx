@@ -6,6 +6,8 @@ import { interpolateSnapshots } from '../../engine/interpolate'
 import {
   buildTask2FocusBuckets,
   buildTask2GraphDescriptors,
+  buildTask2GraphEpochFrame,
+  buildTask2GraphEpochHistory,
   buildTask2ModelSignature,
   sortTask2Descriptors,
 } from '../../utils/task2Metrics'
@@ -227,7 +229,22 @@ function MiniGraphSVG({ nodes, links, contributions, modelSignature = null, size
   )
 }
 
-function DetailGraphSVG({ graph, contributions = [], modelSignature = null, onNodeHover }) {
+function DetailGraphSVG({
+  graph,
+  frame = null,
+  modelSignature = null,
+  onNodeHover,
+  currentEpochFloat = 0,
+  motionClock = 0,
+  animated = false,
+  zoom = 1,
+  pan = { x: 0, y: 0 },
+  onWheel = null,
+}) {
+  const contributions = frame?.contributions || []
+  const contributionDelta = frame?.contributionDelta || []
+  const topContributorIds = frame?.topContributorIds || new Set()
+  const modelId = modelSignature?.id || 'GCN'
   const positions = useMemo(() => {
     const map = {}
     graph.nodes.forEach((node) => {
@@ -235,6 +252,25 @@ function DetailGraphSVG({ graph, contributions = [], modelSignature = null, onNo
     })
     return map
   }, [graph.nodes])
+  const animatedPositions = useMemo(() => {
+    if (!animated) return positions
+    const map = {}
+    const modelMultiplier = modelId === 'GAT' ? 1.18 : modelId === 'SAGE' ? 0.86 : 0.96
+    const visualTime = currentEpochFloat + motionClock * 0.72
+    graph.nodes.forEach((node, index) => {
+      const base = positions[node.id] || { x: 0, y: 0 }
+      const weight = Math.max(0, Math.min(1, contributions[node.id] || 0))
+      const phase = visualTime * (1.08 + weight * 0.32) + index * 1.618
+      const radius = (2 + weight * 5.8) * modelMultiplier
+      const driftX = Math.cos(phase) * radius + Math.sin(phase * 0.37) * radius * 0.22
+      const driftY = Math.sin(phase * 0.86) * radius + Math.cos(phase * 0.31) * radius * 0.18
+      map[node.id] = {
+        x: base.x + driftX,
+        y: base.y + driftY,
+      }
+    })
+    return map
+  }, [animated, positions, graph.nodes, contributions, currentEpochFloat, motionClock, modelId])
   const bounds = useMemo(() => {
     const xs = graph.nodes.map((node) => Number.isFinite(node.x) ? node.x : 0)
     const ys = graph.nodes.map((node) => Number.isFinite(node.y) ? node.y : 0)
@@ -250,16 +286,28 @@ function DetailGraphSVG({ graph, contributions = [], modelSignature = null, onNo
       height: Math.max(180, maxY - minY + pad * 2),
     }
   }, [graph.nodes])
+  const viewBox = useMemo(() => {
+    const safeZoom = Math.max(0.65, Math.min(2.8, Number(zoom) || 1))
+    const width = bounds.width / safeZoom
+    const height = bounds.height / safeZoom
+    return {
+      x: bounds.x + ((bounds.width - width) / 2) + (Number(pan?.x) || 0),
+      y: bounds.y + ((bounds.height - height) / 2) + (Number(pan?.y) || 0),
+      width,
+      height,
+    }
+  }, [bounds, zoom, pan])
 
   return (
     <svg
       width="100%"
       height="100%"
-      viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+      viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
       preserveAspectRatio="xMidYMid meet"
       className="drop-shadow-[0_24px_60px_rgba(8,47,73,0.28)]"
       role="img"
-      aria-label={`Graph ${graph.originalGraphId} structure`}
+      aria-label={`${animated ? 'Animated ' : ''}Graph ${graph.originalGraphId} structure`}
+      onWheel={onWheel}
     >
       <defs>
         <filter id={`task2-node-glow-${graph.originalGraphId}`} x="-80%" y="-80%" width="260%" height="260%">
@@ -273,10 +321,15 @@ function DetailGraphSVG({ graph, contributions = [], modelSignature = null, onNo
       {graph.links.map((link, index) => {
         const source = typeof link.source === 'object' ? link.source.id : link.source
         const target = typeof link.target === 'object' ? link.target.id : link.target
-        const from = positions[source]
-        const to = positions[target]
+        const from = animatedPositions[source]
+        const to = animatedPositions[target]
         if (!from || !to) return null
         const weight = ((contributions[source] || 0) + (contributions[target] || 0)) / 2
+        const stroke = modelId === 'GAT' && weight > 0.5
+          ? 'rgba(251,191,36,0.56)'
+          : modelId === 'SAGE' && weight > 0.36
+            ? 'rgba(52,211,153,0.42)'
+            : 'rgba(34,211,238,0.28)'
         return (
           <line
             key={`${source}-${target}-${index}`}
@@ -284,22 +337,32 @@ function DetailGraphSVG({ graph, contributions = [], modelSignature = null, onNo
             y1={from.y}
             x2={to.x}
             y2={to.y}
-            stroke={weight > 0.55 ? 'rgba(34,211,238,0.44)' : 'rgba(59,130,246,0.24)'}
-            strokeWidth={2.2 + weight * 2.2}
+            stroke={stroke}
+            strokeWidth={1.1 + weight * (modelId === 'GAT' ? 2.4 : 1.6)}
             strokeLinecap="round"
+            strokeDasharray={modelId === 'SAGE' && weight > 0.35 ? '5 5' : undefined}
+            style={{ transition: 'stroke 90ms linear, stroke-width 90ms linear, opacity 90ms linear' }}
           />
         )
       })}
       {graph.nodes.map((node) => {
-        const point = positions[node.id]
+        const point = animatedPositions[node.id]
+        if (!point) return null
         const weight = Math.max(0, Math.min(1, contributions[node.id] || 0))
-        const isFocus = weight >= 0.55
-        const fill = modelSignature?.id === 'SAGE'
-          ? (isFocus ? '#34d399' : '#60a5fa')
-          : isFocus
-            ? '#fbbf24'
-            : '#3b82f6'
-        const size = 11 + weight * 11
+        const delta = contributionDelta[node.id] || 0
+        const isTop = topContributorIds.has(node.id)
+        const isFocus = weight >= 0.48 || isTop
+        const fill = modelId === 'SAGE'
+          ? (isTop ? '#bbf7d0' : isFocus ? '#34d399' : '#60a5fa')
+          : modelId === 'GAT'
+            ? (isTop ? '#fef3c7' : isFocus ? '#f59e0b' : '#3b82f6')
+            : (isFocus ? '#67e8f9' : '#3b82f6')
+        const halo = modelId === 'GCN'
+          ? 'rgba(34,211,238,0.24)'
+          : modelId === 'GAT'
+            ? 'rgba(251,191,36,0.24)'
+            : 'rgba(52,211,153,0.20)'
+        const size = 7 + weight * 10
         const label = node.original_id !== undefined ? node.original_id : node.id
         return (
           <g
@@ -307,25 +370,61 @@ function DetailGraphSVG({ graph, contributions = [], modelSignature = null, onNo
             onMouseEnter={() => onNodeHover?.(node.id)}
             onMouseLeave={() => onNodeHover?.(null)}
             className="cursor-default"
+            style={{ transition: 'opacity 90ms linear' }}
           >
+            {modelId === 'SAGE' && isFocus && (
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r={size + 11}
+                fill="none"
+                stroke="#34d399"
+                strokeWidth="1.4"
+              opacity="0.28"
+              strokeDasharray="5 5"
+                style={{ transition: 'r 90ms linear, opacity 90ms linear, stroke 90ms linear' }}
+              />
+            )}
             <circle
               cx={point.x}
               cy={point.y}
-              r={size + 12}
-              fill={fill}
-              opacity={isFocus ? 0.16 : 0.08}
+              r={size + 8 + Math.max(0, delta) * 22}
+              fill={halo}
+              opacity={isFocus ? 0.28 : 0.08}
               filter={`url(#task2-node-glow-${graph.originalGraphId})`}
+              style={{ transition: 'r 90ms linear, fill 90ms linear, opacity 90ms linear' }}
             />
-            <circle cx={point.x} cy={point.y} r={size} fill={fill} stroke="rgba(226,232,240,0.55)" strokeWidth="1.5" />
+            {delta > 0.08 && (
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r={size + 15}
+                fill="none"
+                stroke={modelId === 'GAT' ? '#fbbf24' : '#22d3ee'}
+                strokeWidth="2"
+                opacity="0.65"
+                style={{ transition: 'r 80ms linear, opacity 80ms linear' }}
+              />
+            )}
+            <circle
+              cx={point.x}
+              cy={point.y}
+              r={size}
+              fill={fill}
+              stroke={isTop ? 'rgba(255,255,255,0.92)' : 'rgba(226,232,240,0.55)'}
+              strokeWidth={isTop ? 2 : 1.2}
+              style={{ transition: 'r 90ms linear, fill 90ms linear, stroke 90ms linear, stroke-width 90ms linear' }}
+            />
             <text
               x={point.x}
               y={point.y + 0.5}
               textAnchor="middle"
               dominantBaseline="middle"
-              fill={isFocus ? '#0f172a' : '#ffffff'}
+              fill={isTop || (modelId === 'GAT' && isFocus) ? '#0f172a' : '#ffffff'}
               fontSize={Math.max(9, size * 0.78)}
               fontWeight="800"
               fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+              style={{ transition: 'fill 90ms linear, font-size 90ms linear' }}
             >
               {label}
             </text>
@@ -333,6 +432,108 @@ function DetailGraphSVG({ graph, contributions = [], modelSignature = null, onNo
         )
       })}
     </svg>
+  )
+}
+
+function Sparkline({ values = [], tone = '#22d3ee', label = 'sparkline' }) {
+  const clean = values.map((value) => (Number.isFinite(value) ? value : 0))
+  const width = 150
+  const height = 44
+  const pad = 5
+  const max = Math.max(1, ...clean)
+  const min = Math.min(0, ...clean)
+  const range = Math.max(0.001, max - min)
+  const points = clean.length
+    ? clean.map((value, index) => {
+      const x = clean.length === 1 ? width / 2 : pad + (index / (clean.length - 1)) * (width - pad * 2)
+      const y = height - pad - ((value - min) / range) * (height - pad * 2)
+      return `${x.toFixed(2)},${y.toFixed(2)}`
+    }).join(' ')
+    : ''
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-11 w-full" role="img" aria-label={label}>
+      <line x1={pad} y1={height - pad} x2={width - pad} y2={height - pad} stroke="rgba(148,163,184,0.18)" />
+      {points && <polyline points={points} fill="none" stroke={tone} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+      {clean.map((value, index) => {
+        if (index !== clean.length - 1) return null
+        const x = clean.length === 1 ? width / 2 : pad + (index / (clean.length - 1)) * (width - pad * 2)
+        const y = height - pad - ((value - min) / range) * (height - pad * 2)
+        return <circle key={index} cx={x} cy={y} r="3.2" fill={tone} />
+      })}
+    </svg>
+  )
+}
+
+function CorrectnessStrip({ history = [], currentEpochFloat = 0 }) {
+  const activeIndex = Math.max(0, Math.min(history.length - 1, Math.round(currentEpochFloat)))
+  return (
+    <div className="flex h-8 min-w-0 items-end gap-1 overflow-hidden" aria-label="Correctness epoch strip">
+      {history.map((item, index) => {
+        const active = index === activeIndex
+        const color = item.correct === 1 ? 'bg-emerald-400' : item.correct === 0 ? 'bg-rose-400' : 'bg-slate-600'
+        return (
+          <div
+            key={`${item.epoch}-${index}`}
+            className={`min-w-0 flex-1 rounded-full ${color} ${active ? 'h-8 ring-2 ring-white/70' : 'h-4 opacity-70'}`}
+            title={`Epoch ${item.epoch}: ${item.correct === 1 ? 'correct' : item.correct === 0 ? 'wrong' : 'unknown'}`}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
+function MetricBar({ label, value = 0, tone = 'bg-cyan-400' }) {
+  const pct = Math.max(0, Math.min(1, value || 0))
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+        <span>{label}</span>
+        <span className="font-mono text-slate-200">{(pct * 100).toFixed(0)}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-900/80">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${pct * 100}%`, transition: 'width 220ms ease' }} />
+      </div>
+    </div>
+  )
+}
+
+function LearningTimeline({ history = [], frame = null, currentEpochFloat = 0 }) {
+  const confidenceValues = history.map((item) => item.confidence ?? 0)
+  const entropyValues = history.map((item) => item.entropy ?? 0)
+  const readoutValues = history.map((item) => item.readoutConcentration ?? 0)
+
+  return (
+    <div className="min-w-0 overflow-hidden rounded-[22px] border border-cyan-300/16 bg-deep/78 px-4 py-3 shadow-lg backdrop-blur">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Learning timeline</div>
+          <div className="mt-1 text-[11px] font-semibold text-slate-400">
+            Epoch <span className="font-mono text-white">{(frame?.epoch ?? currentEpochFloat).toFixed(1)}</span>
+            <span className="mx-2 text-slate-700">/</span>
+            {frame?.correct === 1 ? 'prediction correct' : frame?.correct === 0 ? 'prediction wrong' : 'waiting for labels'}
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <CorrectnessStrip history={history} currentEpochFloat={currentEpochFloat} />
+        </div>
+      </div>
+      <div className="grid min-w-0 gap-3 md:grid-cols-3">
+        <div className="rounded-xl border border-line-subtle bg-nebula/45 p-2">
+          <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Confidence</div>
+          <Sparkline values={confidenceValues} tone="#22d3ee" label="Confidence sparkline" />
+        </div>
+        <div className="rounded-xl border border-line-subtle bg-nebula/45 p-2">
+          <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Entropy</div>
+          <Sparkline values={entropyValues} tone="#f59e0b" label="Entropy sparkline" />
+        </div>
+        <div className="rounded-xl border border-line-subtle bg-nebula/45 p-2">
+          <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Readout</div>
+          <Sparkline values={readoutValues} tone="#34d399" label="Readout concentration sparkline" />
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -357,6 +558,28 @@ function useResponsiveGridCols(ref) {
   }, [ref])
 
   return cols
+}
+
+function useMotionClock(enabled) {
+  const [clock, setClock] = useState(0)
+
+  useEffect(() => {
+    if (!enabled || typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      return undefined
+    }
+
+    let frameId = 0
+    let start = 0
+    const tick = (time) => {
+      if (!start) start = time
+      setClock((time - start) / 1000)
+      frameId = window.requestAnimationFrame(tick)
+    }
+    frameId = window.requestAnimationFrame(tick)
+    return () => window.cancelAnimationFrame(frameId)
+  }, [enabled])
+
+  return clock
 }
 
 function matchesCell(descriptor, selectedCell) {
@@ -398,6 +621,10 @@ export default function TaskTopology2({
   const cols = useResponsiveGridCols(gridRef)
   const [page, setPage] = useState(1)
   const [stableDetailGraphData, setStableDetailGraphData] = useState(null)
+  const [detailTab, setDetailTab] = useState('motion')
+  const [detailOverlayOpen, setDetailOverlayOpen] = useState(false)
+  const [detailViewport, setDetailViewport] = useState({ zoom: 1, pan: { x: 0, y: 0 } })
+  const motionClock = useMotionClock(Boolean(selectedNodeId !== null && detailTab === 'motion'))
 
   const graphs = taskData?.graphs || []
   const indexedGraphs = useMemo(
@@ -500,12 +727,30 @@ export default function TaskTopology2({
 
   const detailGraphKey = useMemo(() => buildDetailGraphStructureKey(selectedGraph), [selectedGraph])
 
+  const selectedGraphHistory = useMemo(
+    () => buildTask2GraphEpochHistory({ snapshots, graph: selectedGraph, classNames: graphClassNames }),
+    [snapshots, selectedGraph, graphClassNames]
+  )
+
+  const selectedGraphFrame = useMemo(
+    () => buildTask2GraphEpochFrame({
+      snapA,
+      snapB,
+      currentEpochFloat,
+      t: frac,
+      graph: selectedGraph,
+      classNames: graphClassNames,
+    }),
+    [snapA, snapB, currentEpochFloat, frac, selectedGraph, graphClassNames]
+  )
+
   const contributions = snap?.node_contributions || []
 
   useEffect(() => {
     if (!selectedGraph || !detailGraphKey) {
       detailGraphKeyRef.current = null
       setStableDetailGraphData(null)
+      setDetailViewport({ zoom: 1, pan: { x: 0, y: 0 } })
       return
     }
 
@@ -513,6 +758,7 @@ export default function TaskTopology2({
 
     detailGraphKeyRef.current = detailGraphKey
     setStableDetailGraphData(createStableDetailGraphData(selectedGraph))
+    setDetailViewport({ zoom: 1, pan: { x: 0, y: 0 } })
   }, [detailGraphKey, selectedGraph])
 
   useEffect(() => {
@@ -544,63 +790,200 @@ export default function TaskTopology2({
   }
 
   if (selectedGraph && stableDetailGraphData) {
-    const predictionLabel = selectedGraph.predicted != null
-      ? labelForClass(selectedGraph.predicted)
+    const predictionLabel = selectedGraphFrame?.predicted != null
+      ? labelForClass(selectedGraphFrame.predicted)
       : 'Pending'
+    const graphForStage = {
+      ...selectedGraph,
+      nodes: stableDetailGraphData.nodes,
+      links: stableDetailGraphData.links,
+    }
+    const confidence = selectedGraphFrame?.confidence ?? selectedGraph.confidence ?? 0
+    const margin = selectedGraphFrame?.margin ?? selectedGraph.margin ?? 0
+    const entropy = selectedGraphFrame?.entropy ?? selectedGraph.entropy ?? 0
+    const readout = selectedGraphFrame?.readoutConcentration ?? selectedGraph.readoutConcentration ?? 0
+    const updateDetailZoom = (delta) => {
+      setDetailViewport((current) => ({
+        ...current,
+        zoom: Math.max(0.7, Math.min(2.6, Number((current.zoom + delta).toFixed(2)))),
+      }))
+    }
+    const resetDetailViewport = () => setDetailViewport({ zoom: 1, pan: { x: 0, y: 0 } })
+    const handleGraphWheel = (event) => {
+      event.preventDefault()
+      updateDetailZoom(event.deltaY < 0 ? 0.12 : -0.12)
+    }
 
     return (
-      <div ref={panelRootRef} className="w-full h-full overflow-hidden bg-[linear-gradient(180deg,#07111f,#081322)] p-6 pt-16">
-        <div className="grid h-full min-h-0 grid-rows-[auto_1fr_auto] gap-4">
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-line-subtle bg-deep/72 px-4 py-3 shadow-lg backdrop-blur">
+      <div ref={panelRootRef} className="h-full w-full overflow-y-auto bg-[linear-gradient(180deg,#07111f,#081322)] px-4 pb-28 pt-16 custom-scrollbar">
+        <div className="grid min-h-full grid-rows-[auto_auto_auto] gap-2">
+          <div className="sticky top-0 z-40 flex items-center justify-between gap-4 rounded-xl bg-[#07111f]/84 px-1 py-2 backdrop-blur-xl">
             <button
               type="button"
               onClick={() => setSelectedNode(null)}
-              className="shrink-0 rounded-full border border-line-default/70 bg-nebula px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-slate-200 transition-colors hover:border-cyan-400/50 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+              className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-slate-300 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
             >
               Back to gallery
             </button>
-            <div className="min-w-0 flex-1 text-center">
-              <div className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-500">Selected graph</div>
-              <div className="mt-0.5 truncate text-sm font-black tracking-tight text-white">{`Graph #${selectedGraph.originalGraphId}`}</div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-lg font-black tracking-tight text-white">{`Graph #${selectedGraph.originalGraphId}`}</div>
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 text-[10px] font-mono text-slate-300">
-              <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2.5 py-1 text-cyan-200">{`#${selectedGraph.originalGraphId}`}</span>
-              <span className="rounded-full border border-line-subtle bg-nebula px-2.5 py-1">GT {labelForClass(selectedGraph.groundTruth)}</span>
-              <span className={`rounded-full border px-2.5 py-1 ${selectedGraph.correct === 1 ? 'border-emerald-400/25 bg-emerald-500/10 text-emerald-300' : 'border-rose-400/25 bg-rose-500/10 text-rose-300'}`}>
+              <span className="rounded-full bg-white/5 px-2.5 py-1">GT {labelForClass(selectedGraph.groundTruth)}</span>
+              <span className={`rounded-full px-2.5 py-1 ${selectedGraphFrame?.correct === 1 ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/10 text-rose-300'}`}>
                 <span className="text-slate-500">Pred</span> <b>{predictionLabel}</b>
               </span>
-              <span className="rounded-full border border-line-subtle bg-nebula px-2.5 py-1">{((selectedGraph.confidence ?? 0) * 100).toFixed(0)}%</span>
+              <span className="rounded-full bg-cyan-500/10 px-2.5 py-1 text-cyan-200">{(confidence * 100).toFixed(0)}%</span>
             </div>
           </div>
 
-          <div className="relative min-h-0 overflow-hidden rounded-[28px] border border-cyan-300/18 bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.10),transparent_46%),rgba(15,23,42,0.30)]">
-            <div className="pointer-events-none absolute inset-5 rounded-[24px] border border-white/5" />
-            <div className="absolute inset-x-8 inset-y-6 z-10">
-              <DetailGraphSVG
-                graph={{ ...selectedGraph, nodes: stableDetailGraphData.nodes, links: stableDetailGraphData.links }}
-                contributions={contributions[selectedGraph.sourceIndex] || []}
-                modelSignature={modelSignature}
-                onNodeHover={setHoveredNode}
-              />
+          <div className="flex items-center justify-between gap-3 px-1 py-1">
+            <div className="flex rounded-full bg-white/[0.04] p-1">
+              {[
+                ['motion', 'Đồ thị động'],
+                ['learning', 'Dòng học'],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setDetailTab(value)}
+                  className={`rounded-full px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] transition-all ${
+                    detailTab === value
+                      ? 'bg-cyan-300 text-slate-950'
+                      : 'text-slate-500 hover:bg-white/5 hover:text-slate-100'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="hidden">
+              {detailTab === 'motion'
+                ? 'Node chuyển động quanh layout gốc theo contribution từng epoch.'
+                : 'Timeline đọc confidence, entropy, readout và trạng thái đúng/sai.'}
             </div>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
-            <div className="rounded-2xl border border-cyan-300/18 bg-deep/72 px-4 py-3 shadow-lg backdrop-blur">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">{modelSignature.primaryLabel}</span>
-                <span className="font-mono text-[11px] font-bold text-slate-200">{(modelSignature.currentScore * 100).toFixed(0)}%</span>
+          {detailTab === 'motion' ? (
+            <div className="relative h-[calc(100vh-250px)] min-h-[600px] max-h-[800px] overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.10),transparent_48%),linear-gradient(180deg,rgba(15,23,42,0.42),rgba(2,8,23,0.12))]">
+              <div className="hidden" />
+              <div className="hidden">
+                dynamic graph · stable center
               </div>
-              <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-400">{modelSignature.explanation}</p>
-            </div>
-            <div className="rounded-2xl border border-line-subtle bg-deep/72 px-4 py-3 text-[11px] font-semibold text-slate-400 shadow-lg backdrop-blur">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-slate-500">Nodes / edges</span>
-                <span className="font-mono text-cyan-200">{selectedGraph.nodes.length} / {selectedGraph.links.length}</span>
+              {!selectedGraphFrame?.hasReadoutData && (
+                <div className="absolute right-6 top-6 z-20 rounded-full border border-amber-400/30 bg-amber-500/12 px-3 py-1 text-[10px] font-bold text-amber-200">
+                  No readout data yet
+                </div>
+              )}
+              <div className="absolute inset-3 z-10">
+                <DetailGraphSVG
+                  graph={graphForStage}
+                  frame={selectedGraphFrame}
+                  modelSignature={modelSignature}
+                  onNodeHover={setHoveredNode}
+                  currentEpochFloat={currentEpochFloat}
+                  motionClock={motionClock}
+                  animated
+                  zoom={detailViewport.zoom}
+                  pan={detailViewport.pan}
+                  onWheel={handleGraphWheel}
+                />
               </div>
-              <div className="mt-2 line-clamp-2 text-slate-500">{selectedGraph.motifSignature}</div>
+              <div className="absolute right-5 top-5 z-20 flex items-center gap-1 rounded-full border border-white/10 bg-slate-950/45 p-1 text-[10px] font-black text-slate-200 shadow-[0_12px_40px_rgba(2,8,23,0.32)] backdrop-blur-xl">
+                <button
+                  type="button"
+                  onClick={() => updateDetailZoom(-0.18)}
+                  className="grid h-7 w-7 place-items-center rounded-full transition hover:bg-white/10"
+                  aria-label="Zoom out graph"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  onClick={resetDetailViewport}
+                  className="rounded-full px-2 py-1 font-mono text-cyan-100 transition hover:bg-white/10"
+                  aria-label="Reset graph zoom"
+                >
+                  {detailViewport.zoom.toFixed(1)}x
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateDetailZoom(0.18)}
+                  className="grid h-7 w-7 place-items-center rounded-full transition hover:bg-white/10"
+                  aria-label="Zoom in graph"
+                >
+                  +
+                </button>
+              </div>
+              {detailOverlayOpen ? (
+                <div className="absolute bottom-2 right-5 z-20 w-[min(330px,calc(100%-40px))] rounded-[22px] border border-white/16 bg-slate-950/54 px-3.5 py-3 shadow-[0_20px_62px_rgba(2,8,23,0.50)] backdrop-blur-2xl transition-all duration-200">
+                  <div className="mb-2.5 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
+                        {modelSignature.primaryLabel}
+                      </div>
+                      <div className="mt-0.5 font-mono text-[10px] font-bold text-slate-300">
+                        {selectedGraph.nodes.length}n / {selectedGraph.links.length}e
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDetailOverlayOpen(false)}
+                      className="shrink-0 rounded-full border border-white/18 bg-white/[0.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-200 transition hover:border-cyan-300/60 hover:text-cyan-200"
+                    >
+                      Thu gọn
+                    </button>
+                  </div>
+                  <div className="grid gap-2">
+                    <MetricBar label="Confidence" value={confidence} tone="bg-cyan-400" />
+                    <MetricBar label="Margin" value={margin} tone="bg-emerald-400" />
+                    <MetricBar label="Readout" value={readout} tone="bg-amber-400" />
+                    <MetricBar label="Entropy" value={entropy} tone="bg-rose-400" />
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-[10px] font-semibold leading-relaxed text-slate-400">
+                    {modelSignature.explanation}
+                  </p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setDetailOverlayOpen(true)}
+                  className="absolute bottom-2 right-5 z-20 rounded-full border border-cyan-200/20 bg-slate-950/55 px-3.5 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-cyan-100 shadow-[0_14px_45px_rgba(2,8,23,0.44)] backdrop-blur-xl transition hover:border-cyan-200/70 hover:bg-cyan-300 hover:text-slate-950"
+                >
+                  Mở thông số · {(confidence * 100).toFixed(0)}%
+                </button>
+              )}
             </div>
-          </div>
+          ) : (
+            <div className="min-h-0">
+              <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <LearningTimeline
+                  history={selectedGraphHistory}
+                  frame={selectedGraphFrame}
+                  currentEpochFloat={currentEpochFloat}
+                />
+                <div className="grid min-w-0 gap-3 rounded-[22px] border border-line-subtle bg-deep/72 px-4 py-3 shadow-lg backdrop-blur">
+                  <div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">{modelSignature.primaryLabel}</span>
+                      <span className="font-mono text-[11px] font-bold text-slate-200">{(modelSignature.currentScore * 100).toFixed(0)}%</span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-400">{modelSignature.explanation}</p>
+                  </div>
+                  <div className="grid gap-2">
+                    <MetricBar label="Confidence" value={confidence} tone="bg-cyan-400" />
+                    <MetricBar label="Margin" value={margin} tone="bg-emerald-400" />
+                    <MetricBar label="Readout" value={readout} tone="bg-amber-400" />
+                    <MetricBar label="Entropy" value={entropy} tone="bg-rose-400" />
+                  </div>
+                  <div className="rounded-xl border border-line-subtle bg-nebula/35 px-3 py-2 text-[11px] font-semibold text-slate-400">
+                    <span className="font-mono text-cyan-200">{selectedGraph.nodes.length} nodes / {selectedGraph.links.length} edges</span>
+                    <div className="mt-1 line-clamp-2 text-slate-500">{selectedGraph.motifSignature}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )

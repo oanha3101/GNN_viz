@@ -16,6 +16,8 @@ import {
   bucketTask2ReadoutConcentration,
   computeTask2ReadoutConcentration,
   buildTask2GraphDescriptors,
+  buildTask2GraphEpochFrame,
+  buildTask2GraphEpochHistory,
   filterTask2DescriptorsByCell,
   sortTask2Descriptors,
   buildTask2NarrativeSummary,
@@ -320,6 +322,80 @@ describe('task 2 collection helpers', () => {
       motifSignature: expect.any(String),
       failureTag: expect.any(String),
     }))
+  })
+
+  it('builds graph epoch history for confidence, entropy, flips, and contributors', () => {
+    const history = buildTask2GraphEpochHistory({
+      snapshots: [
+        {
+          epoch: 0,
+          graph_predictions: [1],
+          graph_confidences: [0.45],
+          confidence_margins: [0.05],
+          attention_entropy: [0.9],
+          graph_correct: [0],
+          node_contributions: [[0.2, 0.5, 0.3]],
+        },
+        {
+          epoch: 1,
+          graph_predictions: [0],
+          graph_confidences: [0.74],
+          confidence_margins: [0.32],
+          attention_entropy: [0.34],
+          graph_correct: [1],
+          node_contributions: [[0.7, 0.2, 0.1]],
+        },
+      ],
+      graph: { originalGraphId: 10, sourceIndex: 0, groundTruth: 0, nodes: [{ id: 0 }, { id: 1 }, { id: 2 }], links: [] },
+      classNames: ['A', 'B'],
+    })
+
+    expect(history).toHaveLength(2)
+    expect(history[0]).toEqual(expect.objectContaining({
+      epoch: 0,
+      predicted: 1,
+      confidence: 0.45,
+      entropy: 0.9,
+      correct: 0,
+    }))
+    expect(history[1].predictionChanged).toBe(true)
+    expect(history[1].topContributorChanged).toBe(true)
+    expect(history[1].topContributors[0].nodeId).toBe(0)
+  })
+
+  it('builds an interpolated graph epoch frame without changing backend schema', () => {
+    const frame = buildTask2GraphEpochFrame({
+      snapA: {
+        epoch: 4,
+        graph_predictions: [1],
+        graph_confidences: [0.4],
+        confidence_margins: [0.1],
+        attention_entropy: [0.8],
+        graph_correct: [0],
+        node_contributions: [[0.1, 0.9]],
+      },
+      snapB: {
+        epoch: 5,
+        graph_predictions: [0],
+        graph_confidences: [0.8],
+        confidence_margins: [0.5],
+        attention_entropy: [0.2],
+        graph_correct: [1],
+        node_contributions: [[0.7, 0.3]],
+      },
+      t: 0.5,
+      graph: { originalGraphId: 10, sourceIndex: 0, groundTruth: 0, nodes: [{ id: 0 }, { id: 1 }], links: [] },
+      classNames: ['A', 'B'],
+    })
+
+    expect(frame.epoch).toBeCloseTo(4.5)
+    expect(frame.predicted).toBe(0)
+    expect(frame.confidence).toBeCloseTo(0.6)
+    expect(frame.margin).toBeCloseTo(0.3)
+    expect(frame.entropy).toBeCloseTo(0.5)
+    expect(frame.contributions[0]).toBeCloseTo(0.4)
+    expect(frame.contributionDelta[0]).toBeCloseTo(0.3)
+    expect(frame.hasReadoutData).toBe(true)
   })
 
   it('uses prediction and ground truth when emitted graph_correct drifts', () => {
