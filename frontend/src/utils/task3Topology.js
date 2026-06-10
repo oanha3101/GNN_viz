@@ -1,7 +1,7 @@
 const TASK3_MIN_ZOOM = 0.45
 const TASK3_MAX_ZOOM = 1.5
-const TASK3_NODE_SIZE_MIN = 3
-const TASK3_NODE_SIZE_CAP = 8
+const TASK3_NODE_SIZE_MIN = 5
+const TASK3_NODE_SIZE_CAP = 12
 
 export function selectTask3OverlayEdgeIndexes({
   testEdges = [],
@@ -86,11 +86,11 @@ export function getTask3NodeRadius({
 }) {
   const base = Math.max(
     TASK3_NODE_SIZE_MIN,
-    Math.min(TASK3_NODE_SIZE_CAP, Math.sqrt(Math.max(1, degree)) * 0.9 + 2.8),
+    Math.min(TASK3_NODE_SIZE_CAP, Math.sqrt(Math.max(1, degree)) * 1.2 + 4.5),
   )
 
-  if (isSelected) return Math.min(TASK3_NODE_SIZE_CAP + 2, base + 1.8)
-  if (isCommonNeighbor) return Math.min(TASK3_NODE_SIZE_CAP + 1, base + 1.2)
+  if (isSelected) return Math.min(TASK3_NODE_SIZE_CAP + 3, base + 2.5)
+  if (isCommonNeighbor) return Math.min(TASK3_NODE_SIZE_CAP + 2, base + 1.8)
   return base
 }
 
@@ -101,20 +101,21 @@ export function shouldShowTask3NodeLabel({
   isCommonNeighbor = false,
 }) {
   if (isSelected || isCommonNeighbor) return true
-  if (showBulkNodeLabels && globalScale > 1.45) return true
-  return globalScale > 2.05
+  return globalScale > 0.85
 }
 
 export function shouldShowTask3EdgeLabel({
   isFocused = false,
-  isPrimary = false,
+  isConnectedToSelected = false,
   selectedNodeId = null,
   hoveredLink = null,
   scale = 1,
 }) {
   if (isFocused) return true
-  if (!isPrimary) return false
-  return (selectedNodeId != null || hoveredLink != null) && scale > 0.95
+  if (selectedNodeId != null) {
+    return isConnectedToSelected && scale > 0.85
+  }
+  return false
 }
 
 function buildAdjacency(graphData) {

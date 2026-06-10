@@ -57,7 +57,7 @@ export default function NodeInfoPanelV2() {
   // Node correctness from backend
   const nodeCorrect = useMemo(() => {
     if (selectedNodeId === null || !snapshot?.node_correctness) return null
-    return snapshot.node_correctness[selectedNodeId] === 1
+    return snapshot.node_correctness[selectedNodeId] === 1 || snapshot.node_correctness[selectedNodeId] === true
   }, [selectedNodeId, snapshot])
 
   // Neighbor context from backend

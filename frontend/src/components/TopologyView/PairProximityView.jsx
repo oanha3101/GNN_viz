@@ -29,7 +29,7 @@ export default function PairProximityView({ reportMode = false }) {
   // Zoom & Pan state
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
-  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 })
+  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0, hasDragged: false, clickNode: null })
 
   // Data refs
   const graphDataRef = useRef(null)
@@ -256,17 +256,15 @@ export default function PairProximityView({ reportMode = false }) {
         ctx.stroke()
       }
 
-      // Node ID label (always visible for test nodes, zoom-dependent for others)
-      if (isTestNode || isHov || zoom > 1.2) {
-        const fontSize = isHov ? 10 : 8
-        ctx.font = `bold ${fontSize}px monospace`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillStyle = '#fff'
-        ctx.globalAlpha = dimmed ? 0.3 : 1
-        ctx.fillText(`${i}`, cx, cy)
-        ctx.globalAlpha = 1
-      }
+      // Node ID label (always visible for all nodes)
+      const fontSize = isHov ? 10 : 8
+      ctx.font = `bold ${fontSize}px monospace`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillStyle = '#fff'
+      ctx.globalAlpha = dimmed ? 0.3 : 1
+      ctx.fillText(`${i}`, cx, cy)
+      ctx.globalAlpha = 1
     })
 
     // (Header removed — handled by PanelHeading in App.jsx)
@@ -278,33 +276,7 @@ export default function PairProximityView({ reportMode = false }) {
     if (dataReady) drawCanvas()
   }, [dataReady, drawCanvas])
 
-  // Auto-pan to selected node (gentle center, no aggressive zoom)
-  useEffect(() => {
-    if (selectedNodeId === null || !snapshotsRef.current.length || !dims.width) return
-    const emb = snapshotsRef.current[epochRef.current]?.embeddings_2d
-    if (!emb || !emb[selectedNodeId]) return
 
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
-    emb.forEach(([x, y]) => {
-      if (x < minX) minX = x; if (x > maxX) maxX = x
-      if (y < minY) minY = y; if (y > maxY) maxY = y
-    })
-    const rangeX = (maxX - minX) || 1
-    const rangeY = (maxY - minY) || 1
-    const pad = 35
-    const { width, height } = dims
-
-    const [nx, ny] = emb[selectedNodeId]
-    const baseCx = pad + ((nx - minX) / rangeX) * (width - pad * 2)
-    const baseCy = pad + ((ny - minY) / rangeY) * (height - pad * 2)
-
-    const targetZoom = 1.1 // Very gentle zoom so we still see the overview
-    setZoom(targetZoom)
-    setPan({
-      x: width / 2 - baseCx * targetZoom,
-      y: height / 2 - baseCy * targetZoom
-    })
-  }, [selectedNodeId, dims])
 
   // ── Mouse interactions ──
   const getNodeAt = useCallback((mx, my) => {
@@ -332,33 +304,59 @@ export default function PairProximityView({ reportMode = false }) {
   }, [dims, zoom, pan])
 
   const handleMouseMove = useCallback((e) => {
-    if (dragRef.current.dragging) {
-      setPan({
-        x: dragRef.current.startPanX + (e.clientX - dragRef.current.startX),
-        y: dragRef.current.startPanY + (e.clientY - dragRef.current.startY),
-      })
-      return
-    }
     const rect = canvasRef.current?.getBoundingClientRect()
     if (!rect) return
-    setHoveredNode(getNodeAt(e.clientX - rect.left, e.clientY - rect.top))
+    const mx = e.clientX - rect.left
+    const my = e.clientY - rect.top
+
+    if (dragRef.current.dragging) {
+      const dx = e.clientX - dragRef.current.startX
+      const dy = e.clientY - dragRef.current.startY
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        dragRef.current.hasDragged = true
+      }
+      setPan({
+        x: dragRef.current.startPanX + dx,
+        y: dragRef.current.startPanY + dy,
+      })
+      setHoveredNode(null)
+      return
+    }
+
+    setHoveredNode(getNodeAt(mx, my))
   }, [getNodeAt])
 
   const handleMouseDown = useCallback((e) => {
-    if (e.button === 0 && e.shiftKey) {
-      dragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, startPanX: pan.x, startPanY: pan.y }
-    } else if (e.button === 0 && !e.shiftKey) {
-      if (hoveredNode !== null) {
-        setSelectedNode(hoveredNode)
-      } else {
-        setSelectedNode(null)
-      }
+    if (e.button !== 0) return
+    const rect = canvasRef.current?.getBoundingClientRect()
+    const mx = rect ? e.clientX - rect.left : 0
+    const my = rect ? e.clientY - rect.top : 0
+    const clickedNode = getNodeAt(mx, my)
+
+    dragRef.current = {
+      dragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      startPanX: pan.x,
+      startPanY: pan.y,
+      hasDragged: false,
+      clickNode: clickedNode
     }
-  }, [pan, hoveredNode, setSelectedNode])
+  }, [pan, getNodeAt])
 
   const handleMouseUp = useCallback(() => {
-    dragRef.current.dragging = false
-  }, [])
+    if (dragRef.current.dragging) {
+      if (!dragRef.current.hasDragged) {
+        const node = dragRef.current.clickNode
+        if (node !== null) {
+          setSelectedNode(node)
+        } else {
+          setSelectedNode(null)
+        }
+      }
+      dragRef.current.dragging = false
+    }
+  }, [setSelectedNode])
 
   const handleWheel = useCallback((e) => {
     e.preventDefault()
@@ -386,8 +384,8 @@ export default function PairProximityView({ reportMode = false }) {
     <div ref={containerRef} className="w-full h-full relative bg-nebula overflow-hidden">
       <canvas
         ref={canvasRef}
-        style={{ width: dims.width, height: dims.height, cursor: dragRef.current.dragging ? 'grabbing' : 'crosshair' }}
-        className="absolute inset-0"
+        style={{ width: '100%', height: '100%', cursor: dragRef.current.dragging ? 'grabbing' : 'crosshair' }}
+        className="absolute inset-0 w-full h-full"
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}

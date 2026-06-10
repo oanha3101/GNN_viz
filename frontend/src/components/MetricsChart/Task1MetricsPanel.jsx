@@ -15,7 +15,6 @@ import {
   extractAttentionFocusSeries,
   extractBoundaryResilienceSeries,
   extractSamplingCoverageSeries,
-  computeHomophilyScatter,
   computeAttentionFocus,
   buildTask1ModelSignature,
   assessTask1Reliability,
@@ -37,7 +36,6 @@ const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'model', label: 'Model' },
   { id: 'confusion', label: 'Confusion' },
-  { id: 'homophily', label: 'Homophily' },
   { id: 'insights', label: 'Insights' },
 ]
 
@@ -135,7 +133,6 @@ export default function Task1MetricsPanel({ forcedTab = null, hideTabControls = 
           {activeTab === 'confusion' && (
             <ConfusionTab snap={snap} graphData={graphData} onPick={setSelectedNode} snapshots={snapshots} epochInt={epochInt} />
           )}
-          {activeTab === 'homophily' && <HomophilyTab snap={snap} onPick={setSelectedNode} />}
           {activeTab === 'insights' && (
             <InsightsTab
               snap={snap}
@@ -504,63 +501,6 @@ function ConfusionTab({ snap, graphData, onPick, snapshots, epochInt }) {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function HomophilyTab({ snap, onPick }) {
-  const points = useMemo(() => computeHomophilyScatter(snap), [snap])
-
-  if (!points.length) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-1 text-micro text-slate-500">
-        <p>No homophily data yet.</p>
-        <p className="text-nano">Backend needs to emit `majority_ratio` and `node_correctness`.</p>
-      </div>
-    )
-  }
-
-  const correctPts = points.filter((p) => p.correct === 1)
-  const wrongPts = points.filter((p) => p.correct === 0)
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
-      <div className="text-nano font-bold uppercase tracking-ultra text-slate-500">
-        Neighbor majority ratio vs node correctness | click a dot to focus the node on canvas
-      </div>
-      <div className="flex-1 min-h-[200px] rounded-xl border border-line-subtle bg-nebula p-2">
-        <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
-            <XAxis
-              dataKey="ratio"
-              type="number"
-              domain={[0, 1]}
-              tick={{ fill: '#94a3b8', fontSize: 9 }}
-              label={{ value: 'majority_ratio', fill: '#94a3b8', fontSize: 9, dy: 14 }}
-            />
-            <YAxis
-              dataKey="correct"
-              type="number"
-              domain={[-0.1, 1.1]}
-              ticks={[0, 1]}
-              tick={{ fill: '#94a3b8', fontSize: 9 }}
-              label={{ value: 'correct', fill: '#94a3b8', fontSize: 9, angle: -90, dx: -8 }}
-            />
-            <Tooltip
-              contentStyle={{ background: 'var(--c-bg-elev)', border: '1px solid var(--c-border)', color: 'var(--c-fg)', borderRadius: 8, fontSize: 10 }}
-              itemStyle={{ color: '#e2e8f0' }}
-              labelStyle={{ color: '#94a3b8' }}
-            />
-            <ReferenceLine x={0.5} stroke="#f59e0b" strokeDasharray="3 3" strokeOpacity={0.5} />
-            <Scatter name="Correct" data={correctPts} fill="#22c55e" onClick={(d) => onPick(d.id)} />
-            <Scatter name="Wrong" data={wrongPts} fill="#ef4444" onClick={(d) => onPick(d.id)} />
-          </ScatterChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="text-nano text-slate-500">
-        Heterophilic mistakes usually cluster at low ratio with incorrect predictions, while clean homophilic wins sit near the upper-right corner.
       </div>
     </div>
   )

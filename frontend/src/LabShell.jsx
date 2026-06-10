@@ -592,7 +592,7 @@ function LabShell() {
                     <Network size={12} className="text-amethyst" />
                     <span className="text-[9px] font-bold uppercase tracking-wider text-moonlight">{t('lab.inspector')}</span>
                   </div>
-                  <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
+                  <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                     <ErrorBoundary>
                       <Suspense fallback={<PanelLoader label={t('lab.loading_inspector')} />}>
                         <InfoRouter />

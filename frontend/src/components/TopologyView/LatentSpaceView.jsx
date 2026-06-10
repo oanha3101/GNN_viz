@@ -199,8 +199,8 @@ export default function LatentSpaceView() {
     <div ref={containerRef} className="w-full h-full relative bg-nebula overflow-hidden">
       <canvas
         ref={canvasRef}
-        style={{ width: dims.width, height: dims.height, cursor: 'crosshair' }}
-        className="absolute inset-0"
+        style={{ width: '100%', height: '100%', cursor: 'crosshair' }}
+        className="absolute inset-0 w-full h-full"
         onClick={handleClick}
       />
 
