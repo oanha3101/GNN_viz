@@ -107,32 +107,36 @@ export function drawTask1Node(node, ctx, globalScale, config) {
         // Simple ring — no gradient fill, no pulse animation
         ctx.beginPath()
         ctx.arc(drawX, drawY, size + 1.5 + maxAttn * 3, 0, 2 * Math.PI)
-        ctx.strokeStyle = `rgba(96, 165, 250, ${0.15 + maxAttn * 0.3})`
+        ctx.strokeStyle = `rgba(245, 158, 11, ${0.15 + maxAttn * 0.3})`
         ctx.lineWidth = 1 / globalScale
         ctx.stroke()
       } else {
-        const glowRadius = size + 1.5 + maxAttn * 5
-        const pulse = disableMotion ? 0.85 : 0.75 + Math.sin(Date.now() / 280 + node.id * 0.8) * 0.15
+        const glowRadius = size + 2 + maxAttn * 4.5
+        // Calm breathing pulse: very slow (period of ~3 seconds)
+        const pulse = disableMotion ? 0.85 : 0.8 + Math.sin(Date.now() / 1200 + node.id * 0.4) * 0.1
+        
+        // Soft golden glow
         ctx.beginPath()
         ctx.arc(drawX, drawY, glowRadius, 0, 2 * Math.PI)
-        ctx.fillStyle = `rgba(96, 165, 250, ${(0.08 + maxAttn * 0.26) * pulse})`
+        ctx.fillStyle = `rgba(245, 158, 11, ${(0.05 + maxAttn * 0.18) * pulse})`
         ctx.fill()
 
+        // Outer soft golden border (solid, no short dashes to avoid flickering)
         ctx.beginPath()
-        ctx.arc(drawX, drawY, glowRadius + 2, 0, 2 * Math.PI)
-        ctx.strokeStyle = `rgba(191, 219, 254, ${0.14 + maxAttn * 0.24})`
-        ctx.lineWidth = 1.2 / globalScale
+        ctx.arc(drawX, drawY, glowRadius + 1.5, 0, 2 * Math.PI)
+        ctx.strokeStyle = `rgba(251, 191, 36, ${(0.15 + maxAttn * 0.25) * pulse})`
+        ctx.lineWidth = 1.0 / globalScale
         ctx.stroke()
 
-        // Rotating amber attention orbital ring for highly-attended nodes
-        if (maxAttn > 0.12 && !disableMotion) {
-          const time = -Date.now() / 500
+        // Subtle, elegant outer attention orbit for key hubs — very slow rotation, large dashes
+        if (maxAttn > 0.15 && !disableMotion) {
+          const time = Date.now() / 2200 // 4.4x slower than before
           ctx.save()
           ctx.beginPath()
           ctx.arc(drawX, drawY, glowRadius + 4.5, 0, 2 * Math.PI)
-          ctx.strokeStyle = `rgba(251, 191, 36, ${0.25 + maxAttn * 0.35})`
-          ctx.lineWidth = 1.0 / globalScale
-          ctx.setLineDash([2, 5])
+          ctx.strokeStyle = `rgba(245, 158, 11, ${0.2 + maxAttn * 0.3})`
+          ctx.lineWidth = 0.8 / globalScale
+          ctx.setLineDash([6, 8]) // Longer dashes, less flickery
           ctx.translate(drawX, drawY)
           ctx.rotate(time)
           ctx.translate(-drawX, -drawY)

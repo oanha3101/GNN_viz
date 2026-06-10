@@ -11,6 +11,7 @@ import { computeKHopNeighbors } from '../../utils/khop'
 import { isNodeMisclassified, countMisclassified } from '../../utils/misclassification'
 import { logger } from '../../utils/logger'
 import NodeHoverCard from './NodeHoverCard'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 function normalizeVisualModel(model) {
   const safe = String(model || 'GCN').toUpperCase().replace('-', '_')
@@ -20,6 +21,7 @@ function normalizeVisualModel(model) {
 }
 
 export default function TopologyView({ reportMode = false }) {
+  const { lang } = useLanguage()
   // 1. Dữ liệu tĩnh
   const rawGraphData = useGNNStore(s => s.graphData)
   const groundTruth = useGNNStore(s => s.groundTruth)
@@ -31,6 +33,7 @@ export default function TopologyView({ reportMode = false }) {
   const setHoveredNode = useGNNStore(s => s.setHoveredNode)
   const attentionHead = useGNNStore(s => s.attentionHead)
   const setAttentionHead = useGNNStore(s => s.setAttentionHead)
+  const selectedTask = useGNNStore(s => s.selectedTask)
 
   // 2. Dữ liệu động
   const snapshots = usePlayerStore(s => s.snapshots)
@@ -54,6 +57,7 @@ export default function TopologyView({ reportMode = false }) {
 
   // Misclassification Explorer state
   const [showErrorsOnly, setShowErrorsOnly] = useState(false)
+  const [correctnessFilter, setCorrectnessFilter] = useState('all')
 
   // 3. StateRef: Đảm bảo luồng vẽ Canvas luôn lấy được dữ liệu mới nhất mà không trễ nhịp
   const animState = useRef({
@@ -223,6 +227,7 @@ export default function TopologyView({ reportMode = false }) {
       kHopMaxHops,
       kHopNeighbors: kHopNeighborsRef.current,
       showErrorsOnly,
+      correctnessFilter,
       nodeCorrectness: currentSnap ? (currentSnap.node_correctness || null) : null,
       attentionMap,
       perHeadMap,
@@ -244,7 +249,7 @@ export default function TopologyView({ reportMode = false }) {
 
     // Force a redraw of the canvas to render real-time changes when playing
     fgRef.current?.refresh?.()
-  }, [snapshots, currentEpochFloat, selectedNodeId, viewMode, groundTruth, visualModel, attentionHead, kHopEnabled, kHopMaxHops, rawGraphData, showErrorsOnly, graphPerf])
+  }, [snapshots, currentEpochFloat, selectedNodeId, viewMode, groundTruth, visualModel, attentionHead, kHopEnabled, kHopMaxHops, rawGraphData, showErrorsOnly, correctnessFilter, graphPerf])
 
   // Resize handler — re-attach whenever the target node remounts
   // (e.g. after activeGraphData flips from null → data, the render tree swaps
@@ -296,6 +301,34 @@ export default function TopologyView({ reportMode = false }) {
   }, [graphData])
 
   const activeGraphData = stableGraphData || graphData
+
+  const activeEpochInt = useMemo(() => {
+    return snapshots && snapshots.length > 0
+      ? Math.max(0, Math.min(snapshots.length - 1, Math.floor(currentEpochFloat)))
+      : 0
+  }, [snapshots, currentEpochFloat])
+
+  const activeSnap = useMemo(() => {
+    return snapshots?.[activeEpochInt] || null
+  }, [snapshots, activeEpochInt])
+
+  const { correctCount, incorrectCount } = useMemo(() => {
+    if (!activeSnap || !Array.isArray(activeSnap.node_correctness)) {
+      return { correctCount: 0, incorrectCount: 0 }
+    }
+    let correct = 0
+    let incorrect = 0
+    const nodeCorrectness = activeSnap.node_correctness
+    const activeNodes = activeGraphData?.nodes || []
+    activeNodes.forEach(node => {
+      if (nodeCorrectness[node.id] === true || nodeCorrectness[node.id] === 1) {
+        correct += 1
+      } else {
+        incorrect += 1
+      }
+    })
+    return { correctCount: correct, incorrectCount: incorrect }
+  }, [activeSnap, activeGraphData])
 
   const legendEntries = useMemo(() => {
     const explicitNames = Array.isArray(classNames) && classNames.length > 0
@@ -404,6 +437,20 @@ export default function TopologyView({ reportMode = false }) {
       if (!node || !ctx) return
       if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
 
+      // Opacity filter for correctness
+      let opacity = 1
+      if (nodeCorrectness && Array.isArray(nodeCorrectness)) {
+        const isNodeCorrect = nodeCorrectness[node.id] === true || nodeCorrectness[node.id] === 1
+        if (state.correctnessFilter === 'correct' && !isNodeCorrect) {
+          opacity = 0.15
+        } else if (state.correctnessFilter === 'incorrect' && isNodeCorrect) {
+          opacity = 0.15
+        }
+      }
+
+      ctx.save()
+      ctx.globalAlpha = opacity
+
       const totalEpochsSafe = state.totalEpochs || 100
       const selectedModelSafe = visualModel || 'GCN'
       const gtSafe = gt || []
@@ -508,10 +555,11 @@ export default function TopologyView({ reportMode = false }) {
         showcaseMode: graphPerf.isShowcaseGraph,
         largeGraph: graphPerf.isLargeGraph,
       })
+      ctx.restore()
     } catch (error) {
       logger.error('nodeCanvasObject error:', error)
     }
-  }, [graphPerf, visualModel]) // totalEpochs removed — read from animState ref to avoid re-creating callback on every snapshot
+  }, [graphPerf, visualModel, correctnessFilter]) // totalEpochs removed — read from animState ref to avoid re-creating callback on every snapshot
 
   if (!activeGraphData) {
     return (
@@ -656,7 +704,25 @@ export default function TopologyView({ reportMode = false }) {
           }
         }}
         linkColor={(link) => {
-          const { snaps, cef, sid, model, kHopEnabled, kHopNeighbors, attentionMap, perHeadMap, samplingEdgeMap } = animState.current
+          const { snaps, cef, sid, model, kHopEnabled, kHopNeighbors, attentionMap, perHeadMap, samplingEdgeMap, nodeCorrectness, correctnessFilter } = animState.current
+
+          // Fade links whose endpoints are filtered out by correctness filter
+          if (nodeCorrectness && Array.isArray(nodeCorrectness)) {
+            const srcId = typeof link.source === 'object' ? link.source.id : link.source
+            const tgtId = typeof link.target === 'object' ? link.target.id : link.target
+            const isSrcCorrect = nodeCorrectness[srcId] === true || nodeCorrectness[srcId] === 1
+            const isTgtCorrect = nodeCorrectness[tgtId] === true || nodeCorrectness[tgtId] === 1
+            
+            let fadeLink = false
+            if (correctnessFilter === 'correct' && (!isSrcCorrect || !isTgtCorrect)) {
+              fadeLink = true
+            } else if (correctnessFilter === 'incorrect' && (isSrcCorrect || isTgtCorrect)) {
+              fadeLink = true
+            }
+            if (fadeLink) {
+              return 'rgba(91, 86, 137, 0.02)'
+            }
+          }
 
           // K-Hop edge highlighting
           if (kHopEnabled && kHopNeighbors && sid !== null) {
@@ -734,52 +800,7 @@ export default function TopologyView({ reportMode = false }) {
           }
           return `rgba(99, 102, 241, ${graphPerf.isShowcaseGraph ? 0.075 + weight * 0.18 : 0.1 + weight * 0.27})`
         }}
-        linkDirectionalParticles={(link) => {
-          const { model, snaps, cef, attentionMap, perHeadMap, showLinkParticles, disableMotion } = animState.current
-          if (!showLinkParticles || disableMotion) return 0
-          if (model === 'SAGE') {
-            const source = typeof link.source === 'object' ? link.source.id : link.source
-            const target = typeof link.target === 'object' ? link.target.id : link.target
-            const key = Math.min(source, target) + '-' + Math.max(source, target)
-            return animState.current.samplingEdgeMap?.has(key) ? 1 : 0
-          }
-          // GCN: subtle message-passing particles (animate along edges)
-          if (model === 'GCN' && snaps && snaps.length > 0) {
-            const epochProgress = (cef || 0) / (snaps.length || 1)
-            const seed = link._idx + Math.floor(cef * 3)
-            // More particles early (message passing establishing), fewer later
-            const threshold = 0.7 + epochProgress * 0.2
-            return (Math.sin(seed) * 10000 % 1) > threshold ? 1 : 0
-          }
-          if (model !== 'GAT' || !snaps || snaps.length === 0) return 0
-
-          const srcId = typeof link.source === 'object' ? link.source.id : link.source
-          const tgtId = typeof link.target === 'object' ? link.target.id : link.target
-          const edgeKey = Math.min(srcId, tgtId) + '-' + Math.max(srcId, tgtId)
-          const activeMap = perHeadMap || attentionMap
-          let weight = activeMap ? (activeMap.get(edgeKey) || 0) : 0
-          return weight > 0.4 ? 2 : 0
-        }}
-        linkDirectionalParticleWidth={1.5}
-        linkDirectionalParticleSpeed={(link) => {
-          const { model, attentionMap, perHeadMap, showLinkParticles, disableMotion } = animState.current
-          if (!showLinkParticles || disableMotion) return 0
-          if (model === 'SAGE') return 0.015
-          if (model === 'GCN') return 0.01
-
-          const srcId = typeof link.source === 'object' ? link.source.id : link.source
-          const tgtId = typeof link.target === 'object' ? link.target.id : link.target
-          const edgeKey = Math.min(srcId, tgtId) + '-' + Math.max(srcId, tgtId)
-          const activeMap = perHeadMap || attentionMap
-          let weight = activeMap ? (activeMap.get(edgeKey) || 0) : 0
-          return 0.002 + weight * 0.008
-        }}
-        linkDirectionalParticleColor={(link) => {
-          const m = animState.current.model
-          if (m === 'SAGE') return '#a855f7'
-          if (m === 'GCN') return 'rgba(99, 102, 241, 0.6)'
-          return 'rgba(168, 85, 247, 0.8)'
-        }}
+        linkDirectionalParticles={() => 0}
         onNodeClick={(node) => setSelectedNode(node.id)}
         onEngineStop={() => {
           if (fitPendingRef.current && fgRef.current) {
@@ -853,7 +874,67 @@ export default function TopologyView({ reportMode = false }) {
         )}
       </AnimatePresence>}
 
+      {!reportMode && selectedTask === 1 && (
+        <div className="absolute top-3 left-3 bg-deep/90 backdrop-blur-md rounded-lg p-2 border border-line-default/50 z-10 pointer-events-none shadow-lg">
+          <div className="text-[10px] text-twilight uppercase tracking-widest font-black mb-0.5">
+            {lang === 'vi' ? 'MÔ HÌNH HOẠT ĐỘNG' : 'ACTIVE MODEL'}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full animate-pulse ${
+              visualModel === 'GAT' ? 'bg-amber-400 shadow-[0_0_8px_#fbbf24]' :
+              visualModel === 'SAGE' ? 'bg-cyan-400 shadow-[0_0_8px_#22d3ee]' :
+              'bg-indigo-400 shadow-[0_0_8px_#818cf8]'
+            }`} />
+            <span className={`text-xs font-black tracking-wider ${
+              visualModel === 'GAT' ? 'text-amber-400' :
+              visualModel === 'SAGE' ? 'text-cyan-300' :
+              'text-[#a78bfa]'
+            }`}>
+              {visualModel === 'GAT' ? 'GAT (Graph Attention Network)' :
+               visualModel === 'SAGE' ? 'GraphSAGE' : 'GCN (Graph Convolutional Network)'}
+            </span>
+          </div>
+        </div>
+      )}
+
       {!reportMode && <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-10 items-end">
+        {/* Correct/Incorrect Node Filter */}
+        {selectedTask === 1 && activeGraphData && activeSnap && Array.isArray(activeSnap.node_correctness) && (
+          <div className="bg-deep/90 backdrop-blur-md rounded-lg p-1.5 border border-line-default/50 shadow-lg">
+            <div className="text-[8px] text-twilight uppercase tracking-wider mb-1 text-center font-bold">
+              {lang === 'vi' ? 'BỘ LỌC ĐÚNG/SAI' : 'CORRECTNESS FILTER'}
+            </div>
+            <div className="flex gap-1 justify-center">
+              <button
+                onClick={() => setCorrectnessFilter('all')}
+                className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all
+                  ${correctnessFilter === 'all'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-[0_0_6px_rgba(6,182,212,0.15)]'
+                    : 'text-twilight hover:text-moonlight border border-line-default/20'}`}
+              >
+                {lang === 'vi' ? 'Tất cả' : 'All'}
+              </button>
+              <button
+                onClick={() => setCorrectnessFilter('correct')}
+                className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all
+                  ${correctnessFilter === 'correct'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_6px_rgba(16,185,129,0.15)]'
+                    : 'text-twilight hover:text-moonlight border border-line-default/20'}`}
+              >
+                {lang === 'vi' ? `Đúng (${correctCount})` : `Correct (${correctCount})`}
+              </button>
+              <button
+                onClick={() => setCorrectnessFilter('incorrect')}
+                className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all
+                  ${correctnessFilter === 'incorrect'
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-[0_0_6px_rgba(244,63,94,0.15)]'
+                    : 'text-twilight hover:text-moonlight border border-line-default/20'}`}
+              >
+                {lang === 'vi' ? `Sai (${incorrectCount})` : `Incorrect (${incorrectCount})`}
+              </button>
+            </div>
+          </div>
+        )}
         {/* K-Hop Neighborhood Toggle */}
         {selectedNodeId !== null && (
           <div className="bg-deep/90 backdrop-blur-md rounded-lg p-1.5 border border-line-default/50">
