@@ -332,7 +332,7 @@ export default function EmbeddingView({
 
     const traces = [{
       type: 'scatter',
-      mode: 'markers+text',
+      mode: 'markers',
       x,
       y,
       text: emb.map((_, index) => String(index)),
